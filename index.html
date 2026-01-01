@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Öğrenci Analiz ve Raporlama Platformu</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="app.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  </head>
+  <body>
+    <header class="top-bar">
+      <div class="logo">Öğrenci Analiz &amp; Raporlama</div>
+      <nav>
+        <a href="#dashboard">Panel</a>
+        <a href="#analytics">Başarı Analizi</a>
+        <a href="#reports">Raporlar</a>
+        <a href="#recommendations">Öneriler</a>
+      </nav>
+      <button class="primary" id="new-report">Yeni Rapor</button>
+    </header>
+
+    <main>
+      <section class="hero" id="dashboard">
+        <div class="hero-text">
+          <h1>Türkçe SaaS: Öğrenci Analiz ve Raporlama Platformu</h1>
+          <p>
+            Okulların deneme sınavları, öğrenci cevapları ve gelişim verilerini tek
+            yerde toplayın. MEB kazanımı bazında analiz edin, ileriye dönük öneriler ve
+            aile odaklı geri bildirimler üretin.
+          </p>
+          <div class="hero-actions">
+            <button class="primary">Sınav Yükle</button>
+            <button class="ghost">Demo Verilerle Başla</button>
+          </div>
+          <div class="stats">
+            <div>
+              <h3>%98</h3>
+              <span>Başarı tahmin doğruluğu</span>
+            </div>
+            <div>
+              <h3>12.450+</h3>
+              <span>Analiz edilen deneme</span>
+            </div>
+            <div>
+              <h3>4.3x</h3>
+              <span>Öğrenci gelişim hızı</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-card">
+          <h2>Hızlı Yükleme</h2>
+          <p>Excel (.xlsx) ve PDF deneme dosyalarını sürükleyip bırakın.</p>
+          <div class="upload-zone" id="upload-zone">
+            <input type="file" id="file-input" multiple accept=".xlsx,.xls,.pdf" />
+            <div class="upload-placeholder">
+              <span>Dosyaları buraya bırakın</span>
+              <small>veya tıklayarak seçin</small>
+            </div>
+          </div>
+          <ul class="file-list" id="file-list"></ul>
+          <p class="helper">LLM destekli OCR ile PDF'lerden soru ve kazanım çıkarılır.</p>
+        </div>
+      </section>
+
+      <section class="grid" id="analytics">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Başarı Analizi Motoru</h2>
+            <span class="badge">Tam fonksiyonel demo</span>
+          </div>
+          <div class="analysis">
+            <div>
+              <h3>Öğrenci Kümeleri</h3>
+              <p>Başarı trendlerine göre dinamik segmentasyon.</p>
+              <div class="cluster">
+                <div>
+                  <strong>Yükselen</strong>
+                  <span>%32 öğrenci</span>
+                </div>
+                <div>
+                  <strong>Stabil</strong>
+                  <span>%51 öğrenci</span>
+                </div>
+                <div>
+                  <strong>Riskli</strong>
+                  <span>%17 öğrenci</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3>Kazanım Performansı</h3>
+              <div class="progress-list">
+                <div>
+                  <span>Matematik - Olasılık</span>
+                  <div class="progress"><div style="width: 82%"></div></div>
+                </div>
+                <div>
+                  <span>Türkçe - Anlam Bilgisi</span>
+                  <div class="progress"><div style="width: 74%"></div></div>
+                </div>
+                <div>
+                  <span>Fen - DNA ve Genetik</span>
+                  <div class="progress"><div style="width: 61%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="insights">
+            <div>
+              <h4>LLM Model Seçimi</h4>
+              <p>
+                Sistem her analizde güncel, en yüksek başarıya sahip modeli seçer ve
+                yanıt kalitesini otomatik ölçer.
+              </p>
+              <label class="switch">
+                <input type="checkbox" checked />
+                <span class="slider"></span>
+                <span>Otomatik model optimizasyonu</span>
+              </label>
+            </div>
+            <div>
+              <h4>Güncel Sınav Veri Havuzu</h4>
+              <p>
+                MEB kazanımları ile eşlenen 1M+ soru bankası ve haftalık güncellemeler.
+              </p>
+              <button class="ghost">Veri Havuzunu Yönet</button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="panel" id="reports">
+          <h2>PDF Rapor Üretimi</h2>
+          <p>
+            Uzun ve görsel açıdan zengin raporlar. Öğrenciye özel testler, konu
+            anlatımı ve aile için özel öneriler içerir.
+          </p>
+          <div class="report-preview" id="report-preview">
+            <div class="report-header">
+              <h3>Örnek Öğrenci Raporu</h3>
+              <span>Hazırlanıyor</span>
+            </div>
+            <div class="report-body">
+              <div class="chart-card">
+                <h4>Gelişim Eğrisi</h4>
+                <div class="spark">
+                  <span></span><span></span><span></span><span></span><span></span>
+                </div>
+              </div>
+              <div class="chart-card">
+                <h4>Önerilen Kazanım</h4>
+                <p>8. Sınıf Matematik / Olasılık</p>
+              </div>
+              <div class="math-card">
+                <h4>Formül Doğruluğu</h4>
+                <p>\(P(A \cap B) = P(A) \cdot P(B|A)\)</p>
+              </div>
+            </div>
+          </div>
+          <button class="primary" id="generate-report">PDF Raporu Oluştur</button>
+        </aside>
+      </section>
+
+      <section class="panel" id="recommendations">
+        <div class="panel-header">
+          <h2>Öğrenciye Özel Öneriler</h2>
+          <span class="badge">Aile ve öğretmen için</span>
+        </div>
+        <div class="recommendation-grid">
+          <div class="recommendation">
+            <h3>Haftalık Çalışma Planı</h3>
+            <ul>
+              <li>Matematik: Olasılık konu anlatımı + 20 soru.</li>
+              <li>Türkçe: Paragraf hız çalışması (15 dk/gün).</li>
+              <li>Fen: DNA etkinlik kartları ve mini test.</li>
+            </ul>
+          </div>
+          <div class="recommendation">
+            <h3>Veliye Özel Notlar</h3>
+            <p>
+              Öğrenci son 3 denemede netlerini 6.4 puan artırdı. Motivasyon için
+              haftalık hedef panosu önerilir.
+            </p>
+          </div>
+          <div class="recommendation">
+            <h3>Öğrenciye Özel Testler</h3>
+            <p>
+              Sistem, yanlış yapılan kazanımlara göre otomatik PDF testleri oluşturur.
+            </p>
+            <button class="ghost">Testleri Görüntüle</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta">
+        <div>
+          <h2>Deneme sınavlarını yükle, öğrencilerini dakikalar içinde analiz et.</h2>
+          <p>Ölçeklenebilir SaaS altyapısı ile tüm okullar için hazır.</p>
+        </div>
+        <button class="primary">Canlı Demo Talep Et</button>
+      </section>
+    </main>
+
+    <footer>
+      <p>© 2024 Öğrenci Analiz ve Raporlama Platformu</p>
+      <div class="footer-links">
+        <a href="#">KVKK</a>
+        <a href="#">Güvenlik</a>
+        <a href="#">İletişim</a>
+      </div>
+    </footer>
+
+    <div class="modal" id="report-modal" aria-hidden="true">
+      <div class="modal-content">
+        <button class="close" id="close-modal">×</button>
+        <h2>PDF Raporu Hazır</h2>
+        <p>
+          Özel testler, kazanım bazlı analizler ve aileye yönelik öneriler dahil edildi.
+        </p>
+        <ul>
+          <li>40 sayfa detaylı analiz</li>
+          <li>Grafikler ve performans kıyasları</li>
+          <li>Öğrenciye özel matematik formülleri</li>
+        </ul>
+        <button class="primary">PDF'i İndir</button>
+      </div>
+    </div>
+  </body>
+</html>
