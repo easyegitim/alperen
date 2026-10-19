@@ -1,0 +1,15 @@
+<!-- @dsCard group="Profil" height=160 subtitle="Alıntı + kaynak" -->
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><title>EvidenceQuote — önizleme</title></head>
+<body>
+<div id="root" class="og-stack"></div>
+<script>
+  var O = window.Ogrenmen, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(O.EvidenceQuote, { kind: 'lesson', source: 'Ders 12 · 14:32', href: '#' }, 'Paydaları eşitlemeden topladım galiba, 4/12 çıktı.'),
+    h(O.EvidenceQuote, { kind: 'quiz', source: 'Deneme 3 · Soru 8' }, 'D şıkkını (4/12) işaretledi; pay ve paydaları ayrı ayrı topladı.')
+  ));
+</script>
+</body>
+</html>

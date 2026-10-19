@@ -1,0 +1,12 @@
+<!-- @dsCard group="İçerik" height=232 subtitle="Ders kartı" -->
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><title>LessonCard — önizleme</title><style>.og-stage{align-items:stretch}</style></head>
+<body>
+<div id="root" class="og-stage"></div>
+<script>
+  var O = window.Ogrenmen, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null, h(O.LessonCard, { subject: 'MATEMATİK', title: 'Payda eşitleme', meta: '6. sınıf · 12 dk · 8 soru', progress: 62, status: 'in-progress', onClick: function(){} }), h(O.LessonCard, { subject: 'FEN BİLİMLERİ', title: 'Güneş sistemi ve gezegenler', meta: '15 dk · 10 soru', status: 'not-started', ai: true, onClick: function(){} }), h(O.LessonCard, { subject: 'TÜRKÇE', title: 'Paragrafta ana fikir', meta: '10 dk · 6 soru', progress: 100, status: 'done' })));
+</script>
+</body>
+</html>

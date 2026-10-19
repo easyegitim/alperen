@@ -1,0 +1,17 @@
+<!-- @dsCard group="Sohbet" height=360 subtitle="AI öğretmen · öğrenci · eğitmen denetimi" -->
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><title>TutorMessage — önizleme</title></head>
+<body>
+<div id="root" class="og-stack"></div>
+<script>
+  var O = window.Ogrenmen, h = React.createElement;
+  var M = '../../assets/Maskot/ogrenmen-maskot.webp';
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h(O.TutorMessage, { avatarSrc: M, actions: h(React.Fragment, null, h(O.Button, { variant: 'secondary' }, 'Bir örnek göster'), h(O.Button, { variant: 'quiet' }, 'Anladım')), review: { model: 'Flash-Lite', cost: '0,002 $', memory: 3 } }, 'Payları toplamadan önce paydaları eşitlememiz gerekiyor. 1/4 kesrini 2 ile genişletirsen ne elde edersin?'),
+    h(O.TutorMessage, { from: 'student' }, '2/8 olur!'),
+    h(O.TutorMessage, { avatarSrc: M, typing: true })
+  ));
+</script>
+</body>
+</html>

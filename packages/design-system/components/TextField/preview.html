@@ -1,0 +1,12 @@
+<!-- @dsCard group="Formlar" height=128 subtitle="Etiket · ipucu · hata" -->
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><title>TextField — önizleme</title><style>.og-stage{align-items:flex-start}</style></head>
+<body>
+<div id="root" class="og-stage"></div>
+<script>
+  var O = window.Ogrenmen, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null, h(O.TextField, { label: 'Cevabın', placeholder: 'Örn. 7/8', hint: 'Kesri sadeleştirerek yaz.', mono: true }), h(O.TextField, { label: 'Cevabın', defaultValue: '6/8', error: 'Sadeleştirmeyi unuttun.', mono: true })));
+</script>
+</body>
+</html>

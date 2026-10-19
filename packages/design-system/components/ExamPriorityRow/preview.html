@@ -1,0 +1,17 @@
+<!-- @dsCard group="Sınav" height=304 subtitle="Sıklık analizine göre öncelikler" -->
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><title>ExamPriorityRow — önizleme</title><style>.og-stack{max-width:640px}.t{margin:0;font-size:18px;line-height:26px;font-weight:600}</style></head>
+<body>
+<div id="root" class="og-stack"></div>
+<script>
+  var O = window.Ogrenmen, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h('p', { className: 't' }, 'Sıklık analizine göre öncelikler · Matematik 2 vizesi'),
+    h(O.ExamPriorityRow, { rank: 1, topic: 'Kısmi integrasyon', kind: 'hesap', hits: 5, years: 5, points: '≈20 puan', evidence: 'Kanıt: 5 sınav', href: '#' }),
+    h(O.ExamPriorityRow, { rank: 2, topic: 'Taylor serisi açılımı', kind: 'ispat', hits: 4, years: 5, points: '≈15 puan', evidence: 'Kanıt: 4 sınav', href: '#' }),
+    h(O.ExamPriorityRow, { rank: 3, topic: 'Belirsiz limitler', kind: 'çoktan seçmeli', hits: 2, years: 5, points: '≈10 puan', evidence: 'Kanıt: 2 sınav', href: '#' })
+  ));
+</script>
+</body>
+</html>

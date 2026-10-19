@@ -1,0 +1,51 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Öğrenmen</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--surface); color:var(--ink); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; width:960px; height:288px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:288px; overflow:hidden; }
+  .brand { fill:var(--primary); }
+  .deep { fill:var(--ink); }
+  .gold { fill:var(--gold); }
+  .easy { fill:var(--easy-purple); }
+  .blk { rx:var(--radius-sm); }
+  .chev { fill:none; stroke:var(--on-primary); stroke-width:var(--space-2); stroke-linejoin:miter; stroke-linecap:butt; }
+  .words { position:absolute; left:var(--space-6); bottom:var(--space-6); max-width:440px; }
+  .name { margin:0; font-size:84px; line-height:.95; font-weight:700; letter-spacing:-.02em; color:var(--ink); }
+  .tag { margin:var(--space-2) 0 0 4px; font-size:14px; line-height:20px; color:var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      primary 184×272 bled off the top (pelerin mavisi, the largest) · ink 272×176 bleeding off the right (kitap laciverti in light; paper-white in dark so it never sinks into the ground) · gold 120×80 off the top (kemer altını, the reward) · easy-purple 96×72 straddling the ink block's top edge (the corporate signature, visible against ground or ink in either theme) — ≈40% of 960×288
+  arrangement one tall primary slab with satellites; primary and ink bottoms share one line space-6 above the edge; space-4 gutters
+  pattern     chevrons, from the easy mark itself — an isometric graduation-cap roof with slopes of ≈0.43: five space-2-thick chevrons at a space-6 pitch cut into the primary slab in on-primary, the cap stacked like pages
+  scales      gutters space-4; insets space-6; chevron stroke space-2, pitch space-6; corners radius-sm (the mark is sharp-edged, so blocks stay nearly square)
+-->
+<rect class="brand blk" x="24" y="-8" width="184" height="272" rx="4"/>
+<rect class="gold blk" x="224" y="-8" width="120" height="80" rx="4"/>
+<rect class="deep blk" x="224" y="88" width="272" height="176" rx="4"/>
+<rect class="easy blk" x="360" y="40" width="96" height="72" rx="4"/>
+<polyline class="chev" points="56,146 116,120 176,146"/>
+<polyline class="chev" points="56,170 116,144 176,170"/>
+<polyline class="chev" points="56,194 116,168 176,194"/>
+<polyline class="chev" points="56,218 116,192 176,218"/>
+<polyline class="chev" points="56,242 116,216 176,242"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Öğrenmen</h1>
+<p class="tag">Kendi hızında, yanında bir öğretmenle.</p>
+</div>
+</div>
+</body>
+</html>

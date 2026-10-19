@@ -1,0 +1,12 @@
+<!-- @dsCard group="Sınav" height=344 subtitle="Boşta · seçili · doğru · yanlış" -->
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><title>QuizOption — önizleme</title><style>.q{margin:0 0 var(--space-1);font-size:18px;line-height:26px;font-weight:600}</style></head>
+<body>
+<div id="root" class="og-stack"></div>
+<script>
+  var O = window.Ogrenmen, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null, h('p', { className: 'q' }, '3/4 + 1/8 işleminin sonucu kaçtır?'), h(O.QuizOption, { letter: 'A' }, '4/12'), h(O.QuizOption, { letter: 'B', state: 'selected' }, '5/8'), h(O.QuizOption, { letter: 'C', state: 'correct', feedback: '6/8 + 1/8 = 7/8' }, '7/8'), h(O.QuizOption, { letter: 'D', state: 'incorrect', feedback: 'Paylar ve paydalar ayrı ayrı toplanmaz.' }, '4/12')));
+</script>
+</body>
+</html>
