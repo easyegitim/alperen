@@ -1,0 +1,16 @@
+node_modules/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+out/
+.next/
+.wrangler/
+.dev.vars
+.env
+*.local
+apps/panel/public/ds/
+/tmp-*/
