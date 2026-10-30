@@ -1,0 +1,27 @@
+{
+  "all-distractors-tagged.json": [
+    "contains",
+    "minContains"
+  ],
+  "approved-sympy-failed.json": [
+    "enum"
+  ],
+  "correct-option-field.json": [
+    "additionalProperties"
+  ],
+  "duplicate-option-keys.json": [
+    "const"
+  ],
+  "mcq-without-options.json": [
+    "required"
+  ],
+  "numeric-with-options.json": [
+    "not"
+  ],
+  "three-options.json": [
+    "minItems"
+  ],
+  "unordered-option-keys.json": [
+    "const"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "curriculum": {
+    "code": "TYT-MAT",
+    "authority": "ÖSYM",
+    "year": 2027,
+    "version": "2027.1",
+    "label": "TYT Matematik 2027",
+    "status": "draft"
+  },
+  "skills": [
+    {
+      "id": "tyt.mat.cebir",
+      "parent_id": null,
+      "name": "Cebir",
+      "is_leaf": false
+    },
+    {
+      "id": "tyt.mat.cebir.denklem",
+      "parent_id": "tyt.mat.cebir",
+      "name": "Birinci dereceden denklemler ve sistemler",
+      "is_leaf": true
+    }
+  ],
+  "prerequisites": []
+}

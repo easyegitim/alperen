@@ -1,0 +1,18 @@
+{
+  "currency-eur.json": [
+    "const"
+  ],
+  "free-gemini-trains-false.json": [
+    "const"
+  ],
+  "missing-chat-chain.json": [
+    "required"
+  ],
+  "missing-verified-at.json": [
+    "required"
+  ],
+  "model-without-price.json": [
+    "anyOf",
+    "required"
+  ]
+}

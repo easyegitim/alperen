@@ -1,0 +1,55 @@
+{
+  "title": "MisconceptionTags",
+  "description": "Yanılgı etiketi kataloğu (misconception-tags.json): dizi; her etiket eğitmen metni (üçüncü tekil) ve öğrenci metni (sen dili, ünlemsiz) taşır. skill_id null olan etiketler yalnız genel.* önekli olabilir.",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "required": [
+      "tag",
+      "skill_id",
+      "prereq_skill_id",
+      "text_instructor",
+      "text_student"
+    ],
+    "properties": {
+      "tag": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"
+      },
+      "skill_id": {
+        "type": "string",
+        "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$",
+        "description": "null = çok kazanımlı genel etiket (genel.*)",
+        "nullable": true
+      },
+      "prereq_skill_id": {
+        "type": "string",
+        "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$",
+        "description": "'Asıl sorun alt konuda' çıkarımı için ön koşul",
+        "nullable": true
+      },
+      "text_instructor": {
+        "type": "string",
+        "minLength": 5,
+        "maxLength": 200,
+        "pattern": "^[^!☀-➿⭐-⭕️🀀-🫿]*$",
+        "description": "Üçüncü tekil, ünlemsiz, emojisiz (desen ! ve emoji aralıklarını reddeder)"
+      },
+      "text_student": {
+        "type": "string",
+        "minLength": 5,
+        "maxLength": 200,
+        "pattern": "^[^!☀-➿⭐-⭕️🀀-🫿]*$",
+        "description": "Sen dili, ünlemsiz, emojisiz (desen ! ve emoji aralıklarını reddeder)"
+      }
+    },
+    "propertyOrdering": [
+      "tag",
+      "skill_id",
+      "prereq_skill_id",
+      "text_instructor",
+      "text_student"
+    ]
+  }
+}

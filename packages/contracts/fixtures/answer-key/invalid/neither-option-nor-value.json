@@ -1,0 +1,7 @@
+{
+  "question_id": "8a1c2e3f-4b5d-4c6e-8f7a-9b0c1d2e3f42",
+  "numeric_tolerance": 0,
+  "canonical_expr": "200*Rational(12,10)*Rational(11,10)",
+  "solution": "Önce %20 zam: `200 * 1,2 = 240`. Sonra %10 zam: `240 * 1,1 = 264` TL.",
+  "sympy_status": "verified"
+}

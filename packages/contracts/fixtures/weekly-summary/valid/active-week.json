@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "student_ref": "s_k3m7q2x4z6ab",
+  "week_start": "2026-10-12",
+  "body": "Öğrenci bu hafta rasyonel sayılar ve EBOB-EKOK üzerinde çalıştı. Payda eşitlemede iki kez takıldı. Cumartesiye kadar çalışma kâğıdını bitireceğini söyledi. Moral göstergesi hafta sonunda düştü.",
+  "metrics": {
+    "messages": 42,
+    "questions_solved": 18,
+    "accuracy": 0.61,
+    "active_days": 5,
+    "open_misconceptions": 2,
+    "unanswered_questions": 1,
+    "morale_trend": "down",
+    "mastery_deltas": [
+      {
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+        "delta": 0.12,
+        "reliable": true
+      },
+      {
+        "skill_id": "tyt.mat.temel.ebob-ekok",
+        "delta": -0.03,
+        "reliable": false
+      }
+    ]
+  },
+  "facts_used": [
+    311,
+    314,
+    318
+  ],
+  "next_week_focus": [
+    "tyt.mat.temel.rasyonel-sayilar",
+    "tyt.mat.temel.ondalik"
+  ]
+}

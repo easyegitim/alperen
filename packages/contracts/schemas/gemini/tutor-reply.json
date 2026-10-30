@@ -1,0 +1,100 @@
+{
+  "title": "TutorReply",
+  "description": "Sohbetin yapılandırılmış çıktısı (zincir chat). Sunucu used_fact_ids ve detected_skill_ids'i doğrular.",
+  "type": "object",
+  "required": [
+    "reply",
+    "ends_with_question",
+    "confidence",
+    "escalate",
+    "escalate_reason",
+    "detected_skill_ids",
+    "detected_misconception_tag",
+    "used_fact_ids",
+    "suggest_pool_save"
+  ],
+  "properties": {
+    "reply": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 700,
+      "description": "En çok 4 satır; emoji ve ünlem yok; yalnız **kalın** ve `kod`"
+    },
+    "ends_with_question": {
+      "type": "boolean"
+    },
+    "hint_level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "escalate": {
+      "type": "boolean"
+    },
+    "escalate_reason": {
+      "enum": [
+        "bot_unsure",
+        "grade_attendance_payment",
+        "human_requested"
+      ],
+      "type": "string",
+      "nullable": true
+    },
+    "detected_skill_ids": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$"
+      }
+    },
+    "detected_misconception_tag": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$",
+      "nullable": true
+    },
+    "used_fact_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "description": "Gerçekten kullanılan olgu numaraları; sunucu bilinmeyen id'yi atar"
+    },
+    "suggested_buttons": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "enum": [
+          "hint",
+          "show_solution",
+          "ask_instructor",
+          "skip",
+          "continue"
+        ],
+        "type": "string"
+      }
+    },
+    "suggest_pool_save": {
+      "type": "boolean",
+      "description": "Cevap genel bir açıklamaysa content_pool adayı"
+    }
+  },
+  "propertyOrdering": [
+    "reply",
+    "ends_with_question",
+    "hint_level",
+    "confidence",
+    "escalate",
+    "escalate_reason",
+    "detected_skill_ids",
+    "detected_misconception_tag",
+    "used_fact_ids",
+    "suggested_buttons",
+    "suggest_pool_save"
+  ]
+}

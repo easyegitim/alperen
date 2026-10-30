@@ -1,0 +1,72 @@
+[
+  {
+    "schema_version": "1.0",
+    "source_id": "53ad77db-789c-5344-b86e-a2491d00af64",
+    "item_no": 1,
+    "topic": "Rasyonel sayılar",
+    "kind": "calc",
+    "points": 10,
+    "year": 2023,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "ocr_text": "1) 7/8 - (1/2 + 1/8) işleminin sonucunu en sade kesir olarak bulunuz.",
+    "ocr_confidence": 0.94
+  },
+  {
+    "schema_version": "1.0",
+    "source_id": "53ad77db-789c-5344-b86e-a2491d00af64",
+    "item_no": 2,
+    "topic": "Yüzde problemleri",
+    "kind": "mc",
+    "points": 5,
+    "year": 2023,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "skill_id": "tyt.mat.problem.yuzde",
+    "ocr_text": "2) Maliyeti 120 TL olan bir ürün %25 kârla satılıyor. Satış fiyatı kaç TL'dir? A) 140 B) 145 C) 150 D) 160",
+    "ocr_confidence": 0.93
+  },
+  {
+    "schema_version": "1.0",
+    "source_id": "53ad77db-789c-5344-b86e-a2491d00af64",
+    "item_no": 3,
+    "topic": "Birinci dereceden denklem",
+    "kind": "calc",
+    "points": 10,
+    "year": 2023,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "skill_id": "tyt.mat.cebir.denklem",
+    "ocr_text": "3) (x - 1)/2 + x/3 = 4 denklemini çözünüz.",
+    "ocr_confidence": 0.92
+  },
+  {
+    "schema_version": "1.0",
+    "source_id": "53ad77db-789c-5344-b86e-a2491d00af64",
+    "item_no": 4,
+    "topic": "Tek ve çift sayılar ispatı",
+    "kind": "proof",
+    "points": 15,
+    "year": 2023,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "skill_id": null,
+    "ocr_text": "4) Herhangi iki tek tam sayının toplamının çift olduğunu gösteriniz.",
+    "ocr_confidence": 0.91
+  },
+  {
+    "schema_version": "1.0",
+    "source_id": "53ad77db-789c-5344-b86e-a2491d00af64",
+    "item_no": 5,
+    "topic": "Oran orantı",
+    "kind": "other",
+    "points": 5,
+    "year": 2023,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "skill_id": "tyt.mat.cebir.oran-oranti",
+    "ocr_text": "5) 6 musluk bir havuzu 8 saatte dolduruyor. Aynı musluklardan 4 tanesi bu havuzu kaç saatte doldurur?",
+    "ocr_confidence": 0.9
+  }
+]

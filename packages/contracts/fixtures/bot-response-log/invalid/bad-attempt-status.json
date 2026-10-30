@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "in_message_id": null,
+  "chat_id": 7350012345,
+  "out_telegram_message_id": null,
+  "purpose": "degraded",
+  "mode": null,
+  "prompt_version": null,
+  "prompt_hash": null,
+  "prompt_text": null,
+  "response_text": "Şu an yoğunluk var; sorunu eğitmenine ilettim.",
+  "memory_fact_ids": [],
+  "recent_message_ids": [],
+  "cache_hit": false,
+  "provider": null,
+  "model": null,
+  "provider_attempts": [
+    {
+      "provider": "gemini-paid",
+      "model": "gemini-2.5-flash-lite",
+      "status": "crashed",
+      "error_code": "429"
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "status": "timeout",
+      "latency_ms": 8000,
+      "error_code": "timeout"
+    }
+  ],
+  "tokens_in": null,
+  "tokens_out": null,
+  "cost_usd": 0,
+  "latency_ms": 8120,
+  "confidence": null,
+  "escalated": true,
+  "schema_valid": null,
+  "degraded_mode": true,
+  "pii_replacements": 0,
+  "guards": [
+    "unsure"
+  ]
+}

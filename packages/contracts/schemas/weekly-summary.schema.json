@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/weekly-summary.json",
+  "title": "WeeklySummary",
+  "description": "Haftalık öğrenci özeti (Katman 3): üçüncü tekil, isimsiz; metrikler SQL/Python'dan, LLM yalnız metni yazar.",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "student_ref",
+    "week_start",
+    "body",
+    "metrics",
+    "facts_used"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "student_ref": {
+      "$ref": "common.json#/$defs/studentRef"
+    },
+    "week_start": {
+      "$ref": "common.json#/$defs/date"
+    },
+    "body": {
+      "type": "string",
+      "maxLength": 600,
+      "description": "3–6 cümle, üçüncü tekil, isimsiz: ne çalıştı, nerede takıldı, ne söz verdi, moral"
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "messages",
+        "questions_solved",
+        "accuracy",
+        "active_days",
+        "open_misconceptions",
+        "unanswered_questions",
+        "morale_trend"
+      ],
+      "properties": {
+        "messages": {
+          "type": "integer"
+        },
+        "questions_solved": {
+          "type": "integer"
+        },
+        "accuracy": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "common.json#/$defs/probability"
+            }
+          ]
+        },
+        "active_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "open_misconceptions": {
+          "type": "integer"
+        },
+        "unanswered_questions": {
+          "type": "integer"
+        },
+        "morale_trend": {
+          "enum": [
+            "up",
+            "flat",
+            "down",
+            "unknown"
+          ]
+        },
+        "mastery_deltas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "skill_id",
+              "delta"
+            ],
+            "properties": {
+              "skill_id": {
+                "$ref": "common.json#/$defs/skillId"
+              },
+              "delta": {
+                "type": "number",
+                "minimum": -1,
+                "maximum": 1
+              },
+              "reliable": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "facts_used": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "next_week_focus": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "$ref": "common.json#/$defs/skillId"
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "update_id": 900001,
+  "message": {
+    "message_id": 41,
+    "from": {
+      "id": 7350012345,
+      "is_bot": false,
+      "first_name": "Elif",
+      "last_name": "Kaya",
+      "language_code": "tr"
+    },
+    "date": 1760799600,
+    "text": "3/4 + 1/8 neden 4/12 değil?"
+  }
+}

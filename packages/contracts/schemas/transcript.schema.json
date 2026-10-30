@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/transcript.json",
+  "title": "Transcript",
+  "description": "Ders transkripti (transcribe/diarize sahteleri ve transcripts/<id>.jsonl): konuşmacı etiketli, isimsiz bölümler. Tek bölüm transcript#/$defs/segment ile doğrulanır.",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "segments"
+  ],
+  "properties": {
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/segment"
+      }
+    }
+  },
+  "$defs": {
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "speaker",
+        "text"
+      ],
+      "properties": {
+        "t": {
+          "$ref": "common.json#/$defs/ts"
+        },
+        "t_end": {
+          "$ref": "common.json#/$defs/ts"
+        },
+        "speaker": {
+          "$ref": "common.json#/$defs/speaker"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      }
+    }
+  }
+}

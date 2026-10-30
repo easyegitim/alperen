@@ -1,0 +1,20 @@
+{
+  "bad-points-text.json": [
+    "pattern"
+  ],
+  "single-year.json": [
+    "minimum"
+  ],
+  "word-cikacak.json": [
+    "x-forbidden-words"
+  ],
+  "word-garantili-uppercase.json": [
+    "x-forbidden-words"
+  ],
+  "word-tahmin.json": [
+    "x-forbidden-words"
+  ],
+  "wrong-title.json": [
+    "const"
+  ]
+}

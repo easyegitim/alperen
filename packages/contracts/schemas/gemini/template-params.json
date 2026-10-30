@@ -1,0 +1,35 @@
+{
+  "title": "TemplateParams",
+  "description": "Parametrik şablon varyantının parametreleri (question-item.template ile aynı biçim: {id, params}); seed ile aynı varyant yeniden üretilir. Değerler: sayı, metin, mantıksal, null, bunların düz dizisi ya da bir düzey düz nesne (ör. {\"kesir1\": {\"pay\": 1, \"payda\": 2}}); iki düzey iç içe nesne düşer.",
+  "type": "object",
+  "required": [
+    "id",
+    "params"
+  ],
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "1.0"
+      ],
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "params": {
+      "type": "object",
+      "minProperties": 1
+    }
+  },
+  "propertyOrdering": [
+    "schema_version",
+    "id",
+    "seed",
+    "params"
+  ]
+}

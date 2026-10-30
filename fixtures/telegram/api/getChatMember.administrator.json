@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "result": {
+    "status": "administrator",
+    "user": {
+      "id": 800000001,
+      "is_bot": true,
+      "first_name": "Öğrenmen",
+      "username": "ogrenmen_bot"
+    },
+    "can_be_edited": false,
+    "can_manage_chat": true,
+    "can_delete_messages": true,
+    "can_invite_users": true,
+    "can_pin_messages": true,
+    "is_anonymous": false
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "title": "DiagnosticKeys",
+  "description": "Teşhis cevap anahtarları (diagnostic/answer-keys.json): {madde kodu: anahtar}. Yalnız seed-keys.py okur; Worker ve LLM yolu içe almaz.",
+  "type": "object",
+  "minProperties": 1
+}

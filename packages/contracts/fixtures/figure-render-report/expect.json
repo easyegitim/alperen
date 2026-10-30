@@ -1,0 +1,14 @@
+{
+  "inconsistent-status.json": [
+    "const"
+  ],
+  "match-with-mismatches.json": [
+    "maxItems"
+  ],
+  "mismatch-without-details.json": [
+    "minItems"
+  ],
+  "unknown-render-status.json": [
+    "enum"
+  ]
+}

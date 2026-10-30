@@ -1,0 +1,17 @@
+{
+  "callback-data-too-long.json": [
+    "maxLength"
+  ],
+  "message-without-chat.json": [
+    "required"
+  ],
+  "no-event.json": [
+    "oneOf"
+  ],
+  "two-events.json": [
+    "oneOf"
+  ],
+  "unknown-chat-type.json": [
+    "enum"
+  ]
+}

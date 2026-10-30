@@ -1,0 +1,11 @@
+{
+  "evidence-extra-field.json": [
+    "additionalProperties"
+  ],
+  "quote-with-name-speaker.json": [
+    "enum"
+  ],
+  "student-ref-with-name.json": [
+    "pattern"
+  ]
+}

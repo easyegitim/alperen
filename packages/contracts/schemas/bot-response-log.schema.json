@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/bot-response-log.json",
+  "title": "BotResponseLog",
+  "description": "Her bot cevabının kaydı (bot_responses; log_bot_response). Kayıt yoksa cevap yok; prompt_text temizlenmiş tam prompttur.",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "chat_id",
+    "purpose",
+    "response_text",
+    "provider_attempts",
+    "memory_fact_ids",
+    "recent_message_ids",
+    "cost_usd",
+    "latency_ms",
+    "cache_hit",
+    "degraded_mode",
+    "escalated",
+    "pii_replacements"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "in_message_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "chat_id": {
+      "type": "integer"
+    },
+    "out_telegram_message_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "purpose": {
+      "enum": [
+        "chat",
+        "feedback",
+        "hint",
+        "command",
+        "proactive",
+        "escalation",
+        "quota",
+        "consent",
+        "degraded"
+      ]
+    },
+    "mode": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "enum": [
+            "socratic",
+            "direct"
+          ]
+        }
+      ]
+    },
+    "prompt_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "prompt_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "prompt_text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 16000,
+      "description": "TEMİZLENMİŞ tam prompt (sistem + bağlam + mesaj); 30 gün sonra null"
+    },
+    "response_text": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "memory_fact_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "recent_message_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "pool_id": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.json#/$defs/uuid"
+        }
+      ]
+    },
+    "cache_hit": {
+      "type": "boolean"
+    },
+    "provider": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "provider_attempts": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/providerAttempt"
+      }
+    },
+    "tokens_in": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "tokens_out": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "cost_usd": {
+      "$ref": "common.json#/$defs/usd"
+    },
+    "latency_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "confidence": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.json#/$defs/probability"
+        }
+      ]
+    },
+    "escalated": {
+      "type": "boolean"
+    },
+    "schema_valid": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "quota_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "used": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      }
+    },
+    "degraded_mode": {
+      "type": "boolean"
+    },
+    "pii_replacements": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "guards": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "forbidden_topic",
+          "unsure",
+          "human_requested",
+          "quota",
+          "consent_missing",
+          "figure_unverified",
+          "format_fix",
+          "injection_suspect"
+        ]
+      }
+    }
+  }
+}

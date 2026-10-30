@@ -1,0 +1,32 @@
+[
+  {
+    "id": "c661b28c-81a8-5c11-9a5e-b919b5231034",
+    "public_ref": "s_qk7m2rx4tn5a",
+    "is_minor": false,
+    "tz": "Europe/Istanbul",
+    "tier": "standard",
+    "status": "active",
+    "created_at": "2026-10-10T12:00:00Z",
+    "deleted_at": null
+  },
+  {
+    "id": "1da926ea-a047-5403-9644-bb047719707b",
+    "public_ref": "s_vd3hp6wz2kc7",
+    "is_minor": true,
+    "tz": "Europe/Istanbul",
+    "tier": "standard",
+    "status": "active",
+    "created_at": "2026-10-10T12:00:00Z",
+    "deleted_at": null
+  },
+  {
+    "id": "9d4d557b-6191-5018-b679-baf9dbacc67e",
+    "public_ref": "s_mb5tj7ye4ql2",
+    "is_minor": true,
+    "tz": "Europe/Istanbul",
+    "tier": "standard",
+    "status": "pending_consent",
+    "created_at": "2026-10-10T12:00:00Z",
+    "deleted_at": null
+  }
+]

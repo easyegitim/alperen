@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "course_code": "DEMO",
+  "period": "2026",
+  "title": "Sıklık analizine göre öncelikler",
+  "years_total": 2,
+  "rows": [
+    {
+      "rank": 1,
+      "topic": "Sınavda çıkacak kesir",
+      "kind": "çoktan seçmeli",
+      "skill_id": "tyt.mat.problem.kesir",
+      "hits": 3,
+      "years": 2,
+      "points_text": "≈4 puan",
+      "evidence_count": 3,
+      "evidence_item_ids": [
+        "c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e03"
+      ],
+      "syllabus_alignment": "asked_not_in_syllabus"
+    }
+  ],
+  "others": [],
+  "evidence_count": 3,
+  "generated_at": "2026-10-18T09:30:00+03:00"
+}

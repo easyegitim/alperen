@@ -1,0 +1,8 @@
+{
+  "ref": "#/$defs/timedQuote",
+  "data": {
+    "speaker": "Elif",
+    "quote": "Bunu anlamadım.",
+    "t": "00:03:10"
+  }
+}

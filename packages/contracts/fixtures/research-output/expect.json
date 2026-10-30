@@ -1,0 +1,20 @@
+{
+  "crossref-verified-false.json": [
+    "additionalProperties"
+  ],
+  "low-title-similarity.json": [
+    "minimum"
+  ],
+  "no-doi-with-doi.json": [
+    "not"
+  ],
+  "two-expanded-queries.json": [
+    "minItems"
+  ],
+  "unresolved-citation.json": [
+    "enum"
+  ],
+  "verified-without-doi.json": [
+    "required"
+  ]
+}

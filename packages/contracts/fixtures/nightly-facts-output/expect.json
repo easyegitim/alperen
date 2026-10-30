@@ -1,0 +1,14 @@
+{
+  "active-hour-24.json": [
+    "maximum"
+  ],
+  "bad-day.json": [
+    "format"
+  ],
+  "nested-fact-missing-source.json": [
+    "required"
+  ],
+  "too-many-facts.json": [
+    "maxItems"
+  ]
+}

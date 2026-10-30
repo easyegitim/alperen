@@ -1,0 +1,11 @@
+{
+  "reply": "Bu soruyu eğitmenine iletiyorum; o sana döner.",
+  "ends_with_question": false,
+  "confidence": 0.4,
+  "escalate": true,
+  "escalate_reason": "grade_attendance_payment",
+  "detected_skill_ids": [],
+  "detected_misconception_tag": null,
+  "used_fact_ids": [],
+  "suggest_pool_save": false
+}

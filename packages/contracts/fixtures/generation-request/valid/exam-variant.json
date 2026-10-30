@@ -1,0 +1,11 @@
+{
+  "kind": "exam_variant",
+  "skill_id": "tyt.mat.problem.kesir",
+  "difficulty_band": "mid",
+  "topic": "Kesir problemleri",
+  "question_kind": "mcq",
+  "points": 4,
+  "plan_id": "0e9d8c7b-6a5f-4e3d-8c2b-1a0f9e8d7c64",
+  "requested_by_staff": "5b6c7d8e-9f0a-4b1c-8d2e-3f4a5b6c7d85",
+  "needs_generation": true
+}

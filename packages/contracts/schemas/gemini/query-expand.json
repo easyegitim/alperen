@@ -1,0 +1,23 @@
+{
+  "title": "QueryExpand",
+  "description": "Kitap araştırma sorusunun 3–5 arama sorgusuna genişletilmesi (zincir query_expand).",
+  "type": "object",
+  "required": [
+    "queries"
+  ],
+  "properties": {
+    "queries": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 200
+      }
+    }
+  },
+  "propertyOrdering": [
+    "queries"
+  ]
+}

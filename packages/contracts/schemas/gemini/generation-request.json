@@ -1,0 +1,103 @@
+{
+  "title": "GenerationRequest",
+  "description": "generation_requests satırı (boru hatları arası sözleşme tablosu): yalnız META taşır (kazanım, bant, konu, tür, puan). ocr_text/stem alanı TANIMSIZDIR ve additionalProperties:false olduğundan ham soru metni taşınamaz.",
+  "type": "object",
+  "required": [
+    "kind",
+    "skill_id",
+    "difficulty_band"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "pool_miss",
+        "regenerate",
+        "exam_variant"
+      ],
+      "type": "string"
+    },
+    "curriculum_id": {
+      "type": "string"
+    },
+    "skill_id": {
+      "type": "string",
+      "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$"
+    },
+    "difficulty_band": {
+      "enum": [
+        "easy",
+        "mid",
+        "hard"
+      ],
+      "type": "string"
+    },
+    "topic": {
+      "type": "string",
+      "maxLength": 80,
+      "description": "exam_variant: küme konusu (ham soru metni ASLA)",
+      "nullable": true
+    },
+    "question_kind": {
+      "enum": [
+        "mcq",
+        "numeric"
+      ],
+      "type": "string",
+      "nullable": true
+    },
+    "points": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 999.99,
+      "nullable": true
+    },
+    "plan_id": {
+      "type": "string",
+      "nullable": true
+    },
+    "requested_by": {
+      "type": "string",
+      "nullable": true
+    },
+    "requested_by_staff": {
+      "type": "string",
+      "nullable": true
+    },
+    "served_question_id": {
+      "type": "string",
+      "nullable": true
+    },
+    "served_at": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "needs_generation": {
+      "type": "boolean"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "propertyOrdering": [
+    "id",
+    "kind",
+    "curriculum_id",
+    "skill_id",
+    "difficulty_band",
+    "topic",
+    "question_kind",
+    "points",
+    "plan_id",
+    "requested_by",
+    "requested_by_staff",
+    "served_question_id",
+    "served_at",
+    "needs_generation",
+    "created_at"
+  ]
+}

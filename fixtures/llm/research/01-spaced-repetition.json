@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0",
+  "request_id": "88aef3ff-53e8-5bfa-843b-acc2d9456277",
+  "query": "spaced repetition matematik",
+  "expanded_queries": [
+    "spaced repetition mathematics learning",
+    "distributed practice math achievement",
+    "aralıklı tekrar matematik öğrenme",
+    "interleaved practice mathematics problems"
+  ],
+  "synthesis": [
+    {
+      "text": "Aralıklı çalışma, aynı sürenin tek oturumda toplanmasına göre uzun süreli hatırlamayı güvenilir biçimde artırır; etki, tekrarlar arasındaki aralık sınav tarihine göre ayarlandığında en yüksektir.",
+      "cites": [
+        1,
+        3
+      ]
+    },
+    {
+      "text": "Matematikte problem türlerinin karıştırılarak ve aralıklı çalışılması, aynı türün art arda çözülmesine göre gecikmeli testte daha iyi sonuç vermiştir.",
+      "cites": [
+        2,
+        4
+      ]
+    },
+    {
+      "text": "Türkiye'deki öğrencilerde aralıklı tekrarın başarıyı kesin olarak iki katına çıkardığı bildirilmiştir.",
+      "cites": [
+        5
+      ]
+    }
+  ],
+  "citations": [
+    {
+      "ordinal": 1,
+      "doi": "10.1037/0033-2909.132.3.354",
+      "title": "Distributed practice in verbal recall tasks: A review and quantitative synthesis",
+      "authors": "Cepeda, Nicholas J.; Pashler, Harold; Vul, Edward; Wixted, John T.; Rohrer, Doug",
+      "venue": "Psychological Bulletin",
+      "year": 2006,
+      "crossref_status": "verified",
+      "title_similarity": 0.98,
+      "verified_at": "2026-10-18T00:20:00Z",
+      "oa_pdf_url": null,
+      "tldr": "Aralıklı çalışma, toplu çalışmaya göre uzun süreli hatırlamayı artırır.",
+      "source": "openalex"
+    },
+    {
+      "ordinal": 2,
+      "doi": "10.1007/s11251-007-9015-8",
+      "title": "The shuffling of mathematics problems improves learning",
+      "authors": "Rohrer, Doug; Taylor, Kelli",
+      "venue": "Instructional Science",
+      "year": 2007,
+      "crossref_status": "verified",
+      "title_similarity": 0.97,
+      "verified_at": "2026-10-18T00:20:00Z",
+      "oa_pdf_url": "https://example.org/oa/rohrer-2007.pdf",
+      "tldr": "Karışık sıralanmış matematik problemleri gecikmeli testte daha iyi sonuç verir.",
+      "source": "openalex"
+    },
+    {
+      "ordinal": 3,
+      "doi": "10.1177/1529100612453266",
+      "title": "Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology",
+      "authors": "Dunlosky, John; Rawson, Katherine A.; Marsh, Elizabeth J.; Nathan, Mitchell J.; Willingham, Daniel T.",
+      "venue": "Psychological Science in the Public Interest",
+      "year": 2013,
+      "crossref_status": "verified",
+      "title_similarity": 0.96,
+      "verified_at": "2026-10-18T00:20:00Z",
+      "oa_pdf_url": "https://example.org/oa/dunlosky-2013.pdf",
+      "tldr": "Aralıklı tekrar ve kendini sınama yüksek fayda sağlayan tekniklerdir.",
+      "source": "semantic_scholar"
+    },
+    {
+      "ordinal": 4,
+      "title": "Interleaved and spaced retrieval practice for secondary school algebra",
+      "authors": "Sentetik Yazar; Örnek Araştırmacı",
+      "venue": null,
+      "year": 2025,
+      "crossref_status": "no_doi",
+      "oa_pdf_url": "https://arxiv.org/pdf/2513.00042",
+      "tldr": "Cebirde aralıklı ve karışık tekrarın sınav performansına etkisini tartışır.",
+      "source": "arxiv"
+    },
+    {
+      "ordinal": 5,
+      "doi": "10.9999/fake",
+      "title": "Aralıklı tekrarın matematik başarısına etkisi: bir meta-analiz",
+      "authors": "Yazar, A.",
+      "venue": "Uydurma Eğitim Dergisi",
+      "year": 2021,
+      "crossref_status": "verified",
+      "title_similarity": 0.95,
+      "verified_at": "2026-10-18T00:20:00Z",
+      "oa_pdf_url": null,
+      "tldr": "Aralıklı tekrarın matematik başarısını artırdığını öne sürer.",
+      "source": "semantic_scholar"
+    }
+  ],
+  "matrix": [
+    {
+      "ordinal": 1,
+      "method": "Meta-analiz",
+      "sample": "317 deney",
+      "finding": "Aralıklı çalışma hatırlamayı artırır",
+      "limitation": "Çoğunlukla sözel materyal"
+    },
+    {
+      "ordinal": 2,
+      "method": "Deney",
+      "sample": "Üniversite öğrencileri",
+      "finding": "Karışık problem sırası gecikmeli testte üstün",
+      "limitation": "Tek konu (hacim problemleri)"
+    },
+    {
+      "ordinal": 3,
+      "method": "Derleme",
+      "sample": "10 öğrenme tekniği",
+      "finding": "Aralıklı tekrar yüksek fayda",
+      "limitation": "Sınıf içi uygulama verisi sınırlı"
+    },
+    {
+      "ordinal": 4,
+      "method": "Gözlemsel",
+      "sample": "Sentetik platform verisi",
+      "finding": "Aralıklı tekrar cebirde tutarlı",
+      "limitation": "Hakem değerlendirmesi yok"
+    }
+  ],
+  "removed": [],
+  "bibtex": "@article{cepeda2006,\n  title = {Distributed practice in verbal recall tasks: A review and quantitative synthesis},\n  author = {Cepeda, Nicholas J. and Pashler, Harold and Vul, Edward and Wixted, John T. and Rohrer, Doug},\n  journal = {Psychological Bulletin},\n  year = {2006},\n  doi = {10.1037/0033-2909.132.3.354}\n}\n@article{rohrer2007,\n  title = {The shuffling of mathematics problems improves learning},\n  author = {Rohrer, Doug and Taylor, Kelli},\n  journal = {Instructional Science},\n  year = {2007},\n  doi = {10.1007/s11251-007-9015-8}\n}\n@article{dunlosky2013,\n  title = {Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology},\n  author = {Dunlosky, John and Rawson, Katherine A. and Marsh, Elizabeth J. and Nathan, Mitchell J. and Willingham, Daniel T.},\n  journal = {Psychological Science in the Public Interest},\n  year = {2013},\n  doi = {10.1177/1529100612453266}\n}\n",
+  "apa": [
+    "Cepeda, N., Pashler, H., Vul, E., Wixted, J., Rohrer, D. (2006). Distributed practice in verbal recall tasks: A review and quantitative synthesis. Psychological Bulletin. https://doi.org/10.1037/0033-2909.132.3.354",
+    "Rohrer, D., Taylor, K. (2007). The shuffling of mathematics problems improves learning. Instructional Science. https://doi.org/10.1007/s11251-007-9015-8",
+    "Dunlosky, J., Rawson, K., Marsh, E., Nathan, M., Willingham, D. (2013). Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology. Psychological Science in the Public Interest. https://doi.org/10.1177/1529100612453266"
+  ],
+  "model": "gemini-2.5-flash",
+  "cost_usd": 0.0275
+}

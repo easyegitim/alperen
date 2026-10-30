@@ -1,0 +1,56 @@
+{
+  "update_id": 910000103,
+  "callback_query": {
+    "id": "4382950193847561",
+    "from": {
+      "id": 700000001,
+      "is_bot": false,
+      "first_name": "Elif",
+      "last_name": "Kaya",
+      "username": "elif_k",
+      "language_code": "tr"
+    },
+    "chat_instance": "-6011912345678901",
+    "data": "ans:XGYd94IgW1ihFNeO8cRjDg:HvgkizlLVLOKzL7AVnE-NA:A",
+    "message": {
+      "message_id": 52,
+      "from": {
+        "id": 800000001,
+        "is_bot": true,
+        "first_name": "Öğrenmen",
+        "username": "ogrenmen_bot"
+      },
+      "chat": {
+        "id": 700000001,
+        "type": "private",
+        "first_name": "Elif",
+        "last_name": "Kaya",
+        "username": "elif_k"
+      },
+      "date": 1792512300,
+      "text": "Soru 1/20 · `-3 + 4 · (-2)` işleminin sonucu kaçtır?\nA) `-11`  B) `-2`  C) `5`  D) `-5`",
+      "reply_markup": {
+        "inline_keyboard": [
+          [
+            {
+              "text": "A",
+              "callback_data": "ans:XGYd94IgW1ihFNeO8cRjDg:HvgkizlLVLOKzL7AVnE-NA:A"
+            },
+            {
+              "text": "B",
+              "callback_data": "ans:XGYd94IgW1ihFNeO8cRjDg:HvgkizlLVLOKzL7AVnE-NA:B"
+            },
+            {
+              "text": "C",
+              "callback_data": "ans:XGYd94IgW1ihFNeO8cRjDg:HvgkizlLVLOKzL7AVnE-NA:C"
+            },
+            {
+              "text": "D",
+              "callback_data": "ans:XGYd94IgW1ihFNeO8cRjDg:HvgkizlLVLOKzL7AVnE-NA:D"
+            }
+          ]
+        ]
+      }
+    }
+  }
+}

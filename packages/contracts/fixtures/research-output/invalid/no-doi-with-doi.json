@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "request_id": "8a1c2e3f-4b5d-4c6e-8f7a-9b0c1d2e3f42",
+  "query": "spaced repetition matematik",
+  "expanded_queries": [
+    "spaced repetition mathematics high school",
+    "distributed practice math retention",
+    "aralıklı tekrar matematik"
+  ],
+  "synthesis": [
+    {
+      "text": "Aralıklı tekrarın saklama üzerindeki etkisi aralık uzunluğuna bağlıdır.",
+      "cites": [
+        1
+      ]
+    },
+    {
+      "text": "Lise matematiğinde aralıklı pratik, toplu pratiğe göre daha yüksek kalıcılık göstermiştir.",
+      "cites": [
+        1,
+        2
+      ]
+    }
+  ],
+  "citations": [
+    {
+      "ordinal": 1,
+      "doi": "10.1037/a0020082",
+      "title": "Spacing effects in learning: A temporal ridgeline of optimal retention",
+      "authors": "Cepeda, N. J.; Vul, E.; Rohrer, D.; Wixted, J. T.; Pashler, H.",
+      "venue": "Psychological Science",
+      "year": 2008,
+      "crossref_status": "verified",
+      "title_similarity": 0.97,
+      "verified_at": "2026-10-18T21:40:00Z",
+      "oa_pdf_url": null,
+      "tldr": "Aralıklı tekrar aralığı hedeflenen saklama süresine göre ayarlandığında kalıcılık artar.",
+      "source": "openalex"
+    },
+    {
+      "ordinal": 2,
+      "title": "Aralıklı tekrar ve matematik başarısı: lise öğrencileriyle bir saha çalışması",
+      "authors": "Yılmaz, A.; Demir, B.",
+      "venue": null,
+      "year": 2021,
+      "crossref_status": "no_doi",
+      "oa_pdf_url": "https://dergipark.org.tr/tr/download/article-file/123456",
+      "tldr": null,
+      "source": "manual",
+      "doi": "10.1000/xyz123"
+    }
+  ],
+  "matrix": [
+    {
+      "ordinal": 1,
+      "method": "deneysel",
+      "sample": "1354 yetişkin",
+      "finding": "optimum aralık saklama süresiyle artar",
+      "limitation": "laboratuvar ortamı"
+    },
+    {
+      "ordinal": 2,
+      "method": "yarı deneysel",
+      "sample": "2 lise, 96 öğrenci",
+      "finding": "aralıklı grup daha başarılı",
+      "limitation": "küçük örneklem"
+    }
+  ],
+  "removed": [
+    {
+      "doi_or_title": "10.9999/fake",
+      "reason": "crossref_unresolved"
+    }
+  ],
+  "bibtex": "@article{cepeda2008,\n  doi = {10.1037/a0020082},\n  year = {2008}\n}",
+  "apa": [
+    "Cepeda, N. J., Vul, E., Rohrer, D., Wixted, J. T., & Pashler, H. (2008). Spacing effects in learning. Psychological Science."
+  ],
+  "model": "gemini-2.5-flash",
+  "cost_usd": 0.0274
+}

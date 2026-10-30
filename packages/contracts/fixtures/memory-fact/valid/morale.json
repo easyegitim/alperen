@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "student_ref": "s_p2r4t6v7w3cd",
+  "kind": "morale",
+  "text": "Öğrenci denemeden sonra kendini yorgun hissettiğini yazdı.",
+  "source_message_ids": [
+    1201,
+    1203,
+    1204
+  ],
+  "confidence": 0.64,
+  "morale_signal": -2,
+  "requires_approval": false
+}

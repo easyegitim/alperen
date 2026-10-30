@@ -1,0 +1,265 @@
+{
+  "title": "BotResponseLog",
+  "description": "Her bot cevabının kaydı (bot_responses; log_bot_response). Kayıt yoksa cevap yok; prompt_text temizlenmiş tam prompttur.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "chat_id",
+    "purpose",
+    "response_text",
+    "provider_attempts",
+    "memory_fact_ids",
+    "recent_message_ids",
+    "cost_usd",
+    "latency_ms",
+    "cache_hit",
+    "degraded_mode",
+    "escalated",
+    "pii_replacements"
+  ],
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "1.0"
+      ],
+      "type": "string"
+    },
+    "in_message_id": {
+      "type": "integer",
+      "nullable": true
+    },
+    "chat_id": {
+      "type": "integer"
+    },
+    "out_telegram_message_id": {
+      "type": "integer",
+      "nullable": true
+    },
+    "purpose": {
+      "enum": [
+        "chat",
+        "feedback",
+        "hint",
+        "command",
+        "proactive",
+        "escalation",
+        "quota",
+        "consent",
+        "degraded"
+      ],
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "socratic",
+        "direct"
+      ],
+      "type": "string",
+      "nullable": true
+    },
+    "prompt_version": {
+      "type": "string",
+      "nullable": true
+    },
+    "prompt_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "nullable": true
+    },
+    "prompt_text": {
+      "type": "string",
+      "maxLength": 16000,
+      "description": "TEMİZLENMİŞ tam prompt (sistem + bağlam + mesaj); 30 gün sonra null",
+      "nullable": true
+    },
+    "response_text": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "memory_fact_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "recent_message_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "pool_id": {
+      "type": "string",
+      "nullable": true
+    },
+    "cache_hit": {
+      "type": "boolean"
+    },
+    "provider": {
+      "type": "string",
+      "nullable": true
+    },
+    "model": {
+      "type": "string",
+      "nullable": true
+    },
+    "provider_attempts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "provider",
+          "model",
+          "status"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error",
+              "rate_limited",
+              "timeout",
+              "cap_blocked",
+              "cooldown_skip",
+              "bad_output"
+            ],
+            "type": "string"
+          },
+          "tokens_in": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tokens_out": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cost_usd": {
+            "type": "number",
+            "minimum": 0
+          },
+          "latency_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "error_code": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "propertyOrdering": [
+          "provider",
+          "model",
+          "status",
+          "tokens_in",
+          "tokens_out",
+          "cost_usd",
+          "latency_ms",
+          "error_code"
+        ]
+      }
+    },
+    "tokens_in": {
+      "type": "integer",
+      "nullable": true
+    },
+    "tokens_out": {
+      "type": "integer",
+      "nullable": true
+    },
+    "cost_usd": {
+      "type": "number",
+      "minimum": 0
+    },
+    "latency_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "nullable": true
+    },
+    "escalated": {
+      "type": "boolean"
+    },
+    "schema_valid": {
+      "type": "boolean",
+      "nullable": true
+    },
+    "quota_state": {
+      "type": "object",
+      "properties": {
+        "used": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "propertyOrdering": [
+        "used",
+        "limit"
+      ]
+    },
+    "degraded_mode": {
+      "type": "boolean"
+    },
+    "pii_replacements": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "guards": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "forbidden_topic",
+          "unsure",
+          "human_requested",
+          "quota",
+          "consent_missing",
+          "figure_unverified",
+          "format_fix",
+          "injection_suspect"
+        ],
+        "type": "string"
+      }
+    }
+  },
+  "propertyOrdering": [
+    "schema_version",
+    "in_message_id",
+    "chat_id",
+    "out_telegram_message_id",
+    "purpose",
+    "mode",
+    "prompt_version",
+    "prompt_hash",
+    "prompt_text",
+    "response_text",
+    "memory_fact_ids",
+    "recent_message_ids",
+    "pool_id",
+    "cache_hit",
+    "provider",
+    "model",
+    "provider_attempts",
+    "tokens_in",
+    "tokens_out",
+    "cost_usd",
+    "latency_ms",
+    "confidence",
+    "escalated",
+    "schema_valid",
+    "quota_state",
+    "degraded_mode",
+    "pii_replacements",
+    "guards"
+  ]
+}

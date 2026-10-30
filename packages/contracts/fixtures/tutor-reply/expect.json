@@ -1,0 +1,17 @@
+{
+  "four-buttons.json": [
+    "maxItems"
+  ],
+  "missing-pool-flag.json": [
+    "required"
+  ],
+  "reply-too-long.json": [
+    "maxLength"
+  ],
+  "three-skills.json": [
+    "maxItems"
+  ],
+  "unknown-escalate-reason.json": [
+    "enum"
+  ]
+}

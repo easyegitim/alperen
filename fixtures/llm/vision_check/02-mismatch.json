@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "matches_stem": false,
+  "status": "mismatch",
+  "mismatches": [
+    {
+      "field": "payda2",
+      "expected": 4,
+      "observed": 3,
+      "note": "Alt dikdörtgen 3 eş parçaya bölünmüş."
+    },
+    "Etiket 1/3 yazıyor, kökte 1/4 geçiyor."
+  ],
+  "notes": "Şekil kodu alt modeli yanlış paydayla çiziyor.",
+  "render": {
+    "status": "ok",
+    "tool": "matplotlib",
+    "width_px": 800,
+    "height_px": 400,
+    "bytes": 14310
+  }
+}

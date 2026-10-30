@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/exam-item.json",
+  "title": "ExamItem",
+  "description": "Sınav arşivinden OCR ile çıkarılmış tek soru (exam_items). ocr_text hiçbir öğrenci çıktısına kopyalanmaz.",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_id",
+    "item_no",
+    "topic",
+    "kind",
+    "year",
+    "ocr_text"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "source_id": {
+      "$ref": "common.json#/$defs/uuid"
+    },
+    "item_no": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "topic": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "kind": {
+      "enum": [
+        "proof",
+        "calc",
+        "mc",
+        "other"
+      ]
+    },
+    "points": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "year": {
+      "type": "integer"
+    },
+    "term": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "enum": [
+            "vize",
+            "final",
+            "but",
+            "deneme",
+            "osym",
+            "diger"
+          ]
+        }
+      ]
+    },
+    "instructor_alias": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^hoca-[A-Z]$"
+    },
+    "skill_id": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.json#/$defs/skillId"
+        }
+      ]
+    },
+    "ocr_text": {
+      "type": "string",
+      "description": "Yalnız eğitmen arşivi ve kümeleme; hiçbir öğrenci çıktısına kopyalanmaz"
+    },
+    "ocr_confidence": {
+      "$ref": "common.json#/$defs/probability"
+    }
+  }
+}

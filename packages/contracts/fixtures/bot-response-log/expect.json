@@ -1,0 +1,17 @@
+{
+  "bad-attempt-status.json": [
+    "enum"
+  ],
+  "missing-provider-attempts.json": [
+    "required"
+  ],
+  "negative-pii-count.json": [
+    "minimum"
+  ],
+  "prompt-hash-not-hex.json": [
+    "pattern"
+  ],
+  "unknown-purpose.json": [
+    "enum"
+  ]
+}

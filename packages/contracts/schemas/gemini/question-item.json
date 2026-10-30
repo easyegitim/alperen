@@ -1,0 +1,360 @@
+{
+  "title": "QuestionItem",
+  "description": "Soru maddesi. Cevap anahtarı BU NESNEDE YOKTUR (answer-key ayrı sözleşmedir).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "curriculum_code",
+    "kind",
+    "skill_ids",
+    "stem",
+    "figure",
+    "source",
+    "verification"
+  ],
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "1.0"
+      ],
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "curriculum_code": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,5}-[A-Z]{2,5}@[0-9]{4}\\.[0-9]+$"
+    },
+    "kind": {
+      "enum": [
+        "mcq",
+        "numeric"
+      ],
+      "type": "string"
+    },
+    "skill_ids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$"
+      }
+    },
+    "stem": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 900,
+      "description": "Soru kökü; formüller düz metin/kod biçiminde; şekil varsa kök şekli kelimelerle de anlatır"
+    },
+    "stem_values": {
+      "type": "object",
+      "description": "Şekil denetiminin karşılaştırdığı değerler (kenar, açı, eksen)"
+    },
+    "figure": {
+      "type": "object",
+      "required": [
+        "tool",
+        "code",
+        "alt_text"
+      ],
+      "properties": {
+        "tool": {
+          "enum": [
+            "matplotlib",
+            "svg",
+            "tikz",
+            "vega-lite",
+            "schemdraw",
+            "rdkit",
+            "graphviz",
+            "latex",
+            "template"
+          ],
+          "type": "string"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000
+        },
+        "alt_text": {
+          "type": "string",
+          "minLength": 15,
+          "maxLength": 400,
+          "description": "Şekli kelimelerle anlatır (Telegram altyazısı, alt)"
+        },
+        "expected_px": {
+          "type": "object",
+          "properties": {
+            "min_w": {
+              "type": "integer"
+            },
+            "max_w": {
+              "type": "integer"
+            },
+            "min_h": {
+              "type": "integer"
+            },
+            "max_h": {
+              "type": "integer"
+            }
+          },
+          "propertyOrdering": [
+            "min_w",
+            "max_w",
+            "min_h",
+            "max_h"
+          ]
+        },
+        "render": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": [
+                "pending",
+                "rendered",
+                "failed"
+              ],
+              "type": "string"
+            },
+            "png_path": {
+              "type": "string"
+            },
+            "width_px": {
+              "type": "integer"
+            },
+            "height_px": {
+              "type": "integer"
+            },
+            "bytes": {
+              "type": "integer"
+            },
+            "vision": {
+              "enum": [
+                "pending",
+                "match",
+                "mismatch",
+                "not_applicable",
+                "skipped"
+              ],
+              "type": "string"
+            },
+            "attempts": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3
+            }
+          },
+          "propertyOrdering": [
+            "status",
+            "png_path",
+            "width_px",
+            "height_px",
+            "bytes",
+            "vision",
+            "attempts"
+          ]
+        }
+      },
+      "propertyOrdering": [
+        "tool",
+        "code",
+        "alt_text",
+        "expected_px",
+        "render"
+      ],
+      "nullable": true
+    },
+    "options": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "Tam dört şık, anahtarlar sırayla A, B, C, D (yinelenen, eksik ya da sırası bozuk anahtar düşer; Telegram A·B·C·D düğmeleri ve grade_attempt aynı sırayı varsayar). En az iki şık misconception_tag=null taşır (doğru şık + en az bir etiketsiz çeldirici).",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "text",
+          "misconception_tag"
+        ],
+        "properties": {
+          "key": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "misconception_tag": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$",
+            "description": "Yanlış şıkkın kodladığı yanılgı. DOĞRU ŞIK BU DİZİDEN ÇIKARILAMAZ: doğru şık null taşır VE en az bir çeldirici de null taşır (en az iki null zorunlu); LLM ve öğrenci yolu şıkları app.strip_tags ile etiketsiz görür.",
+            "nullable": true
+          }
+        },
+        "propertyOrdering": [
+          "key",
+          "text",
+          "misconception_tag"
+        ]
+      }
+    },
+    "difficulty": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "source": {
+      "enum": [
+        "template",
+        "llm",
+        "instructor",
+        "diagnostic"
+      ],
+      "type": "string"
+    },
+    "template": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "description": "Şablon parametreleri (template-params ile aynı değer kuralı: sayı, metin, mantıksal, null, bunların düz dizisi ya da bir düzey düz nesne)"
+        }
+      },
+      "propertyOrdering": [
+        "id",
+        "params"
+      ]
+    },
+    "verification": {
+      "type": "object",
+      "required": [
+        "schema",
+        "sympy",
+        "render",
+        "vision",
+        "attempts",
+        "status"
+      ],
+      "properties": {
+        "schema": {
+          "type": "boolean"
+        },
+        "sympy": {
+          "enum": [
+            "verified",
+            "failed",
+            "not_applicable",
+            "pending"
+          ],
+          "type": "string"
+        },
+        "render": {
+          "enum": [
+            "ok",
+            "failed",
+            "size_mismatch",
+            "not_applicable",
+            "pending"
+          ],
+          "type": "string"
+        },
+        "vision": {
+          "enum": [
+            "match",
+            "mismatch",
+            "not_applicable",
+            "pending",
+            "skipped"
+          ],
+          "type": "string"
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "pending_review",
+            "approved",
+            "rejected",
+            "retired"
+          ],
+          "type": "string"
+        },
+        "review_note": {
+          "type": "string",
+          "nullable": true
+        }
+      },
+      "propertyOrdering": [
+        "schema",
+        "sympy",
+        "render",
+        "vision",
+        "attempts",
+        "status",
+        "review_note"
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "cost_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "prompt_version": {
+          "type": "string"
+        },
+        "prompt_hash": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "propertyOrdering": [
+        "model",
+        "cost_usd",
+        "prompt_version",
+        "prompt_hash",
+        "created_at"
+      ]
+    }
+  },
+  "propertyOrdering": [
+    "schema_version",
+    "id",
+    "curriculum_code",
+    "kind",
+    "skill_ids",
+    "stem",
+    "stem_values",
+    "figure",
+    "options",
+    "difficulty",
+    "source",
+    "template",
+    "verification",
+    "provenance"
+  ]
+}

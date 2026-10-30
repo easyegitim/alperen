@@ -1,0 +1,47 @@
+{
+  "update_id": 910000109,
+  "my_chat_member": {
+    "chat": {
+      "id": -1001000000002,
+      "type": "supergroup",
+      "title": "TYT Matematik · Pilot B"
+    },
+    "from": {
+      "id": 700000102,
+      "is_bot": false,
+      "first_name": "Selin",
+      "last_name": "Arslan",
+      "username": "selin_koord",
+      "language_code": "tr"
+    },
+    "date": 1792479600,
+    "old_chat_member": {
+      "status": "left",
+      "user": {
+        "id": 800000001,
+        "is_bot": true,
+        "first_name": "Öğrenmen",
+        "username": "ogrenmen_bot"
+      }
+    },
+    "new_chat_member": {
+      "status": "administrator",
+      "user": {
+        "id": 800000001,
+        "is_bot": true,
+        "first_name": "Öğrenmen",
+        "username": "ogrenmen_bot"
+      },
+      "can_be_edited": false,
+      "can_manage_chat": true,
+      "can_delete_messages": true,
+      "can_manage_video_chats": false,
+      "can_restrict_members": false,
+      "can_promote_members": false,
+      "can_change_info": false,
+      "can_invite_users": true,
+      "can_pin_messages": true,
+      "is_anonymous": false
+    }
+  }
+}

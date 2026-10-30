@@ -1,0 +1,376 @@
+{
+  "lesson": {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "enrollment_id": "8bef16e2-1fb1-56d1-9530-3cd5b1ea7cf3",
+    "staff_id": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "held_at": "2026-10-19T15:00:00Z",
+    "duration_min": 90,
+    "video_deleted_at": null,
+    "deletion_notified_at": null,
+    "transcript_path": "transcripts/00000000-0000-0000-0000-000000000001.jsonl",
+    "frames_count": 8,
+    "status": "analyzed",
+    "created_at": "2026-10-19T17:00:00Z"
+  },
+  "student_label": "Elif K.",
+  "student_ref": "s_qk7m2rx4tn5a",
+  "staff_name": "Ayşe Yılmaz",
+  "analysis": {
+    "id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+    "lesson_id": "00000000-0000-0000-0000-000000000001",
+    "version": 1,
+    "seed_profile": {
+      "weak": [],
+      "misconceptions": [],
+      "prereq_hint": null,
+      "explanation_notes": "kısa adımlar işe yarıyor",
+      "weekly_line": null,
+      "open_misconceptions": [],
+      "previous_next_step": null
+    },
+    "analysis": {
+      "schema_version": "1.0",
+      "lesson_ref": "00000000-0000-0000-0000-000000000001",
+      "student_ref": "s_qk7m2rx4tn5a",
+      "duration_min": 90,
+      "skills": [
+        {
+          "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+          "mastery_estimate": 0.45,
+          "confidence": 0.8,
+          "evidence": [
+            {
+              "speaker": "ÖĞRENCİ",
+              "quote": "Payları toplarım 4, paydaları toplarım 12, yani 4/12.",
+              "t": "00:00:06",
+              "t_end": "00:00:08"
+            },
+            {
+              "speaker": "ÖĞRENCİ",
+              "quote": "O zaman 6/8 + 1/8 = 7/8 oluyor.",
+              "t": "00:00:14",
+              "t_end": "00:00:16"
+            }
+          ]
+        },
+        {
+          "skill_id": "tyt.mat.cebir.denklem",
+          "mastery_estimate": 0.7,
+          "confidence": 0.6,
+          "evidence": [
+            {
+              "speaker": "EĞİTMEN",
+              "quote": "Denklemde de x/2 + 1 = 4 sorusunu doğru çözdün.",
+              "t": "00:00:16",
+              "t_end": "00:00:18"
+            }
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "t": "00:00:10",
+          "quote": "Anlamadım, neden sekiz?",
+          "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+          "answered": true
+        }
+      ],
+      "hesitations": [
+        {
+          "t": "00:00:10",
+          "kind": "said_dont_understand",
+          "quote": "Anlamadım, neden sekiz?",
+          "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+        },
+        {
+          "t": "00:00:06",
+          "kind": "wrong_answer",
+          "quote": "Payları toplarım 4, paydaları toplarım 12, yani 4/12.",
+          "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+        }
+      ],
+      "misconceptions": [
+        {
+          "tag": "rasyonel.pay-payda-ayri-toplama",
+          "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+          "text_instructor": "Payları ve paydaları ayrı ayrı topluyor.",
+          "text_student": "Paylar ve paydalar ayrı ayrı toplanmaz; önce paydaları eşitleyelim.",
+          "resolved_in_lesson": true,
+          "evidence": [
+            {
+              "speaker": "ÖĞRENCİ",
+              "quote": "Payları toplarım 4, paydaları toplarım 12, yani 4/12.",
+              "t": "00:00:06",
+              "t_end": "00:00:08"
+            }
+          ]
+        },
+        {
+          "tag": null,
+          "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+          "text_instructor": "Ortak paydanın neden seçildiğini açıklayamıyor.",
+          "text_student": "Ortak payda iki paydanın ortak katıdır; en küçüğünü seçmek işi kolaylaştırır.",
+          "resolved_in_lesson": false,
+          "evidence": [
+            {
+              "speaker": "ÖĞRENCİ",
+              "quote": "Anlamadım, neden sekiz?",
+              "t": "00:00:10",
+              "t_end": "00:00:12"
+            }
+          ]
+        }
+      ],
+      "commitments": [
+        {
+          "who": "ÖĞRENCİ",
+          "kind": "homework",
+          "text": "Hafta sonuna kadar on kesir sorusu çözecek.",
+          "due": "2026-10-25",
+          "t": "00:00:18"
+        }
+      ],
+      "talk": {
+        "student_ratio": 0.42,
+        "student_questions": 1,
+        "attention": "medium",
+        "morale": "medium",
+        "notes": "Öğrenci soru sormaktan çekinmedi; hatasını fark edince düzeltti."
+      },
+      "previous_profile_check": [],
+      "next_step": {
+        "for_student": "Paydası farklı üç kesir toplama sorusu çöz; her birinde önce ortak paydayı yaz.",
+        "for_instructor": "Bir sonraki derste ortak payda seçimini EKOK ile ilişkilendirerek tekrar edin."
+      },
+      "model_notes": {
+        "model": "gemini-2.5-pro",
+        "prompt_version": "lesson_analysis.v1",
+        "cost_usd": 0.41,
+        "tokens_in": 182000,
+        "tokens_out": 2600,
+        "frames": 8
+      }
+    },
+    "model": "gemini-2.5-pro",
+    "cost_usd": 0.41,
+    "status": "draft",
+    "approved_by": null,
+    "approved_at": null,
+    "created_at": "2026-10-19T17:30:00Z"
+  },
+  "claims": [
+    {
+      "id": "9a57882e-24cf-5ac6-b2da-5b882dc4a888",
+      "analysis_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+      "kind": "skill_mastery",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "mastery": 0.45,
+        "confidence": 0.8
+      },
+      "quote": "Payları toplarım 4, paydaları toplarım 12, yani 4/12.",
+      "speaker": "ÖĞRENCİ",
+      "t_start_sec": 6,
+      "t_end_sec": 8,
+      "status": "pending",
+      "edited_value": null,
+      "decided_by": null,
+      "decided_at": null
+    },
+    {
+      "id": "863475d7-2534-5af4-a256-52a3b9ad611e",
+      "analysis_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+      "kind": "skill_mastery",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": "tyt.mat.cebir.denklem",
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "mastery": 0.7,
+        "confidence": 0.6
+      },
+      "quote": "Denklemde de x/2 + 1 = 4 sorusunu doğru çözdün.",
+      "speaker": "EĞİTMEN",
+      "t_start_sec": 16,
+      "t_end_sec": 18,
+      "status": "pending",
+      "edited_value": null,
+      "decided_by": null,
+      "decided_at": null
+    },
+    {
+      "id": "94778dfd-a5c3-510d-90b6-43bcf509b4a7",
+      "analysis_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+      "kind": "misconception",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "misconception_tag": "rasyonel.pay-payda-ayri-toplama",
+      "misconception_id": null,
+      "value": {
+        "text": "Payları ve paydaları ayrı ayrı topluyor.",
+        "text_student": "Paylar ve paydalar ayrı ayrı toplanmaz; önce paydaları eşitleyelim."
+      },
+      "quote": "Payları toplarım 4, paydaları toplarım 12, yani 4/12.",
+      "speaker": "ÖĞRENCİ",
+      "t_start_sec": 6,
+      "t_end_sec": 8,
+      "status": "pending",
+      "edited_value": null,
+      "decided_by": null,
+      "decided_at": null
+    },
+    {
+      "id": "9e30db91-09ae-53d7-99ad-4f392f1e4424",
+      "analysis_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+      "kind": "misconception",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "text": "Ortak paydanın neden seçildiğini açıklayamıyor.",
+        "text_student": "Ortak payda iki paydanın ortak katıdır; en küçüğünü seçmek işi kolaylaştırır."
+      },
+      "quote": "Anlamadım, neden sekiz?",
+      "speaker": "ÖĞRENCİ",
+      "t_start_sec": 10,
+      "t_end_sec": 12,
+      "status": "pending",
+      "edited_value": null,
+      "decided_by": null,
+      "decided_at": null
+    },
+    {
+      "id": "6661c9fe-5e7b-5ae6-a9cf-5004b6794eed",
+      "analysis_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+      "kind": "question",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "text": "Anlamadım, neden sekiz?",
+        "answered": true
+      },
+      "quote": "Anlamadım, neden sekiz?",
+      "speaker": "ÖĞRENCİ",
+      "t_start_sec": 10,
+      "t_end_sec": null,
+      "status": "pending",
+      "edited_value": null,
+      "decided_by": null,
+      "decided_at": null
+    },
+    {
+      "id": "e6669d9d-be17-595c-aa9a-bc7dc95ad92e",
+      "analysis_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+      "kind": "hesitation",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "text": "Anlamadım, neden sekiz?",
+        "kind": "said_dont_understand"
+      },
+      "quote": "Anlamadım, neden sekiz?",
+      "speaker": "ÖĞRENCİ",
+      "t_start_sec": 10,
+      "t_end_sec": null,
+      "status": "pending",
+      "edited_value": null,
+      "decided_by": null,
+      "decided_at": null
+    },
+    {
+      "id": "29669843-72bd-57bf-b0a1-bd0831d1a22e",
+      "analysis_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+      "kind": "hesitation",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "text": "Payları toplarım 4, paydaları toplarım 12, yani 4/12.",
+        "kind": "wrong_answer"
+      },
+      "quote": "Payları toplarım 4, paydaları toplarım 12, yani 4/12.",
+      "speaker": "ÖĞRENCİ",
+      "t_start_sec": 6,
+      "t_end_sec": null,
+      "status": "pending",
+      "edited_value": null,
+      "decided_by": null,
+      "decided_at": null
+    },
+    {
+      "id": "00b66013-ae8c-5a35-a35f-1a1582dc4119",
+      "analysis_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+      "kind": "homework",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": null,
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "text": "Hafta sonuna kadar on kesir sorusu çözecek.",
+        "due": "2026-10-25"
+      },
+      "quote": "Hafta sonuna kadar on kesir sorusu çözecek.",
+      "speaker": "ÖĞRENCİ",
+      "t_start_sec": 18,
+      "t_end_sec": null,
+      "status": "pending",
+      "edited_value": null,
+      "decided_by": null,
+      "decided_at": null
+    },
+    {
+      "id": "a5b58c26-0b39-5121-9924-f7bc70d86e72",
+      "analysis_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+      "kind": "next_step",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": null,
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "text": "Paydası farklı üç kesir toplama sorusu çöz; her birinde önce ortak paydayı yaz.",
+        "for_instructor": "Bir sonraki derste ortak payda seçimini EKOK ile ilişkilendirerek tekrar edin."
+      },
+      "quote": "Paydası farklı üç kesir toplama sorusu çöz; her birinde önce ortak paydayı yaz.",
+      "speaker": "EĞİTMEN",
+      "t_start_sec": 0,
+      "t_end_sec": null,
+      "status": "pending",
+      "edited_value": null,
+      "decided_by": null,
+      "decided_at": null
+    },
+    {
+      "id": "cc34c8eb-6a20-5d26-b410-5ab231e908e7",
+      "analysis_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+      "kind": "talk",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": null,
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "student_ratio": 0.42,
+        "student_questions": 1,
+        "attention": "medium",
+        "morale": "medium"
+      },
+      "quote": "Öğrenci soru sormaktan çekinmedi; hatasını fark edince düzeltti.",
+      "speaker": "EĞİTMEN",
+      "t_start_sec": 0,
+      "t_end_sec": null,
+      "status": "pending",
+      "edited_value": null,
+      "decided_by": null,
+      "decided_at": null
+    }
+  ],
+  "cost_line": "Ders analizi: 0,41 $ (ayrı bütçe)"
+}

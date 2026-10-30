@@ -1,0 +1,229 @@
+{
+  "title": "CurriculumBundle",
+  "description": "Müfredat sürümünün birleşik doğrulaması: curriculum.json + skills.json + prerequisites.json tek nesnede ({curriculum, skills, prerequisites}). Tekil dosyalar $defs ile doğrulanabilir (curriculum#/$defs/skill vb.).",
+  "type": "object",
+  "required": [
+    "curriculum",
+    "skills",
+    "prerequisites"
+  ],
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "1.0"
+      ],
+      "type": "string"
+    },
+    "curriculum": {
+      "type": "object",
+      "description": "curriculum.json (curricula satırı + dönem + teşhis istisnaları)",
+      "required": [
+        "code",
+        "authority",
+        "year",
+        "version",
+        "label",
+        "status"
+      ],
+      "properties": {
+        "schema_version": {
+          "enum": [
+            "1.0"
+          ],
+          "type": "string"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,5}-[A-Z]{2,5}$"
+        },
+        "authority": {
+          "enum": [
+            "MEB",
+            "ÖSYM",
+            "UNI",
+            "OTHER"
+          ],
+          "type": "string"
+        },
+        "year": {
+          "type": "integer",
+          "minimum": 2000,
+          "maximum": 2100
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]{4}\\.[0-9]+$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "active",
+            "retired"
+          ],
+          "description": "Zorunlu; export-sql.py curricula.status olarak aynen yazar",
+          "type": "string"
+        },
+        "period_label": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 40,
+          "description": "settings.default_period ile aynı (ör. 'YKS 2027')"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "diagnostic_exempt": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$"
+          },
+          "description": "Teşhis maddesi olmayan, pratikte ölçülen yapraklar"
+        }
+      },
+      "propertyOrdering": [
+        "schema_version",
+        "code",
+        "authority",
+        "year",
+        "version",
+        "label",
+        "status",
+        "period_label",
+        "sources",
+        "diagnostic_exempt"
+      ]
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "description": "skills.json öğesi (skills satırı)",
+        "required": [
+          "id",
+          "parent_id",
+          "name",
+          "is_leaf"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$"
+          },
+          "parent_id": {
+            "type": "string",
+            "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 600,
+            "nullable": true
+          },
+          "is_leaf": {
+            "type": "boolean",
+            "description": "Düğüm kazanımlar (false) mastery tutmaz"
+          },
+          "order_no": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "p_init": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 0.999
+          },
+          "p_learn": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 0.999
+          },
+          "p_guess": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 0.999
+          },
+          "p_slip": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 0.999
+          }
+        },
+        "propertyOrdering": [
+          "id",
+          "parent_id",
+          "name",
+          "description",
+          "is_leaf",
+          "order_no",
+          "p_init",
+          "p_learn",
+          "p_guess",
+          "p_slip"
+        ]
+      }
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "prerequisites.json öğesi (skill_prerequisites satırı)",
+        "required": [
+          "skill_id",
+          "prereq_id",
+          "strength"
+        ],
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$"
+          },
+          "prereq_id": {
+            "type": "string",
+            "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$"
+          },
+          "strength": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "source": {
+            "enum": [
+              "curriculum",
+              "instructor",
+              "inferred"
+            ],
+            "type": "string"
+          }
+        },
+        "propertyOrdering": [
+          "skill_id",
+          "prereq_id",
+          "strength",
+          "source"
+        ]
+      }
+    }
+  },
+  "propertyOrdering": [
+    "schema_version",
+    "curriculum",
+    "skills",
+    "prerequisites"
+  ]
+}

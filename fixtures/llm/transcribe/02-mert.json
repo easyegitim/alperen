@@ -1,0 +1,22 @@
+{
+  "segments": [
+    {
+      "t": "00:00:00",
+      "t_end": "00:00:03",
+      "speaker": "EĞİTMEN",
+      "text": "Mert, üslü ifadelerle başlayalım."
+    },
+    {
+      "t": "00:00:03",
+      "t_end": "00:00:06",
+      "speaker": "ÖĞRENCİ",
+      "text": "Negatif üs olunca sayı negatif mi olur?"
+    },
+    {
+      "t": "00:00:06",
+      "t_end": "00:00:10",
+      "speaker": "EĞİTMEN",
+      "text": "Hayır, negatif üs tersini alır: 2^-1 eşittir 1/2."
+    }
+  ]
+}

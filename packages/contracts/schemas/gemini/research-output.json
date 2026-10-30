@@ -1,0 +1,257 @@
+{
+  "title": "ResearchOutput",
+  "description": "Kitap araştırma çıktısı: her atıf Crossref'te doğrulanmış (verified) ya da DOI'siz kurumsal bağlantılı (no_doi); unresolved burada olamaz.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "request_id",
+    "query",
+    "expanded_queries",
+    "synthesis",
+    "citations",
+    "matrix",
+    "removed",
+    "bibtex",
+    "apa",
+    "model",
+    "cost_usd"
+  ],
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "1.0"
+      ],
+      "type": "string"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "query": {
+      "type": "string"
+    },
+    "expanded_queries": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 5,
+      "items": {
+        "type": "string"
+      }
+    },
+    "synthesis": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "text",
+          "cites"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "cites": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "citations[].ordinal — her paragraf en az bir doğrulanmış kaynağa bağlı; pipeline eşleşmeyen paragrafı atar"
+          }
+        },
+        "propertyOrdering": [
+          "text",
+          "cites"
+        ]
+      }
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ordinal",
+          "title",
+          "authors",
+          "year",
+          "crossref_status"
+        ],
+        "properties": {
+          "ordinal": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "doi": {
+            "type": "string",
+            "pattern": "^10\\.[0-9]{4,9}/\\S+$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "authors": {
+            "type": "string"
+          },
+          "venue": {
+            "type": "string",
+            "nullable": true
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1800,
+            "maximum": 2100
+          },
+          "crossref_status": {
+            "enum": [
+              "verified",
+              "no_doi"
+            ],
+            "type": "string"
+          },
+          "title_similarity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "oa_pdf_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "tldr": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Tek cümle; kaynağın iddiasını aşmaz",
+            "nullable": true
+          },
+          "source": {
+            "enum": [
+              "openalex",
+              "semantic_scholar",
+              "arxiv",
+              "crossref",
+              "manual"
+            ],
+            "type": "string"
+          }
+        },
+        "propertyOrdering": [
+          "ordinal",
+          "doi",
+          "title",
+          "authors",
+          "venue",
+          "year",
+          "crossref_status",
+          "title_similarity",
+          "verified_at",
+          "oa_pdf_url",
+          "tldr",
+          "source"
+        ]
+      },
+      "description": "Yalnız verified veya no_doi; unresolved burada OLAMAZ (enum)"
+    },
+    "matrix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ordinal",
+          "method",
+          "sample",
+          "finding",
+          "limitation"
+        ],
+        "properties": {
+          "ordinal": {
+            "type": "integer"
+          },
+          "method": {
+            "type": "string"
+          },
+          "sample": {
+            "type": "string"
+          },
+          "finding": {
+            "type": "string"
+          },
+          "limitation": {
+            "type": "string"
+          }
+        },
+        "propertyOrdering": [
+          "ordinal",
+          "method",
+          "sample",
+          "finding",
+          "limitation"
+        ]
+      }
+    },
+    "removed": {
+      "type": "array",
+      "description": "Yalnız inceleme ekranı; öğrenciye gitmez",
+      "items": {
+        "type": "object",
+        "required": [
+          "doi_or_title",
+          "reason"
+        ],
+        "properties": {
+          "doi_or_title": {
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "crossref_unresolved",
+              "title_mismatch",
+              "no_doi_no_link",
+              "duplicate",
+              "off_topic"
+            ],
+            "type": "string"
+          }
+        },
+        "propertyOrdering": [
+          "doi_or_title",
+          "reason"
+        ]
+      }
+    },
+    "bibtex": {
+      "type": "string"
+    },
+    "apa": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "model": {
+      "type": "string"
+    },
+    "cost_usd": {
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "propertyOrdering": [
+    "schema_version",
+    "request_id",
+    "query",
+    "expanded_queries",
+    "synthesis",
+    "citations",
+    "matrix",
+    "removed",
+    "bibtex",
+    "apa",
+    "model",
+    "cost_usd"
+  ]
+}

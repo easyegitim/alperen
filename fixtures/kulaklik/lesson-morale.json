@@ -1,0 +1,463 @@
+{
+  "lessons": [
+    {
+      "id": "dab851c0-9a29-593a-984d-14ad045dc9a8",
+      "enrollment_id": "1899cde6-c497-5b14-8051-882f44649013",
+      "staff_id": "de70e65e-1410-5026-a773-c5e55a3e6368",
+      "held_at": "2026-10-14T15:00:00Z",
+      "duration_min": 60,
+      "video_ref": "local:mert-14.mp4",
+      "video_deleted_at": null,
+      "deletion_notified_at": null,
+      "transcript_path": "transcripts/dab851c0-9a29-593a-984d-14ad045dc9a8.jsonl",
+      "frames_count": 24,
+      "status": "approved",
+      "created_at": "2026-10-14T17:00:00Z"
+    },
+    {
+      "id": "4ced11ae-959c-59b8-9347-fb2175a4354b",
+      "enrollment_id": "1899cde6-c497-5b14-8051-882f44649013",
+      "staff_id": "de70e65e-1410-5026-a773-c5e55a3e6368",
+      "held_at": "2026-10-16T15:00:00Z",
+      "duration_min": 60,
+      "video_ref": "local:mert-16.mp4",
+      "video_deleted_at": null,
+      "deletion_notified_at": null,
+      "transcript_path": "transcripts/4ced11ae-959c-59b8-9347-fb2175a4354b.jsonl",
+      "frames_count": 24,
+      "status": "approved",
+      "created_at": "2026-10-16T17:00:00Z"
+    },
+    {
+      "id": "b55c905b-d856-5669-b8f3-d3febdcb01a3",
+      "enrollment_id": "1899cde6-c497-5b14-8051-882f44649013",
+      "staff_id": "de70e65e-1410-5026-a773-c5e55a3e6368",
+      "held_at": "2026-10-18T15:00:00Z",
+      "duration_min": 60,
+      "video_ref": "local:mert-18.mp4",
+      "video_deleted_at": null,
+      "deletion_notified_at": null,
+      "transcript_path": "transcripts/b55c905b-d856-5669-b8f3-d3febdcb01a3.jsonl",
+      "frames_count": 24,
+      "status": "approved",
+      "created_at": "2026-10-18T17:00:00Z"
+    }
+  ],
+  "lesson_analyses": [
+    {
+      "id": "6a3a645f-67a3-5989-9800-51752ac7773b",
+      "lesson_id": "dab851c0-9a29-593a-984d-14ad045dc9a8",
+      "version": 1,
+      "seed_profile": {
+        "weak": [
+          {
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+            "name": "Rasyonel sayılarda dört işlem ve sıralama",
+            "band": "düşük"
+          }
+        ],
+        "misconceptions": [
+          "Paylar ve paydalar ayrı ayrı toplanmaz; önce paydaları eşitleyelim."
+        ],
+        "prereq_hint": null,
+        "explanation_notes": null,
+        "weekly_line": null,
+        "open_misconceptions": [],
+        "previous_next_step": null
+      },
+      "analysis": {
+        "schema_version": "1.0",
+        "lesson_ref": "dab851c0-9a29-593a-984d-14ad045dc9a8",
+        "student_ref": "s_vd3hp6wz2kc7",
+        "duration_min": 60,
+        "skills": [
+          {
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+            "mastery_estimate": 0.45,
+            "confidence": 0.6,
+            "evidence": [
+              {
+                "speaker": "ÖĞRENCİ",
+                "quote": "Yine paydaları ayrı topladım galiba.",
+                "t": "00:18:20"
+              }
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "t": "00:25:40",
+            "quote": "Bunu sınavda da yanlış yaparsam ne olacak?",
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+            "answered": true
+          }
+        ],
+        "hesitations": [
+          {
+            "t": "00:18:20",
+            "kind": "long_silence",
+            "quote": "Yine paydaları ayrı topladım galiba.",
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+          }
+        ],
+        "misconceptions": [],
+        "commitments": [
+          {
+            "who": "ÖĞRENCİ",
+            "kind": "homework",
+            "text": "Paydası farklı beş kesir toplama sorusu çözecek.",
+            "due": "2026-10-17",
+            "t": "00:57:10"
+          }
+        ],
+        "talk": {
+          "student_ratio": 0.22,
+          "student_questions": 1,
+          "attention": "medium",
+          "morale": "low",
+          "notes": "Öğrenci yanlış yapmaktan çekindiğini söyledi."
+        },
+        "previous_profile_check": [],
+        "next_step": {
+          "for_student": "Her gün iki kesir sorusu çöz; ilk adımda ortak paydayı yaz.",
+          "for_instructor": "Derse kısa ve kolay bir soruyla başlayıp başarı hissini güçlendirin."
+        },
+        "model_notes": {
+          "model": "gemini-2.5-pro",
+          "prompt_version": "lesson_analysis.v1",
+          "cost_usd": 0.45,
+          "tokens_in": 150000,
+          "tokens_out": 26250,
+          "frames": 24
+        }
+      },
+      "model": "gemini-2.5-pro",
+      "cost_usd": 0.45,
+      "status": "approved",
+      "approved_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+      "approved_at": "2026-10-14T20:00:00Z",
+      "created_at": "2026-10-14T17:00:00Z"
+    },
+    {
+      "id": "f637ad0f-0587-54d7-802d-58294f6d4439",
+      "lesson_id": "4ced11ae-959c-59b8-9347-fb2175a4354b",
+      "version": 1,
+      "seed_profile": {
+        "weak": [
+          {
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+            "name": "Rasyonel sayılarda dört işlem ve sıralama",
+            "band": "düşük"
+          }
+        ],
+        "misconceptions": [
+          "Paylar ve paydalar ayrı ayrı toplanmaz; önce paydaları eşitleyelim."
+        ],
+        "prereq_hint": null,
+        "explanation_notes": null,
+        "weekly_line": null,
+        "open_misconceptions": [],
+        "previous_next_step": null
+      },
+      "analysis": {
+        "schema_version": "1.0",
+        "lesson_ref": "4ced11ae-959c-59b8-9347-fb2175a4354b",
+        "student_ref": "s_vd3hp6wz2kc7",
+        "duration_min": 60,
+        "skills": [
+          {
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+            "mastery_estimate": 0.45,
+            "confidence": 0.6,
+            "evidence": [
+              {
+                "speaker": "ÖĞRENCİ",
+                "quote": "Yine paydaları ayrı topladım galiba.",
+                "t": "00:18:20"
+              }
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "t": "00:25:40",
+            "quote": "Bunu sınavda da yanlış yaparsam ne olacak?",
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+            "answered": true
+          }
+        ],
+        "hesitations": [
+          {
+            "t": "00:18:20",
+            "kind": "long_silence",
+            "quote": "Yine paydaları ayrı topladım galiba.",
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+          }
+        ],
+        "misconceptions": [],
+        "commitments": [
+          {
+            "who": "ÖĞRENCİ",
+            "kind": "homework",
+            "text": "Paydası farklı beş kesir toplama sorusu çözecek.",
+            "due": "2026-10-19",
+            "t": "00:57:10"
+          }
+        ],
+        "talk": {
+          "student_ratio": 0.18,
+          "student_questions": 1,
+          "attention": "medium",
+          "morale": "low",
+          "notes": "Öğrenci yanlış yapmaktan çekindiğini söyledi."
+        },
+        "previous_profile_check": [],
+        "next_step": {
+          "for_student": "Her gün iki kesir sorusu çöz; ilk adımda ortak paydayı yaz.",
+          "for_instructor": "Derse kısa ve kolay bir soruyla başlayıp başarı hissini güçlendirin."
+        },
+        "model_notes": {
+          "model": "gemini-2.5-pro",
+          "prompt_version": "lesson_analysis.v1",
+          "cost_usd": 0.45,
+          "tokens_in": 150000,
+          "tokens_out": 26250,
+          "frames": 24
+        }
+      },
+      "model": "gemini-2.5-pro",
+      "cost_usd": 0.45,
+      "status": "approved",
+      "approved_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+      "approved_at": "2026-10-16T20:00:00Z",
+      "created_at": "2026-10-16T17:00:00Z"
+    },
+    {
+      "id": "4916ef98-27dc-53a3-86c2-427034998c05",
+      "lesson_id": "b55c905b-d856-5669-b8f3-d3febdcb01a3",
+      "version": 1,
+      "seed_profile": {
+        "weak": [
+          {
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+            "name": "Rasyonel sayılarda dört işlem ve sıralama",
+            "band": "düşük"
+          }
+        ],
+        "misconceptions": [
+          "Paylar ve paydalar ayrı ayrı toplanmaz; önce paydaları eşitleyelim."
+        ],
+        "prereq_hint": null,
+        "explanation_notes": null,
+        "weekly_line": null,
+        "open_misconceptions": [],
+        "previous_next_step": null
+      },
+      "analysis": {
+        "schema_version": "1.0",
+        "lesson_ref": "b55c905b-d856-5669-b8f3-d3febdcb01a3",
+        "student_ref": "s_vd3hp6wz2kc7",
+        "duration_min": 60,
+        "skills": [
+          {
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+            "mastery_estimate": 0.45,
+            "confidence": 0.6,
+            "evidence": [
+              {
+                "speaker": "ÖĞRENCİ",
+                "quote": "Yine paydaları ayrı topladım galiba.",
+                "t": "00:18:20"
+              }
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "t": "00:25:40",
+            "quote": "Bunu sınavda da yanlış yaparsam ne olacak?",
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+            "answered": true
+          }
+        ],
+        "hesitations": [
+          {
+            "t": "00:18:20",
+            "kind": "long_silence",
+            "quote": "Yine paydaları ayrı topladım galiba.",
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+          }
+        ],
+        "misconceptions": [],
+        "commitments": [
+          {
+            "who": "ÖĞRENCİ",
+            "kind": "homework",
+            "text": "Paydası farklı beş kesir toplama sorusu çözecek.",
+            "due": "2026-10-21",
+            "t": "00:57:10"
+          }
+        ],
+        "talk": {
+          "student_ratio": 0.25,
+          "student_questions": 1,
+          "attention": "medium",
+          "morale": "low",
+          "notes": "Öğrenci yanlış yapmaktan çekindiğini söyledi."
+        },
+        "previous_profile_check": [],
+        "next_step": {
+          "for_student": "Her gün iki kesir sorusu çöz; ilk adımda ortak paydayı yaz.",
+          "for_instructor": "Derse kısa ve kolay bir soruyla başlayıp başarı hissini güçlendirin."
+        },
+        "model_notes": {
+          "model": "gemini-2.5-pro",
+          "prompt_version": "lesson_analysis.v1",
+          "cost_usd": 0.45,
+          "tokens_in": 150000,
+          "tokens_out": 26250,
+          "frames": 24
+        }
+      },
+      "model": "gemini-2.5-pro",
+      "cost_usd": 0.45,
+      "status": "approved",
+      "approved_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+      "approved_at": "2026-10-18T20:00:00Z",
+      "created_at": "2026-10-18T17:00:00Z"
+    }
+  ],
+  "lesson_claims": [
+    {
+      "id": "dceb25b8-a272-5e94-ada5-469fa7f2899e",
+      "analysis_id": "6a3a645f-67a3-5989-9800-51752ac7773b",
+      "kind": "talk",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": null,
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "student_ratio": 0.22,
+        "student_questions": 1,
+        "attention": "medium",
+        "morale": "low"
+      },
+      "quote": "Öğrenci yanlış yapmaktan çekindiğini söyledi.",
+      "speaker": "EĞİTMEN",
+      "t_start_sec": 0,
+      "t_end_sec": null,
+      "status": "approved",
+      "edited_value": null,
+      "decided_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+      "decided_at": "2026-10-14T20:00:00Z"
+    },
+    {
+      "id": "48ca7b54-5e7b-5b62-a204-731d87440d57",
+      "analysis_id": "f637ad0f-0587-54d7-802d-58294f6d4439",
+      "kind": "talk",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": null,
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "student_ratio": 0.18,
+        "student_questions": 1,
+        "attention": "medium",
+        "morale": "low"
+      },
+      "quote": "Öğrenci yanlış yapmaktan çekindiğini söyledi.",
+      "speaker": "EĞİTMEN",
+      "t_start_sec": 0,
+      "t_end_sec": null,
+      "status": "approved",
+      "edited_value": null,
+      "decided_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+      "decided_at": "2026-10-16T20:00:00Z"
+    },
+    {
+      "id": "8a4a447f-c26f-59fd-bfd4-2ab1b6660a3d",
+      "analysis_id": "4916ef98-27dc-53a3-86c2-427034998c05",
+      "kind": "talk",
+      "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "skill_id": null,
+      "misconception_tag": null,
+      "misconception_id": null,
+      "value": {
+        "student_ratio": 0.25,
+        "student_questions": 1,
+        "attention": "medium",
+        "morale": "low"
+      },
+      "quote": "Öğrenci yanlış yapmaktan çekindiğini söyledi.",
+      "speaker": "EĞİTMEN",
+      "t_start_sec": 0,
+      "t_end_sec": null,
+      "status": "approved",
+      "edited_value": null,
+      "decided_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+      "decided_at": "2026-10-18T20:00:00Z"
+    }
+  ],
+  "memory_facts": [
+    {
+      "id": 101,
+      "student_id": "1da926ea-a047-5403-9644-bb047719707b",
+      "kind": "morale",
+      "text": "Derste moral: düşük; konuşma oranı %22",
+      "source_message_ids": [],
+      "source_lesson_claim_id": "dceb25b8-a272-5e94-ada5-469fa7f2899e",
+      "confidence": 0.8,
+      "requires_approval": false,
+      "approved": false,
+      "approved_by": null,
+      "valid_from": "2026-10-14",
+      "valid_until": null,
+      "morale_signal": -2,
+      "status": "active",
+      "embedding": null,
+      "model": "gemini-2.5-pro",
+      "cost_usd": 0,
+      "created_at": "2026-10-14T20:00:00Z"
+    },
+    {
+      "id": 102,
+      "student_id": "1da926ea-a047-5403-9644-bb047719707b",
+      "kind": "morale",
+      "text": "Derste moral: düşük; konuşma oranı %18",
+      "source_message_ids": [],
+      "source_lesson_claim_id": "48ca7b54-5e7b-5b62-a204-731d87440d57",
+      "confidence": 0.8,
+      "requires_approval": false,
+      "approved": false,
+      "approved_by": null,
+      "valid_from": "2026-10-16",
+      "valid_until": null,
+      "morale_signal": -2,
+      "status": "active",
+      "embedding": null,
+      "model": "gemini-2.5-pro",
+      "cost_usd": 0,
+      "created_at": "2026-10-16T20:00:00Z"
+    },
+    {
+      "id": 103,
+      "student_id": "1da926ea-a047-5403-9644-bb047719707b",
+      "kind": "morale",
+      "text": "Derste moral: düşük; konuşma oranı %25",
+      "source_message_ids": [],
+      "source_lesson_claim_id": "8a4a447f-c26f-59fd-bfd4-2ab1b6660a3d",
+      "confidence": 0.8,
+      "requires_approval": false,
+      "approved": false,
+      "approved_by": null,
+      "valid_from": "2026-10-18",
+      "valid_until": null,
+      "morale_signal": -2,
+      "status": "active",
+      "embedding": null,
+      "model": "gemini-2.5-pro",
+      "cost_usd": 0,
+      "created_at": "2026-10-18T20:00:00Z"
+    }
+  ]
+}

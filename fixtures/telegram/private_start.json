@@ -1,0 +1,30 @@
+{
+  "update_id": 910000102,
+  "message": {
+    "message_id": 1,
+    "from": {
+      "id": 700000004,
+      "is_bot": false,
+      "first_name": "Can",
+      "last_name": "Öztürk",
+      "username": "can_o",
+      "language_code": "tr"
+    },
+    "chat": {
+      "id": 700000004,
+      "type": "private",
+      "first_name": "Can",
+      "last_name": "Öztürk",
+      "username": "can_o"
+    },
+    "date": 1792510200,
+    "text": "/start",
+    "entities": [
+      {
+        "type": "bot_command",
+        "offset": 0,
+        "length": 6
+      }
+    ]
+  }
+}

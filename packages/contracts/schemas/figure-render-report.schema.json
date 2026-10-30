@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/figure-render-report.json",
+  "title": "FigureRenderReport",
+  "description": "Şekil denetim raporu (zincir vision_check): PNG + stem_values karşılaştırması {matches_stem, mismatches, notes}; isteğe bağlı olarak render adımının boyut/durum özeti. mismatch → attempts+1 ve 'kodu düzelt' ile yeniden üretim.",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "matches_stem",
+    "mismatches"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "figure_id": {
+      "$ref": "common.json#/$defs/uuid"
+    },
+    "matches_stem": {
+      "type": "boolean",
+      "description": "Şekil soru kökündeki değerlerle uyuşuyor mu"
+    },
+    "status": {
+      "enum": [
+        "match",
+        "mismatch"
+      ],
+      "description": "figures.vision_status karşılığı; matches_stem ile tutarlı olmalı"
+    },
+    "mismatches": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          {
+            "$ref": "#/$defs/mismatch"
+          }
+        ]
+      }
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 600
+    },
+    "render": {
+      "$ref": "#/$defs/render"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "matches_stem": {
+            "const": true
+          }
+        },
+        "required": [
+          "matches_stem"
+        ]
+      },
+      "then": {
+        "properties": {
+          "mismatches": {
+            "maxItems": 0
+          },
+          "status": {
+            "const": "match"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "matches_stem": {
+            "const": false
+          }
+        },
+        "required": [
+          "matches_stem"
+        ]
+      },
+      "then": {
+        "properties": {
+          "mismatches": {
+            "minItems": 1
+          },
+          "status": {
+            "const": "mismatch"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "mismatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "stem_values anahtarı ya da şekil öğesi"
+        },
+        "expected": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "observed": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 300
+        }
+      }
+    },
+    "render": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "failed",
+            "size_mismatch",
+            "blank",
+            "skipped"
+          ]
+        },
+        "tool": {
+          "enum": [
+            "matplotlib",
+            "svg",
+            "tikz",
+            "vega-lite",
+            "schemdraw",
+            "rdkit",
+            "graphviz",
+            "latex",
+            "template"
+          ]
+        },
+        "width_px": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "height_px": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pixel_variance": {
+          "type": "number",
+          "minimum": 0
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "log": {
+          "type": "string",
+          "maxLength": 4000
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "verified_at": "2026-10-19",
+  "currency": "EUR",
+  "providers": {
+    "fake": {
+      "kind": "fake",
+      "tier": "free"
+    }
+  },
+  "models": {
+    "fake-model": {
+      "provider": "fake",
+      "in_per_m": 0,
+      "out_per_m": 0,
+      "ctx": 8192,
+      "structured": true
+    }
+  },
+  "chains": {
+    "chat": [
+      "fake-model"
+    ],
+    "chat_free_only": [
+      "fake-model"
+    ],
+    "nightly_facts": [
+      "fake-model"
+    ],
+    "weekly_summary": [
+      "fake-model"
+    ],
+    "question_gen": [
+      "fake-model"
+    ],
+    "vision_check": [
+      "fake-model"
+    ],
+    "ocr": [
+      "fake-model"
+    ],
+    "lesson_analysis": [
+      "fake-model"
+    ],
+    "transcribe": [
+      "fake-model"
+    ],
+    "diarize": [
+      "fake-model"
+    ],
+    "query_expand": [
+      "fake-model"
+    ],
+    "research": [
+      "fake-model"
+    ],
+    "embedding": [
+      "fake-model"
+    ]
+  },
+  "cost_rules": {
+    "chat_budget_tokens_in": 2200,
+    "chat_turn_max_usd": 0.0003,
+    "chat_target_usd": 0.00025
+  }
+}

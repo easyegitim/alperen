@@ -1,0 +1,30 @@
+{
+  "update_id": 910000108,
+  "message": {
+    "message_id": 7,
+    "from": {
+      "id": 700000006,
+      "is_bot": false,
+      "first_name": "Kaan",
+      "last_name": "Uçar",
+      "username": "kaan_u",
+      "language_code": "tr"
+    },
+    "chat": {
+      "id": -1001000000003,
+      "type": "supergroup",
+      "title": "Hafta sonu etüt grubu"
+    },
+    "date": 1792515900,
+    "new_chat_members": [
+      {
+        "id": 700000006,
+        "is_bot": false,
+        "first_name": "Kaan",
+        "last_name": "Uçar",
+        "username": "kaan_u",
+        "language_code": "tr"
+      }
+    ]
+  }
+}

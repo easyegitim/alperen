@@ -1,0 +1,9 @@
+[
+  {
+    "tag": "uslu.usleri-carpma",
+    "skill_id": "tyt.mat.temel.uslu",
+    "prereq_skill_id": null,
+    "text_instructor": "Aynı tabanlı çarpımda üsleri çarpıyor ✅",
+    "text_student": "Tabanlar aynıysa üsler toplanır."
+  }
+]

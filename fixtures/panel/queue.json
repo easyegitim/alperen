@@ -1,0 +1,122 @@
+[
+  {
+    "kind": "question",
+    "ref_id": "15c5b12a-3176-5348-a0d2-ddc391f2acba",
+    "created_at": "2026-10-05T03:20:00Z",
+    "reason": "Şekil incelemesi bekliyor",
+    "student_ref": null,
+    "staff_hint": "template"
+  },
+  {
+    "kind": "figure",
+    "ref_id": "eb17b011-7afc-5389-9a88-65711d3c5053",
+    "created_at": "2026-10-05T03:20:00Z",
+    "reason": "Şekil doğrulanmadı",
+    "student_ref": null,
+    "staff_hint": "template"
+  },
+  {
+    "kind": "question",
+    "ref_id": "3287fc04-ca60-5ed1-96c1-a35c6740d5fa",
+    "created_at": "2026-10-11T00:40:00Z",
+    "reason": "Yeni LLM sorusu onay bekliyor",
+    "student_ref": null,
+    "staff_hint": "llm"
+  },
+  {
+    "kind": "question",
+    "ref_id": "0a86bcef-4c31-5214-a19f-7e6d5cf47e9c",
+    "created_at": "2026-10-11T00:40:00Z",
+    "reason": "Yeni LLM sorusu onay bekliyor",
+    "student_ref": null,
+    "staff_hint": "llm"
+  },
+  {
+    "kind": "misconception",
+    "ref_id": "275a73df-ccfa-5021-ad2e-8253495306ce",
+    "created_at": "2026-10-15T15:08:00Z",
+    "reason": "EBOB ile EKOK'u yer değiştiriyor.",
+    "student_ref": "s_vd3hp6wz2kc7",
+    "staff_hint": "ebob-ekok.karistirma"
+  },
+  {
+    "kind": "misconception",
+    "ref_id": "22df768a-b6b9-5ff5-87eb-f399a0052b22",
+    "created_at": "2026-10-15T15:12:00Z",
+    "reason": "√a + √b'yi √(a+b) olarak topluyor.",
+    "student_ref": "s_vd3hp6wz2kc7",
+    "staff_hint": "koklu.toplam-kok-icine"
+  },
+  {
+    "kind": "misconception",
+    "ref_id": "e7d95221-8def-5de0-94cf-fe7de004beb6",
+    "created_at": "2026-10-15T15:19:00Z",
+    "reason": "Ardışık yüzdeleri topluyor.",
+    "student_ref": "s_vd3hp6wz2kc7",
+    "staff_hint": "yuzde.ardisik-toplama"
+  },
+  {
+    "kind": "flagged_response",
+    "ref_id": "28",
+    "created_at": "2026-10-17T16:10:00Z",
+    "reason": "Cevabı tek adımda verdi",
+    "student_ref": "s_qk7m2rx4tn5a",
+    "staff_hint": "Ayşe Yılmaz"
+  },
+  {
+    "kind": "flagged_response",
+    "ref_id": "30",
+    "created_at": "2026-10-17T16:20:00Z",
+    "reason": "Ücretsiz katmana düştü, metin kontrol edilmeli",
+    "student_ref": "s_qk7m2rx4tn5a",
+    "staff_hint": "Ayşe Yılmaz"
+  },
+  {
+    "kind": "pool",
+    "ref_id": "52d21564-8ab0-5c58-957e-eb7f5a278106",
+    "created_at": "2026-10-17T17:05:00Z",
+    "reason": "Havuz açıklaması onay bekliyor",
+    "student_ref": null,
+    "staff_hint": "hint"
+  },
+  {
+    "kind": "flagged_response",
+    "ref_id": "6",
+    "created_at": "2026-10-17T17:05:00Z",
+    "reason": "Grupta cevabı fazla yönlendirdi",
+    "student_ref": "s_qk7m2rx4tn5a",
+    "staff_hint": "Ayşe Yılmaz"
+  },
+  {
+    "kind": "research",
+    "ref_id": "b9ed1ca1-1f34-59a3-a829-cec38fa3296b",
+    "created_at": "2026-10-18T00:30:00Z",
+    "reason": "Araştırma çıktısı inceleme bekliyor",
+    "student_ref": "s_qk7m2rx4tn5a",
+    "staff_hint": "4 atıf"
+  },
+  {
+    "kind": "flagged_response",
+    "ref_id": "12",
+    "created_at": "2026-10-18T18:15:00Z",
+    "reason": "Ön koşul ipucu eksik",
+    "student_ref": "s_vd3hp6wz2kc7",
+    "staff_hint": "Ayşe Yılmaz"
+  },
+  {
+    "kind": "priority_plan",
+    "ref_id": "e0cc9cfb-fffd-5244-8eaf-45e360ce3381",
+    "created_at": "2026-10-19T03:50:00Z",
+    "reason": "Öncelik planı onay bekliyor",
+    "student_ref": null,
+    "staff_hint": "TYT-MAT"
+  },
+  {
+    "kind": "lesson_analysis",
+    "ref_id": "6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af",
+    "created_at": "2026-10-19T17:30:00Z",
+    "reason": "Ders raporu onay bekliyor",
+    "student_ref": "s_qk7m2rx4tn5a",
+    "staff_hint": "Ayşe Yılmaz"
+  }
+]

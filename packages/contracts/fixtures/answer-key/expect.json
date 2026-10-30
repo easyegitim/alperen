@@ -1,0 +1,14 @@
+{
+  "both-option-and-value.json": [
+    "oneOf"
+  ],
+  "fifth-option.json": [
+    "enum"
+  ],
+  "neither-option-nor-value.json": [
+    "oneOf"
+  ],
+  "short-solution.json": [
+    "minLength"
+  ]
+}
