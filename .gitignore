@@ -14,3 +14,11 @@ out/
 *.local
 apps/panel/public/ds/
 /tmp-*/
+# M13L — kök eklemeleri
+.venv/
+venv/
+*.log
+.DS_Store
+coverage/
+.env.*
+!.env.example

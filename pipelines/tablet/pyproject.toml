@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ogrenmen-tablet"
+version = "0.1.0"
+description = "Öğrenmen Tablet (M06, pilot dilimi): sıfır LLM parametrik şablon varyantları, şekil PNG'leri ve register_template_question ile stok doldurma"
+readme = "README.md"
+requires-python = ">=3.11"
+# Yerel yol bağımlılıkları (ogrenmen-common, ogrenmen-contracts, ogrenmen-pii) BLUEPRINT §2 gereği aynı ortamda
+# `pip install -e <yol>` ile önceden kurulmuş olmalıdır; şablonlar content/tyt-matematik/templates'ten dosya yoluyla
+# yüklenir (içerik paketi kurulmaz). sympy/matplotlib/numpy sürümleri content/tyt-matematik ile aynıdır.
+dependencies = [
+  "matplotlib==3.11.2",
+  "numpy==2.5.3",
+  "ogrenmen-common==0.1.0",
+  "ogrenmen-contracts==0.1.0",
+  "ogrenmen-pii==0.1.0",
+  "sympy==1.14.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.2.0", "ruff==0.17.3"]
+
+[project.scripts]
+ogrenmen-tablet = "ogrenmen_tablet.cli:entrypoint"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+markers = ["live: OGRENMEN_DATABASE_URL tanımlıysa canlı Postgres'e karşı koşar; yoksa atlanır"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ogrenmen_tablet"]
