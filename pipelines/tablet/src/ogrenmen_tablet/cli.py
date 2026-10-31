@@ -1,4 +1,7 @@
-"""``python -m ogrenmen_tablet`` — Tablet pilot dilimi: sıfır LLM ``template`` komutu (BLUEPRINT §6.1).
+"""``python -m ogrenmen_tablet`` — Tablet (BLUEPRINT §6.1): şablon stoku, LLM soru üretimi, şekil, doğrulama, PDF.
+
+Komutlar: ``template`` (sıfır LLM), ``generate``, ``render``, ``vision``, ``verify``, ``pdf``, ``review-queue``,
+``notes ingest``. Ayrıntı ``pipelines/tablet/README.md``; aşağısı ``template`` komutunun sözleşmesidir.
 
 Kullanım::
 
@@ -65,7 +68,42 @@ def build_parser() -> argparse.ArgumentParser:
                      help=f"--fill hedef onaylı stok (varsayılan {DEFAULT_MIN_STOCK}; yalnız --fill ile)")
     tpl.add_argument("--dump-keys", action="store_true",
                      help="yalnız test: cevap anahtarlarını out/keys.jsonl'e yaz (gerçek veritabanıyla kullanılamaz)")
+    add_llm_commands(sub)
     return parser
+
+
+def add_llm_commands(sub: Any) -> None:
+    """§6.1 LLM yolu ve yardımcı komutlar (``template`` dışındakiler)."""
+    gen = cli_base.add_command(sub, "generate", "LLM ile soru üret (generation_requests + < 30 stoklu yapraklar)")
+    gen.add_argument("--skill", default=None, help="yalnız bu yaprak kazanım (elle/test); verilmezse gece modu")
+    gen.add_argument("--count", type=int, default=None,
+                     help="--skill ile üretilecek soru sayısı (varsayılan 10); gece modunda üst sınır "
+                          "(runtime_flags.tablet_nightly_count'ı aşmaz)")
+    gen.add_argument("--band", choices=("easy", "mid", "hard"), default=None, help="zorluk bandı (varsayılan mid)")
+    gen.add_argument("--batch", action="store_true", help="Gemini Batch API ile (gece; gecikirse ertesi gece)")
+    gen.add_argument("--dump-keys", action="store_true",
+                     help="yalnız dry-run/test: cevap anahtarlarını out/keys.jsonl'e yaz")
+    ren = cli_base.add_command(sub, "render", "Şekil kodunu sandbox'ta çiz (--queue ya da --fixtures <dizin>)")
+    ren.add_argument("--queue", action="store_true", help="figures.render_status='pending' satırları")
+    vis = cli_base.add_command(sub, "vision", "Render edilmiş şekilleri vision ile denetle (--queue)")
+    vis.add_argument("--queue", action="store_true", help="figures.vision_status='pending' satırları")
+    ver = cli_base.add_command(sub, "verify", "Tek soruyu doğrula (şema, şık kuralı, SymPy, şekil)")
+    ver.add_argument("--question", required=True, help="questions.id ya da question-generation zarfı (JSON dosyası)")
+    ver.add_argument("--key", type=Path, default=None,
+                     help="uuid ile: SymPy için eğitmenin anahtar dosyası (answer-key JSON); batch anahtarı okuyamaz")
+    pdf = cli_base.add_command(sub, "pdf", "Deneme PDF'i (LaTeX exam + tectonic; yoksa yalnız .tex)")
+    pdf.add_argument("--test", required=True, help="diagnostic_tests.id ya da test JSON dosyası")
+    pdf.add_argument("--with-keys", action="store_true",
+                     help="cevap anahtarı sayfası (yalnız eğitmen oturumu: OGRENMEN_STAFF_JWT, peek_answer_key)")
+    pdf.add_argument("--require-pdf", action="store_true", help="tectonic yoksa ya da derleme düşerse hata ver")
+    rq = cli_base.add_command(sub, "review-queue", "Onay kuyruğu özeti (--push ile bildirim)")
+    rq.add_argument("--push", action="store_true", help="özeti Notifier ile gönder")
+    notes = cli_base.add_command(sub, "notes", "Ders notu kütüphanesi")
+    notes_sub = notes.add_subparsers(dest="notes_command", required=True, metavar="alt-komut")
+    ing = cli_base.add_command(notes_sub, "ingest", "PDF ders notunu library_documents/library_chunks'a al")
+    ing.add_argument("--pdf", type=Path, required=True, help="yerel PDF yolu")
+    ing.add_argument("--curriculum", required=True, help="müfredat kodu (TYT-MAT ya da TYT-MAT@2026.1)")
+    ing.add_argument("--title", default=None, help="belge başlığı (varsayılan dosya adı)")
 
 
 def zero_cost_estimate(dry_run: bool | None, clock: Clock = system_clock) -> dict[str, Any]:
@@ -223,11 +261,14 @@ def cmd_fill(args: argparse.Namespace, out: Path, env: Mapping[str, str] | None,
     return 1 if failed else 0
 
 
-def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = None, transport: Any = None) -> int:
+def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = None, transport: Any = None,
+         llm_options: Mapping[str, Any] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    if args.command != "template":  # pragma: no cover - argparse yalnız kayıtlı komutları kabul eder
-        parser.error(f"bilinmeyen komut: {args.command}")
+    if args.command != "template":
+        from . import commands
+
+        return commands.dispatch(parser, args, env=env, transport=transport, llm_options=llm_options)
     if args.out is None:
         parser.error("template --out <dizin> ister")
     if args.fill and args.auto_approve:

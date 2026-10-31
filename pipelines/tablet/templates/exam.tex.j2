@@ -1,0 +1,54 @@
+<# Öğrenmen deneme PDF'i — LaTeX exam sınıfı (BLUEPRINT §6.1 "PDF"). Jinja2 ayraçları LaTeX ile çakışmasın diye
+   açılı ayraçlıdır (ayrıntı pdf.py). Tüm metinler pdf.py'de LaTeX kaçışından geçmiş olarak gelir.
+   Yanılgı etiketleri hiçbir yerde basılmaz; cevap anahtarı sayfası yalnız --with-keys ile (eğitmen). #>
+% Öğrenmen · easy — otomatik üretildi; elle düzenlenmez.
+\documentclass[a4paper,11pt<% if with_keys %>,answers<% endif %>]{exam}
+\usepackage{fontspec}
+\usepackage{graphicx}
+\usepackage[margin=2cm]{geometry}
+\usepackage{xcolor}
+\definecolor{navy}{HTML}{051C60}
+\definecolor{primary}{HTML}{0030A2}
+\pagestyle{headandfoot}
+\firstpageheader{\textcolor{navy}{Öğrenmen}}{}{\textcolor{navy}{<< period >>}}
+\runningheader{\textcolor{navy}{<< title >>}}{}{\textcolor{navy}{<< period >>}}
+\firstpagefooter{}{Sayfa \thepage\ / \numpages}{}
+\runningfooter{}{Sayfa \thepage\ / \numpages}{}
+\renewcommand{\choicelabel}{\thechoice)}
+\begin{document}
+\begin{center}
+{\Large\bfseries\textcolor{navy}{<< title >>}}\\[4pt]
+<< subtitle >>
+\end{center}
+\vspace{6pt}
+\noindent Ad Soyad: \rule{6cm}{0.4pt}\hfill Süre: << minutes >> dk
+\vspace{10pt}
+\begin{questions}
+<% for q in questions %>
+\question << q.stem >>
+<% if q.figure %>
+\begin{center}
+\includegraphics[width=0.7\textwidth]{<< q.figure >>}
+\end{center}
+<% endif %>
+<% if q.options %>
+\begin{choices}
+<% for o in q.options %>
+<% if with_keys and o.correct %>\CorrectChoice<% else %>\choice<% endif %> << o.text >>
+<% endfor %>
+\end{choices}
+<% else %>
+\vspace{2.5cm}
+<% endif %>
+<% endfor %>
+\end{questions}
+<% if with_keys %>
+\newpage
+\section*{Cevap anahtarı (yalnız eğitmen)}
+\begin{enumerate}
+<% for k in keys %>
+\item << k.answer >>. << k.solution >>
+<% endfor %>
+\end{enumerate}
+<% endif %>
+\end{document}

@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ogrenmen-kalem"
+version = "0.1.0"
+description = "Öğrenmen Kalem (M09): sınav arşivi → OCR → madde → kümeleme → izlence hizalaması → öncelik planı; varyant istekleri, çeldirici ve ön koşul denetim raporları"
+readme = "README.md"
+requires-python = ">=3.11"
+# Yerel yol bağımlılıkları (ogrenmen-common, ogrenmen-contracts, ogrenmen-pii) BLUEPRINT §2 gereği aynı ortamda
+# `pip install -e <yol>` ile önceden kurulmuş olmalıdır (pipelines/common README'si). numpy ogrenmen-common'dan gelir.
+# pypdfium2: PDF → sayfa PNG (§6.4); pillow: pypdfium2 bitmap → PNG kodlaması.
+# scikit-learn isteğe bağlıdır ([sklearn] ekstrası): yoksa kümeleme saf numpy tek bağla yapılır (§6.4).
+dependencies = [
+  "numpy==2.5.3",
+  "ogrenmen-common==0.1.0",
+  "ogrenmen-contracts==0.1.0",
+  "ogrenmen-pii==0.1.0",
+  "pillow==12.3.0",
+  "pypdfium2==5.13.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.2.0", "ruff==0.17.3"]
+sklearn = ["scikit-learn==1.9.1"]
+
+[project.scripts]
+ogrenmen-kalem = "ogrenmen_kalem.cli:entrypoint"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ogrenmen_kalem = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+markers = ["live: canlı Postgres gerektirir (OGRENMEN_DATABASE_URL yoksa atlanır)"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ogrenmen_kalem"]
