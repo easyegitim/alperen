@@ -23,7 +23,7 @@ from templates import _common as C  # noqa: E402
 
 EXPECTED_TAG_COUNT = 27
 EXPECTED_ITEM_COUNT = 20
-FIGURE_MIN_PX, FIGURE_MAX_PX = 200, 1600
+FIGURE_MIN_PX, FIGURE_MAX_PX = C.FIGURE_MIN_PX, C.FIGURE_MAX_PX
 LEGAL_KINDS = ("kvkk_aydinlatma", "veli_onayi", "grup_kayit", "ders_kaydi", "kullanim_kosullari")
 # "sen" dili denetimi: resmî "siz" hitabı ve çoğul emir kipleri yasak (tasarım sistemi README: sen dili)
 _SIZ = re.compile(r"\b(siz|sizin|size|sizi|sizce)\b|(m[ae]n[ıi]z|[ıiuü]n[ıiuü]z)\b", re.IGNORECASE)
@@ -439,6 +439,28 @@ def check_settings(content: Content, report: Report, repo_root: Path) -> None:
         report.err(f"period_label {content.curriculum.get('period_label')!r} ≠ settings.default_period {period!r}")
 
 
+def check_dev_seed(content: Content, report: Report, repo_root: Path) -> None:
+    """``fixtures/db/dev-seed.json`` (M01) teşhis soruları bizim kimliklerimizle duruyorsa içerikleri aynı mı?
+
+    Farklıysa ``db-test.sh --dev`` (seed/dev → export-sql.py) ``OGR-SEED-003`` ile durur; bu M01 fixture'ının
+    ``items.json``'dan yeniden üretilmesini ister. Kendi içeriğimiz geçerli olduğundan uyarıdır, hata değil."""
+    path = repo_root / "fixtures" / "db" / "dev-seed.json"
+    if not path.exists():
+        return
+    try:
+        rows = read_json(path).get("questions", [])
+    except (ContentError, AttributeError):
+        report.warn(f"{path}: okunamadı; teşhis sorusu eşitliği denetlenemedi")
+        return
+    ours = {C.uid("question", i["code"]): i for i in content.items if "code" in i and "options" in i}
+    drift = sorted(ours[r["id"]]["code"] for r in rows if isinstance(r, dict) and r.get("id") in ours
+                   and r.get("content_hash") != C.content_hash(ours[r["id"]]["stem"], ours[r["id"]]["options"]))
+    if drift:
+        report.warn(f"fixtures/db/dev-seed.json: {len(drift)} teşhis sorusu aynı kimlikte ama items.json'dan farklı "
+                    f"içerikte ({', '.join(drift[:5])}{' …' if len(drift) > 5 else ''}); db-test.sh --dev export "
+                    "adımında OGR-SEED-003 verir — M01 fixture'ı items.json'dan yeniden üretilmeli")
+
+
 def check_templates(content: Content, report: Report, seeds: range = range(2)) -> None:
     import random
 
@@ -547,6 +569,7 @@ def validate_content(content: Content, *, repo_root: Path = REPO_ROOT, previous:
     check_items(content, report)
     check_keys(content, report)
     check_settings(content, report, repo_root)
+    check_dev_seed(content, report, repo_root)
     check_version_diff(content, report, previous)
     if with_templates:
         check_templates(content, report)
@@ -629,20 +652,34 @@ def sql_insert_rows(sql: str, table: str) -> list[dict[str, Any]]:
     return rows
 
 
+_NO_TABLE = object()
+
+
 def sql_column_default(sql: str, table: str, column: str) -> Any:
+    """``create table <table>`` sütun varsayılanı ve ardından gelen ``alter table … alter column … set/drop default``.
+
+    Dönüş: tablo hiç geçmiyorsa ``_NO_TABLE``; varsayılan yoksa ``None``; sabit değilse ``...``; aksi değer."""
     import pglast
     from pglast import ast
-    from pglast.enums import ConstrType
+    from pglast.enums import AlterTableType, ConstrType
 
+    value: Any = _NO_TABLE
     for raw in pglast.parse_sql(sql):
         st = raw.stmt
         if isinstance(st, ast.CreateStmt) and st.relation.relname == table:
+            value = None
             for el in st.tableElts or ():
                 if isinstance(el, ast.ColumnDef) and el.colname == column:
                     for con in el.constraints or ():
                         if con.contype == ConstrType.CONSTR_DEFAULT:
-                            return _const(con.raw_expr)
-    return None
+                            value = _const(con.raw_expr)
+        elif isinstance(st, ast.AlterTableStmt) and st.relation.relname == table:
+            if value is _NO_TABLE:
+                value = None
+            for cmd in st.cmds or ():
+                if cmd.subtype == AlterTableType.AT_ColumnDefault and cmd.name == column:
+                    value = None if cmd.def_ is None else _const(cmd.def_)
+    return value
 
 
 # --- Saklama süreleri ve yer tutucular -------------------------------------------------------
@@ -688,18 +725,32 @@ def load_retention(repo_root: Path = REPO_ROOT, seed_path: Path | None = None, m
                    allow_fallback: bool = True) -> RetentionSource:
     """``supabase/seed/04_retention_policies.sql`` (pglast) + ``tg_chats.retention_days`` varsayılanı (migration).
 
-    M02 dosyaları yoksa ve ``allow_fallback`` açıksa BLUEPRINT §3.10/§3.5 okunur (uyarıyla)."""
+    Yedek (BLUEPRINT §3.10/§3.5, uyarıyla) yalnız M02 dosyası/dizini **hiç yoksa** ve ``allow_fallback`` açıksa
+    kullanılır. Dosya var ama okunamıyorsa (satır yok, ``days`` sabit değil, ``tg_chats`` tablosu ya da
+    ``retention_days`` varsayılanı bulunamıyor) ``ContentError`` — kaynak seed'dir, çözülemeyen değer hatadır."""
     seed_path = seed_path or repo_root / "supabase" / "seed" / "04_retention_policies.sql"
     migrations_dir = migrations_dir or repo_root / "supabase" / "migrations"
     days: dict[str, int] = {}
     origin: list[str] = []
+    missing: list[str] = []
     tg: int | None = None
     if seed_path.exists():
         for row in sql_insert_rows(seed_path.read_text(encoding="utf-8"), "retention_policies"):
-            if isinstance(row.get("id"), str) and isinstance(row.get("days"), int):
-                days[row["id"]] = row["days"]
+            pid, value = row.get("id"), row.get("days")
+            if not isinstance(pid, str):
+                raise ContentError(f"{seed_path}: retention_policies satırında id metin sabiti değil: {pid!r}")
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ContentError(f"{seed_path}: {pid} için days tam sayı sabiti değil: {value!r}")
+            days[pid] = value
+        if not days:
+            raise ContentError(f"{seed_path}: retention_policies satırı okunamadı "
+                               "(insert into public.retention_policies (...) values (...) biçimi bekleniyor)")
         origin.append(str(seed_path))
-    if migrations_dir.exists():
+    else:
+        missing.append(str(seed_path))
+    if migrations_dir.is_dir():
+        table_seen = False
+        source: Path | None = None
         for path in sorted(migrations_dir.glob("*.sql")):
             text = path.read_text(encoding="utf-8")
             if "tg_chats" not in text:
@@ -708,11 +759,23 @@ def load_retention(repo_root: Path = REPO_ROOT, seed_path: Path | None = None, m
                 value = sql_column_default(text, "tg_chats", "retention_days")
             except Exception as exc:  # noqa: BLE001 — pglast ayrıştırma hatası
                 raise ContentError(f"{path}: SQL ayrıştırılamadı: {exc}") from exc
-            if isinstance(value, int):
-                tg = value
-                origin.append(str(path))
+            if value is _NO_TABLE:
+                continue
+            table_seen = True
+            if value is ... or isinstance(value, bool) or (value is not None and not isinstance(value, int)):
+                raise ContentError(f"{path}: tg_chats.retention_days varsayılanı tam sayı sabiti değil")
+            tg, source = value, path
+        if not table_seen:
+            raise ContentError(f"{migrations_dir}: public.tg_chats tablosu bulunamadı")
+        if tg is None:
+            raise ContentError(f"{migrations_dir}: tg_chats.retention_days varsayılanı okunamadı")
+        origin.append(str(source))
+    else:
+        missing.append(str(migrations_dir))
     fallback = False
-    if (not days or tg is None) and allow_fallback:
+    if missing:
+        if not allow_fallback:
+            raise ContentError(f"saklama süreleri okunamadı: {', '.join(missing)} yok")
         fallback = True
         fb = retention_from_blueprint(repo_root / "docs" / "BLUEPRINT.md")
         if not days:

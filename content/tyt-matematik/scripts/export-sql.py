@@ -7,16 +7,27 @@ Yazılan tablolar: ``curricula`` (``status`` curriculum.json'dan aynen), ``skill
 ``diagnostic_tests``, ``legal_texts`` (docs/hukuk gövdeleri; ``{{RETENTION_*}}`` yer tutucuları gün sayısına
 çevrilmiş, ``ogrenmen:*`` işaretleri korunmuş).
 
+Tekrar uygulama kuralları:
+
+* Şekil kimliği içerikten türer: ``uid('figure', code_hash)``. Şekil kaynağı değişirse yeni satır yazılır (eski
+  satır kalır), taslak soru yeni şekle bağlanır; ``on conflict do nothing`` hem birincil anahtarı hem
+  ``code_hash`` tekilliğini kapsar.
+* Teşhis sorusu yalnız ``draft``/``pending_review`` iken güncellenir. Onaylı (``approved``) bir teşhis sorusunun
+  kökü/şıkları (``content_hash``) ya da şekli ``items.json``'dan farklıysa SQL ``OGR-SEED-003`` ile durur:
+  onaylı soru yerinde düzenlenmez; değişiklik emekliye ayırma + yeni kod + yeniden inceleme ister.
+
 Cevap anahtarı üretmez: anahtarları ``seed-keys.py`` yazar ve teşhis sorularını ``approved``'a o çeker.
 
 ``--as-version 2027.1``: aynı kazanım kimliklerini ikinci bir ``curricula`` satırı altında yazar (yalnız
-müfredat tabloları; teşhis, şablon ve hukuk metinleri ilk sürümde kalır). Kimlikler deterministiktir:
-``uuid5(NAMESPACE_OGRENMEN, "<code>@<version>")``.
+müfredat tabloları; teşhis, şablon ve hukuk metinleri ilk sürümde kalır). Değer ``YYYY.N`` biçiminde ve
+``curriculum.json`` sürümünden büyük olmalıdır (aynı ya da eski sürüm etkin müfredatı ``draft``'a düşürürdü).
+Kimlikler deterministiktir: ``uuid5(NAMESPACE_OGRENMEN, "<code>@<version>")``.
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -27,6 +38,7 @@ from _contentlib import C, jsonb, num, q, text_array, uuid_array  # noqa: E402
 
 import templates  # noqa: E402
 
+AS_VERSION = re.compile(r"\d{4}\.\d+")
 SEED_COORDINATOR = ("(select s.id from public.staff s where s.role = 'coordinator' and s.active "
                     "order by s.created_at limit 1)")
 
@@ -43,6 +55,31 @@ def curriculum_row(cur: dict, as_version: str | None, status: str | None) -> dic
     elif status:
         row["status"] = status
     return row
+
+
+def drift_guard_sql(expected: list[tuple[str, str, str, str | None]]) -> str:
+    """Onaylı teşhis sorusunun ``content_hash``'i ya da şeklinin ``code_hash``'i beklenenden farklıysa
+    ``OGR-SEED-003``. ``expected``: (question_id, kod, content_hash, şekil code_hash | None)."""
+    values = ",\n      ".join(f"({q(qid)}::uuid, {q(code)}::text, {q(chash)}::text, {q(fhash)}::text)"
+                              for qid, code, chash, fhash in expected)
+    return (
+        "do $$\n"
+        "declare\n"
+        "  v_drift text;\n"
+        "begin\n"
+        "  select string_agg(v.code, ', ' order by v.code) into v_drift\n"
+        f"  from (values\n      {values}\n  ) as v(id, code, content_hash, figure_code_hash)\n"
+        "  join public.questions qq on qq.id = v.id\n"
+        "  left join public.figures ff on ff.id = qq.figure_id\n"
+        "  where qq.status = 'approved'\n"
+        "    and (qq.content_hash is distinct from v.content_hash or ff.code_hash is distinct from v.figure_code_hash);\n"
+        "  if v_drift is not null then\n"
+        "    raise exception 'OGR-SEED-003 onaylı teşhis sorusunun içeriği items.json ile uyuşmuyor: %', v_drift\n"
+        "      using hint = 'Onaylı soru yerinde düzenlenmez: soruyu emekliye ayır, yeni kodla ekle, '\n"
+        "        'yeniden incelemeye gönder.';\n"
+        "  end if;\n"
+        "end $$;"
+    )
 
 
 def build_sql(content: lib.Content, *, as_version: str | None = None, status: str | None = None,
@@ -123,19 +160,23 @@ def build_sql(content: lib.Content, *, as_version: str | None = None, status: st
         out.append(
             "insert into public.figures (id, tool, code, code_hash, alt_text, png_path, width_px, height_px, bytes, "
             "render_status, vision_status, review_status, reviewed_by, reviewed_at) values "
-            f"({q(C.uid('figure', item['code']))}, {q(fig['tool'])}, {q(src)}, {q(code_hash)}, {q(fig['alt_text'])}, "
+            f"({q(C.uid('figure', code_hash))}, {q(fig['tool'])}, {q(src)}, {q(code_hash)}, {q(fig['alt_text'])}, "
             f"{q(fig['png_path'])}, {width}, {height}, {png.stat().st_size}, 'rendered', 'not_applicable', 'verified', "
             f"{SEED_COORDINATOR}, now())\n"
-            "  on conflict (code_hash) do nothing;"
+            "  on conflict do nothing;"
         )
 
-    out += ["", "-- teşhis maddeleri: status='draft' (onaylı duruma seed-keys.py çeker)"]
+    out += ["", "-- teşhis maddeleri: status='draft' (onaylı duruma seed-keys.py çeker); yalnız taslak/incelemedeki "
+            "satır güncellenir"]
     item_ids = []
+    expected: list[tuple[str, str, str, str | None]] = []
     for item in content.items:
         qid = C.uid("question", item["code"])
         item_ids.append(qid)
         fig_sql = (f"(select f.id from public.figures f where f.code_hash = {q(figure_hash[item['code']])})"
                    if item["code"] in figure_hash else "null")
+        chash = C.content_hash(item["stem"], item["options"])
+        expected.append((qid, item["code"], chash, figure_hash.get(item["code"])))
         verification = {"schema": True, "sympy": "verified", "render": "ok" if item.get("figure") else "not_applicable",
                         "vision": "not_applicable", "attempts": 0}
         out.append(
@@ -143,11 +184,15 @@ def build_sql(content: lib.Content, *, as_version: str | None = None, status: st
             "difficulty, source, content_hash, verification, status) values "
             f"({q(qid)}, {q(cur_id)}, {text_array(item['skill_ids'])}, {q(item['kind'])}, {q(item['stem'])}, "
             f"{jsonb(item.get('stem_values', {}))}, {fig_sql}, {jsonb(item['options'])}, {num(item['difficulty'])}, "
-            f"'diagnostic', {q(C.content_hash(item['stem'], item['options']))}, {jsonb(verification)}, 'draft')\n"
+            f"'diagnostic', {q(chash)}, {jsonb(verification)}, 'draft')\n"
             "  on conflict (id) do update set skill_ids = excluded.skill_ids, stem = excluded.stem, "
             "stem_values = excluded.stem_values, figure_id = excluded.figure_id, options = excluded.options, "
-            "difficulty = excluded.difficulty, content_hash = excluded.content_hash;"
+            "difficulty = excluded.difficulty, content_hash = excluded.content_hash\n"
+            "  where public.questions.status in ('draft', 'pending_review');"
         )
+    out += ["", "-- onaylı teşhis sorusu items.json'dan sapmışsa dur (yerinde düzenleme yok: emekliye ayır, yeni kod, "
+            "yeniden inceleme)"]
+    out.append(drift_guard_sql(expected))
     version = content.curriculum["version"]
     out += [
         "",
@@ -188,14 +233,17 @@ def main(argv: list[str] | None = None) -> int:
                     help="M02 seed/migration yoksa BLUEPRINT yedeğine düşme, hata ver")
     args = ap.parse_args(argv)
 
-    if args.as_version is not None:
-        try:
-            lib.version_tuple(args.as_version)
-        except ValueError:
-            print(f"HATA: --as-version sürüm biçimi YYYY.N olmalı: {args.as_version}", file=sys.stderr)
-            return 1
     try:
         content = lib.load_content(args.content, with_keys=False)
+        if args.as_version is not None:
+            if not AS_VERSION.fullmatch(args.as_version):
+                print(f"HATA: --as-version sürüm biçimi YYYY.N olmalı (ör. 2027.1): {args.as_version}", file=sys.stderr)
+                return 1
+            current = content.curriculum["version"]
+            if lib.version_tuple(args.as_version) <= lib.version_tuple(current):
+                print(f"HATA: --as-version {args.as_version}, curriculum.json sürümü {current}'den büyük olmalı; "
+                      "aynı ya da eski sürüm etkin müfredatı taslağa düşürür", file=sys.stderr)
+                return 1
         report = lib.validate_content(content)
         if not report.ok:
             print(report.render(), file=sys.stderr)

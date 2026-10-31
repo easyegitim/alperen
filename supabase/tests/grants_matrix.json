@@ -1,0 +1,1992 @@
+{
+  "description": "Tablo × rol × yetki matrisi (BLUEPRINT §3.8'in makine-okur hâli). Kaynak 0014_rls.sql (+ 0012/0013/0015 GRANT'leri). check_sql.py --grants-matrix migration GRANT'lerini bununla birebir karşılaştırır (fazla/eksik → OGR-LINT-MATRIX); tests/09_grants_matrix.sql canlı DB'de pg_class/pg_attribute/pg_proc ACL'lerini karşılaştırır. Yetki değeri \"*\" tablo düzeyi, liste sütun düzeyidir. Yalnız uygulama rolleri (anon, authenticated, bot_runtime, batch_worker) izlenir; service_role ve postgres kapsam dışıdır.",
+  "roles": [
+    "anon",
+    "authenticated",
+    "bot_runtime",
+    "batch_worker"
+  ],
+  "notes": {
+    "public.messages": "authenticated sütun kümesinde text_raw YOK; eğitmen/koordinatör ham metni yalnız public.v_messages_staff görünümünden okur (gözlemciye 0 satır).",
+    "public.exam_items": "authenticated sütun kümesinde ocr_text YOK; ham metin yalnız public.v_exam_items_full (gözlemciye 0 satır). bot_runtime için politika ve yetki yok.",
+    "public.courses": "Öğrenci ve bot_runtime ASLA (S/B —); /oncelik yalnız priority_plan_for_enrollment RPC'si ile.",
+    "public.provider_health": "bot_runtime/batch_worker insert yetkisi: Worker sağlayıcı sağlığını upsert (on conflict merge) ile yazar.",
+    "public.instructor_alerts": "bot_runtime yalnız ops alarmlarını açar/okur/done yapar (Worker my_chat_member, pratik stoku); diğer türler cron_open_alerts ile.",
+    "app.current_student_sd": "Politikalardaki app.current_student() içinden çağrılır; ifade başlatılırken yetki denetimi yapıldığı için uygulama rollerine EXECUTE verilir (yalnız kendi auth_links satırını döner).",
+    "public.content_pool": "authenticated update yalnız (status, approved_by, approved_at) (§3.8 E: u status,approved_*). K'nin 'u'su sütun düzeyinde ayrışamaz (paylaşılan authenticated rolü); onaylı havuz metni (body) panelden doğrudan düzenlenmez, koordinatör yeni satır ekler.",
+    "public.exam_priority_plans": "bot_runtime S bağlamı: status='approved' ve app.plan_visible_to_student(course_id) (courses.curriculum_id = öğrencinin kaydının curriculum_id'si); başlıksız B: yalnız approved."
+  },
+  "tables": {
+    "audit.events": {},
+    "public.attempts": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.bot_responses": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "flag_reason",
+          "flagged",
+          "flagged_at",
+          "flagged_by"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*",
+        "update": [
+          "review_week"
+        ]
+      }
+    },
+    "public.chat_roles": {
+      "authenticated": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.citations": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "relevance",
+          "relevance_at",
+          "relevance_by",
+          "removed_reason",
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "select": [
+          "authors",
+          "crossref_status",
+          "doi",
+          "id",
+          "oa_pdf_url",
+          "ordinal",
+          "output_id",
+          "status",
+          "title",
+          "title_similarity",
+          "tldr",
+          "venue",
+          "verified_at",
+          "year"
+        ]
+      },
+      "batch_worker": {
+        "insert": [
+          "authors",
+          "crossref_status",
+          "doi",
+          "oa_pdf_url",
+          "ordinal",
+          "output_id",
+          "removed_reason",
+          "status",
+          "title",
+          "title_similarity",
+          "tldr",
+          "venue",
+          "verified_at",
+          "year"
+        ],
+        "select": "*",
+        "update": [
+          "crossref_status",
+          "doi",
+          "oa_pdf_url",
+          "removed_reason",
+          "status",
+          "title_similarity",
+          "tldr",
+          "verified_at"
+        ]
+      }
+    },
+    "public.consents": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "revoked_at",
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.content_pool": {
+      "authenticated": {
+        "insert": "*",
+        "select": "*",
+        "update": [
+          "approved_at",
+          "approved_by",
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "insert": [
+          "body",
+          "cost_usd",
+          "curriculum_id",
+          "kind",
+          "misconception_tag",
+          "mode",
+          "model",
+          "skill_id",
+          "status"
+        ],
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": [
+          "body",
+          "cost_usd",
+          "curriculum_id",
+          "kind",
+          "misconception_tag",
+          "mode",
+          "model",
+          "skill_id",
+          "status"
+        ],
+        "select": "*"
+      }
+    },
+    "public.courses": {
+      "authenticated": {
+        "delete": "*",
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.curricula": {
+      "authenticated": {
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.diagnostic_sessions": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*",
+        "update": [
+          "chat_id",
+          "current_index",
+          "finished_at",
+          "result",
+          "status"
+        ]
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.diagnostic_tests": {
+      "authenticated": {
+        "insert": "*",
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": [
+          "curriculum_id",
+          "id",
+          "version"
+        ]
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.enrollments": {
+      "authenticated": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.escalations": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "answered_at",
+          "answered_by",
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "insert": [
+          "chat_id",
+          "message_id",
+          "question_text",
+          "reason",
+          "student_id",
+          "target_staff_id"
+        ],
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*",
+        "update": [
+          "answered_at",
+          "answered_by",
+          "status"
+        ]
+      }
+    },
+    "public.exam_clusters": {
+      "authenticated": {
+        "delete": "*",
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.exam_items": {
+      "authenticated": {
+        "delete": "*",
+        "insert": [
+          "curriculum_id",
+          "item_no",
+          "kind",
+          "points",
+          "skill_id",
+          "source_id",
+          "topic"
+        ],
+        "select": [
+          "cluster_id",
+          "id",
+          "item_no",
+          "kind",
+          "points",
+          "skill_id",
+          "source_id",
+          "topic"
+        ],
+        "update": [
+          "cluster_id",
+          "kind",
+          "points",
+          "skill_id",
+          "topic"
+        ]
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.exam_priority_plans": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": [
+          "course_id",
+          "evidence_count",
+          "period",
+          "plan"
+        ],
+        "select": "*",
+        "update": [
+          "evidence_count",
+          "period",
+          "plan"
+        ]
+      }
+    },
+    "public.exam_sources": {
+      "authenticated": {
+        "delete": "*",
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.figures": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "review_status",
+          "reviewed_at",
+          "reviewed_by"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": [
+          "alt_text",
+          "attempts",
+          "bytes",
+          "code",
+          "code_hash",
+          "height_px",
+          "id",
+          "png_path",
+          "render_log",
+          "render_status",
+          "svg_path",
+          "tool",
+          "vision_report",
+          "vision_status",
+          "width_px"
+        ],
+        "select": "*",
+        "update": [
+          "attempts",
+          "bytes",
+          "height_px",
+          "png_path",
+          "render_log",
+          "render_status",
+          "svg_path",
+          "vision_report",
+          "vision_status",
+          "width_px"
+        ]
+      }
+    },
+    "public.generation_requests": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "insert": [
+          "curriculum_id",
+          "difficulty_band",
+          "kind",
+          "needs_generation",
+          "question_kind",
+          "requested_by",
+          "skill_id"
+        ],
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": [
+          "curriculum_id",
+          "difficulty_band",
+          "kind",
+          "needs_generation",
+          "plan_id",
+          "points",
+          "question_kind",
+          "requested_by_staff",
+          "skill_id",
+          "topic"
+        ],
+        "select": "*",
+        "update": [
+          "served_at",
+          "served_question_id"
+        ]
+      }
+    },
+    "public.instructor_alerts": {
+      "authenticated": {
+        "insert": "*",
+        "select": "*",
+        "update": [
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "insert": [
+          "detail",
+          "kind",
+          "ref",
+          "severity",
+          "since",
+          "staff_id",
+          "student_id"
+        ],
+        "select": [
+          "created_at",
+          "detail",
+          "id",
+          "kind",
+          "ref",
+          "severity",
+          "staff_id",
+          "status",
+          "student_id"
+        ],
+        "update": [
+          "resolved_at",
+          "status"
+        ]
+      },
+      "batch_worker": {
+        "insert": [
+          "detail",
+          "kind",
+          "ref",
+          "severity",
+          "since",
+          "staff_id",
+          "student_id"
+        ],
+        "select": "*",
+        "update": [
+          "detail",
+          "resolved_at",
+          "resolved_by",
+          "severity",
+          "status"
+        ]
+      }
+    },
+    "public.instructor_notes": {
+      "authenticated": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.legal_texts": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.lesson_analyses": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "approved_at",
+          "approved_by",
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": [
+          "analysis",
+          "cost_usd",
+          "lesson_id",
+          "model",
+          "seed_profile",
+          "version"
+        ],
+        "select": "*"
+      }
+    },
+    "public.lesson_claims": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "decided_at",
+          "decided_by",
+          "edited_value",
+          "status"
+        ]
+      },
+      "batch_worker": {
+        "insert": [
+          "analysis_id",
+          "kind",
+          "misconception_id",
+          "misconception_tag",
+          "quote",
+          "skill_id",
+          "speaker",
+          "t_end_sec",
+          "t_start_sec",
+          "value"
+        ],
+        "select": "*"
+      }
+    },
+    "public.lessons": {
+      "authenticated": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "select": [
+          "created_at",
+          "duration_min",
+          "enrollment_id",
+          "frames_count",
+          "held_at",
+          "id",
+          "staff_id",
+          "status",
+          "transcript_path",
+          "video_deleted_at"
+        ]
+      },
+      "batch_worker": {
+        "select": "*",
+        "update": [
+          "frames_count",
+          "status",
+          "transcript_path",
+          "video_deleted_at"
+        ]
+      }
+    },
+    "public.library_chunks": {
+      "authenticated": {
+        "delete": "*",
+        "insert": [
+          "document_id",
+          "embedding",
+          "page",
+          "text"
+        ],
+        "select": "*",
+        "update": [
+          "embedding",
+          "page",
+          "text"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": [
+          "document_id",
+          "embedding",
+          "page",
+          "text"
+        ],
+        "select": "*"
+      }
+    },
+    "public.library_documents": {
+      "authenticated": {
+        "delete": "*",
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*"
+      }
+    },
+    "public.llm_calls": {
+      "authenticated": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": [
+          "audio_sec",
+          "batch",
+          "cost_usd",
+          "error_code",
+          "images",
+          "latency_ms",
+          "model",
+          "provider",
+          "purpose",
+          "ref_id",
+          "ref_table",
+          "status",
+          "student_ref",
+          "tokens_in",
+          "tokens_out"
+        ],
+        "select": "*"
+      }
+    },
+    "public.mastery": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.mastery_history": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.mastery_view": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.memory_facts": {
+      "authenticated": {
+        "delete": "*",
+        "select": "*",
+        "update": [
+          "approved",
+          "approved_by",
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.messages": {
+      "authenticated": {
+        "select": [
+          "answered_at",
+          "attachments",
+          "chat_id",
+          "created_at",
+          "expires_at",
+          "id",
+          "is_question",
+          "mentions_bot",
+          "reply_to_telegram_message_id",
+          "sender_role",
+          "sent_at",
+          "staff_id",
+          "student_id",
+          "telegram_message_id",
+          "text_llm"
+        ]
+      },
+      "bot_runtime": {
+        "insert": [
+          "attachments",
+          "chat_id",
+          "is_question",
+          "mentions_bot",
+          "reply_to_telegram_message_id",
+          "sender_role",
+          "sent_at",
+          "staff_id",
+          "student_id",
+          "telegram_message_id",
+          "text_llm",
+          "text_raw"
+        ],
+        "select": [
+          "answered_at",
+          "attachments",
+          "chat_id",
+          "created_at",
+          "id",
+          "is_question",
+          "mentions_bot",
+          "reply_to_telegram_message_id",
+          "sender_role",
+          "sent_at",
+          "staff_id",
+          "student_id",
+          "telegram_message_id",
+          "text_llm"
+        ],
+        "update": [
+          "answered_at",
+          "is_question"
+        ]
+      },
+      "batch_worker": {
+        "select": [
+          "answered_at",
+          "attachments",
+          "chat_id",
+          "created_at",
+          "id",
+          "is_question",
+          "mentions_bot",
+          "reply_to_telegram_message_id",
+          "sender_role",
+          "sent_at",
+          "staff_id",
+          "student_id",
+          "telegram_message_id",
+          "text_llm"
+        ],
+        "update": [
+          "answered_at",
+          "is_question"
+        ]
+      }
+    },
+    "public.misconception_evidence": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.misconception_tags": {
+      "authenticated": {
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.misconceptions": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "reject_note",
+          "rejected_by",
+          "resolution_observation_id",
+          "resolved_at",
+          "resolved_by",
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.observations": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.panel_metrics_weekly": {
+      "authenticated": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.pilot_metrics": {
+      "authenticated": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "update": "*"
+      }
+    },
+    "public.preferences": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "active_hours",
+          "default_mode",
+          "explanation_notes",
+          "modality",
+          "proactive_enabled",
+          "updated_at",
+          "voice_reply"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*",
+        "update": [
+          "active_hours",
+          "default_mode",
+          "explanation_notes",
+          "modality",
+          "proactive_enabled",
+          "updated_at",
+          "voice_reply"
+        ]
+      },
+      "batch_worker": {
+        "select": "*",
+        "update": [
+          "active_hours",
+          "default_mode",
+          "explanation_notes",
+          "modality",
+          "proactive_enabled",
+          "updated_at",
+          "voice_reply"
+        ]
+      }
+    },
+    "public.proactive_messages": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "scheduled_for",
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "insert": [
+          "chat_id",
+          "params",
+          "recipient",
+          "scheduled_for",
+          "student_id",
+          "template_id"
+        ],
+        "select": "*",
+        "update": [
+          "sent_at",
+          "status",
+          "telegram_message_id"
+        ]
+      },
+      "batch_worker": {
+        "insert": [
+          "chat_id",
+          "params",
+          "recipient",
+          "scheduled_for",
+          "student_id",
+          "template_id"
+        ]
+      }
+    },
+    "public.provider_health": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.question_templates": {
+      "authenticated": {
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.questions": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "review_note",
+          "reviewed_at",
+          "reviewed_by",
+          "status"
+        ]
+      },
+      "batch_worker": {
+        "insert": [
+          "content_hash",
+          "cost_usd",
+          "curriculum_id",
+          "difficulty",
+          "figure_id",
+          "id",
+          "kind",
+          "model",
+          "options",
+          "prompt_version",
+          "skill_ids",
+          "source",
+          "status",
+          "stem",
+          "stem_values",
+          "template_id",
+          "template_params",
+          "verification"
+        ],
+        "select": "*",
+        "update": [
+          "content_hash",
+          "cost_usd",
+          "difficulty",
+          "figure_id",
+          "kind",
+          "model",
+          "options",
+          "prompt_version",
+          "skill_ids",
+          "stem",
+          "stem_values",
+          "template_id",
+          "template_params",
+          "verification"
+        ]
+      }
+    },
+    "public.questions_public": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      }
+    },
+    "public.quota_limits": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "daily_limit",
+          "warn_at_remaining"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.quota_tiers": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.quota_usage": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.research_outputs": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": [
+          "apa",
+          "bibtex",
+          "model",
+          "output",
+          "request_id"
+        ],
+        "select": "*",
+        "update": [
+          "apa",
+          "bibtex",
+          "model",
+          "output"
+        ]
+      }
+    },
+    "public.research_requests": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "status"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*",
+        "update": [
+          "cost_usd",
+          "expanded_queries",
+          "finished_at",
+          "status"
+        ]
+      }
+    },
+    "public.retention_policies": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "days",
+          "enabled",
+          "user_facing_text"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.retention_runs": {
+      "authenticated": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.runtime_flags": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.sessions": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.settings": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "description",
+          "updated_at",
+          "value"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.skill_prerequisites": {
+      "authenticated": {
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.skills": {
+      "authenticated": {
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.spend_ledger": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*"
+      }
+    },
+    "public.staff": {
+      "authenticated": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "select": [
+          "id",
+          "role",
+          "subject"
+        ]
+      },
+      "batch_worker": {
+        "select": [
+          "id",
+          "role"
+        ]
+      }
+    },
+    "public.staff_students": {
+      "authenticated": {
+        "delete": "*",
+        "insert": "*",
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.storage_deletions": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*",
+        "update": [
+          "done_at",
+          "error"
+        ]
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.students": {
+      "authenticated": {
+        "select": "*",
+        "update": [
+          "is_minor",
+          "status",
+          "tier"
+        ]
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.syllabus_topics": {
+      "authenticated": {
+        "delete": "*",
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.table_sizes_daily": {
+      "authenticated": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "public.tg_chats": {
+      "authenticated": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "bot_runtime": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      },
+      "batch_worker": {
+        "select": "*"
+      }
+    },
+    "public.tg_updates": {},
+    "public.v_exam_items_full": {
+      "authenticated": {
+        "select": "*"
+      }
+    },
+    "public.v_instructor_response_times": {
+      "authenticated": {
+        "select": "*"
+      }
+    },
+    "public.v_messages_staff": {
+      "authenticated": {
+        "select": "*"
+      }
+    },
+    "public.v_review_queue": {
+      "authenticated": {
+        "select": "*"
+      }
+    },
+    "public.weekly_summaries": {
+      "authenticated": {
+        "select": "*"
+      },
+      "bot_runtime": {
+        "select": "*"
+      },
+      "batch_worker": {
+        "insert": "*",
+        "select": "*",
+        "update": "*"
+      }
+    },
+    "secure.answer_keys": {},
+    "secure.auth_links": {},
+    "secure.guardian_codes": {},
+    "secure.staff_codes": {},
+    "secure.student_pii": {},
+    "secure.telegram_identities": {}
+  },
+  "functions": {
+    "app.anonymize_student_ids": {
+      "grants": []
+    },
+    "app.answer_key_complete": {
+      "grants": []
+    },
+    "app.attempts_protect_graded": {
+      "grants": []
+    },
+    "app.audit_row": {
+      "grants": []
+    },
+    "app.base32_random": {
+      "grants": []
+    },
+    "app.bkt_step": {
+      "grants": []
+    },
+    "app.blend_step": {
+      "grants": []
+    },
+    "app.can_edit_student": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "app.can_see_student": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "app.current_student": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "app.current_student_sd": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "app.enrollment_student": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "app.fill_curriculum_id": {
+      "grants": []
+    },
+    "app.infer_prereq_gap": {
+      "grants": []
+    },
+    "app.inferred_guess": {
+      "grants": []
+    },
+    "app.jwt_role": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "app.lesson_protect_status": {
+      "grants": []
+    },
+    "app.messages_expires_at": {
+      "grants": []
+    },
+    "app.numeric_equal": {
+      "grants": []
+    },
+    "app.observations_check_source": {
+      "grants": []
+    },
+    "app.parse_number": {
+      "grants": []
+    },
+    "app.pii_name_token_hashes": {
+      "grants": []
+    },
+    "app.plan_visible_to_student": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "app.questions_approve_guard": {
+      "grants": []
+    },
+    "app.questions_check_skills": {
+      "grants": []
+    },
+    "app.questions_protect_content": {
+      "grants": []
+    },
+    "app.questions_protect_review": {
+      "grants": []
+    },
+    "app.refresh_name_hashes": {
+      "grants": []
+    },
+    "app.research_released": {
+      "grants": []
+    },
+    "app.retention_enrollments_closed": {
+      "grants": []
+    },
+    "app.retention_enrollments_learning_data": {
+      "grants": []
+    },
+    "app.retention_lessons_transcript": {
+      "grants": []
+    },
+    "app.retention_lessons_video": {
+      "grants": []
+    },
+    "app.retention_students_anonymize": {
+      "grants": []
+    },
+    "app.spend_rollup": {
+      "grants": []
+    },
+    "app.staff_in_chat": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "app.staff_name_hashes": {
+      "grants": []
+    },
+    "app.staff_role": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "app.staff_subject": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "app.strip_tags": {
+      "grants": [
+        "authenticated",
+        "bot_runtime"
+      ]
+    },
+    "app.tr_stamp": {
+      "grants": []
+    },
+    "app.transcript_visible": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "app.uid": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.add_instructor_note": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.advance_diagnostic": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.anonymize_students": {
+      "grants": [
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.apply_observation": {
+      "grants": []
+    },
+    "public.approve_lesson_analysis": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.approve_priority_plan": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.approve_question": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.audit_recent": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.cap_memory_facts": {
+      "grants": [
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.check_spend": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.compute_table_sizes": {
+      "grants": [
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.confirm_video_deleted": {
+      "grants": [
+        "batch_worker"
+      ]
+    },
+    "public.consent_ok": {
+      "grants": [
+        "authenticated",
+        "bot_runtime"
+      ]
+    },
+    "public.consume_quota": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.consume_staff_quota": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.create_figure_upload_url": {
+      "grants": [
+        "batch_worker"
+      ]
+    },
+    "public.cron_due_proactive": {
+      "grants": [
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.cron_group_auto_answer": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.cron_idle_sessions": {
+      "grants": [
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.cron_open_alerts": {
+      "grants": [
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.dedup_update": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.enqueue_research": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.erase_student": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.finish_diagnostic": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.grade_attempt": {
+      "grants": [
+        "authenticated",
+        "bot_runtime"
+      ]
+    },
+    "public.link_staff_telegram": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.log_bot_response": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.mark_answered": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.mint_guardian_code": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.mint_staff_code": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.name_token_hashes": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.next_diagnostic_item": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.next_practice_items": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.open_escalation": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.panel_overview": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.peek_answer_key": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.person_labels": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.ping": {
+      "grants": [
+        "anon",
+        "bot_runtime"
+      ]
+    },
+    "public.pool_hit": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.priority_plan_for_enrollment": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.profile_for_prompt": {
+      "grants": [
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.recent_messages": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.recompute_is_minor": {
+      "grants": [
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.record_chat_observation": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.record_staff_consent": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.record_student_consent": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.redeem_guardian_code": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.redeem_guardian_token": {
+      "grants": [
+        "anon"
+      ]
+    },
+    "public.redeem_staff_code": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.register_answer_key": {
+      "grants": [
+        "batch_worker"
+      ]
+    },
+    "public.register_lesson": {
+      "grants": [
+        "authenticated",
+        "batch_worker"
+      ]
+    },
+    "public.register_template_question": {
+      "grants": [
+        "batch_worker"
+      ]
+    },
+    "public.reject_misconception": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.request_deletion": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.resolve_alert": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.resolve_lesson_labels": {
+      "grants": [
+        "batch_worker"
+      ]
+    },
+    "public.resolve_misconception": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.resolve_telegram": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.retrieve_memory": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.reveal_solution": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.rollup_spend": {
+      "grants": [
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.run_retention": {
+      "grants": [
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.set_answer_key": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.set_birth_year": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.set_out_message": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.set_runtime_flag": {
+      "grants": [
+        "authenticated",
+        "batch_worker",
+        "bot_runtime"
+      ]
+    },
+    "public.start_diagnostic": {
+      "grants": [
+        "bot_runtime"
+      ]
+    },
+    "public.student_full_name": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.update_student_pii": {
+      "grants": [
+        "authenticated"
+      ]
+    },
+    "public.write_lesson_analysis": {
+      "grants": [
+        "batch_worker"
+      ]
+    }
+  },
+  "storage": {
+    "storage.objects": {
+      "migration": "0017_storage.sql (storage şeması yoksa atlanır)",
+      "role_membership": "supabase_storage_admin ∋ bot_runtime, batch_worker",
+      "buckets": {
+        "figures": "public",
+        "transcripts": "private",
+        "exams": "private"
+      },
+      "policies": [
+        {
+          "name": "figures_public_read",
+          "cmd": "SELECT",
+          "roles": [
+            "public"
+          ],
+          "bucket": "figures"
+        },
+        {
+          "name": "figures_batch_write",
+          "cmd": "INSERT",
+          "roles": [
+            "batch_worker"
+          ],
+          "bucket": "figures"
+        },
+        {
+          "name": "figures_batch_delete",
+          "cmd": "DELETE",
+          "roles": [
+            "bot_runtime",
+            "batch_worker"
+          ],
+          "bucket": "figures"
+        },
+        {
+          "name": "transcripts_batch",
+          "cmd": "ALL",
+          "roles": [
+            "batch_worker"
+          ],
+          "bucket": "transcripts"
+        },
+        {
+          "name": "transcripts_staff_read",
+          "cmd": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "bucket": "transcripts"
+        },
+        {
+          "name": "transcripts_bot_delete",
+          "cmd": "DELETE",
+          "roles": [
+            "bot_runtime"
+          ],
+          "bucket": "transcripts"
+        },
+        {
+          "name": "exams_staff",
+          "cmd": "ALL",
+          "roles": [
+            "authenticated"
+          ],
+          "bucket": "exams"
+        },
+        {
+          "name": "exams_batch_read",
+          "cmd": "SELECT",
+          "roles": [
+            "batch_worker"
+          ],
+          "bucket": "exams"
+        }
+      ]
+    }
+  }
+}

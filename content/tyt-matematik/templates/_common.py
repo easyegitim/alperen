@@ -4,6 +4,13 @@ Bu modül LLM çağırmaz; yalnız SymPy ve matplotlib kullanır.
 
 * ``parse_math(text)`` — şık ya da ifade metnini (``"`7/8`"``, ``"3√3"``, ``"%25"``, ``"0,045"``,
   ``"-2x + 5 > -3"``) SymPy nesnesine çevirir.
+* ``sympify_expr(expr)`` — anahtardaki ``canonical_expr``/``numeric_value`` metnini SymPy nesnesine çevirir.
+
+Güvenlik: SymPy ``parse_expr``/``sympify`` metni ``eval`` ile çalıştırır. Bu iki yardımcı ayrıştırmadan önce
+``check_safe_math`` ile karakter ve ad beyaz listesi uygular (``_`` yok, öznitelik erişimi yalnız
+``Interval.open/Lopen/Ropen``, adlar yalnız ``_LOCALS`` + ``pi``); liste dışı girdi ``MathParseError`` verir.
+LLM çıktısı (soru üretim hattı) yalnız bu yardımcılarla ayrıştırılmalıdır; ``sympy.sympify``'ı doğrudan
+güvenilmeyen metne çağırma.
 * ``values_equal(a, b)`` — iki SymPy değerini karşılaştırır (sayı, ifade, eşitsizlik → çözüm kümesi).
 * ``content_hash(stem, options)`` — ``questions.content_hash`` (fixtures/db ile aynı normalleştirme).
 * ``FigureSpec`` — şablon şeklinin deterministik tanımı; ``render(path)`` PNG üretir.
@@ -38,6 +45,8 @@ TINT = "#c9d6f2"
 MUTED = "#7a86a8"
 FONT_SIZE = 15  # eksen yazısı ≥ 14 px (100 dpi'da 15 pt ≈ 21 px)
 DPI = 100
+# Şekil PNG sınırı (her iki eksen; validate.py ve testler aynı sabiti kullanır).
+FIGURE_MIN_PX, FIGURE_MAX_PX = 200, 1600
 
 X = sympy.Symbol("x", real=True)
 _SYMBOLS = {name: sympy.Symbol(name, real=True) for name in ("x", "y", "a", "b", "t")}
@@ -58,6 +67,10 @@ _LOCALS: dict[str, Any] = {
     "floor": sympy.floor,
     "ceiling": sympy.ceiling,
 }
+_SAFE_NAMES = frozenset(_LOCALS) | {"pi", "Interval.open", "Interval.Lopen", "Interval.Ropen"}
+_SAFE_CHARS = re.compile(r"[0-9A-Za-z\s()+\-*/^<>=,.']*")
+_NAME = re.compile(r"[A-Za-z_][A-Za-z_0-9]*(?:\s*\.\s*[A-Za-z_][A-Za-z_0-9]*)*")
+_RATIONAL_LITERAL = re.compile(r"Rational\('\d+\.\d+'\)")
 _TRANSFORMS = standard_transformations + (convert_xor,)
 _UNITS = re.compile(r"\s*(TL|km/sa|km|cm|m|dk|dakika|saat|gün|sayfa|işçi)\b", re.IGNORECASE)
 
@@ -138,11 +151,32 @@ def normalize_math(text: str) -> str:
     return s.strip()
 
 
+def check_safe_math(s: str) -> None:
+    """``eval`` öncesi beyaz liste: izinli karakterler, izinli adlar, tırnak yalnız ``Rational('1.5')`` içinde.
+
+    ``_`` (dunder), ``x.attr`` biçimi öznitelik erişimi, bilinmeyen işlev adları ve dize sabitleri reddedilir."""
+    if not isinstance(s, str):
+        raise MathParseError(f"metin bekleniyor: {s!r}")
+    if not _SAFE_CHARS.fullmatch(s):
+        bad = sorted({ch for ch in s if not _SAFE_CHARS.fullmatch(ch)})
+        raise MathParseError(f"izinsiz karakter {bad}: {s!r}")
+    if "'" in _RATIONAL_LITERAL.sub("", s):
+        raise MathParseError(f"dize sabiti yalnız Rational('ondalık') içinde: {s!r}")
+    for name in _NAME.findall(_RATIONAL_LITERAL.sub("Rational(0)", s)):
+        if re.sub(r"\s+", "", name) not in _SAFE_NAMES:
+            raise MathParseError(f"izinsiz ad {name!r}: {s!r}")
+    if re.search(r"\.\s*[A-Za-z]", re.sub(r"Interval\.(open|Lopen|Ropen)\b", "Interval", s)):
+        raise MathParseError(f"öznitelik erişimi yasak: {s!r}")
+
+
 def parse_math(text: str) -> Any:
-    """Şık ya da ifade metnini SymPy nesnesine çevirir; ondalıklar kesir olarak tutulur."""
+    """Şık ya da ifade metnini SymPy nesnesine çevirir; ondalıklar kesir olarak tutulur.
+
+    Girdi ``check_safe_math`` beyaz listesinden geçmezse ``MathParseError`` (``eval`` hiç çalışmaz)."""
     s = normalize_math(text)
     if not s:
         raise MathParseError("boş ifade")
+    check_safe_math(s)
     try:
         return parse_expr(s, local_dict=dict(_LOCALS), transformations=_TRANSFORMS, evaluate=True)
     except Exception as exc:  # noqa: BLE001 — SymPy birçok tür fırlatır
@@ -150,7 +184,8 @@ def parse_math(text: str) -> Any:
 
 
 def sympify_expr(expr: str) -> Any:
-    """Anahtardaki ``canonical_expr``/``numeric_value`` (SymPy sözdizimi)."""
+    """Anahtardaki ``canonical_expr``/``numeric_value`` (SymPy sözdizimi); önce ``check_safe_math``."""
+    check_safe_math(expr)
     try:
         return sympy.sympify(expr, locals=dict(_LOCALS), rational=True)
     except Exception as exc:  # noqa: BLE001
@@ -232,7 +267,8 @@ class FigureSpec:
     alt_text: str
     draw: Callable[[dict[str, Any]], Any] = field(repr=False)
     tool: str = "template"
-    expected_px: dict[str, int] = field(default_factory=lambda: {"min_w": 200, "max_w": 1600, "min_h": 150, "max_h": 1600})
+    expected_px: dict[str, int] = field(default_factory=lambda: {
+        "min_w": FIGURE_MIN_PX, "max_w": FIGURE_MAX_PX, "min_h": FIGURE_MIN_PX, "max_h": FIGURE_MAX_PX})
 
     @property
     def code(self) -> str:

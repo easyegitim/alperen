@@ -1,5 +1,9 @@
 """Şablon ``islem-onceligi`` — işlem önceliği ve işaret kuralları (temel.sayilar; şekilsiz).
 
+Biçimler (§10.4 "parantez, ×/÷, negatifler"): ``negatif-carpim`` ``a + (-b)·(c - d)``, ``parantez-eksi``
+``-(a - b) + c·d``, ``eksi-carpim`` ``c - (-a)·(-b)``, ``bolme`` ``a - (-b) ÷ c · d`` (tam bölünür; soldan
+okuma ``(a - (-b)) ÷ c · d`` olarak etiketlenir).
+
 Çeldiriciler: ``sayilar.islem-onceligi-soldan`` (soldan sağa işlem), ``sayilar.negatif-carpim-isaret``
 ya da ``sayilar.parantez-eksi-dagitma`` ve bir etiketsiz hesap hatası.
 """
@@ -30,8 +34,8 @@ PARAMS_SCHEMA = {
     "additionalProperties": False,
     "required": ["bicim", "a", "b", "c", "d"],
     "properties": {
-        "bicim": {"enum": ["negatif-carpim", "parantez-eksi", "eksi-carpim"],
-                  "description": "a + (-b)·(c - d) | -(a - b) + c·d | c - (-a)·(-b)"},
+        "bicim": {"enum": ["negatif-carpim", "parantez-eksi", "eksi-carpim", "bolme"],
+                  "description": "a + (-b)·(c - d) | -(a - b) + c·d | c - (-a)·(-b) | a - (-b) ÷ c · d"},
         "a": {"type": "integer", "minimum": -9, "maximum": 9},
         "b": {"type": "integer", "minimum": -9, "maximum": 9},
         "c": {"type": "integer", "minimum": -9, "maximum": 9},
@@ -49,7 +53,7 @@ def _num(n: int) -> Choice:
 
 
 def _build(rng: random.Random):
-    bicim = rng.choice(["negatif-carpim", "parantez-eksi", "eksi-carpim"])
+    bicim = rng.choice(["negatif-carpim", "parantez-eksi", "eksi-carpim", "bolme"])
     if bicim == "negatif-carpim":
         # a + (-b)·(c - d), c < d: iki negatifin çarpımı
         a, b = rng.randint(-9, 9), rng.randint(2, 9)
@@ -79,6 +83,23 @@ def _build(rng: random.Random):
         tag_b = PARANTEZ
         solution = (f"Eksi parantezdeki her terime dağılır: `-({a} - {b}) = {-a} + {b} = {b - a}`. "
                     f"Çarpma önce yapılır: `{c} · {paren(d)} = {c * d}`. Toplam: `{b - a} + {paren(c * d)} = {value}`.")
+        params = {"bicim": bicim, "a": a, "b": b, "c": c, "d": d}
+    elif bicim == "bolme":
+        # a - (-b) ÷ c · d: bölme ve çarpma soldan sağa, çıkarmadan önce; b ve a, c'nin katı (tam sonuç)
+        c = rng.randint(2, 4)
+        b = c * rng.randint(1, 9 // c)
+        a = c * rng.choice([n for n in range(-(9 // c), 9 // c + 1) if n != 0])
+        d = rng.randint(2, 9)
+        expr = f"{a} - (-{b}) ÷ {c} · {d}"
+        canonical = f"{a} - (-{b})/{c}*{d}"
+        quotient = -b // c
+        value = a - quotient * d
+        wrong_a = (a + b) // c * d  # soldan sağa: (a - (-b)) ÷ c · d
+        wrong_b = a - (b // c) * d  # (-b) ÷ c · d işaretini pozitif alma
+        tag_b = NEGATIF
+        solution = (f"Bölme ve çarpma, çıkarmadan önce ve soldan sağa yapılır: `(-{b}) ÷ {c} = {quotient}`, "
+                    f"`({quotient}) · {d} = {quotient * d}`. Sonra `{a} - ({quotient * d}) = {a} + {-quotient * d} "
+                    f"= {value}`.")
         params = {"bicim": bicim, "a": a, "b": b, "c": c, "d": d}
     else:
         # c - (-a)·(-b)

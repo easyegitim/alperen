@@ -8,6 +8,10 @@ Biçimler:
 * ``kar`` — maliyet ve satış fiyatı çubukları; sorulan kâr ya da zarar yüzdesi. Çeldiriciler:
   ``yuzde.kar-satis-uzerinden`` (satış fiyatı üzerinden yüzde), ``genel.soruyu-yarim-okuma`` (TL farkı),
   etiketsiz oran hatası (satış/maliyet yüzdesi).
+* ``kar-ardisik`` — maliyet, etiket fiyatı (önce yüzde zam) ve satış fiyatı (sonra yüzde indirim) çubukları;
+  sorulan kâr ya da zarar yüzdesi. Çeldiriciler §10.4'teki iki etiketi birlikte taşır:
+  ``yuzde.ardisik-toplama`` (zam ve indirim yüzdelerini toplama), ``yuzde.kar-satis-uzerinden`` (satış fiyatı
+  üzerinden yüzde), etiketsiz hesap hatası.
 """
 
 from __future__ import annotations
@@ -33,6 +37,8 @@ FIYATLAR = (100, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000)
 YUZDELER = (10, 20, 25, 30, 40, 50)
 # (maliyet üzerinden yüzde, satış üzerinden yüzde, kâr mı)
 KAR_ZARAR = ((25, 20, True), (100, 50, True), (150, 60, True), (20, 25, False), (50, 100, False), (60, 150, False))
+# (zam, indirim): maliyet ve satış üzerinden yüzdeler tam sayı olan çiftler (sonuç kâr ya da zarar, sıfır değil)
+ZAM_INDIRIM = ((150, 50), (150, 20), (300, 50), (60, 50), (100, 60), (25, 60), (100, 75))
 PARAMS_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "yuzde-grafik parametreleri",
@@ -40,13 +46,16 @@ PARAMS_SCHEMA = {
     "additionalProperties": False,
     "required": ["bicim"],
     "properties": {
-        "bicim": {"enum": ["ardisik", "kar"]},
+        "bicim": {"enum": ["ardisik", "kar", "kar-ardisik"]},
         "fiyat": {"type": "integer", "minimum": 1},
         "degisimler": {"type": "array", "minItems": 2, "maxItems": 2,
                        "items": {"type": "integer", "minimum": -50, "maximum": 50},
                        "description": "ardisik: + zam, - indirim (yüzde)"},
         "maliyet": {"type": "integer", "minimum": 1},
         "satis": {"type": "integer", "minimum": 1},
+        "zam": {"type": "integer", "minimum": 1, "maximum": 300, "description": "kar-ardisik: etiket fiyatı zammı (%)"},
+        "indirim": {"type": "integer", "minimum": 1, "maximum": 99,
+                    "description": "kar-ardisik: etiket fiyatından indirim (%)"},
     },
 }
 
@@ -133,8 +142,53 @@ def _kar(rng: random.Random):
     )
 
 
+def _kar_ardisik(rng: random.Random):
+    zam, indirim = rng.choice(ZAM_INDIRIM)
+    cost = rng.choice(range(40, 401, 20))
+    tag_price = sympy.Rational(cost * (100 + zam), 100)
+    sale = tag_price * sympy.Rational(100 - indirim, 100)
+    if not (tag_price.is_integer and sale.is_integer):
+        raise TemplateRetry("tam sayı fiyat")
+    tag_price, sale = int(tag_price), int(sale)
+    profit = sale > cost
+    word = "kâr" if profit else "zarar"
+    diff = abs(sale - cost)
+    on_cost = sympy.Rational(diff * 100, cost)
+    on_sale = sympy.Rational(diff * 100, sale)
+    summed = abs(zam - indirim)
+    if not (on_cost.is_integer and on_sale.is_integer):
+        raise TemplateRetry("tam sayı yüzde")
+    slip = on_cost + rng.choice([-10, -5, 5, 10])
+    if slip <= 0:
+        raise TemplateRetry("pozitif yüzde")
+    stem = (f"Şekildeki grafikte maliyeti {cost} TL olan bir ürünün etiket fiyatı maliyetin %{zam} fazlası olarak "
+            f"belirleniyor, ürün etiket fiyatı üzerinden %{indirim} indirimle satılıyor. Bu satışta {word} yüzdesi "
+            "kaçtır?")
+    solution = (f"Yüzdeler sırayla uygulanır: etiket fiyatı `{cost} · {_factor(zam)} = {tag_price}` TL, satış fiyatı "
+                f"`{tag_price} · {_factor(-indirim)} = {sale}` TL. {word.capitalize()} `{diff}` TL; yüzde maliyet "
+                f"üzerinden hesaplanır: `{diff}/{cost} · 100 = {on_cost}`. Cevap `%{on_cost}`.")
+    fig_params = {"bars": [{"label": "Maliyet", "value": cost, "text": f"{cost} TL"},
+                           {"label": "Etiket fiyatı", "value": tag_price, "text": f"%{zam} zam"},
+                           {"label": "Satış fiyatı", "value": sale, "text": f"%{indirim} indirim"}],
+                  "ylabel": "Tutar (TL)"}
+    alt = (f"Üç çubuklu grafik. İlk çubuk maliyet {cost} TL; ikinci çubuk %{zam} zamlı etiket fiyatını, üçüncü "
+           f"çubuk etiket fiyatından %{indirim} indirimli satış fiyatını gösteriyor; son iki çubuğun değeri yazılmamış.")
+    figure = FigureSpec(template_id=TEMPLATE_ID, params=fig_params, alt_text=alt, draw=draw_bar_chart)
+    return dict(
+        stem=stem, correct=Choice(code(f"%{on_cost}"), on_cost),
+        distractors=[Choice(code(f"%{summed}"), sympy.Integer(summed), ARDISIK),
+                     Choice(code(f"%{on_sale}"), on_sale, KAR_SATIS),
+                     Choice(code(f"%{slip}"), slip)],
+        canonical_expr=f"Abs({cost}*Rational({100 + zam},100)*Rational({100 - indirim},100) - {cost})*100/{cost}",
+        numeric_value=str(on_cost), solution=solution,
+        params={"bicim": "kar-ardisik", "maliyet": cost, "satis": sale, "zam": zam, "indirim": indirim},
+        stem_values={"maliyet": cost, "zam": zam, "indirim": indirim}, figure=figure,
+    )
+
+
 def _build(rng: random.Random):
-    parts = _ardisik(rng) if rng.random() < 0.6 else _kar(rng)
+    roll = rng.random()
+    parts = _ardisik(rng) if roll < 0.4 else _kar_ardisik(rng) if roll < 0.75 else _kar(rng)
     item, key = assemble(rng=rng, template_id=TEMPLATE_ID, skill_ids=[SKILL_ID], **parts)
     return item, key, parts["figure"]
 

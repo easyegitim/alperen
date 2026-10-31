@@ -308,3 +308,24 @@ def test_exclamation_in_stem_rejected(lib, content_copy):
     items[3]["stem"] = items[3]["stem"].replace("kaçtır?", "kaçtır? Hadi bakalım!")
     _write(items_path, items)
     assert "ünlem" in _errors(_report(lib, content_copy))
+
+
+def test_dev_seed_drift_is_a_warning(lib, content_copy, tmp_path):
+    """fixtures/db/dev-seed.json teşhis satırı items.json'dan farklıysa uyarı (db-test.sh --dev OGR-SEED-003)."""
+    from templates import _common as C
+
+    content = lib.load_content(content_copy)
+    same, other = content.items[0], content.items[1]
+    repo = tmp_path / "repo"
+    (repo / "fixtures" / "db").mkdir(parents=True)
+    rows = [{"id": C.uid("question", same["code"]), "content_hash": C.content_hash(same["stem"], same["options"])},
+            {"id": C.uid("question", other["code"]), "content_hash": "eski-icerik"}]
+    (repo / "fixtures" / "db" / "dev-seed.json").write_text(json.dumps({"questions": rows}), encoding="utf-8")
+    report = _report(lib, content_copy, repo_root=repo)
+    assert report.errors == []
+    drift = [w for w in report.warnings if "dev-seed.json" in w]
+    assert len(drift) == 1 and other["code"] in drift[0] and same["code"] not in drift[0]
+    assert "OGR-SEED-003" in drift[0]
+    rows[1]["content_hash"] = C.content_hash(other["stem"], other["options"])
+    (repo / "fixtures" / "db" / "dev-seed.json").write_text(json.dumps({"questions": rows}), encoding="utf-8")
+    assert not [w for w in _report(lib, content_copy, repo_root=repo).warnings if "dev-seed.json" in w]

@@ -53,7 +53,7 @@ def load_file(path: str | Path) -> ModuleType:
 def load(template_id: str) -> ModuleType:
     """Şablon modülünü kimliğiyle yükler."""
     if template_id not in TEMPLATE_FILES:
-        raise KeyError(f"OGR-TPL-002 bilinmeyen şablon: {template_id}")
+        raise KeyError(f"bilinmeyen şablon: {template_id}")
     return load_file(TEMPLATES_DIR / TEMPLATE_FILES[template_id])
 
 

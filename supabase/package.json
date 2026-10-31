@@ -1,0 +1,11 @@
+{
+  "name": "@ogrenmen/supabase",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Öğrenmen veritabanı yardımcıları: bot_runtime/batch_worker JWT basımı (mint-jwt.ts) ve testleri",
+  "scripts": {
+    "mint-jwt": "bun run scripts/mint-jwt.ts",
+    "test": "bun test scripts"
+  }
+}

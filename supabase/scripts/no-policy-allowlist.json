@@ -1,0 +1,13 @@
+{
+  "description": "RLS açık ve zorlanmış ama bilerek HİÇ politikası olmayan tablolar: doğrudan rol erişimi yoktur, yalnız SECURITY DEFINER fonksiyonlar (sahibi postgres) erişir. check_sql.py OGR-LINT-POLICY bu listeyi okur; listede olup politikası olan ya da artık var olmayan tablo da hatadır.",
+  "tables": [
+    {"name": "public.tg_updates", "reason": "yalnız dedup_update() yazar; Worker'ın doğrudan erişimi yok"},
+    {"name": "secure.student_pii", "reason": "kişisel veri; resolve_telegram, update_student_pii, student_full_name, person_labels"},
+    {"name": "secure.telegram_identities", "reason": "Telegram kimliği; resolve_telegram, link_staff_telegram, redeem_staff_code"},
+    {"name": "secure.staff_codes", "reason": "eğitmen bağlama kodları; mint_staff_code, redeem_staff_code"},
+    {"name": "secure.auth_links", "reason": "ileride öğrenci PWA'sı; app.current_student_sd"},
+    {"name": "secure.guardian_codes", "reason": "veli onay kodları; mint_guardian_code, redeem_guardian_code, redeem_guardian_token"},
+    {"name": "secure.answer_keys", "reason": "cevap anahtarları; grade_attempt, reveal_solution, register_answer_key, peek_answer_key"},
+    {"name": "audit.events", "reason": "yalnız eklemeli denetim izi; tetikleyiciler ve RPC'ler yazar, koordinatör audit_recent() ile okur"}
+  ]
+}

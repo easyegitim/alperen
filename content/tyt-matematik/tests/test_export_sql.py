@@ -133,10 +133,36 @@ def test_output_is_deterministic(tmp_path, seed_sql):
     assert out.read_text(encoding="utf-8") == seed_sql
 
 
-def test_invalid_as_version(tmp_path):
-    proc = subprocess.run([sys.executable, str(SCRIPT), "--as-version", "yeni", "--out", str(tmp_path / "x.sql")],
+@pytest.mark.parametrize("version", ["yeni", "1.2.3", "2027", "2027.1.0", "27.1", "2027.x"])
+def test_invalid_as_version(tmp_path, version):
+    proc = subprocess.run([sys.executable, str(SCRIPT), "--as-version", version, "--out", str(tmp_path / "x.sql")],
                           capture_output=True, text=True, timeout=120)
     assert proc.returncode == 1 and not (tmp_path / "x.sql").exists()
+    assert "YYYY.N" in proc.stderr
+
+
+@pytest.mark.parametrize("version", ["2026.1", "2025.9", "2026.0"])
+def test_as_version_must_be_newer_than_current(tmp_path, version):
+    """Aynı ya da eski sürüm etkin müfredatı (on conflict … status = excluded.status) taslağa düşürürdü."""
+    proc = subprocess.run([sys.executable, str(SCRIPT), "--as-version", version, "--out", str(tmp_path / "x.sql")],
+                          capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 1 and not (tmp_path / "x.sql").exists()
+    assert "büyük olmalı" in proc.stderr
+
+
+def test_figure_ids_derive_from_code_hash(lib, seed_sql):
+    figs = rows(lib, seed_sql, "figures")
+    assert {f["id"] for f in figs} == {C.uid("figure", f["code_hash"]) for f in figs}
+    assert seed_sql.count("on conflict do nothing;") == 3
+
+
+def test_approved_questions_are_not_overwritten_and_drift_guard(lib, seed_sql):
+    assert seed_sql.count("where public.questions.status in ('draft', 'pending_review');") == 20
+    assert "OGR-SEED-003" in seed_sql
+    content = lib.load_content()
+    guard = seed_sql[seed_sql.index("OGR-SEED-003") - 6000:seed_sql.index("OGR-SEED-003")]
+    for item in content.items:
+        assert C.content_hash(item["stem"], item["options"]) in guard
 
 
 # --- yer tutucu çözümü -----------------------------------------------------------------------
@@ -215,6 +241,49 @@ def test_blueprint_fallback_reads_section_3_10(lib):
     for name, entry in placeholders.items():
         resolved, _ = lib.resolve_placeholders("{{" + name + "}}", placeholders, src)
         assert int(resolved) == entry["expected_days"], name
+
+
+def _export_with_sources(tmp_path: Path, seed: Path, mig: Path, *extra: str) -> subprocess.CompletedProcess:
+    return subprocess.run([sys.executable, str(SCRIPT), "--out", str(tmp_path / "s.sql"), "--retention-seed", str(seed),
+                           "--migrations", str(mig), *extra], capture_output=True, text=True, timeout=300)
+
+
+def test_present_but_unparseable_seed_fails_without_strict(tmp_path):
+    """Dosya varsa yedeğe düşülmez: insert … select … from (values …) biçimi okunamaz → çıkış 1."""
+    seed, mig = _fake_m02(tmp_path)
+    seed.write_text(
+        "insert into public.retention_policies (id, table_name, ts_column, days, mode)\n"
+        "select * from (values ('messages.hard_delete', 'messages', 'expires_at', 0, 'delete')) v\n"
+        "on conflict (id) do nothing;\n", encoding="utf-8")
+    proc = _export_with_sources(tmp_path, seed, mig)
+    assert proc.returncode == 1 and "retention_policies satırı okunamadı" in proc.stderr
+    assert not (tmp_path / "s.sql").exists()
+
+
+def test_non_literal_days_fails(lib, tmp_path):
+    seed, mig = _fake_m02(tmp_path)
+    seed.write_text(seed.read_text(encoding="utf-8").replace(", 31, ", ", 30 + 1, "), encoding="utf-8")
+    with pytest.raises(lib.ContentError, match="tam sayı sabiti değil"):
+        lib.load_retention(REPO_ROOT, seed, mig)
+
+
+def test_migrations_without_tg_chats_default_fail(lib, tmp_path):
+    seed, mig = _fake_m02(tmp_path)
+    (mig / "0007_kulaklik.sql").write_text("create table public.tg_chats (\n  chat_id bigint primary key,\n"
+                                           "  retention_days smallint not null\n);\n", encoding="utf-8")
+    proc = _export_with_sources(tmp_path, seed, mig)
+    assert proc.returncode == 1 and "retention_days varsayılanı okunamadı" in proc.stderr
+    (mig / "0007_kulaklik.sql").write_text("create table public.diger (id int);\n", encoding="utf-8")
+    with pytest.raises(lib.ContentError, match="tg_chats tablosu bulunamadı"):
+        lib.load_retention(REPO_ROOT, seed, mig)
+
+
+def test_alter_table_default_is_read(lib, tmp_path):
+    seed, mig = _fake_m02(tmp_path, messages_days=90)
+    (mig / "0015_storage.sql").write_text(
+        "alter table public.tg_chats alter column retention_days set default 75;\n", encoding="utf-8")
+    src = lib.load_retention(REPO_ROOT, seed, mig, allow_fallback=False)
+    assert src.tg_chats_retention_days == 75 and not src.fallback
 
 
 def test_strict_sources_without_m02_files_fails(tmp_path):

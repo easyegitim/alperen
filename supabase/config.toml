@@ -1,0 +1,36 @@
+# supabase/config.toml — Supabase CLI yapılandırması (BLUEPRINT §3.0). PostgREST'e YALNIZ public şeması açılır;
+# secure ve audit açılmaz (barındırılan projede Dashboard → API → Exposed schemas yalnız "public").
+project_id = "ogrenmen"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[db.seed]
+enabled = true
+# Yalnız temel seed; müfredat seed'i çalışma anında export-sql.py ile üretilir, anahtarlar seed-keys.py ile yazılır,
+# geliştirme verisi (seed/dev) yalnız db-test.sh --dev ile yüklenir.
+sql_paths = ["./seed/00_roles.sql", "./seed/01_settings.sql", "./seed/02_quota.sql", "./seed/03_runtime_flags.sql", "./seed/04_retention_policies.sql"]
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+enable_signup = false
+
+[auth.email]
+enable_signup = false
+enable_confirmations = true
+
+[storage]
+enabled = true
+file_size_limit = "20MiB"
+
+[studio]
+enabled = false

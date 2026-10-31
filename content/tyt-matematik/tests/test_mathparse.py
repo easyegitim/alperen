@@ -79,3 +79,36 @@ def test_deterministic_ids():
     assert C.curriculum_uuid("TYT-MAT@2026.1") == "7a988b84-8937-5242-8c35-ddbc4ea9216d"
     assert C.uid("question", "DIAG-2026.1-07") == C.uid("question", "DIAG-2026.1-07")
     assert C.uid("question", "DIAG-2026.1-07") != C.uid("question", "DIAG-2026.1-08")
+
+
+@pytest.mark.parametrize("payload", [
+    "__import__('os').getpid()",
+    "x.__class__",
+    "x.conjugate()",
+    "open('/etc/passwd')",
+    "exec('1')",
+    "Rational('1').__init__",
+    "Symbol('y')",
+    "lambda: 1",
+    "[1, 2]",
+    "x; 1",
+])
+def test_untrusted_text_never_reaches_eval(payload, monkeypatch):
+    """parse_math/sympify_expr beyaz liste dışı girdiyi eval'e vermeden reddeder."""
+    import sympy.parsing.sympy_parser as sp
+
+    calls = []
+    monkeypatch.setattr(C, "parse_expr", lambda *a, **k: calls.append(a) or sp.parse_expr(*a, **k))
+    monkeypatch.setattr(C.sympy, "sympify", lambda *a, **k: calls.append(a) or 0)
+    with pytest.raises(C.MathParseError):
+        C.sympify_expr(payload)
+    with pytest.raises(C.MathParseError):
+        C.parse_math(payload)
+    assert calls == []
+
+
+def test_whitelisted_forms_still_parse():
+    assert C.sympify_expr("Interval.open(-oo, 3)") == C.sympy.Interval.open(-C.sympy.oo, 3)
+    assert C.sympify_expr("ilcm(4, 6)*Rational(7, 8)") == C.sympy.Rational(21, 2)
+    assert C.parse_math("`0,045`") == C.sympy.Rational(9, 200)
+    assert C.parse_math("`(5^2)^3 · 5^(-2)`") == 5 ** 4
