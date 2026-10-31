@@ -45,6 +45,24 @@ def test_resolve_lesson_labels_match_fixture_and_hide_names(db):
     assert any(e["action"] == "RPC:resolve_lesson_labels" for e in db.tables["audit.events"])
 
 
+def test_resolve_lesson_labels_only_student_and_instructor(db):
+    """§3.9 ``table(hash, label)`` yalnız 'ÖĞRENCİ'/'EĞİTMEN' döner; veli tokenları (name_token_hashes'te)
+    'ÖĞRENCİ' etiketiyle gelir, ayrı 'VELİ' etiketi yoktur (SQL ile aynı)."""
+    from ogrenmen_pii import normalize_token, sha256_hex
+
+    lesson = db._one("lessons", id=LESSON)
+    student = db._one("enrollments", id=lesson["enrollment_id"])["student_id"]
+    pii = db._one("secure.student_pii", student_id=student)
+    extra = sha256_hex(normalize_token("Hatice"))
+    only_guardian = sha256_hex(normalize_token("Nermin"))
+    db._update_internal("secure.student_pii", pii, {
+        "guardian_name": "Nermin Hatice", "name_token_hashes": list(pii.get("name_token_hashes") or []) + [extra]})
+    labels = db.rpc("resolve_lesson_labels", {"p_lesson": LESSON})
+    assert {r["label"] for r in labels} == {"ÖĞRENCİ", "EĞİTMEN"}
+    by_hash = {r["hash"]: r["label"] for r in labels}
+    assert by_hash[extra] == "ÖĞRENCİ" and only_guardian not in by_hash
+
+
 def test_profile_for_prompt_has_bands_not_percentages(db):
     prof = db.rpc("profile_for_prompt", {"p_enrollment": MERT_ENR})
     assert set(prof) == {"weak", "misconceptions", "prereq_hint", "explanation_notes", "weekly_line"}

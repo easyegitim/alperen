@@ -10,13 +10,19 @@ readme = "README.md"
 requires-python = ">=3.11"
 # Yerel yol bağımlılıkları (ogrenmen-contracts, ogrenmen-mastery, ogrenmen-pii) aynı pip komutunda
 # `-e <yol>` ile kurulur (BLUEPRINT §2); psycopg yok — veritabanına PostgREST REST üzerinden bağlanılır.
+# §6 ağacı: httpx, jsonschema, numpy, typer, rich. typer/rich alt pipeline CLI'ları için gelir (ortak bayraklar
+# cli_base'de argparse ile kurulur; typer kullanan modül cli_base.add_common_args eşdeğerini kendi kurar).
+# defusedxml: arXiv Atom yanıtı (güvenilmez XML) güvenli ayrıştırılır.
 dependencies = [
+  "defusedxml==0.7.1",
   "httpx==0.28.1",
   "jsonschema==4.26.0",
   "numpy==2.5.3",
   "ogrenmen-contracts==0.1.0",
   "ogrenmen-mastery==0.1.0",
   "ogrenmen-pii==0.1.0",
+  "rich==15.0.0",
+  "typer==0.27.3",
 ]
 
 [project.optional-dependencies]

@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import subprocess
 import sys
 
+import ogrenmen_contracts as contracts
 import pytest
 
 from conftest import FIXTURES, read_jsonl
 from ogrenmen_common import cli_base, selftest
 from ogrenmen_common.adapters.base import LLMRequest
-from ogrenmen_common.errors import RpcError
+from ogrenmen_common.errors import AdapterError, RpcError
 from ogrenmen_common.runtime import Runtime
 
 
@@ -52,9 +54,81 @@ def test_real_with_keys_builds_real_adapters():
                                                                                  "cf-ai"}
     assert r.llm.available("gemini-2.5-flash-lite") and not r.llm.available("meta-llama/llama-3.3-70b-instruct:free")
     names = {type(x).__name__ for x in (r.db, r.storage, r.embedding, r.oa, r.doi, r.notifier)}
-    assert names == {"PostgrestDb", "SupabaseStorage", "GeminiEmbedding", "UnpaywallResolver", "CrossrefResolver",
+    assert names == {"PostgrestDb", "SupabaseStorage", "LedgeredEmbedding", "UnpaywallResolver", "CrossrefResolver",
                      "TelegramNotifier"}
+    assert type(r.embedding.inner).__name__ == "GeminiEmbedding"
+    assert (r.embedding.inner.model, r.embedding.dims) == ("gemini-embedding-001", 768)
+    assert r.embedding.inner.client.headers["x-goog-api-key"] == "g1"  # ücretli anahtar (gemini-paid)
     assert r.batch.client is not None and r.ledger.dry_run is False
+    assert r.storage_tmp is None
+
+
+DB_ENV = {"SUPABASE_URL": "https://p.example.org", "SUPABASE_BATCH_JWT": "j", "SUPABASE_ANON_KEY": "a"}
+
+
+def test_real_db_without_llm_key_refuses():
+    """Gerçek veritabanına sahte model çıktısı (fixture olguları, sahte maliyet satırları) yazılmaz."""
+    with pytest.raises(AdapterError, match="OGR-ADP-001 gerçek veritabanıyla sahte model kullanılmaz"):
+        Runtime.from_env(dry_run=False, env=dict(DB_ENV), quiet=True)
+
+
+@pytest.mark.parametrize("keys", [{"GEMINI_PAID_KEY": "g1"}, {"GROQ_KEY": "q"}, {"ANTHROPIC_KEY": "x"},
+                                  {"GEMINI_PAID_KEY": "g1", "SUPABASE_URL": "https://p.example.org"},
+                                  {"GEMINI_PAID_KEY": "g1", "SUPABASE_BATCH_JWT": "j"}])
+def test_real_llm_without_db_refuses(keys):
+    """Ücretli/gerçek çağrı gerçek defter ve check_spend tavanı olmadan yapılmaz (fixture spend_ledger'a bakmaz)."""
+    with pytest.raises(AdapterError, match="gerçek maliyet defteri ve tavan olmadan"):
+        Runtime.from_env(dry_run=False, env=keys, quiet=True)
+
+
+def test_embedding_never_uses_free_key():
+    """gemini-embedding-001 sağlayıcısı gemini-paid; ücretsiz katman veriyle eğitir (§9.1) — anahtarı kullanılmaz."""
+    env = {**DB_ENV, "GEMINI_FREE_KEY": "free-only"}
+    r = Runtime.from_env(dry_run=False, env=env, quiet=True)
+    assert type(r.embedding.inner).__name__ == "RefusingEmbedding"
+    assert any("GEMINI_PAID_KEY" in w for w in r.warnings)
+    with pytest.raises(AdapterError, match="sahte vektör yazılmaz"):
+        r.embedding.embed(["ders notu"])  # ağa ve deftere gitmeden reddedilir
+
+
+def test_embedding_model_and_dims_come_from_models_json(monkeypatch):
+    import ogrenmen_common.runtime as runtime_mod
+
+    models = copy.deepcopy(contracts.load_models())
+    models["models"]["gemini-embedding-002"] = {**models["models"]["gemini-embedding-001"], "dims": 512}
+    models["chains"]["embedding"] = ["gemini-embedding-002"]
+    monkeypatch.setattr(runtime_mod.contracts, "load_models", lambda: models)
+    real = Runtime.from_env(dry_run=False, env={**DB_ENV, "GEMINI_PAID_KEY": "g1"}, quiet=True)
+    assert (real.embedding.inner.model, real.embedding.inner.dims) == ("gemini-embedding-002", 512)
+    fake = Runtime.from_env(dry_run=True)
+    assert (fake.embedding.model, fake.embedding.dims) == ("gemini-embedding-002", 512)
+    assert len(fake.embedding.embed(["x"])[0]) == 512
+
+
+def test_dry_run_embedding_goes_through_ledger():
+    r = Runtime.from_env(dry_run=True)
+    vecs = r.embedding.embed(["kesir", "oran"])
+    assert len(vecs) == 2 and len(vecs[0]) == 768 and r.embedding.calls == [2]
+    row = r.db.written("llm_calls")[-1]
+    assert (row["purpose"], row["provider"], row["model"], row["status"]) == (
+        "embedding", "gemini-paid", "gemini-embedding-001", "ok")
+    assert row["tokens_in"] > 0 and r.ledger.estimate()["by_purpose"]["embedding"]["calls"] == 1
+    r.close()
+
+
+def test_storage_is_private_per_runtime_and_removed_on_close():
+    a, b = Runtime.from_env(dry_run=True), Runtime.from_env(dry_run=True)
+    assert a.storage_tmp is not None and b.storage_tmp is not None and a.storage_tmp != b.storage_tmp
+    assert a.storage_tmp.name.startswith("ogrenmen-storage-")
+    a.storage.upload("figures", "q/1.png", b"png")
+    assert a.storage.exists("figures", "q/1.png") and not b.storage.exists("figures", "q/1.png")
+    root = a.storage_tmp
+    a.close()
+    assert not root.exists()
+    c = Runtime.from_env(dry_run=True)
+    assert not c.storage.exists("figures", "q/1.png")  # önceki çalışmanın nesnesi görünmez (determinizm)
+    b.close()
+    c.close()
 
 
 def test_runtime_close_writes_outputs(tmp_path):
@@ -99,11 +173,19 @@ def test_missing_jwt_falls_back_to_dry_run(tmp_path, capsys):
     args = cli_base.CommonArgs(dry_run=False, fixtures=None, out=tmp_path / "o", limit=None, since=None,
                                student_ref=None, adapters="real")
     dry, message = cli_base.effective_dry_run(args, {})
-    assert dry is True and "SUPABASE_BATCH_JWT yok" in message
-    assert cli_base.effective_dry_run(args, {"SUPABASE_BATCH_JWT": "j"}) == (False, None)
-    rt = cli_base.runtime_from_args(args, env={"GITHUB_ACTIONS": "true"})
-    assert rt.is_fake and rt.dry_run
-    assert "::warning::SUPABASE_BATCH_JWT yok" in capsys.readouterr().err
+    assert dry is True and "SUPABASE_URL/SUPABASE_BATCH_JWT yok" in message
+    # İkisi birlikte gerçek veritabanıdır; biri eksikse dry-run (yarım gerçek kurulum yok).
+    assert cli_base.effective_dry_run(args, {"SUPABASE_BATCH_JWT": "j"})[0] is True
+    assert "SUPABASE_URL yok" in cli_base.effective_dry_run(args, {"SUPABASE_BATCH_JWT": "j"})[1]
+    assert cli_base.effective_dry_run(args, {"SUPABASE_URL": "https://p.example.org"})[0] is True
+    assert cli_base.effective_dry_run(args, {"SUPABASE_URL": "https://p.example.org",
+                                             "SUPABASE_BATCH_JWT": "j"}) == (False, None)
+    rt = cli_base.runtime_from_args(args, env={"GITHUB_ACTIONS": "true", "SUPABASE_BATCH_JWT": "j",
+                                               "GEMINI_PAID_KEY": "g1"})
+    assert rt.is_fake and rt.dry_run and type(rt.llm).__name__ == "FakeLLM"
+    assert "::warning::SUPABASE_URL yok" in capsys.readouterr().err
+    with pytest.raises(AdapterError, match="sahte model"):  # gerçek DB + model anahtarı yok → kurulmaz
+        cli_base.runtime_from_args(args, env={"SUPABASE_URL": "https://p.example.org", "SUPABASE_BATCH_JWT": "j"})
     with cli_base.open_runtime(args, env={}) as rt2:
         assert rt2.out == tmp_path / "o"
     assert (tmp_path / "o" / "cost_estimate.json").is_file()

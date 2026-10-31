@@ -1,0 +1,30 @@
+{
+  "name": "@ogrenmen/worker",
+  "version": "0.1.0",
+  "description": "Öğrenmen Telegram botu — Cloudflare Worker (M04)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "test": "vitest run",
+    "build": "wrangler deploy --dry-run --outdir dist --env production",
+    "dev:fake": "bun test/fakes/dev-fake.ts"
+  },
+  "dependencies": {
+    "@ogrenmen/contracts": "file:../../packages/contracts",
+    "@ogrenmen/mastery-math": "file:../../packages/mastery-math",
+    "@ogrenmen/pii": "file:../../packages/pii/ts"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.7.8",
+    "@cloudflare/workers-types": "4.20250310.0",
+    "@eslint/js": "9.39.5",
+    "@types/node": "22.10.2",
+    "eslint": "9.39.5",
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.30.1",
+    "vitest": "3.0.9",
+    "wrangler": "3.114.1"
+  }
+}

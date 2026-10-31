@@ -2,8 +2,10 @@
 
 ``call(purpose, request)`` sırasıyla:
 
-1. ``check_spend(purpose)`` (60 sn önbellek): ücretli sağlayıcı yalnız ``paid_allowed`` iken çağrılır,
-   değilse deneme ``cap_blocked`` yazılır (ders amaçları kendi ``lesson_monthly_cap_usd`` tavanına bağlıdır).
+1. ``check_spend(purpose)`` (60 sn önbellek): ``degraded`` (``degraded_mode=true``; §5.6 "LLM yok", kurucunun
+   kill-switch'i) iken **hiçbir** model (ücretli ya da ücretsiz, ders amaçları dahil) çağrılmaz — tek
+   ``cap_blocked`` denemesi yazılır ve ``OGR-LLM-002`` yükselir; ücretli sağlayıcı yalnız ``paid_allowed`` iken
+   çağrılır, değilse deneme ``cap_blocked`` yazılır (ders amaçları kendi ``lesson_monthly_cap_usd`` tavanına bağlıdır).
 2. Zincir ``models.json`` ``chains[<chain|purpose>]``; kapalı model/sağlayıcı ve anahtarı olmayan
    sağlayıcı çağrılmadan atlanır; bekleme süresindeki sağlayıcı ``cooldown_skip``.
 3. Hata: 429 → ``rate_limited`` (sağlayıcı ``retry_after`` ya da 60 sn bekler), 5xx → ``error``
@@ -13,6 +15,9 @@
 5. Her deneme bir ``llm_calls`` satırıdır (``purpose, provider, model, tokens, status, cost_usd,
    ref_table, ref_id, student_ref``); ``student_ref`` yalnız ``s_…`` olabilir (uuid/ad asla).
 
+``LedgeredEmbedding`` embedding çağrılarını da aynı kapıdan geçirir (``purpose='embedding'``, ``embedding``
+zinciri; her toplu çağrı bir ``llm_calls`` satırı).
+
 Maliyet: ``tokens_in·in_per_m/1e6 + tokens_out·out_per_m/1e6`` (+ ``per_audio_hour``), Batch'te
 ``(1 − batch_discount)`` ile. ``write_estimate(out)`` dry-run'da ``cost_estimate.json`` yazar.
 """
@@ -20,8 +25,7 @@ Maliyet: ``tokens_in·in_per_m/1e6 + tokens_out·out_per_m/1e6`` (+ ``per_audio_
 from __future__ import annotations
 
 import json
-import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -29,13 +33,14 @@ from typing import Any
 
 import ogrenmen_contracts as contracts
 
-from .adapters.base import DB, LLM, LLM_PURPOSES, LLMRequest, LLMResult, Notifier
+from .adapters.base import DB, LLM, LLM_PURPOSES, Embedding, LLMRequest, LLMResult, Notifier
+from .adapters.router import model_enabled
 from .adapters.structured import parse_json_text
 from .clock import Clock, iso, system_clock
-from .errors import DbError, LedgerError
+from .errors import AdapterError, DbError, LedgerError
+from .ids import STUDENT_REF
 from .purposes import output_errors
 
-STUDENT_REF = re.compile(r"^s_[a-z2-7]{12}$")
 DEFAULT_EXCLUDED = ("lesson_analysis", "transcribe", "diarize")
 REPAIR_NOTE = "Önceki yanıtın şemaya uymadı. Yalnızca şemaya uygun JSON döndür; hatalar: "
 COOLDOWN_DEFAULT_S = 60.0
@@ -143,6 +148,22 @@ class CostLedger:
     def invalidate_gate(self) -> None:
         self._gate_cache.clear()
 
+    @staticmethod
+    def is_degraded(gate: Mapping[str, Any]) -> bool:
+        """``check_spend`` ``degraded`` kipini bildiriyor mu (``degraded_mode=true`` → ``state='degraded'``)."""
+        return bool(gate.get("degraded")) or gate.get("state") == "degraded"
+
+    def refuse_if_degraded(self, purpose: str, gate: Mapping[str, Any], *, model: str, batch: bool = False,
+                           student_ref: str | None = None, ref_table: str | None = None,
+                           ref_id: str | None = None) -> None:
+        """Degraded kipte tek ``cap_blocked`` denemesi yazar ve ``OGR-LLM-002`` yükseltir; değilse hiçbir şey."""
+        if not self.is_degraded(gate):
+            return
+        row = self.record(purpose, provider=self.model_info(model)["provider"], model=model, status="cap_blocked",
+                          error_code="degraded", batch=batch, student_ref=student_ref, ref_table=ref_table,
+                          ref_id=ref_id)
+        raise LedgerError(f"OGR-LLM-002 degraded kipte model çağrılmaz ({purpose})", [self._attempt(row)])
+
     # --- kayıt ----------------------------------------------------------------------------------
 
     def record(self, purpose: str, *, provider: str, model: str, status: str, tokens_in: int = 0, tokens_out: int = 0,
@@ -196,10 +217,9 @@ class CostLedger:
     # --- çağrı ----------------------------------------------------------------------------------
 
     def _available(self, model: str) -> bool:
-        info = (self.models.get("models") or {}).get(model)
-        if info is None or info.get("enabled") is False:
-            return False
-        if self.provider_info(info["provider"]).get("enabled") is False:
+        """Model çağrılabilir mi: ``models.json`` enabled bayrakları (tek kopya: ``router.model_enabled``) ve LLM
+        ``available`` sunuyorsa (``ProviderRouter``: sağlayıcının anahtarı var mı) onun yanıtı."""
+        if not model_enabled(self.models, model):
             return False
         checker = getattr(self.llm, "available", None)
         return bool(checker(model)) if callable(checker) else True
@@ -215,8 +235,9 @@ class CostLedger:
         check = validator or (
             (lambda data: output_errors(request.schema_id, data)) if request.schema_id else None)  # type: ignore[arg-type]
         gate = self.gate(purpose)
-        attempts: list[dict] = []
         common = {"batch": batch, "student_ref": student_ref, "ref_table": ref_table, "ref_id": ref_id}
+        self.refuse_if_degraded(purpose, gate, model=models[0], **common)
+        attempts: list[dict] = []
         tried_any = False
         for model in models:
             if not self._available(model):
@@ -344,3 +365,57 @@ class CostLedger:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(self.estimate(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return path
+
+
+def _estimate_tokens(text: str) -> int:
+    return max(1, (len(text) + 3) // 4)
+
+
+class LedgeredEmbedding:
+    """``Embedding`` Protocol'ü — iç adaptörü (``GeminiEmbedding`` ya da ``FakeEmbedding``) ``CostLedger``
+    kapısından geçirir (§6 kural 2): her ``embed`` çağrısından önce ``check_spend('embedding')`` (degraded →
+    hiç çağrı yok; ücretli sağlayıcı ``paid_allowed=false`` iken → ``cap_blocked``), sonra bir ``llm_calls``
+    satırı (``purpose='embedding'``, ``models.json`` ``embedding`` zincirinin modeli ve sağlayıcısı)."""
+
+    purpose = "embedding"
+
+    def __init__(self, inner: Embedding, ledger: CostLedger, *, chain: str = "embedding",
+                 ref_table: str | None = None):
+        self.inner = inner
+        self.ledger = ledger
+        self.chain = chain
+        self.ref_table = ref_table
+        self.model = ledger.chain(chain)[0]
+        self.provider = ledger.model_info(self.model)["provider"]
+        self.dims = int(getattr(inner, "dims", 0) or ledger.model_info(self.model).get("dims") or 0)
+
+    def __getattr__(self, name: str) -> Any:  # iç adaptörün yardımcıları (ör. FakeEmbedding.calls)
+        if name == "inner":
+            raise AttributeError(name)
+        return getattr(self.inner, name)
+
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:
+        if isinstance(texts, str):
+            raise TypeError("embed metin listesi bekler")
+        if not texts:
+            return []
+        if getattr(self.inner, "available", True) is False:  # yapılandırma reddi: kapıya ve deftere gitmeden
+            return self.inner.embed(list(texts))
+        gate = self.ledger.gate(self.purpose)
+        common = {"ref_table": self.ref_table}
+        self.ledger.refuse_if_degraded(self.purpose, gate, model=self.model, **common)
+        if self.ledger.is_paid(self.model) and not gate.get("paid_allowed", False):
+            row = self.ledger.record(self.purpose, provider=self.provider, model=self.model, status="cap_blocked",
+                                     **common)
+            raise LedgerError(f"OGR-LLM-002 tavan ücretli embedding çağrısını engelledi (durum {gate.get('state')})",
+                              [self.ledger._attempt(row)])
+        tokens = sum(_estimate_tokens(t) for t in texts)
+        try:
+            vectors = self.inner.embed(list(texts))
+        except AdapterError as exc:
+            self.ledger.record(self.purpose, provider=self.provider, model=self.model, status="error",
+                               error_code="embedding", tokens_in=tokens, **common)
+            raise LedgerError(f"OGR-LLM-001 embedding başarısız: {exc.message}") from exc
+        self.ledger.record(self.purpose, provider=self.provider, model=self.model, status="ok", tokens_in=tokens,
+                           **common)
+        return vectors

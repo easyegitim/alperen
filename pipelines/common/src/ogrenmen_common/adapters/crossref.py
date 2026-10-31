@@ -1,7 +1,8 @@
 """Crossref adaptörü (``DOIResolver``): ``GET /works/{doi}`` → ``message`` ya da ``None``.
 
-404 ve iki denemede zaman aşımı "çözülemedi" sayılır (``None``; Kitap ``crossref_unresolved``
-yazar, §6.5); diğer HTTP hataları ``AdapterError``.
+Yalnız 404 ve tüm denemelerde zaman aşımı "çözülemedi" sayılır (``None``; Kitap ``crossref_unresolved``
+yazar, §6.5). 5xx yeniden denenir; son denemeye kadar düzelmezse ``AdapterError`` (Crossref kesintisinde gerçek
+atıflar "çözülemedi" diye düşürülmez). Diğer HTTP hataları da ``AdapterError``.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ class CrossrefResolver:
 
     def resolve(self, doi: str) -> dict | None:
         url = f"{self.base}/works/{quote(doi, safe='/')}"
+        server_error: int | None = None
         for _ in range(self.attempts):
             try:
                 r = self.client.get(url)
@@ -36,8 +38,11 @@ class CrossrefResolver:
             if r.status_code == 404:
                 return None
             if r.status_code >= 500:
+                server_error = r.status_code
                 continue
             if r.status_code != 200:
                 raise AdapterError(f"OGR-ADP-001 Crossref HTTP {r.status_code}")
             return r.json().get("message")
+        if server_error is not None:
+            raise AdapterError(f"OGR-ADP-001 Crossref HTTP {server_error} ({self.attempts} deneme; kesinti)")
         return None

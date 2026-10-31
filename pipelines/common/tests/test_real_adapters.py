@@ -94,13 +94,17 @@ def test_gemini_timeout_and_empty():
 
 def test_gemini_embedding_normalizes():
     rec = Recorder(httpx.Response(200, json={"embeddings": [{"values": [3.0, 4.0]}, {"values": [0.0, 2.0]}]}))
-    vecs = GeminiEmbedding("k", dims=2, transport=rec.transport()).embed(["a", "b"])
+    vecs = GeminiEmbedding("k", model="gemini-embedding-001", dims=2, transport=rec.transport()).embed(["a", "b"])
     assert vecs == [[0.6, 0.8], [0.0, 1.0]]
     body = json.loads(rec.requests[0].content)
     assert body["requests"][0]["outputDimensionality"] == 2
     assert body["requests"][1]["content"]["parts"][0]["text"] == "b"
+    assert rec.requests[0].url.path.endswith("/models/gemini-embedding-001:batchEmbedContents")
     with pytest.raises(AdapterError):
-        GeminiEmbedding("k", transport=Recorder(httpx.Response(200, json={"embeddings": []})).transport()).embed(["a"])
+        GeminiEmbedding("k", model="gemini-embedding-001", dims=2,
+                        transport=Recorder(httpx.Response(200, json={"embeddings": []})).transport()).embed(["a"])
+    with pytest.raises(TypeError):  # model adı koda gömülü varsayılan değil (§4.9): models.json'dan verilir
+        GeminiEmbedding("k")  # type: ignore[call-arg]
 
 
 def _chat_ok(text, pt=10, ct=5):
@@ -200,6 +204,22 @@ def test_openalex_s2_arxiv_normalization_over_transport():
     assert ax[0].year == 2024 and ax[0].oa_pdf_url.endswith("2401.00001v1") and ax[0].source == "arxiv"
     with pytest.raises(AdapterError):
         parse_atom("<bozuk")
+    assert ArxivScholar().base.startswith("https://export.arxiv.org/")
+
+
+@pytest.mark.parametrize("hostile", [
+    # billion laughs (iç varlık genişlemesi)
+    '<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;">]>'
+    '<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>&lol2;</title></entry></feed>',
+    # XXE (dış varlık)
+    '<?xml version="1.0"?><!DOCTYPE feed [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+    '<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>&xxe;</title></entry></feed>',
+    # yalnız DTD
+    '<?xml version="1.0"?><!DOCTYPE feed><feed xmlns="http://www.w3.org/2005/Atom"></feed>',
+])
+def test_arxiv_rejects_dtd_and_entities(hostile):
+    with pytest.raises(AdapterError, match="DTD"):
+        parse_atom(hostile)
 
 
 def test_crossref_and_unpaywall():
@@ -212,6 +232,16 @@ def test_crossref_and_unpaywall():
     assert CrossrefResolver(transport=Recorder(httpx.ReadTimeout("t")).transport()).resolve("10.1/x") is None
     with pytest.raises(AdapterError):
         CrossrefResolver(transport=Recorder(httpx.Response(403)).transport()).resolve("10.1/x")
+    # Kesinti (5xx) "çözülemedi" değildir: yeniden denenir, düzelmezse hata — gerçek atıf düşürülmez.
+    outage = Recorder(httpx.Response(503), httpx.Response(502))
+    with pytest.raises(AdapterError, match="HTTP 502"):
+        CrossrefResolver(transport=outage.transport()).resolve(doi)
+    assert len(outage.requests) == 2
+    recovered = Recorder(httpx.Response(503), httpx.Response(200, json=ok[doi]))
+    assert CrossrefResolver(transport=recovered.transport()).resolve(doi)["DOI"] == doi
+    mixed = Recorder(httpx.ReadTimeout("t"), httpx.Response(500))
+    with pytest.raises(AdapterError):
+        CrossrefResolver(transport=mixed.transport()).resolve(doi)
     up = json.loads((FIXTURES / "kitap" / "unpaywall.json").read_text(encoding="utf-8"))
     rec2 = Recorder(httpx.Response(200, json=up[doi]))
     got = UnpaywallResolver(email="ops@example.org", transport=rec2.transport()).lookup(doi)
@@ -238,6 +268,9 @@ def test_postgrest_select_never_includes_text_raw():
         db.select("messages", columns=["id", "text_raw"])
     with pytest.raises(DbPermissionError):
         db.select("messages", columns=["*"])
+    for sneaky in ("raw:text_raw", "text_raw::text", "raw:text_raw::varchar", " text_raw ", '"text_raw"'):
+        with pytest.raises(DbPermissionError, match="text_raw"):
+            db.select("messages", columns=["id", sneaky])
     with pytest.raises(DbPermissionError):
         db.select("secure.answer_keys")
     assert len(rec.requests) == 1  # reddedilenler ağa hiç gitmedi

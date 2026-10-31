@@ -12,19 +12,24 @@ from collections.abc import Mapping
 from typing import Any
 
 import httpx
+from defusedxml import DefusedXmlException
+from defusedxml import ElementTree as SafeET
 
 from ..errors import AdapterError
 from .base import ScholarRecord
 from .http import make_client
 
-BASE = "http://export.arxiv.org/api/query"
+BASE = "https://export.arxiv.org/api/query"
 NS = {"a": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
 
 
 def parse_atom(xml_text: str) -> list[dict[str, Any]]:
-    """Atom beslemesi → normalize kayıt listesi."""
+    """Atom beslemesi → normalize kayıt listesi. Ağdan gelen metin güvenilmezdir: ``defusedxml`` DTD'yi,
+    varlık (entity) tanımlarını ve dış başvuruları reddeder (billion laughs / XXE)."""
     try:
-        root = ET.fromstring(xml_text)
+        root = SafeET.fromstring(xml_text, forbid_dtd=True)
+    except DefusedXmlException as exc:
+        raise AdapterError(f"OGR-ADP-001 arXiv yanıtı reddedildi (DTD/varlık): {type(exc).__name__}") from exc
     except ET.ParseError as exc:
         raise AdapterError(f"OGR-ADP-001 arXiv yanıtı bozuk XML: {exc}") from exc
     out = []

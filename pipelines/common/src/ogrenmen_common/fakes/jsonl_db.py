@@ -122,7 +122,9 @@ BATCH_WORKER_WRITES: dict[str, dict[str, Any]] = {
     "questions": {"insert": True, "update": _ALL, "deny_columns": {"reviewed_by", "reviewed_at"},
                   "guard_status": True},
     "content_pool": {"insert": True, "update": False},
-    "generation_requests": {"insert": True, "update": {"served_question_id", "served_at", "needs_generation"}},
+    # W: "w (`exam_variant`, kalem) u (`served_question_id, served_at`, tablet)"
+    "generation_requests": {"insert": True, "update": {"served_question_id", "served_at"},
+                            "insert_where": {"kind": "exam_variant"}},
     "messages": {"insert": False, "update": {"is_question", "answered_at"}},
     "memory_facts": {"insert": True, "update": _ALL},
     "weekly_summaries": {"insert": True, "update": False},
@@ -138,8 +140,8 @@ BATCH_WORKER_WRITES: dict[str, dict[str, Any]] = {
     "courses": {"insert": True, "update": _ALL},
     "syllabus_topics": {"insert": True, "update": _ALL},
     "exam_sources": {"insert": True, "update": _ALL},
-    "exam_items": {"insert": True, "update": _ALL, "delete": True},
-    "exam_clusters": {"insert": True, "update": _ALL, "delete": True},
+    "exam_items": {"insert": True, "update": _ALL},  # W "r w u" — silme yok
+    "exam_clusters": {"insert": True, "update": _ALL},  # W "r w u" — silme yok
     "exam_priority_plans": {"insert": True, "update": _ALL, "deny_columns": {"status", "approved_by", "approved_at"}},
     "research_requests": {"insert": False, "update": _ALL},
     "research_outputs": {"insert": True, "update": _ALL},
@@ -428,6 +430,12 @@ class JsonlDb:
             raise DbPermissionError(f"OGR-DB-001 permission denied for table {table} (insert)")
         if op == "delete" and not policy.get("delete"):
             raise DbPermissionError(f"OGR-DB-001 permission denied for table {table} (delete)")
+        if op == "insert":
+            for col, wanted in (policy.get("insert_where") or {}).items():
+                value = values.get(col, TABLE_DEFAULTS.get(table, {}).get(col))
+                if value != wanted:
+                    raise DbPermissionError(f"OGR-DB-001 new row violates row-level security policy for table {table}"
+                                            f" ({col}={value!r}; batch_worker yalnız {col}={wanted!r} ekler)")
         if op == "update":
             allowed = policy.get("update")
             if not allowed:
@@ -517,21 +525,26 @@ class JsonlDb:
         items = [rows] if isinstance(rows, Mapping) else list(rows)
         out: list[dict] = []
         for raw in items:
-            row = _jsonable(dict(raw))
-            self._check_write(table, "insert", row)
-            row = self._apply_defaults(table, row)
-            self._before_insert(table, row)
-            key = self._key(table, row)
-            existing = next((r for r in self._rows(table) if self._key(table, r) == key), None)
+            supplied = _jsonable(dict(raw))
+            self._check_write(table, "insert", supplied)
+            # Çakışma, çağıranın gönderdiği anahtarla aranır; üretilen id yalnız yeni satıra verilir.
+            new_identity = _pk(table) == ("id",) and supplied.get("id") is None
+            # Anahtar sütunlarının varsayılanı (ör. gün) da anahtara girer; id üretimi yalnız gerçek eklemede.
+            probe = supplied if new_identity else self._apply_defaults(table, copy.deepcopy(supplied))
+            existing = None if new_identity else next(
+                (r for r in self._rows(table) if self._key(table, r) == self._key(table, probe)), None)
             if existing is not None:
                 if on_conflict == "ignore":
                     continue
                 if on_conflict == "merge":
-                    existing.update(row)
+                    # PostgREST resolution=merge-duplicates: yalnız gönderilen sütunlar güncellenir.
+                    existing.update(copy.deepcopy(supplied))
                     self._mark(table, existing, "upsert")
                     out.append(copy.deepcopy(existing))
                     continue
-                raise DbError(f"OGR-DB-002 birincil anahtar çakışması: {table} {key}")
+                raise DbError(f"OGR-DB-002 birincil anahtar çakışması: {table} {self._key(table, probe)}")
+            row = self._apply_defaults(table, supplied) if new_identity else probe
+            self._before_insert(table, row)
             self._check_unique(table, row)
             self._rows(table).append(row)
             self._mark(table, row, "insert")
@@ -761,6 +774,9 @@ def load_fixture_dir(folder: Path) -> dict[str, list[dict]]:
                 pieces = {table: data}
         for table, rows in pieces.items():
             bucket = out.setdefault(table, {})
-            for r in rows:
-                bucket[tuple(_jsonable(r.get(c)) for c in _pk(table)) or (len(bucket),)] = dict(r)
+            for i, r in enumerate(rows):
+                key = tuple(_jsonable(r.get(c)) for c in _pk(table))
+                if all(v is None for v in key):  # anahtarsız satır (ör. kimliği DB'nin vereceği llm_calls)
+                    key = ("__row__", path.name, table, i)
+                bucket[key] = dict(r)
     return {t: list(b.values()) for t, b in out.items()}

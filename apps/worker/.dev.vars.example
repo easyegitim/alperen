@@ -1,0 +1,16 @@
+# Yerel geliştirme gizleri (kopyala: cp .dev.vars.example .dev.vars — .dev.vars git'e girmez).
+# Değerler bilerek sahtedir; gerçek anahtarlar yalnız `wrangler secret put` ile verilir.
+TELEGRAM_BOT_TOKEN=000000:sahte-yerel-token
+TELEGRAM_WEBHOOK_SECRET=yerel-webhook-gizi
+WEBHOOK_SECRET_PATH=yerel-gizli-yol
+SUPABASE_URL=http://localhost:54321
+SUPABASE_ANON_KEY=sahte-anon
+SUPABASE_BOT_JWT=sahte.bot.jwt
+GEMINI_PAID_KEY=
+GEMINI_FREE_KEY=
+GROQ_KEY=
+OPENROUTER_KEY=
+CF_AI_TOKEN=
+CF_ACCOUNT_ID=
+ADMIN_CHAT_ID=0
+# Sahte mod (dev:fake bunları kendisi verir): ADAPTERS=fake, DB=fake, TELEGRAM_API_BASE=http://localhost:8788

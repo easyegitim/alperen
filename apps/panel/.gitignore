@@ -1,0 +1,7 @@
+# Tasarım sistemi kopyası (scripts/sync-ds.mjs üretir) ve build çıktısı commit edilmez
+public/ds/
+out/
+.next/
+node_modules/
+*.tsbuildinfo
+.next-live-test/

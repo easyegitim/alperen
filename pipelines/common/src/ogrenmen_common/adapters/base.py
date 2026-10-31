@@ -81,8 +81,11 @@ class LLMRequest:
 
     @property
     def prompt_text(self) -> str:
-        """Sağlayıcıya giden tam metin (sistem + kullanıcı); sahte seçim kuralının girdisi."""
-        return f"{self.system}\n\n{self.prompt}" if self.system else self.prompt
+        """Sahte seçim kuralının (§2.3) girdisi: ``system + "\n\n" + prompt`` — sistem boş olsa da.
+
+        Worker ``promptTextOf`` ile birebir (`${system}\n\n${messages}`): aynı (sistem, istem) çifti iki
+        tarafta aynı fixture'ı seçer."""
+        return f"{self.system}\n\n{self.prompt}"
 
     def with_model(self, model: str) -> LLMRequest:
         return _replace(self, model=model)
@@ -235,9 +238,13 @@ class Vision(Protocol):
 
 @runtime_checkable
 class Transcriber(Protocol):
-    """Ses dosyası → ``transcript`` (``{"segments": [{"t", "speaker", "text"}]}``)."""
+    """Ses dosyası → ``transcript`` (``{"segments": [{"t", "speaker", "text"}]}``).
 
-    def transcribe(self, audio: Path, *, language: str = "tr") -> dict: ...
+    ``labels`` (``resolve_lesson_labels`` yanıtı ``[{hash, label}]``) ve ``name_hashes``: modele giden ara
+    metin (Whisper yedeğinin ``diarize`` isteği) bunlarla temizlenir; düz ad hiçbir zaman girdi değildir."""
+
+    def transcribe(self, audio: Path, *, language: str = "tr", labels: Sequence[Mapping[str, Any]] | None = None,
+                   name_hashes: Sequence[str] | None = None) -> dict: ...
 
 
 @runtime_checkable

@@ -9,8 +9,8 @@ import pytest
 from conftest import as_admin, read_jsonl
 from ogrenmen_common.adapters.base import LLMRequest
 from ogrenmen_common.errors import LedgerError
-from ogrenmen_common.fakes import FakeLLM, FakeNotifier
-from ogrenmen_common.ledger import CostLedger
+from ogrenmen_common.fakes import FakeEmbedding, FakeLLM, FakeNotifier
+from ogrenmen_common.ledger import CostLedger, LedgeredEmbedding
 
 
 def _req(purpose, schema, prompt="istem"):
@@ -174,3 +174,94 @@ def test_without_db_everything_allowed():
     assert ledger.gate("chat")["paid_allowed"] is True
     assert ledger.call("query_expand", _req("query_expand", "query-expand")).data["queries"]
     assert ledger.calls[0]["status"] == "ok"
+
+
+def _degrade(db):
+    db.rpc("set_runtime_flag", {"p_key": "degraded_mode", "p_value": True})
+
+
+@pytest.mark.parametrize("purpose,schema", [("nightly_facts", "nightly-facts-output"),
+                                            ("vision_check", "figure-render-report"),  # ücretsiz zincir de durur
+                                            ("lesson_analysis", "lesson-analysis")])  # ders amacı da (istisna yok)
+def test_degraded_mode_calls_no_model(db, clock, purpose, schema):
+    """§5.6 ``degraded`` = "LLM yok": tavanın altında olsa da hiçbir model çağrılmaz; tek cap_blocked satırı."""
+    _degrade(db)
+    gate = db.rpc("check_spend", {"p_purpose": purpose})[0]
+    assert gate["state"] == "degraded" and gate["degraded"] is True and gate["paid_allowed"] is True
+    llm = FakeLLM()
+    ledger = CostLedger(db, llm, clock=clock)
+    before = len(db.written("llm_calls"))
+    with pytest.raises(LedgerError, match="OGR-LLM-002 degraded") as exc:
+        ledger.call(purpose, _req(purpose, schema))
+    assert llm.calls == []
+    rows = db.written("llm_calls")[before:]
+    assert len(rows) == 1 and rows[0]["status"] == "cap_blocked" and rows[0]["error_code"] == "degraded"
+    assert rows[0]["cost_usd"] == 0 and [a["status"] for a in exc.value.attempts] == ["cap_blocked"]
+
+
+def test_degraded_state_alone_also_blocks(clock):
+    class Gate:
+        def __init__(self):
+            self.inserted = []
+
+        def rpc(self, name, params):
+            return [{"paid_allowed": True, "degraded": False, "state": "degraded"}]
+
+        def insert(self, table, row):
+            self.inserted.append(row)
+            return [row]
+
+        def select(self, *a, **k):
+            return []
+
+    db = Gate()
+    llm = FakeLLM()
+    with pytest.raises(LedgerError, match="degraded"):
+        CostLedger(db, llm, clock=clock).call("chat", _req("chat", None))
+    assert llm.calls == [] and [r["status"] for r in db.inserted] == ["cap_blocked"]
+
+
+def test_ledgered_embedding_records_each_batch(db, clock):
+    ledger = CostLedger(db, FakeLLM(), clock=clock)
+    emb = LedgeredEmbedding(FakeEmbedding(), ledger, ref_table="library_chunks")
+    assert emb.dims == 768 and emb.model == "gemini-embedding-001" and emb.provider == "gemini-paid"
+    vecs = emb.embed(["birinci parça", "ikinci parça"])
+    assert vecs == FakeEmbedding().embed(["birinci parça", "ikinci parça"])
+    row = db.written("llm_calls")[-1]
+    assert (row["purpose"], row["provider"], row["model"], row["status"], row["ref_table"]) == (
+        "embedding", "gemini-paid", "gemini-embedding-001", "ok", "library_chunks")
+    assert row["tokens_in"] == sum((len(t) + 3) // 4 for t in ["birinci parça", "ikinci parça"])
+    assert emb.embed([]) == [] and len(db.written("llm_calls")) == 1  # boş çağrı satır yazmaz
+    with pytest.raises(TypeError):
+        emb.embed("tek metin")
+
+
+def test_ledgered_embedding_respects_cap_and_degraded(db, clock):
+    inner = FakeEmbedding()
+    db.rpc("set_runtime_flag", {"p_key": "paid_llm_enabled", "p_value": False})
+    emb = LedgeredEmbedding(inner, CostLedger(db, FakeLLM(), clock=clock))
+    with pytest.raises(LedgerError, match="OGR-LLM-002 tavan"):
+        emb.embed(["x"])
+    assert inner.calls == [] and db.written("llm_calls")[-1]["status"] == "cap_blocked"
+    with as_admin(db):  # paid_llm_enabled batch_worker için tek yönlüdür; geri açmak koordinatör işi
+        db.rpc("set_runtime_flag", {"p_key": "paid_llm_enabled", "p_value": True})
+    _degrade(db)
+    emb2 = LedgeredEmbedding(inner, CostLedger(db, FakeLLM(), clock=clock))
+    with pytest.raises(LedgerError, match="degraded"):
+        emb2.embed(["x"])
+    assert inner.calls == [] and db.written("llm_calls")[-1]["error_code"] == "degraded"
+
+
+def test_ledgered_embedding_logs_adapter_failure(db, clock):
+    from ogrenmen_common.errors import AdapterError
+
+    class Down:
+        dims = 768
+
+        def embed(self, texts):
+            raise AdapterError("OGR-ADP-001 embedding başarısız: server 503")
+
+    emb = LedgeredEmbedding(Down(), CostLedger(db, FakeLLM(), clock=clock))
+    with pytest.raises(LedgerError, match="OGR-LLM-001 embedding"):
+        emb.embed(["x"])
+    assert db.written("llm_calls")[-1]["status"] == "error"

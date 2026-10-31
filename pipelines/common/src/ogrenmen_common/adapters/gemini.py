@@ -75,15 +75,20 @@ class GeminiLLM:
 
 
 class GeminiEmbedding:
-    """``Embedding`` Protocol'ü — ``gemini-embedding-001``, ``outputDimensionality=768``; vektörler L2 birim."""
+    """``Embedding`` Protocol'ü — batchEmbedContents, ``outputDimensionality=dims``; vektörler L2 birim.
 
-    def __init__(self, api_key: str, *, base: str = BASE, model: str = "gemini-embedding-001", dims: int = 768,
+    Model adı ve boyut koda yazılmaz (§4.9): ``Runtime`` ``models.json`` ``chains.embedding[0]`` modelini ve
+    onun ``dims`` değerini verir; anahtar o modelin sağlayıcısının (``gemini-paid``) anahtarıdır."""
+
+    def __init__(self, api_key: str, *, model: str, dims: int, base: str = BASE,
                  transport: httpx.BaseTransport | None = None):
         if not api_key:
             raise AdapterError("OGR-ADP-001 embedding anahtarı yok")
+        if not model or int(dims) <= 0:
+            raise AdapterError("OGR-ADP-001 embedding modeli ve boyutu models.json'dan verilmeli")
         self.base = base.rstrip("/")
         self.model = model
-        self.dims = dims
+        self.dims = int(dims)
         self.client = make_client(transport, headers={"x-goog-api-key": api_key})
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:

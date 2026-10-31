@@ -10,8 +10,10 @@ Ortak bayraklar: ``--dry-run --fixtures <dizin> --out <dizin> --limit N --since 
     args = parser.parse_args(argv)
     with open_runtime(args) as rt: ...
 
-Anahtar yokken (``SUPABASE_BATCH_JWT`` tanımsız) gerçek çalışma istenirse iş ``--dry-run``'a düşer ve
-başarılı sayılır; stderr'e (GitHub Actions'ta ``::warning::``) uyarı satırı yazılır (§2.9).
+Veritabanı bilgileri yokken (``SUPABASE_URL`` ya da ``SUPABASE_BATCH_JWT`` tanımsız) gerçek çalışma istenirse
+iş ``--dry-run``'a düşer ve başarılı sayılır; stderr'e (GitHub Actions'ta ``::warning::``) uyarı satırı yazılır
+(§2.9). İkisi de varken model anahtarı yoksa ``Runtime`` kurulmaz (``OGR-ADP-001``; gerçek veritabanına sahte
+model çıktısı yazılmaz).
 """
 
 from __future__ import annotations
@@ -19,7 +21,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
@@ -30,9 +31,8 @@ from typing import Any
 
 from .clock import parse_ts
 from .errors import OgrError
+from .ids import STUDENT_REF
 from .runtime import Runtime, fakes_forced
-
-STUDENT_REF = re.compile(r"^s_[a-z2-7]{12}$")
 
 
 def _student_ref(value: str) -> str:
@@ -104,12 +104,14 @@ def common_args(ns: argparse.Namespace) -> CommonArgs:
 
 
 def effective_dry_run(args: CommonArgs, env: Mapping[str, str] | None = None) -> tuple[bool, str | None]:
-    """``(dry_run, uyarı)``: gerçek çalışma istenip ``SUPABASE_BATCH_JWT`` yoksa dry-run'a düşülür."""
+    """``(dry_run, uyarı)``: gerçek çalışma istenip ``SUPABASE_URL`` ya da ``SUPABASE_BATCH_JWT`` yoksa dry-run'a
+    düşülür (ikisi birlikte gerçek veritabanıdır)."""
     env = os.environ if env is None else env
     if args.dry_run or args.adapters == "fake" or fakes_forced(env):
         return True, None
-    if not env.get("SUPABASE_BATCH_JWT"):
-        return True, "SUPABASE_BATCH_JWT yok; iş --dry-run olarak çalışıyor (ağ yok, çıktı --out dizininde)."
+    missing = [k for k in ("SUPABASE_URL", "SUPABASE_BATCH_JWT") if not env.get(k)]
+    if missing:
+        return True, (f"{'/'.join(missing)} yok; iş --dry-run olarak çalışıyor (ağ yok, çıktı --out dizininde).")
     return False, None
 
 

@@ -41,6 +41,23 @@ def test_inline_blocked_by_cap(db, clock):
     assert out.status == "blocked" and set(out.errors) == {"s0", "s1"}
 
 
+class NeverCalled:
+    def create(self, *a, **k):
+        raise AssertionError("degraded kipte Batch gönderilmemeli")
+
+
+@pytest.mark.parametrize("client", [None, NeverCalled()])
+def test_degraded_batch_calls_no_model(db, clock, client):
+    db.rpc("set_runtime_flag", {"p_key": "degraded_mode", "p_value": True})
+    llm = FakeLLM()
+    before = len(db.written("llm_calls"))
+    out = BatchRunner(CostLedger(db, llm, clock=clock), client=client).run("weekly_summary", _items(3))
+    assert out.status == "blocked" and set(out.errors) == {"s0", "s1", "s2"} and not out.results
+    assert all("degraded" in e for e in out.errors.values()) and llm.calls == []
+    rows = db.written("llm_calls")[before:]
+    assert [(r["status"], r["error_code"], r["batch"]) for r in rows] == [("cap_blocked", "degraded", True)]
+
+
 def test_duplicate_keys_rejected(ledger):
     items = _items(1) * 2
     with pytest.raises(ValueError):

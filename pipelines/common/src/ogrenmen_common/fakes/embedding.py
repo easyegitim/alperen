@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import numpy as np
+import ogrenmen_contracts as contracts
 
 DIMS = 768
 
@@ -44,14 +46,23 @@ def to_halfvec(vec: Sequence[float]) -> str:
     return "[" + ",".join(f"{x:.6g}" for x in vec) + "]"
 
 
+def embedding_model(models: Mapping[str, Any] | None = None) -> tuple[str, int]:
+    """``models.json`` ``chains.embedding[0]`` ve onun ``dims`` değeri (model adı koda yazılmaz, §4.9)."""
+    models = contracts.load_models() if models is None else models
+    name = models["chains"]["embedding"][0]
+    return name, int(models["models"][name].get("dims") or DIMS)
+
+
 class FakeEmbedding:
-    """``Embedding`` Protocol'ü; ``calls`` her ``embed`` çağrısındaki metin sayısını kaydeder."""
+    """``Embedding`` Protocol'ü; ``calls`` her ``embed`` çağrısındaki metin sayısını kaydeder. ``model`` ve
+    varsayılan ``dims`` ``models.json`` ``embedding`` zincirinden gelir."""
 
     name = "fake"
-    model = "gemini-embedding-001"
 
-    def __init__(self, dims: int = DIMS):
-        self.dims = dims
+    def __init__(self, dims: int | None = None, *, models: Mapping[str, Any] | None = None):
+        model, model_dims = embedding_model(models)
+        self.model = model
+        self.dims = int(dims) if dims is not None else model_dims
         self.calls: list[int] = []
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:

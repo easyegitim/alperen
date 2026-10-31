@@ -80,7 +80,10 @@ class FakeTranscriber:
         self.transcript = transcript
         self.calls: list[dict] = []
 
-    def transcribe(self, audio: Path, *, language: str = "tr") -> dict:
+    def transcribe(self, audio: Path, *, language: str = "tr", labels: Sequence[Mapping[str, Any]] | None = None,
+                   name_hashes: Sequence[str] | None = None) -> dict:
+        """Fixture transkripti döner; model çağrısı olmadığından ``labels``/``name_hashes`` yalnız imza paritesi
+        içindir (temizlik çağıranın ``pii.label_transcript`` adımındadır)."""
         audio = Path(audio)
         req = transcribe_request(audio, b"", language=language)
         if self.transcript is not None:

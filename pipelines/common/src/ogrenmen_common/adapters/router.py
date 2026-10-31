@@ -13,6 +13,15 @@ from typing import Any
 from .base import LLM, LLMRequest, LLMResult
 
 
+def model_enabled(models: Mapping[str, Any], model: str) -> bool:
+    """``models.json``: model tanımlı ve ne modeli ne sağlayıcısı ``enabled: false`` (tek kopya)."""
+    info = (models.get("models") or {}).get(model)
+    if info is None or info.get("enabled") is False:
+        return False
+    pinfo = (models.get("providers") or {}).get(info.get("provider")) or {}
+    return pinfo.get("enabled") is not False
+
+
 class ProviderRouter:
     def __init__(self, models: Mapping[str, Any], adapters: Mapping[str, LLM]):
         self.models = models
@@ -23,12 +32,7 @@ class ProviderRouter:
         return info.get("provider") if info else None
 
     def available(self, model: str) -> bool:
-        info = (self.models.get("models") or {}).get(model)
-        if info is None or info.get("enabled") is False:
-            return False
-        provider = info.get("provider")
-        pinfo = (self.models.get("providers") or {}).get(provider) or {}
-        return pinfo.get("enabled") is not False and provider in self.adapters
+        return model_enabled(self.models, model) and self.provider_of(model) in self.adapters
 
     def complete(self, request: LLMRequest) -> LLMResult:
         provider = self.provider_of(request.model)

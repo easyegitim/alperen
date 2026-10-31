@@ -88,22 +88,27 @@ import { readdirSync, readFileSync } from "node:fs";
 const mod = await import(process.argv[2]);
 const dir = process.argv[3];
 const prompts = JSON.parse(readFileSync(0, "utf8"));
-const out = [];
-if (typeof mod.selectFixture === "function") {
-  const fixtures = { chat: readdirSync(dir).filter((n) => n.endsWith(".json")).map((name) => ({ name, data: null })) };
-  for (const p of prompts) out.push((await mod.selectFixture(fixtures, "chat", p)).name);
-} else {
-  const fn = ["fixtureIndex", "selectFixtureIndex"].map((n) => mod[n]).find((f) => typeof f === "function");
-  if (!fn) { process.stdout.write("null"); process.exit(0); }
-  const names = readdirSync(dir).filter((n) => n.endsWith(".json") && !n.startsWith("bad-schema")).sort();
-  for (const p of prompts) out.push(names[await fn(p, names.length)]);
+if (typeof mod.selectFixture !== "function" || typeof mod.promptTextOf !== "function") {
+  process.stdout.write("null");
+  process.exit(0);
 }
-process.stdout.write(JSON.stringify(out));
+const fixtures = { chat: readdirSync(dir).filter((n) => n.endsWith(".json")).map((name) => ({ name, data: null })) };
+const direct = [];
+const composed = [];
+for (const p of prompts) {
+  direct.push((await mod.selectFixture(fixtures, "chat", p)).name);
+  // Worker'ın kendi kurucusu: sistem boş, tek kullanıcı mesajı → `${system}\\n\\n${messages}`
+  const text = mod.promptTextOf({ system: "", messages: [{ role: "user", content: p }] });
+  composed.push({ text, file: (await mod.selectFixture(fixtures, "chat", text)).name });
+}
+process.stdout.write(JSON.stringify({ direct, composed }));
 """
 
 
 def test_same_file_as_real_worker_fake_when_present(tmp_path):
-    """M04 ``providers.ts`` (``selectFixture``) varsa onunla birebir karşılaştırır."""
+    """M04 ``providers.ts`` varsa onunla birebir: (1) aynı ``prompt_text`` → aynı dosya; (2) aynı (sistem='',
+    istem) çifti iki tarafın kendi kurucusuyla (``LLMRequest.prompt_text`` / ``promptTextOf``) aynı dosyayı seçer.
+    Yalnız dosya ya da bun yoksa atlanır; ikisi varken yükleme hatası parite hatası sayılır."""
     if not WORKER_FAKE.is_file():
         pytest.skip("apps/worker/test/fakes/providers.ts henüz yok (M04); TS ikamesiyle sınandı")
     if not shutil.which("bun"):
@@ -112,9 +117,24 @@ def test_same_file_as_real_worker_fake_when_present(tmp_path):
     probe.write_text(WORKER_PROBE, encoding="utf-8")
     proc = subprocess.run(["bun", str(probe), str(WORKER_FAKE), str(CHAT)], input=json.dumps(PROMPTS),
                           capture_output=True, text=True, timeout=60)
-    if proc.returncode != 0 or proc.stdout.strip() in ("", "null"):
-        pytest.skip(f"Worker sahtesi yüklenemedi (bağımlılıkları kurulu değil olabilir): {proc.stderr[-300:]}")
-    assert json.loads(proc.stdout) == [select_fixture(CHAT, p).name for p in PROMPTS]
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    out = proc.stdout.strip()
+    assert out not in ("", "null"), "providers.ts selectFixture/promptTextOf dışa aktarmıyor"
+    data = json.loads(out)
+    assert data["direct"] == [select_fixture(CHAT, p).name for p in PROMPTS]
+    for prompt, row in zip(PROMPTS, data["composed"], strict=True):
+        req = _req(prompt, system="")
+        assert row["text"] == req.prompt_text
+        assert row["file"] == FakeLLM().select(req).name
+
+
+def test_empty_system_prompt_text_matches_worker_composition():
+    """Worker ``promptTextOf`` sistem boşken de ``"\\n\\n"`` ekler; Python aynısını yapmalı (bun gerekmez)."""
+    req = _req("3/4 + 1/8 kaç eder?", system="")
+    assert req.prompt_text == "\n\n3/4 + 1/8 kaç eder?"
+    # Önceki (yanlış) kurgu çıplak istemi özetliyordu ve farklı dosya seçiyordu.
+    assert FakeLLM().select(req).name == select_fixture(CHAT, "\n\n3/4 + 1/8 kaç eder?").name
+    assert FakeLLM().select(req).name != select_fixture(CHAT, "3/4 + 1/8 kaç eder?").name
 
 
 def test_deterministic_and_records_calls():
@@ -122,8 +142,9 @@ def test_deterministic_and_records_calls():
     a = llm.complete(_req("paydalar farklı"))
     b = llm.complete(_req("paydalar farklı"))
     assert a.ok and a.json == b.json and a.text == b.text
-    assert [c.file for c in llm.calls] == [select_fixture(CHAT, "paydalar farklı").name] * 2
-    assert a.tokens_in == (len("paydalar farklı") + 3) // 4
+    text = _req("paydalar farklı").prompt_text
+    assert [c.file for c in llm.calls] == [select_fixture(CHAT, text).name] * 2
+    assert a.tokens_in == (len(text) + 3) // 4
     assert a.tokens_out == (len(a.text) + 3) // 4
 
 
@@ -140,7 +161,7 @@ def test_fixture_folder_override_and_hint():
     hinted = llm.complete(LLMRequest(purpose="transcribe", model="m", prompt="her şey", fixture_hint="lesson-01"))
     assert llm.calls[-1].file == "01-lesson-01.json" and hinted.json["segments"]
     nohit = llm.complete(LLMRequest(purpose="transcribe", model="m", prompt="her şey", fixture_hint="yok-boyle"))
-    assert llm.calls[-1].file == select_fixture(FIXTURES / "llm" / "transcribe", "her şey").name and nohit.ok
+    assert llm.calls[-1].file == select_fixture(FIXTURES / "llm" / "transcribe", "\n\nher şey").name and nohit.ok
 
 
 def test_fail_with_status_codes():
@@ -185,7 +206,7 @@ def test_media_tokens_and_audio_seconds():
                      media=(Media(buf.getvalue(), "audio/wav", "a.wav"), Media(b"png", "image/png")))
     res = FakeLLM().complete(req)
     assert res.audio_sec == 3 and res.images == 1
-    assert res.tokens_in == 1 + 258 + 3 * 32
+    assert res.tokens_in == (len(req.prompt_text) + 3) // 4 + 258 + 3 * 32
 
 
 def test_real_fixture_wav_duration():

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from conftest import FIXTURES
@@ -48,22 +50,31 @@ def test_llm_transcriber_on_fixture_wav(db, clock):
     assert row["purpose"] == "transcribe" and row["audio_sec"] == 20 and row["ref_table"] == "lessons"
 
 
+LABELS = json.loads((FIXTURES / "ders" / "labels.json").read_text(encoding="utf-8"))
+NAME_HASHES = [row["hash"] for row in LABELS]
+PLAIN = [{"t": "00:00:05", "t_end": "00:00:07", "text": "Paydaları eşitle."},
+         {"t": "00:02:10", "t_end": "00:02:12", "text": "Tamam hocam."}]
+NAMED = [{"t": "00:00:05", "t_end": "00:00:09", "text": "Elif, bugün kesirlerde toplamaya bakalım."},
+         {"t": "00:00:40", "t_end": "00:00:44", "text": "Tamam hocam Ayşe, Elif'in sorusu da şu."},
+         {"t": "00:02:10", "t_end": "00:02:14", "text": "Kaya ailesi ödevi gördü, hocam Yılmaz."},
+         {"t": "00:02:30", "t_end": "00:02:33", "text": "Hocam Mehmet 3/4 + 1/8 kaç eder?"}]
+
+
 class WhisperThenDiarize:
     """transcribe → etiketsiz Whisper çıktısı; diarize → etiketli pencere (gerçek zincir davranışı)."""
 
-    def __init__(self):
+    def __init__(self, segments=PLAIN):
+        self.segments = segments
         self.diarize_calls = 0
+        self.diarize_prompts: list[str] = []
 
     def complete(self, req: LLMRequest) -> LLMResult:
         if req.purpose == "transcribe":
             if req.model != "whisper-large-v3-turbo":
                 return LLMResult.failure("rate_limited", status=429)
-            segs = [{"t": "00:00:05", "t_end": "00:00:07", "text": "Paydaları eşitle."},
-                    {"t": "00:02:10", "t_end": "00:02:12", "text": "Tamam hocam."}]
-            return LLMResult(ok=True, json={"segments": segs, "unlabeled": True}, audio_sec=140)
+            return LLMResult(ok=True, json={"segments": list(self.segments), "unlabeled": True}, audio_sec=140)
         self.diarize_calls += 1
-        import json
-
+        self.diarize_prompts.append(req.prompt_text)
         window = json.loads(req.prompt)["segments"]
         speaker = "EĞİTMEN" if self.diarize_calls == 1 else "ÖĞRENCİ"
         return LLMResult(ok=True, json={"segments": [{**s, "speaker": speaker} for s in window]}, tokens_in=50,
@@ -72,7 +83,7 @@ class WhisperThenDiarize:
 
 def test_whisper_fallback_is_diarized_in_two_minute_windows(db, clock):
     llm = WhisperThenDiarize()
-    t = LLMTranscriber(CostLedger(db, llm, clock=clock)).transcribe(WAV)
+    t = LLMTranscriber(CostLedger(db, llm, clock=clock)).transcribe(WAV, labels=LABELS)
     assert [s["speaker"] for s in t["segments"]] == ["EĞİTMEN", "ÖĞRENCİ"] and llm.diarize_calls == 2
     statuses = [(r["purpose"], r["model"], r["status"]) for r in db.written("llm_calls")]
     assert statuses[0] == ("transcribe", "gemini-2.5-flash@free", "rate_limited")
@@ -98,3 +109,32 @@ def test_transcriber_failure_propagates(db, clock):
 
     with pytest.raises(LedgerError, match="OGR-LLM-001"):
         LLMTranscriber(CostLedger(db, Down(), clock=clock)).transcribe(WAV)
+
+
+def test_whisper_text_is_scrubbed_before_diarize(db, clock):
+    """§6.3/§9.1: Whisper'ın ham metni (öğrenci, eğitmen, veli adları) diarize modeline adsız gider."""
+    from ogrenmen_common.pii import name_leaks
+
+    llm = WhisperThenDiarize(NAMED)
+    t = LLMTranscriber(CostLedger(db, llm, clock=clock)).transcribe(WAV, labels=LABELS, name_hashes=NAME_HASHES)
+    assert llm.diarize_calls == 2 and llm.diarize_prompts
+    sent = "\n".join(llm.diarize_prompts)
+    assert name_leaks(sent, NAME_HASHES) == []
+    for name in ("Elif", "Ayşe", "Kaya", "Yılmaz", "Mehmet"):  # Mehmet hash'te yok: "hocam X" kalıbı → [AD]
+        assert name not in sent
+    assert "[ÖĞRENCİ]" in sent and "[EĞİTMEN]" in sent and "Hocam [AD]" in sent
+    assert "3/4 + 1/8" in sent  # matematik dokunulmaz
+    assert all("Elif" not in seg["text"] for seg in t["segments"])
+
+
+def test_whisper_labels_from_constructor_are_used(db, clock):
+    llm = WhisperThenDiarize(NAMED)
+    LLMTranscriber(CostLedger(db, llm, clock=clock), labels=LABELS).transcribe(WAV)
+    assert llm.diarize_calls == 2 and all("Elif" not in p for p in llm.diarize_prompts)
+
+
+def test_whisper_without_labels_or_hashes_refuses_to_send_text(db, clock):
+    llm = WhisperThenDiarize(NAMED)
+    with pytest.raises(LedgerError, match="ad temizliği"):
+        LLMTranscriber(CostLedger(db, llm, clock=clock)).transcribe(WAV)
+    assert llm.diarize_calls == 0  # ham metin hiçbir modele gitmedi

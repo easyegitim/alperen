@@ -103,6 +103,84 @@ def test_column_level_write_rules(db):
         db.update("exam_priority_plans", {"status": "approved"}, where={"id": plan["id"]})
 
 
+@pytest.mark.parametrize("table", ["exam_items", "exam_clusters"])
+def test_exam_tables_are_not_deletable_by_batch_worker(db, table):
+    """§3.8 W sütunu ``r w u`` — ``d`` yok (yalnız koordinatör siler)."""
+    row = db.select(table, limit=1)[0]
+    with pytest.raises(DbPermissionError, match="delete"):
+        db.delete(table, where={"id": row["id"]})
+    assert db.get(table, id=row["id"]) is not None
+    assert db.update(table, {"updated_at": "2026-10-20T09:00:00Z"}, where={"id": row["id"]})  # u serbest
+
+
+def test_generation_requests_update_only_served_columns(db):
+    """W ``u (served_question_id, served_at)`` — ``needs_generation`` ya da başka sütun yazılamaz."""
+    gr = db.select("generation_requests", limit=1)[0]
+    done = db.update("generation_requests", {"served_question_id": None, "served_at": "2026-10-20T09:00:00Z"},
+                     where={"id": gr["id"]})
+    assert done[0]["served_at"] == "2026-10-20T09:00:00Z"
+    for bad in ({"needs_generation": False}, {"skill_id": "tyt.mat.temel.sayilar"}, {"kind": "exam_variant"}):
+        with pytest.raises(DbPermissionError, match=next(iter(bad))):
+            db.update("generation_requests", bad, where={"id": gr["id"]})
+
+
+def test_generation_requests_insert_only_exam_variant(db):
+    """W ``w (exam_variant, kalem)`` — RLS ``with check (kind = 'exam_variant')``."""
+    base = {"curriculum_id": CUR, "skill_id": "tyt.mat.temel.rasyonel-sayilar", "topic": "Kesirlerde toplama",
+            "points": 10}
+    row = db.insert("generation_requests", {**base, "kind": "exam_variant"})[0]
+    assert row["kind"] == "exam_variant" and row["difficulty_band"] == "mid"
+    for kind in ("pool_miss", "regenerate"):
+        with pytest.raises(DbPermissionError, match="row-level security"):
+            db.insert("generation_requests", {**base, "kind": kind})
+    with pytest.raises(DbPermissionError, match="row-level security"):
+        db.insert("generation_requests", base)  # varsayılan kind = 'pool_miss'
+
+
+def test_upsert_merge_keeps_unsent_columns(db):
+    """PostgREST ``merge-duplicates`` yalnız gönderilen sütunları günceller; varsayılanlar mevcut satırı ezmez."""
+    cl = db.select("exam_clusters", limit=1)[0]
+    assert cl["item_count"] == 3
+    merged = db.insert("exam_clusters", {"id": cl["id"], "course_id": cl["course_id"], "label": "Yeni etiket"},
+                       on_conflict="merge")[0]
+    assert merged["label"] == "Yeni etiket"
+    assert {k: v for k, v in merged.items() if k != "label"} == {k: v for k, v in cl.items() if k != "label"}
+    alert = db.insert("instructor_alerts", {"kind": "ops", "severity": "warning", "detail": "deneme"})[0]
+    db.update("instructor_alerts", {"status": "done"}, where={"id": alert["id"]})
+    again = db.insert("instructor_alerts", {"id": alert["id"], "detail": "güncel"}, on_conflict="merge")[0]
+    assert again["status"] == "done" and again["detail"] == "güncel" and again["created_at"] == alert["created_at"]
+    with pytest.raises(DbError, match="çakışması"):
+        db.insert("exam_clusters", {"id": cl["id"], "course_id": cl["course_id"]})
+    assert db.insert("exam_clusters", {"id": cl["id"]}, on_conflict="ignore") == []
+    fresh = db.insert("exam_clusters", {"course_id": cl["course_id"], "label": "Yeni küme"}, on_conflict="merge")[0]
+    assert fresh["id"] != cl["id"] and fresh["item_count"] == 0  # gerçek ekleme: varsayılanlar uygulanır
+
+
+def test_fixture_rows_without_primary_key_are_all_kept(tmp_path, clock):
+    rows = [{"purpose": "chat", "provider": "gemini-paid", "model": "gemini-2.5-flash-lite", "status": "ok",
+             "cost_usd": 0.01, "created_at": "2026-10-19T10:00:00Z"},
+            {"purpose": "chat", "provider": "gemini-paid", "model": "gemini-2.5-flash-lite", "status": "ok",
+             "cost_usd": 0.02, "created_at": "2026-10-19T11:00:00Z"},
+            {"purpose": "nightly_facts", "provider": "gemini-paid", "model": "gemini-2.5-flash-lite",
+             "status": "ok", "cost_usd": 0.03, "created_at": "2026-10-19T12:00:00Z"}]
+    (tmp_path / "llm-calls-month.json").write_text(json.dumps(rows), encoding="utf-8")
+    loaded = load_fixture_dir(tmp_path)
+    assert len(loaded["llm_calls"]) == 3
+    assert [r["cost_usd"] for r in loaded["llm_calls"]] == [0.01, 0.02, 0.03]
+    world = JsonlDb.from_fixtures(tmp_path, base=False, clock=clock)
+    assert len(world.tables["llm_calls"]) == 3
+
+
+def test_panel_fixture_tables_keep_every_row():
+    """fixtures/panel: anahtarsız satırlı tablolar (ör. consents, students) birbirini ezmez."""
+    panel = FIXTURES / "panel"
+    loaded = load_fixture_dir(panel)
+    for name in ("consents", "students"):
+        raw = seed_json(f"panel/{name}.json")
+        assert isinstance(raw, list) and len(raw) > 1 and all(r.get("id") is None for r in raw)
+        assert len(loaded[name]) == len(raw), name
+
+
 def _llm_question(**over):
     row = {"curriculum_id": CUR, "skill_ids": ["tyt.mat.temel.rasyonel-sayilar"], "kind": "mcq",
            "stem": "3/4 + 1/8 toplamı kaçtır?", "source": "llm", "content_hash": "h-test-1",
@@ -184,7 +262,8 @@ def test_flush_writes_only_written_rows_and_redacts(db, out):
     q = db.select("questions", where={"source": "llm", "status": "pending_review"}, limit=1)[0]
     db.rpc("register_answer_key", {"p_question": q["id"], "p_key": {
         "correct_option": "A", "solution": "Adım adım çözüm metni.", "sympy_status": "not_applicable"}})
-    db.delete("exam_items", where={"id": db.select("exam_items", limit=1)[0]["id"]})
+    with as_admin(db):  # batch_worker exam_items silemez (W "r w u"); silme kaydı yönetici rolüyle sınanır
+        db.delete("exam_items", where={"id": db.select("exam_items", limit=1)[0]["id"]})
     paths = {p.name for p in db.flush()}
     assert {"messages.jsonl", "questions.jsonl", "rpc_calls.jsonl", "deletions.jsonl"} <= paths
     assert not any(p.startswith("secure.") for p in paths)

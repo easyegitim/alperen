@@ -91,3 +91,11 @@ def istanbul_date(value: datetime | str) -> date:
 
 def month_start(day: date) -> date:
     return day.replace(day=1)
+
+
+def hms_seconds(ts: str | None) -> int:
+    """Transkript zamanı ``HH:MM:SS`` → saniye; boş değer 0 (``lesson_claims.t_start_sec`` kuralı)."""
+    if not ts:
+        return 0
+    h, m, s = (int(x) for x in str(ts).split(":"))
+    return h * 3600 + m * 60 + s

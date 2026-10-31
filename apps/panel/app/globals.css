@@ -1,0 +1,77 @@
+/* Panel yerleşimi. Renk, boşluk ve köşe değerleri yalnız tokens.css değişkenlerinden gelir (tasarım sistemi README "Renk", "Boşluk"). */
+*, *::before, *::after { box-sizing: border-box; }
+html { font-family: var(--font-sans); background: var(--surface); color: var(--ink); }
+body { margin: 0; min-height: 100vh; font-size: var(--type-body-size); line-height: var(--type-body-line); }
+a { color: var(--link); }
+a:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid transparent; box-shadow: var(--focus-ring); }
+h1, h2, h3 { margin: 0; }
+.t-title-1, .t-title-2, .t-title-3 { color: var(--ink); }
+.muted { color: var(--ink-muted); }
+.mono { font-family: var(--font-mono); }
+.num { font-variant-numeric: tabular-nums; }
+
+.topbar { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-6); background: var(--surface-raised); border-bottom: 1px solid var(--line); }
+.topbar-brand { text-decoration: none; color: inherit; display: inline-flex; }
+.topbar-sub { color: var(--ink-muted); }
+
+.shell { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 57px); }
+.shell-nav { border-right: 1px solid var(--line); padding: var(--space-6) var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); background: var(--surface-raised); }
+.shell-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.shell-nav a { text-decoration: none; font-weight: 500; }
+.shell-who { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+.shell-main { padding: var(--space-8) var(--space-8) var(--space-12); display: flex; flex-direction: column; gap: var(--space-6); max-width: 1180px; }
+.mock-role { display: flex; flex-direction: column; gap: var(--space-1); }
+.mock-role-link[aria-current='true'] { font-weight: 700; }
+@media (max-width: 860px) { .shell { grid-template-columns: 1fr; } .shell-nav { border-right: 0; border-bottom: 1px solid var(--line); } .shell-main { padding: var(--space-6) var(--space-4); } }
+
+.section { display: flex; flex-direction: column; gap: var(--space-3); }
+.section + .section { margin-top: var(--space-2); }
+.stack { display: flex; flex-direction: column; gap: var(--space-3); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-3); }
+.card { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); box-shadow: var(--shadow-sm); }
+.card-head { display: flex; justify-content: space-between; gap: var(--space-3); align-items: flex-start; flex-wrap: wrap; }
+.split { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: var(--space-6); align-items: start; }
+@media (max-width: 1000px) { .split { grid-template-columns: 1fr; } }
+.list-btn { width: 100%; text-align: left; font: inherit; background: var(--surface-raised); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-3); cursor: pointer; display: flex; flex-direction: column; gap: var(--space-1); }
+.list-btn[aria-pressed='true'] { border-color: var(--primary); background: var(--primary-soft); }
+
+.table { width: 100%; border-collapse: collapse; font-size: var(--type-small-size); }
+.table th, .table td { text-align: left; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line); vertical-align: top; }
+.table th { color: var(--ink-muted); font-weight: 500; }
+.table td.num, .table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.form { display: flex; flex-direction: column; gap: var(--space-3); max-width: 560px; }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3); }
+.field { display: flex; flex-direction: column; gap: var(--space-1); }
+.field label, .field .field-label { font-size: var(--type-label-size); font-weight: 500; }
+.field select, .field textarea, .field input[type='number'], .field input[type='file'], .field input[type='datetime-local'] { font: inherit; color: var(--ink); background: var(--surface-sunken); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: var(--space-2); }
+.field textarea { min-height: 88px; resize: vertical; }
+.check { display: flex; gap: var(--space-2); align-items: flex-start; }
+.check input { margin-top: 4px; }
+.hint { color: var(--ink-muted); font-size: var(--type-small-size); }
+
+.legal { max-width: 640px; display: flex; flex-direction: column; gap: var(--space-4); }
+.legal-body { white-space: pre-wrap; font-size: var(--type-small-size); background: var(--surface-sunken); border-radius: var(--radius-md); padding: var(--space-3); max-height: 320px; overflow: auto; }
+.onay-page { padding: var(--space-8) var(--space-4) var(--space-12); display: flex; justify-content: center; }
+
+.chart { width: 100%; max-width: 720px; height: auto; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .series { fill: none; stroke: var(--primary); stroke-width: 2; }
+.chart .endpoint { fill: var(--primary); stroke: var(--surface-raised); stroke-width: 2; }
+.chart .axis { fill: var(--ink-muted); font-size: 12px; }
+
+.claim { display: flex; flex-direction: column; gap: var(--space-2); }
+.claim-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.talk-row { display: flex; gap: var(--space-4); flex-wrap: wrap; font-weight: 500; }
+
+.ds-skeleton { min-height: 24px; border-radius: var(--radius-md); background: var(--surface-sunken); }
+.ds-skeleton-inline { display: inline-block; min-width: 64px; min-height: 20px; vertical-align: middle; }
+
+/* Veli onay sayfası: sürümlü hukuk metni (lib/markdown.tsx) */
+.legal-text { display: flex; flex-direction: column; gap: var(--space-3); }
+.legal-text table { border-collapse: collapse; width: 100%; font-size: var(--type-small-size); }
+.legal-text th, .legal-text td { border: 1px solid var(--line, currentColor); padding: var(--space-2); text-align: left; vertical-align: top; }
+.legal-text blockquote { margin: 0; padding-left: var(--space-3); border-left: 2px solid var(--line, currentColor); }
+.legal-details summary { cursor: pointer; }
+.notice-fallback { padding: var(--space-3); border: 1px solid currentColor; border-radius: var(--radius-md); }

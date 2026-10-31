@@ -7,7 +7,21 @@ Kurallar:
   ``FakeCrossref``, ``FakeUnpaywall``, ``LocalDirStorage``, ``FakeNotifier``; saat sabit
   (``OGRENMEN_NOW`` ya da fixture "şimdi"si).
 * Aksi hâlde her adaptör anahtarına bakar; anahtar yoksa o adaptör sahteye düşer ve ``warnings``'e
-  (stderr'e de) Türkçe bir uyarı yazılır — sessiz düşüş yoktur.
+  (stderr'e de) Türkçe bir uyarı yazılır — sessiz düşüş yoktur. **Veritabanı ile model adaptörleri
+  birlikte gerçek ya da birlikte sahtedir** (``OGR-ADP-001``):
+
+  - gerçek veritabanı (``SUPABASE_URL`` + ``SUPABASE_BATCH_JWT``) varken hiçbir model anahtarı yoksa
+    Runtime kurulmaz — fixture çıktıları üretim tablolarına "gerçekmiş gibi" yazılmaz, sahte çağrılar
+    gerçek fiyatlarla ``llm_calls``/``spend_ledger``'a girmez;
+  - bir model anahtarı varken gerçek veritabanı yoksa Runtime kurulmaz — ücretli çağrı gerçek defter ve
+    ``check_spend`` tavanı olmadan yapılmaz (ilke 2 ve 3);
+  - embedding yalnız ``models.json`` ``chains.embedding`` modelinin sağlayıcısının anahtarıyla
+    (``gemini-paid`` → ``GEMINI_PAID_KEY``; ücretsiz katman veriyle eğitir, §9.1) gerçektir; anahtar yoksa
+    gerçek veritabanıyla sahte vektör yazılmaz — ``embed`` çağrısı ``OGR-ADP-001`` ile reddedilir.
+* Embedding her iki kipte de ``LedgeredEmbedding`` ile ``CostLedger`` kapısından geçer
+  (``purpose='embedding'`` ``llm_calls`` satırı, ``check_spend``).
+* Depolama: ``out`` verilmezse her Runtime kendi geçici dizinini (``ogrenmen-storage-*``) kullanır ve
+  ``close()`` onu siler — çalışmalar birbirinin nesnesini görmez (§2 determinizm).
 * ``vision``/``ocr``/``transcriber`` her iki kipte de ``CostLedger`` üzerinden çalışır (tavan, düşüş,
   şema, ``llm_calls``); sahte kipte arkalarında ``FakeLLM`` vardır, böylece dry-run maliyet tahmini
   (``cost_estimate.json``) bu çağrıları da içerir.
@@ -21,8 +35,10 @@ Ortam değişkenleri (§8.2): ``SUPABASE_URL``, ``SUPABASE_ANON_KEY``, ``SUPABAS
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import tempfile
+import weakref
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -35,6 +51,7 @@ from .adapters.base import DOIResolver as DOIResolverProto
 from .adapters.media import LLMOCR, LLMTranscriber, LLMVision
 from .batch import BatchRunner
 from .clock import Clock, fake_clock_from_env, system_clock
+from .errors import AdapterError
 from .fakes import (
     FakeArxiv,
     FakeCrossref,
@@ -46,10 +63,27 @@ from .fakes import (
     JsonlDb,
     LocalDirStorage,
 )
-from .ledger import CostLedger
+from .ledger import CostLedger, LedgeredEmbedding
 from .paths import fixtures_root
 
 TRUTHY = ("1", "true", "yes", "on")
+PROVIDER_KEY_ENV = {"gemini-paid": "GEMINI_PAID_KEY", "gemini-free": "GEMINI_FREE_KEY"}
+"""Embedding sağlayıcısı → anahtar değişkeni (``models.json`` sağlayıcısı belirler)."""
+
+
+class RefusingEmbedding:
+    """Gerçek veritabanı varken embedding anahtarı yoksa: sahte (hash) vektör üretim tablolarına yazılmasın diye
+    her ``embed`` çağrısını ``OGR-ADP-001`` ile reddeder (``Embedding`` Protocol'ünü karşılar)."""
+
+    available = False
+
+    def __init__(self, model: str, dims: int, reason: str):
+        self.model = model
+        self.dims = dims
+        self.reason = reason
+
+    def embed(self, texts):  # noqa: ANN001 - Protocol imzası
+        raise AdapterError(f"OGR-ADP-001 {self.reason}")
 
 
 def fakes_forced(env: Mapping[str, str]) -> bool:
@@ -78,6 +112,12 @@ class Runtime:
     fixtures: Path | None = None
     out: Path | None = None
     warnings: list[str] = field(default_factory=list)
+    storage_tmp: Path | None = None
+    """``out`` yokken kullanılan geçici depolama dizini (``close()`` siler)."""
+
+    def __post_init__(self) -> None:
+        self._cleanup = (weakref.finalize(self, shutil.rmtree, str(self.storage_tmp), True)
+                         if self.storage_tmp is not None else None)
 
     @property
     def is_fake(self) -> bool:
@@ -97,6 +137,8 @@ class Runtime:
             if callable(flush):
                 written.extend(flush(self.out))
             written.append(self.ledger.write_estimate(self.out))
+        if self._cleanup is not None:
+            self._cleanup()
         return written
 
     @classmethod
@@ -125,12 +167,14 @@ class Runtime:
         llm = FakeLLM(**dict(llm_options or {}))
         notifier = FakeNotifier()
         ledger = CostLedger(db, llm, models=models, clock=clock, dry_run=True, notifier=notifier)
-        storage = _local_storage(fixtures, out)
-        return cls(mode="fake", dry_run=dry_run, db=db, llm=llm, embedding=FakeEmbedding(), vision=LLMVision(ledger),
+        storage, tmp = _local_storage(fixtures, out)
+        return cls(mode="fake", dry_run=dry_run, db=db, llm=llm,
+                   embedding=LedgeredEmbedding(FakeEmbedding(models=models), ledger), vision=LLMVision(ledger),
                    transcriber=LLMTranscriber(ledger), ocr=LLMOCR(ledger),
                    scholars=[FakeScholar(source="openalex"), FakeScholar(source="semantic_scholar"), FakeArxiv()],
                    doi=FakeCrossref(), oa=FakeUnpaywall(), storage=storage, notifier=notifier, ledger=ledger,
-                   batch=BatchRunner(ledger), clock=clock, models=models, fixtures=fixtures, out=out)
+                   batch=BatchRunner(ledger), clock=clock, models=models, fixtures=fixtures, out=out,
+                   storage_tmp=tmp)
 
     @classmethod
     def _real(cls, env: dict[str, str], *, fixtures: Path | None, out: Path | None, models: dict,
@@ -159,14 +203,8 @@ class Runtime:
 
         clock: Clock = system_clock
         url, jwt, anon = env.get("SUPABASE_URL"), env.get("SUPABASE_BATCH_JWT"), env.get("SUPABASE_ANON_KEY")
-        if url and jwt:
-            db: DB = PostgrestDb(url, jwt, anon_key=anon)
-            storage: Storage = SupabaseStorage(url, jwt, anon_key=anon)
-        else:
-            warn("SUPABASE_URL/SUPABASE_BATCH_JWT yok; veritabanı ve depolama sahte (JsonlDb, yerel dizin).")
-            clock = fake_clock_from_env(env)
-            db = JsonlDb.from_fixtures(fixtures, out_dir=out, clock=clock)
-            storage = _local_storage(fixtures, out)
+        real_db = bool(url and jwt)
+        storage_tmp: Path | None = None
         if env.get("TELEGRAM_OPS_BOT_TOKEN") and env.get("ADMIN_CHAT_ID"):
             notifier: Notifier = TelegramNotifier(env["TELEGRAM_OPS_BOT_TOKEN"], env["ADMIN_CHAT_ID"])
         else:
@@ -187,18 +225,44 @@ class Runtime:
             adapters_by_provider["cf-ai"] = CloudflareAILLM(env["CF_AI_TOKEN"], env["CF_ACCOUNT_ID"], **kwargs)
         if env.get("ANTHROPIC_KEY"):
             adapters_by_provider["anthropic"] = AnthropicLLM(env["ANTHROPIC_KEY"])
+        if real_db and not adapters_by_provider:
+            raise AdapterError("OGR-ADP-001 gerçek veritabanıyla sahte model kullanılmaz: SUPABASE_URL/"
+                               "SUPABASE_BATCH_JWT var ama hiçbir model anahtarı yok (anahtarları ekle ya da "
+                               "--dry-run ile çalıştır)")
+        if adapters_by_provider and not real_db:
+            raise AdapterError("OGR-ADP-001 gerçek model çağrısı gerçek maliyet defteri ve tavan olmadan yapılmaz: "
+                               f"{', '.join(sorted(adapters_by_provider))} anahtarı var ama SUPABASE_URL/"
+                               "SUPABASE_BATCH_JWT yok (ikisini ekle ya da --dry-run ile çalıştır)")
+        if real_db:
+            db: DB = PostgrestDb(url, jwt, anon_key=anon)
+            storage: Storage = SupabaseStorage(url, jwt, anon_key=anon)
+        else:
+            warn("SUPABASE_URL/SUPABASE_BATCH_JWT yok; veritabanı ve depolama sahte (JsonlDb, yerel dizin).")
+            clock = fake_clock_from_env(env)
+            db = JsonlDb.from_fixtures(fixtures, out_dir=out, clock=clock)
+            storage, storage_tmp = _local_storage(fixtures, out)
         llm: LLM
         if adapters_by_provider:
             llm = ProviderRouter(models, adapters_by_provider)
         else:
             warn("Hiçbir model anahtarı yok; sahte LLM (FakeLLM) kullanılıyor.")
             llm = FakeLLM(**dict(llm_options or {}))
-        embed_key = env.get("GEMINI_PAID_KEY") or env.get("GEMINI_FREE_KEY")
-        if embed_key:
-            embedding: Embedding = GeminiEmbedding(embed_key)
+        embed_model = models["chains"]["embedding"][0]
+        embed_info = models["models"][embed_model]
+        embed_dims = int(embed_info.get("dims") or 0)
+        key_env = PROVIDER_KEY_ENV.get(embed_info["provider"])
+        embed_key = env.get(key_env) if key_env else None
+        inner: Embedding
+        if not real_db:
+            warn("Embedding sahte (veritabanı sahte).")
+            inner = FakeEmbedding(models=models)
+        elif embed_key:
+            inner = GeminiEmbedding(embed_key, model=embed_model, dims=embed_dims)
         else:
-            warn("Embedding anahtarı yok; sahte embedding kullanılıyor.")
-            embedding = FakeEmbedding()
+            reason = (f"embedding anahtarı ({key_env or embed_info['provider']}) yok; gerçek veritabanına sahte "
+                      "vektör yazılmaz")
+            warn(reason[0].upper() + reason[1:] + "; embed çağrıları reddedilecek.")
+            inner = RefusingEmbedding(embed_model, embed_dims, reason)
         mail = env.get("UNPAYWALL_EMAIL")
         scholars: list[Scholar] = [OpenAlexScholar(mailto=mail), SemanticScholar(api_key=env.get("S2_API_KEY")),
                                    ArxivScholar()]
@@ -210,15 +274,17 @@ class Runtime:
             oa = FakeUnpaywall()
         ledger = CostLedger(db, llm, models=models, clock=clock, dry_run=False, notifier=notifier)
         batch_client = GeminiBatchClient(env["GEMINI_PAID_KEY"]) if env.get("GEMINI_PAID_KEY") else None
-        mode = "real" if isinstance(llm, ProviderRouter) and not isinstance(db, JsonlDb) else "mixed"
-        return cls(mode=mode, dry_run=False, db=db, llm=llm, embedding=embedding, vision=LLMVision(ledger),
-                   transcriber=LLMTranscriber(ledger), ocr=LLMOCR(ledger), scholars=scholars, doi=doi, oa=oa,
-                   storage=storage, notifier=notifier, ledger=ledger,
+        mode = "real" if real_db else "mixed"
+        return cls(mode=mode, dry_run=False, db=db, llm=llm, embedding=LedgeredEmbedding(inner, ledger),
+                   vision=LLMVision(ledger), transcriber=LLMTranscriber(ledger), ocr=LLMOCR(ledger),
+                   scholars=scholars, doi=doi, oa=oa, storage=storage, notifier=notifier, ledger=ledger,
                    batch=BatchRunner(ledger, client=batch_client), clock=clock, models=models, fixtures=fixtures,
-                   out=out, warnings=warnings)
+                   out=out, warnings=warnings, storage_tmp=storage_tmp)
 
 
-def _local_storage(fixtures: Path | None, out: Path | None) -> LocalDirStorage:
-    root = (out / "storage") if out is not None else Path(tempfile.gettempdir()) / "ogrenmen-storage"
+def _local_storage(fixtures: Path | None, out: Path | None) -> tuple[LocalDirStorage, Path | None]:
+    """``out/storage``; ``out`` yoksa bu Runtime'a özel geçici dizin (ikinci değer; ``close()`` siler)."""
+    tmp = None if out is not None else Path(tempfile.mkdtemp(prefix="ogrenmen-storage-"))
+    root = (out / "storage") if out is not None else tmp
     read_roots = [p for p in (fixtures, fixtures_root()) if p is not None]
-    return LocalDirStorage(root, read_roots=read_roots)
+    return LocalDirStorage(root, read_roots=read_roots), tmp

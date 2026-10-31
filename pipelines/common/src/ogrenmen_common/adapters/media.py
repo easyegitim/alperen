@@ -14,6 +14,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from ..clock import hms_seconds
 from ..purposes import output_errors
 from .base import LLMRequest, Media
 
@@ -119,16 +120,11 @@ def transcript_or_unlabeled_errors(data: Any) -> list[str]:
     return output_errors("transcript", data)
 
 
-def _seconds(ts: str) -> int:
-    h, m, s = (int(x) for x in ts.split(":"))
-    return h * 3600 + m * 60 + s
-
-
 def diarize_windows(segments: Sequence[Mapping[str, Any]], window_sec: int = DIARIZE_WINDOW_SEC) -> list[list[dict]]:
     """Etiketsiz bölümleri ``window_sec`` (2 dk) pencerelere ayırır (§6.3)."""
     windows: dict[int, list[dict]] = {}
     for seg in segments:
-        windows.setdefault(_seconds(str(seg["t"])) // window_sec, []).append(dict(seg))
+        windows.setdefault(hms_seconds(str(seg["t"])) // window_sec, []).append(dict(seg))
     return [windows[k] for k in sorted(windows)]
 
 
@@ -139,24 +135,43 @@ def diarize_request(window: Sequence[Mapping[str, Any]]) -> LLMRequest:
 
 class LLMTranscriber:
     """``Transcriber`` Protocol'ü — ``transcribe`` zinciri (Gemini ses girdisi, konuşmacı etiketli); yedek
-    Groq Whisper etiketsiz döndüğünde ``diarize`` zinciri 2 dakikalık pencerelerde ÖĞRENCİ/EĞİTMEN yazar."""
+    Groq Whisper etiketsiz döndüğünde ``diarize`` zinciri 2 dakikalık pencerelerde ÖĞRENCİ/EĞİTMEN yazar.
+
+    **PII (§6.3, §9.1):** Whisper metni ``diarize`` modeline **gitmeden önce** dersin
+    ``resolve_lesson_labels`` yanıtı (``labels``: ``[{hash, label}]``) ve ``name_hashes`` ile temizlenir
+    (``pii.label_transcript``: ad → ``[ÖĞRENCİ]``/``[EĞİTMEN]``, kalan "hocam X" → ``[AD]``). Bunlar kurucuda
+    ya da ``transcribe(..., labels=..., name_hashes=...)`` ile verilir; Whisper yoluna düşülüp ikisi de boşsa
+    metin gönderilmez, ``LedgerError`` (``OGR-LLM-003``) yükselir."""
 
     def __init__(self, ledger: CostLedger, *, chain: str = "transcribe", diarize_chain: str = "diarize",
-                 ref_table: str = "lessons"):
+                 ref_table: str = "lessons", labels: Sequence[Mapping[str, Any]] = (),
+                 name_hashes: Sequence[str] = ()):
         self.ledger = ledger
         self.chain = chain
         self.diarize_chain = diarize_chain
         self.ref_table = ref_table
+        self.labels = list(labels)
+        self.name_hashes = list(name_hashes)
 
-    def transcribe(self, audio: Path, *, language: str = "tr") -> dict:
+    def transcribe(self, audio: Path, *, language: str = "tr", labels: Sequence[Mapping[str, Any]] | None = None,
+                   name_hashes: Sequence[str] | None = None) -> dict:
+        from ..errors import LedgerError
+        from ..pii import label_transcript
+
         audio = Path(audio)
         req = transcribe_request(audio, audio.read_bytes(), language=language)
         data = self.ledger.call("transcribe", req, chain=self.chain, ref_table=self.ref_table,
                                 validator=transcript_or_unlabeled_errors).data
         if not (isinstance(data, Mapping) and data.get("unlabeled") is True):
             return data
+        use_labels = list(self.labels if labels is None else labels)
+        use_hashes = list(self.name_hashes if name_hashes is None else name_hashes)
+        if not use_labels and not use_hashes:
+            raise LedgerError("OGR-LLM-003 Whisper metni ad temizliği olmadan diarize'a gönderilmez: "
+                              "resolve_lesson_labels etiketleri ya da ad hash'leri gerekli")
+        cleaned, _ = label_transcript({"segments": list(data["segments"])}, use_labels, use_hashes)
         labeled: list[dict] = []
-        for window in diarize_windows(data["segments"]):
+        for window in diarize_windows(cleaned["segments"]):
             part = self.ledger.call("diarize", diarize_request(window), chain=self.diarize_chain,
                                     ref_table=self.ref_table).data
             labeled.extend(part["segments"])

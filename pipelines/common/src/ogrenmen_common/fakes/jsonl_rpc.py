@@ -18,15 +18,15 @@ from typing import TYPE_CHECKING, Any
 
 from ogrenmen_pii import name_token_hashes
 
-from ..clock import iso, istanbul_date, month_start, parse_ts
+from ..clock import hms_seconds, iso, istanbul_date, month_start, parse_ts
 from ..errors import DbError, RpcError
+from ..ids import STUDENT_REF
 
 if TYPE_CHECKING:  # pragma: no cover
     from .jsonl_db import JsonlDb
 
 RPCS: dict[str, Callable[..., Any]] = {}
 
-STUDENT_REF = re.compile(r"^s_[a-z2-7]{12}$")
 FLAG_KEYS_BATCH = ("alerts_sent", "degraded_mode", "facts_lag_days", "storage_pressure")
 MB = 1024 * 1024
 
@@ -57,15 +57,16 @@ def _audit(db: JsonlDb, action: str, table_name: str, row_id: Any, diff: Any = N
 
 
 def _require_role(db: JsonlDb, code: str) -> None:
+    """SQL gövdesi ``batch_worker``'ı ve imtiyazlı rolleri kabul eden RPC'ler (grant'a dayanan kapı)."""
     if db.role not in ("batch_worker", "service_role", "postgres"):
         raise RpcError(code)
 
 
-def _ts_seconds(ts: str | None) -> int:
-    if not ts:
-        return 0
-    h, m, s = (int(x) for x in ts.split(":"))
-    return h * 3600 + m * 60 + s
+def _require_batch_worker(db: JsonlDb, code: str) -> None:
+    """Anahtar RPC'leri: SQL ``if app.jwt_role() <> 'batch_worker' then raise 'OGR-KEY-001'`` — tam olarak
+    ``batch_worker``; ``postgres``/``service_role`` da reddedilir (üretimdeki gövdeyle aynı)."""
+    if db.role != "batch_worker":
+        raise RpcError(f"{code} anahtar yalnız batch_worker rolüyle yazılır")
 
 
 def _band(p: float) -> str:
@@ -214,7 +215,7 @@ def _approve_guard(db: JsonlDb, q: Mapping[str, Any], key: Mapping[str, Any] | N
 @rpc
 def register_answer_key(db: JsonlDb, p_question: str, p_key: Mapping[str, Any]) -> None:
     """LLM yolunun anahtar yazabildiği tek kapı (§3.9); kilit kuralları satır durumuna bağlıdır."""
-    _require_role(db, "OGR-KEY-001")
+    _require_batch_worker(db, "OGR-KEY-001")
     status = (p_key or {}).get("sympy_status")
     if status not in ("verified", "failed", "not_applicable"):
         raise RpcError("OGR-KEY-002 sympy_status geçersiz")
@@ -267,7 +268,7 @@ def register_answer_key(db: JsonlDb, p_question: str, p_key: Mapping[str, Any]) 
 def register_template_question(db: JsonlDb, p_item: Mapping[str, Any], p_key: Mapping[str, Any],
                                p_figure: Mapping[str, Any] | None = None) -> str | None:
     """Şablon sorusu tek kapı: şekil verified, anahtar verified, soru approved (§3.9)."""
-    _require_role(db, "OGR-KEY-001")
+    _require_batch_worker(db, "OGR-KEY-001")
     if p_item.get("source") != "template":
         raise RpcError("OGR-TPL-001 yalnız source=template")
     tpl_id = (p_item.get("template") or {}).get("id")
@@ -374,7 +375,9 @@ def register_lesson(db: JsonlDb, p_student_ref: str, p_staff_id: str, p_held_at:
 
 @rpc
 def resolve_lesson_labels(db: JsonlDb, p_lesson: str) -> list[dict]:
-    """Dersin öğrencisi ('ÖĞRENCİ'), eğitmeni ('EĞİTMEN') ve velisinin ('VELİ') ad-token hash'leri; düz ad dönmez."""
+    """§3.9 ``table(hash, label)``: dersin öğrencisinin ('ÖĞRENCİ') ve eğitmeninin ('EĞİTMEN') ad-token hash'leri;
+    düz ad dönmez. ``student_pii.name_token_hashes``'teki diğer tokenlar (ör. veli adı) da 'ÖĞRENCİ' etiketiyle
+    döner — SQL'in döndürdüğü yalnız bu iki etikettir."""
     lesson = db._one("lessons", id=p_lesson)
     if lesson is None:
         raise RpcError("OGR-LESSON-002 ders yok")
@@ -401,8 +404,6 @@ def resolve_lesson_labels(db: JsonlDb, p_lesson: str) -> list[dict]:
         staff = db._one("staff", id=lesson.get("staff_id")) if lesson.get("staff_id") else None
         if staff is not None:
             add(name_token_hashes(staff["full_name"]), "EĞİTMEN")
-        guardian = name_token_hashes(pii["guardian_name"]) if pii.get("guardian_name") else []
-        add(guardian, "VELİ")
         add(pii.get("name_token_hashes") or [], "ÖĞRENCİ")
     _audit(db, "RPC:resolve_lesson_labels", "lessons", p_lesson, actor_id="batch_worker:ders")
     return out
@@ -465,31 +466,31 @@ def _claims_from_analysis(analysis: Mapping[str, Any]) -> list[dict]:
         claims.append({"kind": "skill_mastery", "skill_id": s["skill_id"],
                        "value": {"mastery": s["mastery_estimate"], "confidence": s["confidence"]},
                        "quote": ev.get("quote") or "", "speaker": ev.get("speaker") or "ÖĞRENCİ",
-                       "t_start_sec": _ts_seconds(ev.get("t")),
-                       "t_end_sec": _ts_seconds(ev.get("t_end")) if ev.get("t_end") else None})
+                       "t_start_sec": hms_seconds(ev.get("t")),
+                       "t_end_sec": hms_seconds(ev.get("t_end")) if ev.get("t_end") else None})
     for mc in analysis.get("misconceptions") or []:
         ev = (mc.get("evidence") or [{}])[0]
         claims.append({"kind": "misconception", "skill_id": mc["skill_id"], "misconception_tag": mc.get("tag"),
                        "value": {"text": mc["text_instructor"], "text_student": mc["text_student"],
                                  "resolved_in_lesson": bool(mc.get("resolved_in_lesson", False))},
                        "quote": ev.get("quote") or mc["text_instructor"], "speaker": ev.get("speaker") or "ÖĞRENCİ",
-                       "t_start_sec": _ts_seconds(ev.get("t")),
-                       "t_end_sec": _ts_seconds(ev.get("t_end")) if ev.get("t_end") else None})
+                       "t_start_sec": hms_seconds(ev.get("t")),
+                       "t_end_sec": hms_seconds(ev.get("t_end")) if ev.get("t_end") else None})
     for q in analysis.get("questions") or []:
         claims.append({"kind": "question", "skill_id": q.get("skill_id"),
                        "value": {"text": q["quote"], "answered": q.get("answered")},
-                       "quote": q["quote"], "speaker": "ÖĞRENCİ", "t_start_sec": _ts_seconds(q["t"])})
+                       "quote": q["quote"], "speaker": "ÖĞRENCİ", "t_start_sec": hms_seconds(q["t"])})
     for h in analysis.get("hesitations") or []:
         claims.append({"kind": "hesitation", "skill_id": h.get("skill_id"), "value": {"kind": h["kind"]},
-                       "quote": h.get("quote") or h["kind"], "speaker": "ÖĞRENCİ", "t_start_sec": _ts_seconds(h["t"])})
+                       "quote": h.get("quote") or h["kind"], "speaker": "ÖĞRENCİ", "t_start_sec": hms_seconds(h["t"])})
     for c in analysis.get("commitments") or []:
         claims.append({"kind": c["kind"], "value": {"text": c["text"], "due": c.get("due"), "who": c["who"]},
-                       "quote": c["text"], "speaker": c["who"], "t_start_sec": _ts_seconds(c["t"])})
+                       "quote": c["text"], "speaker": c["who"], "t_start_sec": hms_seconds(c["t"])})
     for f in analysis.get("previous_profile_check") or []:
         ev = (f.get("evidence") or [{}])[0]
         claims.append({"kind": "followup", "misconception_id": f["misconception_id"], "value": {"status": f["status"]},
                        "quote": ev.get("quote") or "Önceki yanılgı denetimi", "speaker": ev.get("speaker") or "EĞİTMEN",
-                       "t_start_sec": _ts_seconds(ev.get("t"))})
+                       "t_start_sec": hms_seconds(ev.get("t"))})
     ns = analysis.get("next_step")
     if ns:
         claims.append({"kind": "next_step", "value": dict(ns), "quote": ns["for_instructor"], "speaker": "EĞİTMEN",

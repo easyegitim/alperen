@@ -8,6 +8,8 @@
   ``max_wait_s`` (6 saat) yoklanır. Süre dolarsa ya da iş başarısızsa ``status='deferred'`` döner —
   **eş zamanlı çağrıya düşülmez** (§12 #27); çağıran ``facts_lag_days``'i artırır ve ertesi gece yeniler.
   ``check_spend`` ücretli çağrıya izin vermezse ``status='blocked'`` (her öğe ``cap_blocked``).
+* **Degraded** (``degraded_mode=true``; §5.6 "LLM yok"): iki yolda da hiçbir model çağrılmaz; tek
+  ``cap_blocked`` denemesi yazılır ve ``status='blocked'`` döner (her öğenin hatası ``OGR-LLM-002``).
 """
 
 from __future__ import annotations
@@ -69,6 +71,13 @@ class BatchRunner:
             raise ValueError("Batch öğe anahtarları benzersiz olmalı")
         if not items:
             return BatchOutcome(status="done")
+        gate = self.ledger.gate(purpose, refresh=True)
+        if self.ledger.is_degraded(gate):
+            model = self.ledger.chain(chain_name)[0]
+            try:
+                self.ledger.refuse_if_degraded(purpose, gate, model=model, batch=True)
+            except LedgerError as exc:
+                return BatchOutcome(status="blocked", errors={i.key: exc.message for i in items}, model=model)
         if self.client is None:
             return self._run_inline(purpose, items, chain_name)
         return self._run_remote(purpose, items, chain_name, display_name or f"ogrenmen-{purpose}")

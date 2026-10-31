@@ -31,6 +31,21 @@ DEFAULT_COLUMNS: dict[str, tuple[str, ...]] = {"messages": MESSAGES_COLUMNS}
 DENIED_COLUMNS: dict[str, frozenset[str]] = {"messages": frozenset({"text_raw"})}
 
 
+def base_column(item: str) -> str:
+    """PostgREST seçim öğesinin taban sütunu: takma ad (``raw:text_raw``), tür dönüşümü (``text_raw::text``),
+    JSON yolu (``meta->a``, ``meta->>a``) ve boşluklar soyulur — yasak sütun denetimi buna bakar."""
+    text = str(item).strip()
+    cast = text.find("::")
+    if cast != -1:
+        text = text[:cast]
+    if ":" in text:  # takma ad: "ad:sütun" (tür dönüşümü yukarıda ayrıldı)
+        text = text.split(":")[-1]
+    arrow = text.find("->")
+    if arrow != -1:
+        text = text[:arrow]
+    return text.strip().strip('"')
+
+
 def _literal(value: Any) -> str:
     if value is True:
         return "true"
@@ -109,7 +124,7 @@ class PostgrestDb:
     def select_columns(self, table: str, columns: Sequence[str] | None) -> str:
         cols = list(columns) if columns else list(DEFAULT_COLUMNS.get(table, ("*",)))
         denied = DENIED_COLUMNS.get(table, frozenset())
-        bad = [c for c in cols if c in denied or (c == "*" and denied)]
+        bad = [c for c in cols if (base := base_column(c)) in denied or (base == "*" and denied)]
         if bad:
             raise DbPermissionError(f"OGR-DB-001 permission denied for column {bad[0]} of relation {table}")
         return ",".join(cols)
