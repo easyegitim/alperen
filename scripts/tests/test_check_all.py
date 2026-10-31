@@ -19,8 +19,11 @@ SCRIPT = CHECK_ALL.read_text(encoding="utf-8")
 
 # Modül README'si → check-all'daki modül adı (kabul komutları README'de kod bloğu olarak yazılı olanlar).
 MODULE_READMES = {
-    "M06T": "pipelines/tablet/README.md",
+    "M06": "pipelines/tablet/README.md",
     "M07": "pipelines/kulaklik_batch/README.md",
+    "M08": "pipelines/ders/README.md",
+    "M09": "pipelines/kalem/README.md",
+    "M10": "pipelines/kitap/README.md",
 }
 
 
@@ -68,6 +71,23 @@ def to_check_all_form(command: str) -> str:
 def test_only_m07_is_a_known_module():
     out = run_check_all("--only", "M07", "--list")
     assert out.returncode == 0, out.stderr
+
+
+@pytest.mark.parametrize("alias", ["M06T", "M06R", "m06t"])
+def test_old_tablet_slice_names_select_m06(alias):
+    out = run_check_all("--only", alias, "--list")
+    assert out.returncode == 0, out.stderr
+    assert {line.split()[0] for line in out.stdout.splitlines() if line.strip()} == {"M06"}
+
+
+def test_live_steps_for_tablet_and_ders():
+    out = run_check_all("--list")
+    rows = [line.split() for line in out.stdout.splitlines()]
+    live = {(parts[0], parts[2]) for parts in rows if parts[1:2] == ["live"]}
+    assert {("M06", "m06_live"), ("M08", "m08_live")} <= live, live
+    for fn, pkg in (("m06_live", "tablet"), ("m08_live", "ders")):
+        body = normalize(function_body(fn))
+        assert f"live_only_passes python -m pytest $ROOT/pipelines/{pkg} -q -k live -rs" in body, body
 
 
 def test_finished_modules_in_readme_are_all_run():

@@ -5,7 +5,7 @@ ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PYTHON ?= python3
 FILL_OUT ?= /tmp/ogrenmen-fill-dry
 
-.PHONY: help check check-quick db-test db-migrate rpc-parity fixtures-valid drift fill-dry dev dev-worker dev-panel
+.PHONY: help check check-quick db-test db-migrate rpc-parity fixtures-valid drift fill-dry ders dev dev-worker dev-panel
 
 help:
 	@echo "Öğrenmen hedefleri:"
@@ -18,6 +18,9 @@ help:
 	@echo "  make fixtures-valid  fixtures/llm sözleşmeleri + dev-seed denetimi"
 	@echo "  make drift         BKT ve PII SQL kopyalarının migration'larla birebirliği"
 	@echo "  make fill-dry      tablet template --fill dry-run (çıktı: FILL_OUT=$(FILL_OUT))"
+	@echo "  make ders          ders kaydı → analiz zinciri (register → analyze --lesson); kurucu makinesinde:"
+	@echo "                     make ders STUDENT=s_… STAFF=<staff uuid> HELD_AT=2026-10-20T18:00 VIDEO=<yol> [DURATION=90]"
+	@echo "                     (OGRENMEN_VIDEO_DIR gerekir; video o dizinin içinde, adı yalnız tarih + ders no)"
 	@echo "  make dev           yerel sahte bot + panel nasıl açılır"
 
 check:
@@ -66,6 +69,28 @@ fill-dry:
 	$(PYTHON) -m ogrenmen_tablet template --fill --min-stock 30 --dry-run \
 		--fixtures "$(ROOT)/fixtures/tablet" --out "$(FILL_OUT)"
 	@echo "Özet: $(FILL_OUT)/template_fill.json · RPC kayıtları: $(FILL_OUT)/rpc_calls.jsonl"
+
+# pipelines/ders/README.md "register": yeni dersin uuid'si register'ın stdout'una tek satır yazılır (gerisi stderr),
+# analyze --lesson'a zincirlenir. Video yüklenmez; yerel dosya $OGRENMEN_VIDEO_DIR içinde olmalı (yalnız göreli yol
+# kaydedilir, OGR-DERS-007). İsteğe bağlı: DURATION (dakika), TRANSCRIBER (chain | whispercpp), DERS_ARGS (ortak
+# bayraklar, ör. --out <dizin>). SUPABASE_URL/SUPABASE_BATCH_JWT yoksa iki komut da --dry-run'a düşer; dry-run'da
+# sahte veritabanı süreçler arasında paylaşılmadığı için analyze yeni dersi bulamaz (OGR-DERS-002): zincir canlıdır.
+ders:
+	$(if $(STUDENT),,$(error STUDENT=s_… gerekli (öğrencinin public_ref'i)))
+	$(if $(STAFF),,$(error STAFF=<uuid> gerekli (eğitmenin public.staff.id değeri)))
+	$(if $(HELD_AT),,$(error HELD_AT=2026-10-20T18:00 gerekli (saat dilimsizse Europe/Istanbul)))
+	$(if $(VIDEO),,$(error VIDEO=<yol> gerekli (OGRENMEN_VIDEO_DIR içindeki ders kaydı)))
+	@: "$${OGRENMEN_VIDEO_DIR:?OGRENMEN_VIDEO_DIR tanımlı değil (ham video dizini; pipelines/ders/README.md register)}"
+	@set -euo pipefail; \
+	lesson="$$($(PYTHON) -m ogrenmen_ders register --student-ref "$(STUDENT)" --staff-id "$(STAFF)" \
+	  --held-at "$(HELD_AT)" $(if $(DURATION),--duration "$(DURATION)") --video "$(VIDEO)" $(DERS_ARGS))"; \
+	case "$$lesson" in \
+	  ????????-????-????-????-????????????) ;; \
+	  *) echo "HATA: register ders uuid'si yazmadı: '$$lesson'" >&2; exit 1 ;; \
+	esac; \
+	echo "→ ders $$lesson kaydedildi; analyze başlıyor" >&2; \
+	$(PYTHON) -m ogrenmen_ders analyze --lesson "$$lesson" --video "$(VIDEO)" \
+	  $(if $(TRANSCRIBER),--transcriber "$(TRANSCRIBER)") $(DERS_ARGS)
 
 dev:
 	@echo "Yerel geliştirme (hesap ve anahtar gerekmez; iki ayrı terminal):"

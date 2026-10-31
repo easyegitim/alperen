@@ -206,6 +206,7 @@ def staff_keys(env: Mapping[str, str], ids: Sequence[str], transport: Any = None
     db = PostgrestDb(url, jwt, anon_key=env.get("SUPABASE_ANON_KEY"), transport=transport)
     out: dict[str, dict[str, Any]] = {}
     for qid in ids:
+        # rpc-parity: staff (eğitmen JWT'si; batch_worker bu RPC'yi çağıramaz)
         res = db.rpc("peek_answer_key", {"p_question": qid})
         if isinstance(res, list):
             res = res[0] if res else None

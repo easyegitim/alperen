@@ -187,6 +187,34 @@ def test_python_builder_with_wrong_keys_fails(parity, tmp_path):
     assert "p_fig" in fails[0].detail and "p_figure" in fails[0].detail
 
 
+LOCAL_PARAMS = '''
+
+def register(db, a):
+    params = {"p_a": a, "p_b": "x"}
+    lesson = db.rpc("foo", params)
+    if params["p_b"]:
+        return lesson
+'''
+
+
+def test_python_local_dict_variable_is_resolved(parity, tmp_path):
+    rows, fails, _ = run_check(parity, make_world(tmp_path, py=PY_CALLER + LOCAL_PARAMS))
+    assert fails == [], fails
+    assert sum(r.source == "çağrı:pipelines" for r in rows if r.rpc == "foo") == 3
+
+
+@pytest.mark.parametrize("change", [
+    ('"p_b": "x"}', '"p_zz": "x"}'),                                   # bilinmeyen anahtar yine yakalanır
+    ('    lesson =', '    params["p_c"] = 1\n    lesson ='),            # sonradan eklenen anahtar
+    ('    lesson =', '    params.update(p_c=1)\n    lesson ='),         # update
+    ('    lesson =', '    params = dict(p_a=a)\n    lesson ='),         # ikinci atama
+    ('def register(db, a):', 'def register(db, a, params=None):'),      # parametre adı
+])
+def test_python_local_dict_variable_mutation_is_not_trusted(parity, tmp_path, change):
+    _, fails, _ = run_check(parity, make_world(tmp_path, py=PY_CALLER + LOCAL_PARAMS.replace(*change)))
+    assert len(fails) == 1 and fails[0].rpc == "foo", fails
+
+
 def test_jsonl_fake_signature_checks(parity, tmp_path):
     jsonl = JSONL_RPC.replace("def foo(db, p_a, p_b=None)", "def foo(db, p_a, p_other=None)")
     jsonl = jsonl.replace("def tpl(db, p_item, p_key, p_figure)", "def tpl(db, p_item, p_key, p_figure=None)")
@@ -272,3 +300,29 @@ def test_cli_exit_code_and_json(parity, tmp_path, capsys):
     assert rc == 1
     assert out["counts"]["FAIL"] >= 1
     assert all(r["status"] != "PASS" for r in out["rows"])
+
+
+STAFF_CALL = '''
+
+def staff_keys(db):
+    # rpc-parity: staff (eğitmen JWT'si)
+    return db.rpc("baz", {"p": 1})
+'''
+
+
+def test_staff_marked_pipeline_call_checked_against_panel_list(parity, tmp_path):
+    # İşaretli eğitmen çağrısı batch_worker listesinde aranmaz; panel listesinde varsa geçer.
+    rows, fails, _ = run_check(parity, make_world(tmp_path, py=PY_CALLER + STAFF_CALL, panel_names=["foo", "baz"]))
+    assert not [r for r in fails if r.rpc == "baz"], fails
+    assert any(r.rpc == "baz" and "eğitmen oturumu" in r.detail for r in rows)
+
+
+def test_staff_marked_call_missing_from_panel_list_fails(parity, tmp_path):
+    _, fails, _ = run_check(parity, make_world(tmp_path, py=PY_CALLER + STAFF_CALL))
+    assert any(r.rpc == "baz" and "panel" in r.detail for r in fails), fails
+
+
+def test_unmarked_staff_only_call_still_fails(parity, tmp_path):
+    py = PY_CALLER + STAFF_CALL.replace("# rpc-parity: staff (eğitmen JWT'si)", "# yorum")
+    _, fails, _ = run_check(parity, make_world(tmp_path, py=py, panel_names=["foo", "baz"]))
+    assert any(r.rpc == "baz" and "rpc-names.json listesinde yok" in r.detail for r in fails), fails

@@ -29,8 +29,11 @@ hesap ve anahtar olmadan kurulur, çalışır ve test edilir. Kaynaklar: `docs/p
 | `content/tyt-matematik/` | müfredat `TYT-MAT@2026.1`: 18 yaprak kazanım, 27 yanılgı etiketi, 20 teşhis maddesi, 6 şablon | M03 |
 | `apps/worker/` | Cloudflare Worker: Telegram botu, LLM yönlendirici, kota, hafıza, cron | M04 |
 | `pipelines/common/` | `ogrenmen_common`: adaptörler, sahteler, `JsonlDb`, `CostLedger`, `Runtime` | M05 |
-| `pipelines/tablet/` | `ogrenmen_tablet template`: sıfır LLM şablon soruları, `register_template_question` ile onaylı stok | M06T |
+| `pipelines/tablet/` | `ogrenmen_tablet`: sıfır LLM şablon stoğu (`template`), LLM soru üretimi (`generate`), sandbox'ta şekil render, vision denetimi, SymPy anahtar doğrulaması, PDF, ders notu kütüphanesi | M06 |
 | `pipelines/kulaklik_batch/` | `ogrenmen_kulaklik`: gece olguları, haftalık özet, eğitmen alarmları, pilot ölçütleri ve kapısı, maliyet raporu | M07 |
+| `pipelines/ders/` | `ogrenmen_ders`: ders kaydı (`register`), ders videosu analizi (`analyze`: adsız transkript + kareler → taslak rapor), `purge` | M08 |
+| `pipelines/kalem/` | `ogrenmen_kalem`: sınav arşivi OCR → madde → kümeleme → izlence hizalama → "Sıklık analizine göre öncelikler" planı | M09 |
+| `pipelines/kitap/` | `ogrenmen_kitap`: araştırma ajanı; Crossref'te çözülmeyen DOI'li atıflar silinir | M10 |
 | `apps/panel/` | eğitmen paneli: Next.js 14.2 statik export, design-system bundle, mock/live veri | M11 |
 | `scripts/` | `check-all.sh`, `check-rpc-parity.py`, `check-drift.py`, `check-fixtures.py`, `secret-scan.sh` ve testleri | M13L |
 | `.github/workflows/ci.yml` | hesapsız CI: sır taraması + actionlint + `make check-quick`; M04/M11 ağır build'leri; pgvector'lü Postgres ile canlı `make db-test` | M13L |
@@ -46,7 +49,8 @@ git clone <depo> alperen && cd alperen
 
 # 1) Python paketleri (yerel yol bağımlılıkları sırayla)
 python -m pip install -e packages/contracts/python[dev] -e packages/mastery-math/python[dev] -e packages/pii/py[dev] \
-  -e pipelines/common[dev] -e pipelines/tablet[dev] sqlfluff pglast yamllint
+  -e pipelines/common[dev] -e pipelines/tablet[dev] -e pipelines/kulaklik_batch[dev] -e pipelines/ders[dev] \
+  -e pipelines/kalem[dev] -e pipelines/kitap[dev] sqlfluff pglast yamllint
 
 # 2) TypeScript paketleri (önce paylaşılan paketler, sonra uygulamalar)
 for d in packages/contracts packages/mastery-math packages/pii/ts apps/worker apps/panel supabase; do bun install --cwd "$d"; done
@@ -65,8 +69,22 @@ make fill-dry        # /tmp/ogrenmen-fill-dry/template_fill.json
 ```
 
 `make help` tüm hedefleri listeler: `check`, `check-quick`, `db-test`, `db-migrate`, `rpc-parity`, `fixtures-valid`,
-`drift`, `fill-dry`, `dev`. `make db-migrate` (barındırılan projeye ilk kurulum ya da `MIGRATION=<dosya>` ile tek yeni
-migration; `DB_URL` ister) yalnız kurucu runbook'unda kullanılır. Python hedefleri `PYTHON=python3` (değiştirilebilir).
+`drift`, `fill-dry`, `ders`, `dev`. `make db-migrate` (barındırılan projeye ilk kurulum ya da `MIGRATION=<dosya>` ile tek
+yeni migration; `DB_URL` ister) yalnız kurucu runbook'unda kullanılır. Python hedefleri `PYTHON=python3` (değiştirilebilir).
+
+`make ders` kurucu makinesinde ders kaydını analize zincirler (`pipelines/ders/README.md`): `register` yeni dersin
+uuid'sini stdout'a tek satır yazar, hedef onu `analyze --lesson`'a verir.
+
+```
+export OGRENMEN_VIDEO_DIR=~/ogrenmen-dersler     # ham videolar; dosya ve klasör adı yalnız tarih + ders no
+make ders STUDENT=s_qk7m2rx4tn5a STAFF=<public.staff.id> HELD_AT=2026-10-20T18:00 DURATION=90 \
+  VIDEO=$OGRENMEN_VIDEO_DIR/2026-10/2026-10-20-ders-01.mp4 [TRANSCRIBER=whispercpp] [DERS_ARGS="--out <dizin>"]
+```
+
+Video yüklenmez; `VIDEO` `OGRENMEN_VIDEO_DIR`'in içinde olmalıdır (yalnız göreli yol kaydedilir). `SUPABASE_URL` ve
+`SUPABASE_BATCH_JWT` yoksa iki komut da `--dry-run`'a düşer; dry-run'ın sahte veritabanı iki süreç arasında
+paylaşılmadığı için `analyze` yeni dersi bulamaz (`OGR-DERS-002`): zincir canlı projeyle çalışır. Hesapsız deneme için
+`check-all.sh --only M08` (fixture dersine `analyze --dry-run`).
 
 ## Kabul komutları
 
@@ -78,8 +96,9 @@ adım için bir satır yazar (PASS/FAIL/SKIP + süre); sonunda özet verir, herh
 bash scripts/check-all.sh --quick          # hesapsız; wrangler build ve panel üretim derlemesi atlanır (CI bunu koşar)
 bash scripts/check-all.sh                  # tam: ağır build adımları dahil
 OGRENMEN_DATABASE_URL=postgresql://kullanici:parola@127.0.0.1:5432/postgres bash scripts/check-all.sh
-                                           # + canlı db-test.sh (geçici veritabanı) + tablet live testleri
-bash scripts/check-all.sh --only M02,M13   # yalnız seçilen modüller (M13L = M13; bilinmeyen ad → çıkış 2)
+                                           # + canlı db-test.sh (geçici veritabanı) + tablet ve ders live testleri
+                                           #   (kalem ve kitap live testleri kendi pytest adımlarında koşar)
+bash scripts/check-all.sh --only M02,M13   # yalnız seçilen modüller (M13L = M13, M06T/M06R = M06; bilinmeyen ad → çıkış 2)
 python scripts/check-rpc-parity.py && python -m pytest scripts/tests -q
 yamllint -d relaxed .github/workflows && make -n check
 ```
@@ -92,8 +111,11 @@ yamllint -d relaxed .github/workflows && make -n check
 | M03 | `validate.py`, `export-sql.py` (anahtarsız, yer tutucusuz, çocuk dili işaretli), `--as-version 2027.1`, içerik pytest |
 | M04 | worker typecheck + lint + test; `build` (yalnız tam kipte); kaynakta anahtar/`service_role` yok; `texts.ts`'te ünlem/emoji yok |
 | M05 | `ogrenmen_common` ruff + pytest, `selftest`, `Runtime.from_env(dry_run=True)` → `FakeLLM` |
-| M06T | tablet ruff + pytest, `template --id kesir-modeli-toplama`, `template --fill --min-stock 30 --dry-run`; DB varsa `-k live` (atlanan test FAIL) |
+| M06 | tablet ruff + pytest; `generate --skill tyt.mat.temel.rasyonel-sayilar --count 2 --dry-run` (`cost_estimate.json` var, `correct_option` yok); `template --id kesir-modeli-toplama` (PNG şekiller); `template --fill --min-stock 30 --dry-run` (`register_template_question` çağrısı, `"source": "llm"` yok); DB varsa `-k live` (atlanan test FAIL) |
 | M07 | kulaklik_batch ruff + pytest; `facts --day 2026-10-18 --dry-run` (her olguda `source_message_ids` dolu), `metrics --dry-run` (alarmlarda `depresif`/`tembel` yok), `metrics --gate --dry-run` (`pilot_gate.md`'de "Kapı: AÇIK/KAPALI"), `cost-report --month 2026-10 --dry-run` |
+| M08 | ders ruff + pytest; `analyze --dry-run` fixture dersinde: `lesson_analyses.jsonl` ve `lesson_claims.jsonl` var, `observations.jsonl` yok, `api_payload.json`'da `Elif` yok; DB varsa `tests/test_live_db.py` ayrı adımda (atlanan test FAIL) |
+| M09 | kalem ruff + pytest; `plan --course DEMO --period 2026 --dry-run`: başlık "Sıklık analizine göre öncelikler", satırlar dolu, planda `ocr_text`/`tahmin`/`çıkacak` yok |
+| M10 | kitap ruff + pytest; `run --query "spaced repetition matematik" --dry-run`: her atıf `verified`/`no_doi`, `removed` dolu, sentezin atıfları sıra numaralarının alt kümesi, `10.9999/fake` yok |
 | M11 | panel sync:ds + typecheck + lint + test (üç derleme içerir); mock build + anahtar/CDN taraması (yalnız tam kipte); `lang="tr"` |
 | M12 | 8 hukuk belgesi ve uyarı satırı, yer tutucular `placeholders.json`'da, grup bildirimi ve çocuk dili işaretleri |
 | M13L | BKT/PII kopya sapması, fixtures-valid, RPC adı + parametre paritesi, `scripts/` ruff + pytest, workflow lint'i |
@@ -126,10 +148,12 @@ yamllint -d relaxed .github/workflows && make -n check
   sağlamasıyla adlandırılmış bir kilit (`$TMPDIR/ogrenmen-check-all-<sağlama>.lock`, `flock`) alır; ikinci koşu
   "Başka bir check-all koşusu sürüyor" yazıp en çok 30 dakika bekler (iki üst üste koşu M11'i
   `ENOENT rename .next/export/500.html` ile yanlış FAIL ettirmişti). `flock` olmayan sistemde (macOS) uyarı yazılır.
-- **Boş PASS yok.** `--only` yalnız `--list`'teki modül adlarını kabul eder (M13L, M13'ün eşidir; `M06`, `M99` gibi
-  ad çıkış 2). Seçimle eşleşen adım yoksa çıkış 1. `OGRENMEN_DATABASE_URL` tanımlıyken `db-test.sh`
-  "SKIP: no database" yazarsa ya da tablet live testlerinden biri atlanırsa (ör. `psql` yok) adım FAIL olur; DB varken
-  live testleri `m06t_tablet` adımında seçilmez (`-m "not live"`), yalnız `m06t_live`'da bir kez koşar.
+- **Boş PASS yok.** `--only` yalnız `--list`'teki modül adlarını kabul eder (M13L, M13'ün; M06T ve M06R, tablet
+  dilimlerinin eski adları, M06'nın eşidir; `M99` gibi ad çıkış 2); `--list --only …` yalnız seçilen adımları yazar.
+  Seçimle eşleşen adım yoksa çıkış 1. `OGRENMEN_DATABASE_URL` tanımlıyken `db-test.sh` "SKIP: no database" yazarsa ya
+  da tablet veya ders live testlerinden biri atlanırsa (ör. `psql` ya da `ffmpeg` yok) adım FAIL olur; DB varken live
+  testleri `m06_tablet` (`-m "not live"`) ve `m08_ders` (`-k "not live"`) adımlarında seçilmez, yalnız `m06_live` ve
+  `m08_live`'da bir kez koşar. Kalem ve kitap live testleri (`live` işaretli) DB varken kendi pytest adımlarında koşar.
 - **M04 anahtar taraması** (`! grep -rn … apps/worker/src | grep -v "// anahtar yok"`) `pipefail` altında ilk
   `grep`'in hata kodunu (2, ör. dizin yok) "bulgu yok" saymasın diye çıkış kodu ayrıca denetlenir.
 - **Kök yolu.** Komutlar `/home/user/alperen` yerine betiğin bulunduğu deponun kökünü kullanır (CI'da checkout yolu
@@ -143,8 +167,14 @@ yamllint -d relaxed .github/workflows && make -n check
   (`contracts`, `mastery-math`, `pii`, `pipelines/common`) `pip install -e` ile kurar ki `--only M07` tek başına
   koşsun. `! grep -qiE "depresif|tembel"` denetimi `instructor_alerts.jsonl` yoksa PASS saymasın diye dosyanın
   varlığı ve grep çıkış kodu (1 = temiz) ayrıca denetlenir.
-- **M06T komutları** BLUEPRINT §11'deki M06 satırı değil, pilot diliminin (`pipelines/tablet/README.md`) komutlarıdır:
-  `generate` ertelendi.
+- **M06, M08, M09, M10 komutları** modül README'lerinin "Kurulum ve kabul" bloklarıdır (`pipelines/tablet`, `ders`,
+  `kalem`, `kitap`); `scripts/tests/test_check_all.py` her komutun adımlarda (`/tmp` → geçici dizin, depo kökü →
+  `$ROOT`) geçtiğini denetler. `/tmp/tablet-out`, `/tmp/tablet-out2`, `/tmp/tablet-fill`, `/tmp/ders-out`,
+  `/tmp/kalem-out`, `/tmp/kitap-out` geçici dizine taşınır. Kurulum adımları ortak tabanı da (`contracts`,
+  `mastery-math`, `pii`, `pipelines/common`) `pip install -e` ile kurar ki `--only M08` gibi tek modül koşabilsin.
+  `! grep` denetimleri (`correct_option`, `"source": "llm"`, `Elif`) dosya yoksa PASS saymasın diye denetlenen dosyanın
+  (`questions.jsonl`, `api_payload.json`) varlığı ayrıca sınanır. M08 `ffmpeg`/`ffprobe` ister (yoksa video testleri
+  SKIP, `analyze` `OGR-DERS-004` ile FAIL).
 - **Blueprint'in M13 satırı** (`bun install --frozen-lockfile` kökte, `dev-up.sh --check`, `docs-consistency.test.ts`,
   tüm workflow'lar) bu yalın entegrasyonda yoktur; kök `package.json`'da bağımlılık ve workspaces olmadığı için kökte
   kurulum adımı da yoktur. `check-rpc-parity` blueprint'te `.sh`, burada `.py`'dir (pglast doğrudan kullanılır).
@@ -175,13 +205,14 @@ Adımların komutları `docs/runbook/kurucu.md`'dedir. Hiçbir anahtar depoya, `
 Tüm öğrencilere açılış takvime değil `settings.pilot_gate` eşiklerine bağlıdır (soru doğruluğu ≥ 0,90, teşhis
 örtüşmesi ≥ 0,60, öğrenci başına maliyet ≤ 0,10 $, işaretli cevap ve bozulma payı ≤ %5, yalıtım ve anahtar sızıntısı
 testleri geçti). Panel `/maliyet` "Pilot kapısı" bloğu ölçüt başına PASS / FAIL / NO_DATA gösterir; `NO_DATA` kapıyı
-açmaz. Ölçümleri üreten iş (`kulaklik metrics --gate`, M07) hazırdır; onu her hafta koşturacak `weekly.yml` ve
-`nightly.yml` (M13 tam) ertelendiği için elle çalıştırılır (`pipelines/kulaklik_batch/README.md`). Ölçüm birikene
+açmaz. Ölçümleri üreten iş (`kulaklik metrics --gate`, M07) hazırdır; onu her hafta koşturacak zamanlanmış iş akışı
+(`weekly.yml`/`nightly.yml`) hesaplar açılana kadar depoda yok, iş elle çalıştırılır (`pipelines/kulaklik_batch/README.md`). Ölçüm birikene
 kadar kapı `KAPALI` ve çoğu ölçüt `NO_DATA` görünür; bu beklenen durumdur.
 
 ## Nerede kaldık
 
-Kurucunun kabul ettiği değerlendirme kapsamı 5 öğrencilik TYT pilotunun ihtiyacına daralttı.
+Kurucunun kabul ettiği değerlendirme kapsamı 5 öğrencilik TYT pilotunun ihtiyacına daralttı. 14 modülün (M00–M13)
+hepsi yazıldı ve kabul komutları `check-all.sh` ile koşuyor; kalan işler kod değil, ürün ve operasyon işleridir.
 
 **Bitmiş (kabul komutları `check-all.sh` ile koşuyor):**
 
@@ -193,21 +224,23 @@ Kurucunun kabul ettiği değerlendirme kapsamı 5 öğrencilik TYT pilotunun iht
 | M03 içerik (TYT Matematik) | tamam |
 | M04 Worker (Telegram botu) | tamam |
 | M05 `ogrenmen_common` | tamam |
-| M06T tablet şablon dilimi | yalnız sıfır LLM `template` komutu (`--id`, `--auto-approve`, `--fill`) |
-| M07 `kulaklik_batch` | tamam (gece olguları, haftalık özet, alarmlar, pilot ölçütleri ve kapısı, maliyet raporu; zamanlanmış koşu `nightly.yml`/`weekly.yml`/`cost-guard.yml` M13 tam ile ertelendi) |
+| M06 `tablet` | tamam: şablon stoğu (`template --id`, `--auto-approve`, `--fill`) + LLM üretimi (`generate`, `render`, `vision`, `verify`, `pdf`, `review-queue`, `notes ingest`) |
+| M07 `kulaklik_batch` | tamam (gece olguları, haftalık özet, alarmlar, pilot ölçütleri ve kapısı, maliyet raporu) |
+| M08 `ders` | tamam (`register`, `analyze`, `transcribe-only`, `frames-only`, `purge`; `make ders` zinciri) |
+| M09 `kalem` | tamam (sınav arşivi OCR, kümeleme, izlence hizalama, öncelik planı, varyant/çeldirici/ön koşul raporları) |
+| M10 `kitap` | tamam (araştırma ajanı; `research_enabled` pilotta kapalı kalır) |
 | M11 eğitmen paneli | tamam |
 | M12 hukuk taslakları | tamam (avukat onayı bekliyor) |
 | M13L yalın entegrasyon | bu dizinler: `scripts/`, `Makefile`, CI, README, kurucu runbook'u |
 
-**Ertelenmiş (pilot sonrası; BLUEPRINT bölümleri hazır):**
+**Ertelenmiş (ürün ve operasyon; kod bekleyen modül yok):**
 
-| Modül | Ne eksik | Pilota etkisi |
+| Ne | Ne eksik | Pilota etkisi |
 | --- | --- | --- |
-| M06 LLM üretimi | `tablet generate`, `render --queue`, `vision`, `verify`, `pdf`, `review-queue`, `notes ingest` | pratik soruları yalnız şablonlardan ve eğitmenden; şablonsuz yapraklarda pratik sorusu yok (#53) |
-| M08 `ders` | ders videosu analizi (`register`, `analyze`, `purge`) | ders raporu yok; panel `/dersler` boş |
-| M09 `kalem` | sınav arşivi OCR, kümeleme, öncelik planı | `/oncelik` "plan yok" satırını gösterir |
-| M10 `kitap` | araştırma ajanı | `research_enabled=false` (zaten pilotta kapalı) |
-| M13 tam | `nightly.yml`/`weekly.yml`/`cost-guard.yml`/`keepalive.yml`/`deploy-*.yml`, ADR'ler, diğer runbook'lar, `dev-up.sh`, `docs-consistency.test.ts`, `set-webhook.ts` | gece şablon dolumu ve haftalık yedek elle (`docs/runbook/kurucu.md`); `kulaklik` gece/hafta işleri elle (`pipelines/kulaklik_batch/README.md`) |
+| Hesaplar | yukarıdaki "Pilot öncesi yapılacak hesap ve erişim listesi" (Telegram, Supabase, JWT'ler, Gemini, Groq/OpenRouter, Cloudflare); gizleri isteyen zamanlanmış iş akışları (`nightly.yml`, `weekly.yml`, `cost-guard.yml`, `keepalive.yml`, `deploy-*.yml`) hesaplarla birlikte | hesaplar açılana kadar her şey yalnız sahtelerle; gece şablon dolumu, `kulaklik` gece/hafta işleri ve haftalık yedek elle (`docs/runbook/kurucu.md`) |
+| Eğitmen | pilot eğitmeninin `public.staff` kaydı ve panel erişimi; onay kuyruğunu (LLM soruları, ders raporları, öncelik planları) üstlenmesi | onaysız soru, ders raporu ve plan öğrenciye gitmez |
+| Avukat | `docs/hukuk/` taslaklarının onayı; veli onay formu ve grup kayıt bildiriminin yayımı | onay olmadan gerçek öğrenci kaydı açılmaz |
+| İlk hafta kişiselleştirmesi | gerçek öğrencilerin ilk haftasındaki teşhis, sohbet ve ilk ders verisiyle profillerin ve tercihlerin gözden geçirilmesi | pilotun ilk haftası varsayılan ayarlarla başlar |
 
 **Takip maddeleri (açık uyarılar):**
 
@@ -221,6 +254,10 @@ Kurucunun kabul ettiği değerlendirme kapsamı 5 öğrencilik TYT pilotunun iht
   `proactive_messages` güncellemesi): `apps/worker/README.md` "Kabul komutu notu" 11. Worker bunları en iyi çabayla
   yapar; M02 matrisi genişletilmeli.
 - Gece işleri ertelendiği için pratik stoku kurucu makinesinde elle doldurulur (`kurucu.md` "Haftalık iş").
+- `check-rpc-parity`: `pipelines/tablet/src/ogrenmen_tablet/pdf.py` `peek_answer_key`'i (eğitmen JWT'siyle, `pdf
+  --with-keys`) çağırıyor ama ad `pipelines/common/.../fakes/rpc-names.json`'da ve JsonlDb eşleniklerinde yok → M13
+  adımı FAIL. Pipelines'ın her RPC'si sahtede de olmalı (ya da betik eğitmen oturumu çağrılarını ayrı listelemeli);
+  sahibi `pipelines/common` + `pipelines/tablet`.
 
 ## Lisans ve gizlilik
 

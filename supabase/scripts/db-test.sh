@@ -7,7 +7,7 @@
 #     tests/00_local_stub.sql → migrations/*.sql → seed/*.sql → müfredat seed'i (content/tyt-matematik/scripts/export-sql.py,
 #     çalışma anında üretilir; betik yoksa "SKIP: no content") → cevap anahtarları (seed-keys.py --database-url;
 #     answer-keys.json yoksa "SKIP: no keys", have_keys=0) → seed/dev/*.sql (fixtures/db/dev-seed.json'ın SQL'i; Worker
-#     FakeDb ve panel mock ile aynı dünya, §2.4; satır sayıları dev-seed.json ile karşılaştırılır) → tests/01…12
+#     FakeDb ve panel mock ile aynı dünya, §2.4; satır sayıları dev-seed.json ile karşılaştırılır) → tests/01…13
 #     (psql -v ON_ERROR_STOP=1).
 #   Ardından ayrı bir veritabanında (…_dev) içerik seed'i OLMADAN migration + seed/*.sql + seed/dev/*.sql yüklenir
 #   (--dev dünyası kendi müfredatını, sorularını ve anahtarlarını taşır; tek başına da yüklenebilmeli).

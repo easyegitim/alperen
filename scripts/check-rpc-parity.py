@@ -177,6 +177,20 @@ class Row:
     detail: str
 
 
+STAFF_MARK = "rpc-parity: staff"
+
+
+def _staff_marked(call: CallSite) -> bool:
+    """Çağrı satırında ya da hemen üstünde ``# rpc-parity: staff`` işareti var mı."""
+    try:
+        lines = Path(call.file).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    idx = call.line - 1
+    window = lines[max(0, idx - 1): idx + 1]
+    return any(STAFF_MARK in ln for ln in window)
+
+
 def compare_keys(fns: list[SqlFunction], keys: frozenset[str]) -> tuple[str, str]:
     """Gönderilen anahtarlar ↔ SQL giriş parametreleri. Aşırı yükleme varsa herhangi biri uyarsa geçer."""
     problems: list[str] = []
@@ -494,6 +508,61 @@ def _py_dict_builders(trees: dict[Path, ast.Module]) -> dict[str, frozenset[str]
     return out
 
 
+def _local_dict_keys(fn: ast.FunctionDef | ast.AsyncFunctionDef | None, name: str) -> frozenset[str] | None:
+    """``params = {...}; db.rpc("x", params)``: ad fonksiyonda bir kez dict değişmezine bağlanıp hiç
+    değiştirilmiyorsa o değişmezin anahtarları; ikinci atama, ``params[...] = …``, ``params.update(…)``, ``|=``
+    gibi değişiklik → ``None``."""
+    if fn is None:
+        return None
+    values: list[ast.expr | None] = []
+    for node in ast.walk(fn):
+        if isinstance(node, ast.Assign):
+            for t in node.targets:
+                if isinstance(t, ast.Name) and t.id == name:
+                    values.append(node.value)
+                elif isinstance(t, ast.Subscript) and isinstance(t.value, ast.Name) and t.value.id == name:
+                    return None
+                elif not isinstance(t, (ast.Name, ast.Subscript, ast.Attribute)) and any(
+                        isinstance(n, ast.Name) and n.id == name for n in ast.walk(t)):
+                    return None  # demet açma vb.
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign, ast.NamedExpr)):
+            target = node.target
+            if isinstance(target, ast.Name) and target.id == name:
+                values.append(node.value if isinstance(node, (ast.AnnAssign, ast.NamedExpr)) else None)
+            elif isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name) and target.value.id == name:
+                return None
+        elif isinstance(node, ast.Delete):
+            if any(isinstance(t, ast.Subscript) and isinstance(t.value, ast.Name) and t.value.id == name
+                   for t in node.targets):
+                return None
+        elif (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == name
+              and node.attr in {"update", "setdefault", "pop", "popitem", "clear", "__setitem__", "__delitem__"}):
+            return None
+        elif isinstance(node, (ast.For, ast.AsyncFor, ast.With, ast.AsyncWith, ast.comprehension)):
+            targets = [node.target] if isinstance(node, (ast.For, ast.AsyncFor, ast.comprehension)) \
+                else [i.optional_vars for i in node.items if i.optional_vars is not None]
+            if any(isinstance(n, ast.Name) and n.id == name for t in targets for n in ast.walk(t)):
+                return None
+    args = fn.args
+    if any(a.arg == name for a in args.posonlyargs + args.args + args.kwonlyargs) \
+            or (args.vararg and args.vararg.arg == name) or (args.kwarg and args.kwarg.arg == name):
+        return None
+    if len(values) != 1 or values[0] is None:
+        return None
+    return _dict_keys(values[0])
+
+
+def _enclosing_functions(tree: ast.Module) -> dict[int, ast.FunctionDef | ast.AsyncFunctionDef]:
+    """Düğüm kimliği → onu içeren en içteki fonksiyon (ast.walk dıştan içe gezer; iç fonksiyon üzerine yazar)."""
+    out: dict[int, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+    for fn in ast.walk(tree):
+        if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for node in ast.walk(fn):
+                if node is not fn:
+                    out[id(node)] = fn
+    return out
+
+
 def _callee_name(node: ast.expr) -> str | None:
     if isinstance(node, ast.Name):
         return node.id
@@ -513,6 +582,7 @@ def py_rpc_calls(files: list[Path]) -> list[CallSite]:
     builders = _py_dict_builders(trees)
     calls: list[CallSite] = []
     for path, tree in trees.items():
+        enclosing = _enclosing_functions(tree)
         for node in ast.walk(tree):
             if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "rpc"):
                 continue
@@ -537,7 +607,12 @@ def py_rpc_calls(files: list[Path]) -> list[CallSite]:
                 calls.append(CallSite(path, node.lineno, name, frozenset()))
                 continue
             keys = _dict_keys(params_node)
-            if keys is None and isinstance(params_node, ast.Call) and not params_node.args and not params_node.keywords:
+            if keys is None and isinstance(params_node, ast.Name):
+                keys = _local_dict_keys(enclosing.get(id(node)), params_node.id)
+                if keys is None:
+                    note = f"parametreler dict değişmezi değil ({params_node.id}: tek atamalı, değişmeyen dict değil)"
+            elif (keys is None and isinstance(params_node, ast.Call)
+                  and not params_node.args and not params_node.keywords):
                 callee = _callee_name(params_node.func)
                 keys = builders.get(callee or "")
                 if keys is None:
@@ -709,7 +784,15 @@ def check(root: Path, required_objects: tuple[str, ...] = SECTION_2_10_OBJECTS) 
                 rows.append(Row(FAIL, f"çağrı:{source}", c.rpc, where, c.note or "gövde çözümlenemedi"))
                 continue
             status, detail = compare_keys(fns, c.keys)
-            if c.rpc not in listed:
+            if source == "pipelines" and _staff_marked(c):
+                # Eğitmen oturumuyla (OGRENMEN_STAFF_JWT) yapılan çağrı: batch_worker listesine değil,
+                # eğitmen paneli RPC listesine göre denetlenir. İşaret: aynı ya da üst satırda
+                # "# rpc-parity: staff" yorumu.
+                if c.rpc not in names_by_source["panel"]:
+                    status, detail = FAIL, f"eğitmen çağrısı ama panel rpc-names.json listesinde yok; {detail}"
+                else:
+                    detail = f"eğitmen oturumu; {detail}"
+            elif c.rpc not in listed:
                 status, detail = FAIL, f"rpc-names.json listesinde yok; {detail}"
             rows.append(Row(status, f"çağrı:{source}", c.rpc, where, detail))
         if warn_uncalled:

@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # scripts/check-all.sh — tamamlanmış her modülün kabul komutları sırayla (BLUEPRINT §11; M13L).
 #
-# Modüller: M00 M01 M02 M03 M04 M05 M06T M07 M11 M12 + M13 (kopya sapması, fixtures-valid, RPC paritesi, betik testleri,
-# workflow lint'i). Her adım için bir satır: PASS/FAIL/SKIP + süre; sonunda özet. Herhangi bir FAIL → çıkış 1.
+# Modüller: M00 M01 M02 M03 M04 M05 M06 M07 M08 M09 M10 M11 M12 + M13 (kopya sapması, fixtures-valid, RPC paritesi,
+# betik testleri, workflow lint'i). Her adım için bir satır: PASS/FAIL/SKIP + süre; sonunda özet. Herhangi bir FAIL → çıkış 1.
 #
 #   --quick       ağır build adımlarını atlar (wrangler build, panel üretim derlemesi); SKIP olarak yazılır
-#   --live-only   yalnız canlı veritabanı adımları (db-test.sh + tablet live); OGRENMEN_DATABASE_URL yoksa SKIP
-#   --only LISTE  yalnız bu modüller, virgülle (ör. --only M02,M13; M13L = M13); bilinmeyen ad → çıkış 2
-#   --list        adımları listele, çalıştırma
+#   --live-only   yalnız canlı veritabanı adımları (db-test.sh + tablet ve ders live); OGRENMEN_DATABASE_URL yoksa SKIP
+#   --only LISTE  yalnız bu modüller, virgülle (ör. --only M02,M13; M13L = M13, M06T/M06R = M06); bilinmeyen ad → çıkış 2
+#   --list        adımları listele, çalıştırma (--only ile yalnız seçilenler)
 #   -h, --help    bu metin
 #
 # OGRENMEN_DATABASE_URL tanımlıysa supabase/scripts/db-test.sh canlı koşar (geçici OGRENMEN_TEST_DB veritabanı;
-# bağlanılan veritabanına dokunulmaz) ve tablet live testleri çalışır; yoksa db-test "SKIP: no database" ile geçer.
+# bağlanılan veritabanına dokunulmaz), tablet ve ders live testleri ayrı adımda koşar (kalem ve kitap live testleri
+# kendi pytest adımlarında); yoksa db-test "SKIP: no database" ile geçer.
 # Komutlar §11'deki biçimleriyle, depo kökü mutlak yoluyla ve nötr bir çalışma dizininden koşar ("her cwd'den").
 # /tmp altındaki sabit çıktı yolları (/tmp/seed.sql, /tmp/tablet-out …) bu çalışmaya özel geçici dizine taşınır.
 # Depo içi derleme çıktıları (apps/panel/.next ve out/, apps/worker/dist, packages/contracts/src/generated,
@@ -156,31 +157,50 @@ m05_runtime() {
   python -c "from ogrenmen_common.runtime import Runtime;r=Runtime.from_env(dry_run=True);assert r.llm.__class__.__name__=='FakeLLM'"
 }
 
-m06t_tablet() {
-  # Veritabanı varken live testleri ayrı adımda (m06t_live) bir kez koşar; burada seçilmez.
-  local deselect=()
-  [ "$HAS_DB" -eq 1 ] && deselect=(-m "not live")
-  python -m pip install -e "$ROOT/pipelines/tablet[dev]" && ruff check "$ROOT/pipelines/tablet" \
-    && python -m pytest "$ROOT/pipelines/tablet" -q "${deselect[@]}"
+# Ortak taban (pipelines/common README'si): M06/M08/M09/M10 kurulum adımları bunu da kurar ki --only ile tek başına
+# koşabilsinler (m05_common, m07_kulaklik ile aynı).
+pip_base() {
+  python -m pip install -e "$ROOT/packages/contracts/python" -e "$ROOT/packages/mastery-math/python" \
+    -e "$ROOT/packages/pii/py" -e "$ROOT/pipelines/common" "$@"
 }
-m06t_live() {
-  # Atlanan test PASS sayılmaz: live_db fikstürü psql yoksa pytest.skip çağırır; en az bir test geçmeli, hiçbiri atlanmamalı.
-  command -v psql >/dev/null || { echo "psql yok: tablet live testleri koşamaz (postgresql-client kur)"; return 1; }
+# Live testleri ayrı adımda bir kez koşar: atlanan test PASS sayılmaz (live fikstürleri psql/ffmpeg yoksa pytest.skip
+# çağırır); en az bir test geçmeli, hiçbiri atlanmamalı.
+live_only_passes() {   # live_only_passes <pytest komutu…>
+  command -v psql >/dev/null || { echo "psql yok: live testleri koşamaz (postgresql-client kur)"; return 1; }
   local out rc
-  out="$(python -m pytest "$ROOT/pipelines/tablet" -q -k live -rs 2>&1)"
+  out="$("$@" 2>&1)"
   rc=$?
   echo "$out"
   [ "$rc" -eq 0 ] || return "$rc"
   if grep -qE '[0-9]+ skipped|^SKIPPED' <<<"$out"; then echo "HATA: live testleri atlandı (yukarıdaki SKIPPED satırları)"; return 1; fi
   grep -qE '[0-9]+ passed' <<<"$out" || { echo "HATA: hiç live testi geçmedi"; return 1; }
 }
-m06t_template() {
-  python -m ogrenmen_tablet template --id kesir-modeli-toplama --count 5 --seed 7 --out "$W/tablet-out" \
-    && ls "$W"/tablet-out/figures/*.png && ! grep -q correct_option "$W/tablet-out/questions.jsonl"
+
+m06_tablet() {
+  # Veritabanı varken live testleri ayrı adımda (m06_live) bir kez koşar; burada seçilmez.
+  local deselect=()
+  [ "$HAS_DB" -eq 1 ] && deselect=(-m "not live")
+  pip_base -e "$ROOT/pipelines/tablet[dev]" && ruff check "$ROOT/pipelines/tablet" \
+    && python -m pytest "$ROOT/pipelines/tablet" -q "${deselect[@]}"
 }
-m06t_fill() {
+m06_live() {
+  # README: OGRENMEN_DATABASE_URL=… python -m pytest …/pipelines/tablet -q -k live (URL kabuktan gelir).
+  live_only_passes python -m pytest "$ROOT/pipelines/tablet" -q -k live -rs
+}
+m06_generate() {
+  # ! grep dosya yoksa da (çıkış 2) başarı sayardı; questions.jsonl'in varlığı ayrıca denetlenir.
+  python -m ogrenmen_tablet generate --skill tyt.mat.temel.rasyonel-sayilar --count 2 --dry-run --fixtures "$ROOT/fixtures/tablet" --out "$W/tablet-out" \
+    && test -f "$W/tablet-out/cost_estimate.json" && test -f "$W/tablet-out/questions.jsonl" \
+    && ! grep -q correct_option "$W/tablet-out/questions.jsonl"
+}
+m06_template() {
+  python -m ogrenmen_tablet template --id kesir-modeli-toplama --count 5 --seed 7 --out "$W/tablet-out2" \
+    && ls "$W"/tablet-out2/figures/*.png && test -f "$W/tablet-out2/questions.jsonl" \
+    && ! grep -q correct_option "$W/tablet-out2/questions.jsonl"
+}
+m06_fill() {
   python -m ogrenmen_tablet template --fill --min-stock 30 --dry-run --fixtures "$ROOT/fixtures/tablet" --out "$W/tablet-fill" \
-    && grep -q register_template_question "$W/tablet-fill/rpc_calls.jsonl" \
+    && grep -q register_template_question "$W/tablet-fill/rpc_calls.jsonl" && test -f "$W/tablet-fill/questions.jsonl" \
     && ! grep -q '"source": "llm"' "$W/tablet-fill/questions.jsonl" && test -f "$W/tablet-fill/template_fill.json"
 }
 
@@ -210,6 +230,42 @@ m07_gate() {
 m07_cost() {
   python -m ogrenmen_kulaklik cost-report --month 2026-10 --dry-run --fixtures "$ROOT/fixtures/kulaklik" --out "$W/kk-out" \
     && test -f "$W/kk-out/cost-report.md"
+}
+
+m08_ders() {
+  # Veritabanı varken live testi (tests/test_live_db.py) ayrı adımda (m08_live) bir kez koşar; burada seçilmez.
+  local deselect=()
+  [ "$HAS_DB" -eq 1 ] && deselect=(-k "not live")
+  pip_base -e "$ROOT/pipelines/ders[dev]" && ruff check "$ROOT/pipelines/ders" \
+    && python -m pytest "$ROOT/pipelines/ders" -q "${deselect[@]}"
+}
+m08_analyze() {
+  # ! grep -q Elif api_payload.json dosya yoksa da geçerdi; varlığı ayrıca denetlenir.
+  python -m ogrenmen_ders analyze --lesson 00000000-0000-0000-0000-000000000001 --video "$ROOT/fixtures/ders/lesson-01.wav" --dry-run --fixtures "$ROOT/fixtures/ders" --out "$W/ders-out" \
+    && test -f "$W/ders-out/lesson_analyses.jsonl" && test -f "$W/ders-out/lesson_claims.jsonl" \
+    && ! test -f "$W/ders-out/observations.jsonl" && test -f "$W/ders-out/api_payload.json" \
+    && ! grep -q Elif "$W/ders-out/api_payload.json"
+}
+m08_live() {
+  # tests/test_live_db.py (ffmpeg de ister); -k live dosya adıyla seçer.
+  live_only_passes python -m pytest "$ROOT/pipelines/ders" -q -k live -rs
+}
+
+m09_kalem() {
+  pip_base -e "$ROOT/pipelines/kalem[dev]" && ruff check "$ROOT/pipelines/kalem" && python -m pytest "$ROOT/pipelines/kalem" -q
+}
+m09_plan() {
+  python -m ogrenmen_kalem plan --course DEMO --period 2026 --dry-run --fixtures "$ROOT/fixtures/kalem" --out "$W/kalem-out" \
+    && python3 -c "import json;p=json.loads(open('$W/kalem-out/exam_priority_plans.jsonl').readline())['plan'];assert p['title']=='Sıklık analizine göre öncelikler' and p['rows'];s=json.dumps(p,ensure_ascii=False).lower();assert 'ocr_text' not in s and 'tahmin' not in s and 'çıkacak' not in s"
+}
+
+m10_kitap() {
+  pip_base -e "$ROOT/pipelines/kitap[dev]" && ruff check "$ROOT/pipelines/kitap" && python -m pytest "$ROOT/pipelines/kitap" -q
+}
+m10_run() {
+  python -m ogrenmen_kitap run --query "spaced repetition matematik" --dry-run --fixtures "$ROOT/fixtures/kitap" --out "$W/kitap-out" \
+    && python3 -c "import json;o=json.load(open('$W/kitap-out/output.json'));assert all(c['crossref_status'] in ('verified','no_doi') for c in o['citations']);assert o['removed'];ords={c['ordinal'] for c in o['citations']};assert all(set(p['cites'])<=ords for p in o['synthesis'])" \
+    && ! grep -q "10.9999/fake" "$W/kitap-out/output.json"
 }
 
 m11_panel() {
@@ -298,15 +354,23 @@ STEPS=(
   "M05|normal|ogrenmen_common: pip -e + ruff + pytest|m05_common"
   "M05|normal|ogrenmen_common selftest (OGRENMEN_FAKES=1)|m05_selftest"
   "M05|normal|Runtime.from_env(dry_run) → FakeLLM|m05_runtime"
-  "M06T|normal|tablet: pip -e + ruff + pytest|m06t_tablet"
-  "M06T|live|tablet live (gerçek register_template_question)|m06t_live"
-  "M06T|normal|tablet template --id kesir-modeli-toplama|m06t_template"
-  "M06T|normal|tablet template --fill --min-stock 30 --dry-run|m06t_fill"
+  "M06|normal|tablet: pip -e + ruff + pytest|m06_tablet"
+  "M06|live|tablet live (gerçek register_template_question, generate yazımları)|m06_live"
+  "M06|normal|tablet generate --skill tyt.mat.temel.rasyonel-sayilar --count 2 --dry-run (correct_option yok)|m06_generate"
+  "M06|normal|tablet template --id kesir-modeli-toplama (PNG şekiller)|m06_template"
+  "M06|normal|tablet template --fill --min-stock 30 --dry-run (LLM kaynağı yok)|m06_fill"
   "M07|normal|kulaklik_batch: pip -e + ruff + pytest|m07_kulaklik"
   "M07|normal|kulaklik facts --day 2026-10-18 --dry-run (source_message_ids dolu)|m07_facts"
   "M07|normal|kulaklik metrics --dry-run (alarmlarda yargı kelimesi yok)|m07_metrics"
   "M07|normal|kulaklik metrics --gate --dry-run (pilot_gate.md \"Kapı: AÇIK/KAPALI\")|m07_gate"
   "M07|normal|kulaklik cost-report --month 2026-10 --dry-run|m07_cost"
+  "M08|normal|ders: pip -e + ruff + pytest|m08_ders"
+  "M08|live|ders live (boru hattı çağrıları gerçek SQL'e karşı)|m08_live"
+  "M08|normal|ders analyze --dry-run (taslak rapor + iddialar; observations yok, api_payload'da ad yok)|m08_analyze"
+  "M09|normal|kalem: pip -e + ruff + pytest|m09_kalem"
+  "M09|normal|kalem plan --dry-run (\"Sıklık analizine göre öncelikler\", OCR metni ve tahmin dili yok)|m09_plan"
+  "M10|normal|kitap: pip -e + ruff + pytest|m10_kitap"
+  "M10|normal|kitap run --query --dry-run (atıflar Crossref'te doğrulanmış, uydurma DOI silinmiş)|m10_run"
   "M11|normal|panel: sync:ds + typecheck + lint + test|m11_panel"
   "M11|heavy|panel mock build + anahtar/CDN taraması|m11_build"
   "M11|normal|panel layout lang=\"tr\"|m11_lang"
@@ -322,7 +386,8 @@ STEPS=(
   "M13|normal|sır taraması (gerçek görünümlü anahtar yok)|m13_secret_scan"
 )
 
-# --only doğrulaması: her ad STEPS'teki bir modül olmalı (M13L, modülün kendi adı, M13'ün eşidir).
+# --only doğrulaması: her ad STEPS'teki bir modül olmalı (M13L, modülün kendi adı, M13'ün eşidir; M06T ve M06R,
+# tablet dilimlerinin eski adları, M06'nın eşidir).
 ONLY_MODS=()
 if [ -n "$ONLY" ]; then
   known=" $(for s in "${STEPS[@]}"; do printf '%s ' "${s%%|*}"; done)"
@@ -332,6 +397,7 @@ if [ -n "$ONLY" ]; then
     m="$(echo "$m" | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')"
     [ -z "$m" ] && continue
     [ "$m" = "M13L" ] && m="M13"
+    { [ "$m" = "M06T" ] || [ "$m" = "M06R" ]; } && m="M06"
     if [[ "$known" == *" $m "* ]]; then ONLY_MODS+=("$m"); else unknown+=("$m"); fi
   done
   if [ "${#unknown[@]}" -gt 0 ] || [ "${#ONLY_MODS[@]}" -eq 0 ]; then
@@ -354,6 +420,7 @@ selected() {   # selected <modül>
 if [ "$LIST" -eq 1 ]; then
   for s in "${STEPS[@]}"; do
     IFS='|' read -r mod kind desc fn <<< "$s"
+    selected "$mod" || continue
     printf '%-5s %-10s %-24s %s\n' "$mod" "$kind" "$fn" "$desc"
   done
   rm -rf "$WORK"

@@ -61,7 +61,11 @@ begin
   values ((now() at time zone 'Europe/Istanbul')::date - 1, 'nightly_facts', 'gemini-paid', 1, 0.10),
          (date_trunc('month', (now() at time zone 'Europe/Istanbul')::date)::date, 'question_gen', 'gemini-paid', 1, 24.00);
   perform t.as_bot(null);
-  perform t.ok((select c.state = 'free_only' and c.day_usd = 0 and c.month_usd >= 24.00 from public.check_spend('chat') c), 'aylık 24 $ tavanı → free_only');
+  -- Ayın ilk günü (Europe/Istanbul) 24 $'lık satır bugüne düşer; o gün day_usd 24 olur. Aylık tavanın
+  -- etkisi gün toplamından bağımsız sınanır: durum free_only ve ay toplamı ≥ 24.
+  perform t.ok((select c.state = 'free_only' and c.month_usd >= 24.00
+                  and (c.day_usd = 0 or extract(day from (now() at time zone 'Europe/Istanbul')) = 1)
+                from public.check_spend('chat') c), 'aylık 24 $ tavanı → free_only');
   perform t.as_admin();
   delete from public.spend_ledger;
   perform t.as_batch();
