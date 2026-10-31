@@ -172,3 +172,17 @@ def test_messages_matrix_hides_text_raw():
     assert matrix["tables"]["public.v_messages_staff"] == {"authenticated": {"select": "*"}}
     for name in ("secure.answer_keys", "secure.student_pii", "audit.events"):
         assert matrix["tables"][name] == {}
+
+
+def test_pilot_metrics_batch_select_is_tracked(mig, capsys):
+    """M02 entegrasyonu: kulaklik metrics upsert'ü (ON CONFLICT DO UPDATE) ve --gate/cost-report okuması batch_worker'da
+    pilot_metrics SELECT'i ve SELECT politikası ister (0018); bot_runtime/anon hiç erişemez. 0018 kaldırılırsa matris düşer."""
+    matrix = json.loads(MATRIX.read_text(encoding="utf-8"))
+    pm = matrix["tables"]["public.pilot_metrics"]
+    assert pm["batch_worker"] == {"insert": "*", "select": "*", "update": "*"}
+    assert "bot_runtime" not in pm and "anon" not in pm
+    sql = (MIGRATIONS / "0018_pilot_metrics_grants.sql").read_text(encoding="utf-8")
+    assert "create policy pilot_metrics_batch_r on public.pilot_metrics for select to batch_worker" in sql
+    (mig / "0018_pilot_metrics_grants.sql").unlink()
+    code, out = run(mig, capsys)
+    assert code == 1 and "public.pilot_metrics batch_worker select" in out

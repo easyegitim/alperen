@@ -5,6 +5,7 @@
   "compute_table_sizes",
   "confirm_video_deleted",
   "cron_idle_sessions",
+  "cron_open_alerts",
   "profile_for_prompt",
   "recompute_is_minor",
   "register_answer_key",

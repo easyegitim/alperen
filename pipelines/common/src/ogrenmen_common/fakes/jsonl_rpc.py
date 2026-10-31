@@ -771,6 +771,20 @@ def cron_idle_sessions(db: JsonlDb) -> int:
 
 
 @rpc
+def cron_open_alerts(db: JsonlDb) -> int:
+    """Kasıtlı olarak eşlenik yok: ``OGR-RPC-002`` fırlatır, hiçbir şey yazmaz.
+
+    SQL gövdesi (0012) ``staff.active``, ``messages.expires_at`` gibi ``batch_worker``'ın okuyamadığı
+    sütunları kullanır; JsonlDb'de ikinci bir kopya Python eşleniğiyle ayrışırdı. Dry-run
+    (``Runtime.is_fake``) ``ogrenmen_kulaklik.alerts.open_alerts(db, now)``'u (``via_rpc=False``) çağırır;
+    bu ad yalnız canlı yolun (``db.rpc('cron_open_alerts', {})``) parite listesinde yer alsın diye kayıtlıdır.
+    """
+    raise RpcError("OGR-RPC-002 cron_open_alerts JsonlDb'de çalıştırılmaz: dry-run'da Python eşleniğini "
+                   "kullanın (ogrenmen_kulaklik.alerts.open_alerts(db, now), via_rpc=False)",
+                   rpc="cron_open_alerts")
+
+
+@rpc
 def compute_table_sizes(db: JsonlDb) -> int:
     """Tablo boyutları → ``table_sizes_daily``; > 350 MB ops uyarısı; > 450 MB ``storage_pressure`` ve saklama 60 gün.
 

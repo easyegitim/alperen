@@ -10,7 +10,10 @@
   Aynı dizinde aynı tabloya düşen dosyalar birincil anahtara göre birleşir (ad sırası).
 * **Yetki taklidi.** ``secure.*`` ve ``audit.events`` okunamaz, ``messages.text_raw`` hiçbir zaman
   dönmez (sütun yetkisi yok); yazma ``BATCH_WORKER_WRITES`` matrisine uyar (ör. ``observations``'a
-  yazılamaz, ``questions.status``/``reviewed_*`` yalnız RPC ile). İhlal → ``DbPermissionError``.
+  yazılamaz, ``questions.status``/``reviewed_*`` yalnız RPC ile) **ve** sütun yetkileri çalışma anında
+  ``supabase/tests/grants_matrix.json``'dan denetlenir (INSERT/UPDATE sütunları, ``merge`` için UPDATE + çakışma
+  sütunlarında SELECT, ``where`` için SELECT, ``returning='representation'`` için tablo düzeyi SELECT).
+  İhlal → ``DbPermissionError`` (``OGR-DB-001``); matris okunamazsa ``OGR-DB-004``.
 * **Tetikleyiciler.** ``llm_calls`` eklemesi ``spend_ledger``'ı günceller (``app.spend_rollup``);
   ``messages`` eklemesi ``expires_at``'i yazar; ``questions``'ta ``app.questions_check_skills``.
 * **RPC'ler.** ``rpc(ad, parametreler)`` ``fakes/jsonl_rpc.py``'deki eşlenikleri çağırır; adlar
@@ -31,7 +34,8 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from ..adapters.base import Filter, Where
+from .. import grants
+from ..adapters.base import Filter, Where, resolve_returning
 from ..clock import Clock, fake_clock_from_env, iso, istanbul_date, parse_ts
 from ..errors import DbError, DbPermissionError, RpcError
 from ..paths import dev_seed_path
@@ -459,6 +463,25 @@ class JsonlDb:
             if op == "insert" and values.get("status") == "approved":
                 raise RpcError("OGR-Q-001 anahtarsız ya da doğrulanmamış soru onaylanamaz")
 
+    def _check_grants(self, table: str, op: str, columns: Iterable[str], *, where: Where | None = None,
+                      on_conflict: str | None = None, returning: str = "minimal") -> None:
+        """Sütun yetkileri ``supabase/tests/grants_matrix.json``'dan (çalışma anında okunur; §3.8): yazılan sütunlar
+        rolün INSERT/UPDATE yetkisinde olmalı; ``on_conflict='merge'`` (``ON CONFLICT DO UPDATE SET`` tüm gönderilen
+        sütunlar) ayrıca UPDATE ve çakışma sütunlarında SELECT; ``where`` sütunları SELECT; ``returning=
+        'representation'`` (``RETURNING *``) tablo düzeyi SELECT ister. İhlal → ``OGR-DB-001``."""
+        if self._privileged() or self._via != "direct":
+            return
+        cols = list(columns)
+        grants.require(self.role, table, op, cols)
+        if op == "insert" and on_conflict == "merge":
+            grants.require(self.role, table, "update", cols, why="on conflict do update")
+            grants.require(self.role, table, "select", _pk(table), why="on conflict hedefi")
+        if where:
+            grants.require(self.role, table, "select", list(where), why=f"{op} where")
+        if returning == "representation" and not grants.has_full(self.role, table, "select"):
+            raise DbPermissionError(f"OGR-DB-001 permission denied for table {table} ({op} RETURNING *: {self.role} "
+                                    "tablo düzeyi SELECT yetkisi yok; returning='minimal' kullan)")
+
     def _next_identity(self, table: str) -> int:
         ids = [r.get("id") for r in self._rows(table) if isinstance(r.get("id"), int)]
         return (max(ids) if ids else 0) + 1
@@ -520,13 +543,19 @@ class JsonlDb:
     # --- yazma ----------------------------------------------------------------------------------
 
     def insert(self, table: str, rows: Mapping[str, Any] | Sequence[Mapping[str, Any]], *,
-               on_conflict: str | None = None) -> list[dict]:
-        """Ekler; ``on_conflict``: ``None`` (çakışma → hata), ``"ignore"`` (do nothing), ``"merge"`` (upsert)."""
+               on_conflict: str | None = None, returning: str | None = None) -> list[dict]:
+        """Ekler; ``on_conflict``: ``None`` (çakışma → hata), ``"ignore"`` (do nothing), ``"merge"`` (upsert).
+        ``returning``: ``"minimal"`` → ``[]`` (SELECT gerekmez), ``"representation"`` → satırlar (tablo düzeyi
+        SELECT gerekir); ``None`` → satır dizisi minimal, tek satır representation (PostgrestDb ile aynı)."""
+        mode = resolve_returning(returning, single_row=isinstance(rows, Mapping))
+        if on_conflict not in (None, "ignore", "merge"):
+            raise DbError(f"OGR-DB-002 bilinmeyen on_conflict: {on_conflict}")
         items = [rows] if isinstance(rows, Mapping) else list(rows)
         out: list[dict] = []
         for raw in items:
             supplied = _jsonable(dict(raw))
             self._check_write(table, "insert", supplied)
+            self._check_grants(table, "insert", supplied, on_conflict=on_conflict, returning=mode)
             # Çakışma, çağıranın gönderdiği anahtarla aranır; üretilen id yalnız yeni satıra verilir.
             new_identity = _pk(table) == ("id",) and supplied.get("id") is None
             # Anahtar sütunlarının varsayılanı (ör. gün) da anahtara girer; id üretimi yalnız gerçek eklemede.
@@ -550,20 +579,25 @@ class JsonlDb:
             self._mark(table, row, "insert")
             self._after_insert(table, row)
             out.append(copy.deepcopy(row))
-        return out
+        return out if mode == "representation" else []
 
-    def update(self, table: str, values: Mapping[str, Any], *, where: Where) -> list[dict]:
+    def update(self, table: str, values: Mapping[str, Any], *, where: Where,
+               returning: str | None = None) -> list[dict]:
+        """``returning``: ``"minimal"`` (varsayılan) → ``[]``; ``"representation"`` → güncellenen satırlar (tablo
+        düzeyi SELECT gerekir; ör. ``messages``'ta yoktur)."""
         if not where:
             raise DbError("OGR-DB-002 koşulsuz update yapılmaz")
+        mode = resolve_returning(returning, single_row=False)
         vals = _jsonable(dict(values))
         self._check_write(table, "update", vals)
+        self._check_grants(table, "update", vals, where=where, returning=mode)
         changed = []
         for row in self._rows(table):
             if matches(row, where):
                 row.update(copy.deepcopy(vals))
                 self._mark(table, row, "update")
                 changed.append(copy.deepcopy(row))
-        return changed
+        return changed if mode == "representation" else []
 
     def delete(self, table: str, *, where: Where) -> int:
         if not where:
@@ -682,7 +716,7 @@ class JsonlDb:
     def _insert_internal(self, table: str, row: Mapping[str, Any], *, on_conflict: str | None = None) -> dict | None:
         prev_role, self.role = self.role, "postgres"
         try:
-            got = self.insert(table, row, on_conflict=on_conflict)
+            got = self.insert(table, row, on_conflict=on_conflict, returning="representation")
         finally:
             self.role = prev_role
         return got[0] if got else None

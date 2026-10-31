@@ -5,6 +5,8 @@
 * ``messages`` okumasının varsayılan sütun listesi ``MESSAGES_COLUMNS``'tır: ``text_raw`` **yoktur**
   (``batch_worker``'ın sütun yetkisinde değildir; §3.8, §6 kural 5 — statik test bunu denetler);
   ``text_raw`` isteyen çağrı ağa gitmeden ``DbPermissionError``.
+* Yazımlar ``returning`` alır: ``"minimal"`` → ``Prefer: return=minimal`` (``RETURNING`` yok; ``batch_worker``'ın
+  SELECT yetkisi olmayan tablolarda da çalışır), toplu yazımın (satır dizisi eklemesi ve ``update``) varsayılanıdır.
 * RPC hataları (``{"code":"P0001","message":"OGR-…"}``) ``RpcError`` olarak, mesaj aynen taşınır.
 """
 
@@ -18,7 +20,7 @@ import httpx
 
 from ..clock import iso
 from ..errors import DbError, DbPermissionError, RpcError
-from .base import Filter, Where
+from .base import Filter, Where, resolve_returning
 from .http import make_client
 
 MESSAGES_COLUMNS: tuple[str, ...] = (
@@ -166,24 +168,37 @@ class PostgrestDb:
         return list(self._send("GET", table, params=params).json())
 
     def insert(self, table: str, rows: Mapping[str, Any] | Sequence[Mapping[str, Any]], *,
-               on_conflict: str | None = None) -> list[dict]:
+               on_conflict: str | None = None, returning: str | None = None) -> list[dict]:
+        """``returning``: ``"minimal"`` (``Prefer: return=minimal``; ``RETURNING`` yok, SELECT gerekmez, ``[]``
+        döner) ya da ``"representation"``; ``None`` → toplu yazım (satır dizisi) minimal, tek satır representation."""
         self._check_table(table)
+        mode = resolve_returning(returning, single_row=isinstance(rows, Mapping))
         body = [dict(rows)] if isinstance(rows, Mapping) else [dict(r) for r in rows]
-        prefer = "return=representation"
+        prefer = f"return={mode}"
         if on_conflict == "ignore":
             prefer += ",resolution=ignore-duplicates"
         elif on_conflict == "merge":
             prefer += ",resolution=merge-duplicates"
         elif on_conflict is not None:
             raise DbError(f"OGR-DB-002 bilinmeyen on_conflict: {on_conflict}")
-        return list(self._send("POST", table, json=body, prefer=prefer).json())
+        return self._rows_of(self._send("POST", table, json=body, prefer=prefer), mode)
 
-    def update(self, table: str, values: Mapping[str, Any], *, where: Where) -> list[dict]:
+    def update(self, table: str, values: Mapping[str, Any], *, where: Where,
+               returning: str | None = None) -> list[dict]:
+        """``returning``: ``"minimal"`` (varsayılan; UPDATE yetkisi + ``where`` sütunlarında SELECT yeterli, ``[]``
+        döner) ya da ``"representation"`` (``RETURNING *`` için tablo düzeyi SELECT gerekir)."""
         self._check_table(table)
         if not where:
             raise DbError("OGR-DB-002 koşulsuz update yapılmaz")
-        return list(self._send("PATCH", table, params=filter_params(where), json=dict(values),
-                               prefer="return=representation").json())
+        mode = resolve_returning(returning, single_row=False)
+        response = self._send("PATCH", table, params=filter_params(where), json=dict(values), prefer=f"return={mode}")
+        return self._rows_of(response, mode)
+
+    @staticmethod
+    def _rows_of(response: httpx.Response, mode: str) -> list[dict]:
+        if mode == "minimal" or response.status_code == 204 or not response.content:
+            return []
+        return list(response.json())
 
     def delete(self, table: str, *, where: Where) -> int:
         self._check_table(table)

@@ -1,5 +1,5 @@
 {
-  "description": "Tablo × rol × yetki matrisi (BLUEPRINT §3.8'in makine-okur hâli). Kaynak 0014_rls.sql (+ 0012/0013/0015 GRANT'leri). check_sql.py --grants-matrix migration GRANT'lerini bununla birebir karşılaştırır (fazla/eksik → OGR-LINT-MATRIX); tests/09_grants_matrix.sql canlı DB'de pg_class/pg_attribute/pg_proc ACL'lerini karşılaştırır. Yetki değeri \"*\" tablo düzeyi, liste sütun düzeyidir. Yalnız uygulama rolleri (anon, authenticated, bot_runtime, batch_worker) izlenir; service_role ve postgres kapsam dışıdır.",
+  "description": "Tablo × rol × yetki matrisi (BLUEPRINT §3.8'in makine-okur hâli). Kaynak 0014_rls.sql (+ 0012/0013/0015/0018 GRANT'leri). check_sql.py --grants-matrix migration GRANT'lerini bununla birebir karşılaştırır (fazla/eksik → OGR-LINT-MATRIX); tests/09_grants_matrix.sql canlı DB'de pg_class/pg_attribute/pg_proc ACL'lerini karşılaştırır. Yetki değeri \"*\" tablo düzeyi, liste sütun düzeyidir. Yalnız uygulama rolleri (anon, authenticated, bot_runtime, batch_worker) izlenir; service_role ve postgres kapsam dışıdır.",
   "roles": [
     "anon",
     "authenticated",
@@ -14,7 +14,8 @@
     "public.instructor_alerts": "bot_runtime yalnız ops alarmlarını açar/okur/done yapar (Worker my_chat_member, pratik stoku); diğer türler cron_open_alerts ile.",
     "app.current_student_sd": "Politikalardaki app.current_student() içinden çağrılır; ifade başlatılırken yetki denetimi yapıldığı için uygulama rollerine EXECUTE verilir (yalnız kendi auth_links satırını döner).",
     "public.content_pool": "authenticated update yalnız (status, approved_by, approved_at) (§3.8 E: u status,approved_*). K'nin 'u'su sütun düzeyinde ayrışamaz (paylaşılan authenticated rolü); onaylı havuz metni (body) panelden doğrudan düzenlenmez, koordinatör yeni satır ekler.",
-    "public.exam_priority_plans": "bot_runtime S bağlamı: status='approved' ve app.plan_visible_to_student(course_id) (courses.curriculum_id = öğrencinin kaydının curriculum_id'si); başlıksız B: yalnız approved."
+    "public.exam_priority_plans": "bot_runtime S bağlamı: status='approved' ve app.plan_visible_to_student(course_id) (courses.curriculum_id = öğrencinin kaydının curriculum_id'si); başlıksız B: yalnız approved.",
+    "public.pilot_metrics": "batch_worker r w u (0018_pilot_metrics_grants.sql): kulaklik metrics upsert'ü (ON CONFLICT DO UPDATE) çakışma sütunlarında SELECT ve SELECT politikası ister; metrics --gate ve cost-report son dönemi buradan okur. bot_runtime ve anon için yetki yok (tests/12_pilot_metrics.sql)."
   },
   "tables": {
     "audit.events": {},
@@ -872,6 +873,7 @@
       },
       "batch_worker": {
         "insert": "*",
+        "select": "*",
         "update": "*"
       }
     },

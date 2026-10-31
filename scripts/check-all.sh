@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/check-all.sh — tamamlanmış her modülün kabul komutları sırayla (BLUEPRINT §11; M13L).
 #
-# Modüller: M00 M01 M02 M03 M04 M05 M06T M11 M12 + M13 (kopya sapması, fixtures-valid, RPC paritesi, betik testleri,
+# Modüller: M00 M01 M02 M03 M04 M05 M06T M07 M11 M12 + M13 (kopya sapması, fixtures-valid, RPC paritesi, betik testleri,
 # workflow lint'i). Her adım için bir satır: PASS/FAIL/SKIP + süre; sonunda özet. Herhangi bir FAIL → çıkış 1.
 #
 #   --quick       ağır build adımlarını atlar (wrangler build, panel üretim derlemesi); SKIP olarak yazılır
@@ -184,6 +184,34 @@ m06t_fill() {
     && ! grep -q '"source": "llm"' "$W/tablet-fill/questions.jsonl" && test -f "$W/tablet-fill/template_fill.json"
 }
 
+m07_kulaklik() {
+  # Ortak taban (pipelines/common README'si) da kurulur: --only M07 tek başına koşabilsin (m05_common ile aynı).
+  python -m pip install -e "$ROOT/packages/contracts/python" -e "$ROOT/packages/mastery-math/python" \
+    -e "$ROOT/packages/pii/py" -e "$ROOT/pipelines/common" -e "$ROOT/pipelines/kulaklik_batch[dev]" \
+    && ruff check "$ROOT/pipelines/kulaklik_batch" && python -m pytest "$ROOT/pipelines/kulaklik_batch" -q
+}
+m07_facts() {
+  python -m ogrenmen_kulaklik facts --day 2026-10-18 --dry-run --fixtures "$ROOT/fixtures/kulaklik" --out "$W/kk-out" \
+    && python3 -c "import json,sys;rows=[json.loads(l) for l in open(sys.argv[1])];assert rows and all(len(r['source_message_ids'])>=1 for r in rows)" \
+      "$W/kk-out/memory_facts.jsonl"
+}
+m07_metrics() {
+  # §11: ! grep -qiE "depresif|tembel". Dosya yoksa grep 2 döner ve ! onu PASS'e çevirirdi; varlığı ayrıca denetlenir.
+  python -m ogrenmen_kulaklik metrics --dry-run --fixtures "$ROOT/fixtures/kulaklik" --out "$W/kk-out" || return 1
+  test -f "$W/kk-out/instructor_alerts.jsonl" || { echo "instructor_alerts.jsonl yazılmadı"; return 1; }
+  LC_ALL=C.UTF-8 grep -niE "depresif|tembel" "$W/kk-out/instructor_alerts.jsonl"
+  local rc=$?
+  [ "$rc" -eq 1 ] || { echo "instructor_alerts.jsonl: yargı kelimesi bulundu ya da grep hatası (çıkış $rc)"; return 1; }
+}
+m07_gate() {
+  python -m ogrenmen_kulaklik metrics --gate --dry-run --fixtures "$ROOT/fixtures/kulaklik" --out "$W/kk-gate" \
+    && test -f "$W/kk-gate/pilot_gate.md" && LC_ALL=C.UTF-8 grep -E "Kapı: (AÇIK|KAPALI)" "$W/kk-gate/pilot_gate.md"
+}
+m07_cost() {
+  python -m ogrenmen_kulaklik cost-report --month 2026-10 --dry-run --fixtures "$ROOT/fixtures/kulaklik" --out "$W/kk-out" \
+    && test -f "$W/kk-out/cost-report.md"
+}
+
 m11_panel() {
   bun install --cwd "$ROOT/apps/panel" && bun run --cwd "$ROOT/apps/panel" sync:ds \
     && bun run --cwd "$ROOT/apps/panel" typecheck && bun run --cwd "$ROOT/apps/panel" lint \
@@ -274,6 +302,11 @@ STEPS=(
   "M06T|live|tablet live (gerçek register_template_question)|m06t_live"
   "M06T|normal|tablet template --id kesir-modeli-toplama|m06t_template"
   "M06T|normal|tablet template --fill --min-stock 30 --dry-run|m06t_fill"
+  "M07|normal|kulaklik_batch: pip -e + ruff + pytest|m07_kulaklik"
+  "M07|normal|kulaklik facts --day 2026-10-18 --dry-run (source_message_ids dolu)|m07_facts"
+  "M07|normal|kulaklik metrics --dry-run (alarmlarda yargı kelimesi yok)|m07_metrics"
+  "M07|normal|kulaklik metrics --gate --dry-run (pilot_gate.md \"Kapı: AÇIK/KAPALI\")|m07_gate"
+  "M07|normal|kulaklik cost-report --month 2026-10 --dry-run|m07_cost"
   "M11|normal|panel: sync:ds + typecheck + lint + test|m11_panel"
   "M11|heavy|panel mock build + anahtar/CDN taraması|m11_build"
   "M11|normal|panel layout lang=\"tr\"|m11_lang"

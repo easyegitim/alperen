@@ -504,6 +504,8 @@ export interface GateResult {
   rows: GateRow[];
   gate: 'AÇIK' | 'KAPALI';
   period: string | null;
+  /** settings.pilot_gate geçersizse `OGR-KLK-020 …` metni (satır yok, kapı KAPALI); geçerliyse null. */
+  error: string | null;
 }
 
 // ---------------------------------------------------------------- öncelik planı (Kalem b)

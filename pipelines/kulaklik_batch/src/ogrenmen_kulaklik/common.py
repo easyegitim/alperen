@@ -325,8 +325,8 @@ def safe_select(db: DB, table: str, **kwargs: Any) -> list[dict] | None:
 # --- Dönüşsüz yazımlar (Prefer: return=minimal) ---------------------------------------------------
 #
 # ``PostgrestDb.insert/update`` her zaman ``return=representation`` gönderir; bu ``RETURNING *`` demektir ve
-# ``batch_worker``'ın SELECT yetkisi olmayan sütunlarda (``messages.text_raw``, ``expires_at``) ya da tabloda
-# (``pilot_metrics``: yalnız ``insert, update``) yazımı ``permission denied`` ile düşürür. Bu modül o
+# ``batch_worker``'ın SELECT yetkisi olmayan sütunlarda (``messages.text_raw``, ``expires_at``) yazımı
+# ``permission denied`` ile düşürür (``pilot_metrics`` 0018'e kadar SELECT'siz idi). Bu modül o
 # tablolara aşağıdaki yardımcılarla yazar: canlıda isteği ``return=minimal`` ile gönderir; ``insert_minimal`` /
 # ``update_minimal`` yöntemi olan bir DB (testlerdeki yetki taklidi) o yöntemle, JsonlDb doğrudan yazar.
 

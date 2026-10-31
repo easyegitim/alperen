@@ -11,10 +11,13 @@ hata türleri ``rate_limited | server | timeout | bad_output | config``.
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
+
+from ..errors import DbError
 
 LLM_ERRORS = ("rate_limited", "server", "timeout", "bad_output", "config")
 """``LLMResult.error`` değerleri (Worker ``Provider`` ile aynı küme)."""
@@ -277,17 +280,36 @@ class OAResolver(Protocol):
     def lookup(self, doi: str) -> dict | None: ...
 
 
+RETURNING_MODES = ("minimal", "representation")
+"""PostgREST ``Prefer: return=…`` değerleri. ``representation`` (``RETURNING *``) tablo düzeyi SELECT ister;
+``minimal`` yalnız INSERT/UPDATE yetkisi (+ ``where``/çakışma sütunlarında SELECT) ister ve boş liste döner."""
+
+
+def resolve_returning(returning: str | None, *, single_row: bool) -> str:
+    """``returning=None`` varsayılanı: toplu yazım (satır dizisi eklemesi ve her ``update``) → ``minimal``; tek satır
+    (``Mapping``) eklemesi → ``representation`` (üretilen kimliği okuyan çağıranlar için geriye uyumlu)."""
+    if returning is None:
+        return "representation" if single_row else "minimal"
+    if returning not in RETURNING_MODES:
+        raise DbError(f"OGR-DB-002 bilinmeyen returning: {returning}")
+    return returning
+
+
 @runtime_checkable
 class DB(Protocol):
-    """batch_worker rolüyle veritabanı (PostgREST ya da JsonlDb)."""
+    """batch_worker rolüyle veritabanı (PostgREST ya da JsonlDb).
+
+    ``insert``/``update`` ``returning`` alır (``resolve_returning``): ``"minimal"`` iken boş liste döner; varsayılan
+    tek satır eklemede ``representation``, toplu eklemede ve ``update``'te ``minimal``'dir."""
 
     def select(self, table: str, *, where: Where | None = None, columns: Sequence[str] | None = None,
                order: str | Sequence[str] | None = None, limit: int | None = None) -> list[dict]: ...
 
     def insert(self, table: str, rows: Mapping[str, Any] | Sequence[Mapping[str, Any]], *,
-               on_conflict: str | None = None) -> list[dict]: ...
+               on_conflict: str | None = None, returning: str | None = None) -> list[dict]: ...
 
-    def update(self, table: str, values: Mapping[str, Any], *, where: Where) -> list[dict]: ...
+    def update(self, table: str, values: Mapping[str, Any], *, where: Where,
+               returning: str | None = None) -> list[dict]: ...
 
     def delete(self, table: str, *, where: Where) -> int: ...
 
@@ -352,3 +374,38 @@ class Usage:
     images: int | None = None
     latency_ms: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
+
+
+def _accepts(fn: Any, name: str) -> bool:
+    try:
+        params = inspect.signature(fn).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    return any(p.name == name or p.kind is inspect.Parameter.VAR_KEYWORD for p in params)
+
+
+def insert_minimal(db: DB, table: str, rows: Mapping[str, Any] | Sequence[Mapping[str, Any]], *,
+                   on_conflict: str | None = None) -> None:
+    """``return=minimal`` ekleme (``RETURNING`` yok → SELECT gerekmez). ``returning`` almayan DB'lerde (testlerin
+    yetki taklitleri, elle yazılmış ikameler) varsa onların ``insert_minimal``'ı, yoksa düz ``insert`` çağrılır."""
+    kw: dict[str, Any] = {} if on_conflict is None else {"on_conflict": on_conflict}
+    if _accepts(db.insert, "returning"):
+        db.insert(table, rows, returning="minimal", **kw)
+        return
+    custom = getattr(db, "insert_minimal", None)
+    if callable(custom):
+        custom(table, [dict(rows)] if isinstance(rows, Mapping) else [dict(r) for r in rows], **kw)
+        return
+    db.insert(table, rows, **kw)
+
+
+def update_minimal(db: DB, table: str, values: Mapping[str, Any], *, where: Where) -> None:
+    """``return=minimal`` güncelleme (UPDATE yetkisi + ``where`` sütunlarında SELECT yeterli)."""
+    if _accepts(db.update, "returning"):
+        db.update(table, dict(values), where=where, returning="minimal")
+        return
+    custom = getattr(db, "update_minimal", None)
+    if callable(custom):
+        custom(table, dict(values), where=where)
+        return
+    db.update(table, dict(values), where=where)

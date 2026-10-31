@@ -6,7 +6,10 @@ import json
 import re
 from importlib import resources
 
+import pytest
+
 from conftest import REPO
+from ogrenmen_common.errors import RpcError
 from ogrenmen_common.fakes import rpc_names
 from ogrenmen_common.fakes.jsonl_rpc import RPCS
 
@@ -35,3 +38,29 @@ def test_every_name_is_a_batch_worker_rpc_in_blueprint():
 
 def test_names_are_plain_identifiers():
     assert all(re.fullmatch(r"[a-z_][a-z0-9_]*", n) for n in rpc_names())
+
+
+MIGRATIONS = "\n".join(p.read_text(encoding="utf-8") for p in sorted((REPO / "supabase" / "migrations").glob("*.sql")))
+
+
+def test_every_name_is_created_and_granted_to_batch_worker_in_migrations():
+    created = set(re.findall(r"create\s+(?:or\s+replace\s+)?function\s+public\.([a-z_][a-z0-9_]*)\s*\(",
+                             MIGRATIONS, re.I))
+    granted: set[str] = set()
+    for m in re.finditer(r"grant\s+execute\s+on\s+function\s+(.*?)\s+to\s+([^;]*);", MIGRATIONS, re.I | re.S):
+        if re.search(r"\bbatch_worker\b", m.group(2)):
+            granted |= set(re.findall(r"public\.([a-z_][a-z0-9_]*)\s*\(", m.group(1)))
+    for name in rpc_names():
+        assert name in created, name
+        assert name in granted, name
+
+
+def test_cron_open_alerts_fake_refuses_and_points_to_python_port(db):
+    """Dry-run alarmları Python eşleniğiyle (``open_alerts(db, now)``) üretir; RPC eşleniği bilerek çalışmaz."""
+    writes = len(db.write_log)
+    with pytest.raises(RpcError, match="OGR-RPC-002") as exc:
+        db.rpc("cron_open_alerts", {})
+    assert exc.value.code == "OGR-RPC-002" and exc.value.rpc == "cron_open_alerts"
+    assert "Python eşleniği" in exc.value.message and "via_rpc=False" in exc.value.message
+    assert len(db.write_log) == writes
+    assert db.rpc_log[-1]["rpc"] == "cron_open_alerts" and db.rpc_log[-1]["error"].startswith("OGR-RPC-002")

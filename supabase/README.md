@@ -1,6 +1,6 @@
 # supabase/ — Öğrenmen veritabanı (M02)
 
-Postgres 15+ (Supabase) şeması: migration'lar `0001`–`0017`, seed'ler, düz SQL testleri, statik denetim ve yardımcı
+Postgres 15+ (Supabase) şeması: migration'lar `0001`–`0018`, seed'ler, düz SQL testleri, statik denetim ve yardımcı
 betikler. Kaynak: `docs/BLUEPRINT.md` §3 (veri modeli, RLS matrisi, RPC'ler, saklama), §2.4, §9.1. Tablo/sütun/RPC adları
 blueprint'teki adlardır; her tablo ve sütun `comment on` ile Türkçe açıklanır.
 
@@ -8,12 +8,12 @@ blueprint'teki adlardır; her tablo ve sütun `comment on` ile Türkçe açıkla
 
 | Yol | İçerik |
 | --- | --- |
-| `migrations/0001_extensions.sql` … `0017_storage.sql` | şemalar ve roller (0002), kimlik (0003), müfredat (0004), Gözlük (0005), Tablet (0006), Kulaklık (0007), Ders (0008), Kalem (0009), Kitap (0010), BKT + `apply_observation` (0011), RPC'ler (0012), görünümler (0013), tablo okuyan yardımcılar + RLS + GRANT matrisi (0014), denetim ve saklama (0015), pg_cron (0016), Storage (0017) |
+| `migrations/0001_extensions.sql` … `0018_pilot_metrics_grants.sql` | şemalar ve roller (0002), kimlik (0003), müfredat (0004), Gözlük (0005), Tablet (0006), Kulaklık (0007), Ders (0008), Kalem (0009), Kitap (0010), BKT + `apply_observation` (0011), RPC'ler (0012), görünümler (0013), tablo okuyan yardımcılar + RLS + GRANT matrisi (0014), denetim ve saklama (0015), pg_cron (0016), Storage (0017), `batch_worker` → `pilot_metrics` okuma yetkisi ve SELECT politikası (0018) |
 | `seed/00_roles.sql` | yalnız yerel/test: uygulama rolleri ve test personeli (`coord`, `inst_a`, `inst_b`, `obs`) |
 | `seed/01_settings.sql` … `04_retention_policies.sql` | sabitler (`default_period`, `pilot_gate`), kota, çalışma bayrakları (`cap_excluded_purposes`, `lesson_monthly_cap_usd`), saklama politikaları (`mode='custom'` + `handler`) |
 | `seed/dev/*.sql` | geliştirme dünyası; `scripts/gen-dev-seed.py` `fixtures/db/dev-seed.json`'dan üretir (elle düzenlenmez) |
 | `tests/00_local_stub.sql` | yerel Postgres'te `auth` şeması, `auth.uid()/jwt()`, Supabase rolleri, `extensions` şeması (yalnız yoksa), halfvec yedeği, süper kullanıcı olmayan migration sahibi `ogrenmen_owner` |
-| `tests/01…11_*.sql` | canlı SQL testleri (her dosya `begin … rollback`; `_fixture.sql` ortak dünya ve yardımcılar) |
+| `tests/01…12_*.sql` | canlı SQL testleri (her dosya `begin … rollback`; `_fixture.sql` ortak dünya ve yardımcılar) |
 | `tests/grants_matrix.json` | tablo × rol × yetki matrisi (§3.8'in makine-okur hâli; statik ve canlı denetimin ortak kaynağı) |
 | `scripts/check_sql.py` | pglast ile statik denetim (aşağıda) |
 | `scripts/lint.sh` | sqlfluff + yorum blokları + dev seed eşitliği + BKT/PII kopyaları + denetleyici testleri |
@@ -79,7 +79,7 @@ OGRENMEN_DATABASE_URL=postgresql://kullanici:parola@127.0.0.1:5432/postgres bash
 - Sıra: `tests/00_local_stub.sql` → `migrations/*.sql` (her dosya tek işlem) → `seed/0*.sql` → müfredat seed'i
   (`content/tyt-matematik/scripts/export-sql.py --out <geçici>`; betik yoksa `SKIP: no content`) → cevap anahtarları
   (`seed-keys.py --database-url`; yoksa `SKIP: no keys`, `have_keys=0`) → **`seed/dev/*.sql`** (§2.4: Worker `FakeDb` ve
-  panel `mock` ile aynı dünya; `fixtures/db/dev-seed.json` satır sayılarıyla karşılaştırılır) → `tests/01…11`
+  panel `mock` ile aynı dünya; `fixtures/db/dev-seed.json` satır sayılarıyla karşılaştırılır) → `tests/01…12`
   (`psql -v ON_ERROR_STOP=1`). `export-sql.py --as-version 2027.1` çıktısı `begin/commit`'siz hâliyle 01'e `seed2`
   değişkeni olarak verilir. Testler dev dünyasının satırlarına güvenmez; kendi fikstür satırlarıyla sınırlı sayar.
 - Ardından ayrı bir veritabanında (`…_dev`) içerik seed'i OLMADAN migration + seed üstüne `seed/dev/*.sql` yüklenir
@@ -97,7 +97,7 @@ döner, veli kodu/token; `03` secure yalıtımı, `OGR-KEY-003` kilitleri, 'not_
 `04` öğrenci ve personel yalıtımı; `05` kanıt zinciri, ders onayı, 'retrieve_memory ranks null-embedding facts by fts only';
 `06` kendi 12 satırlık şablon fikstürü, `next_practice_items`, `OGR-GRADE-004` (anahtarsız ve eksik anahtarlı), prereq ipucu,
 teşhis; `07` her `custom` saklama işleyicisi + `storage_pressure` + anonimleştirmede alarm/araştırma metinleri; `08` BKT
-paritesi (41 vektör); `09` canlı ACL ↔ `grants_matrix.json` ve nesne sahipliği; `10` denetim izi; `11` iki bütçe ve kota.
+paritesi (41 vektör); `09` canlı ACL ↔ `grants_matrix.json` ve nesne sahipliği; `10` denetim izi; `11` iki bütçe ve kota; `12` `batch_worker` `pilot_metrics` upsert'ü (`ON CONFLICT DO UPDATE`, aynı haftanın yeniden hesabı satırı günceller) ve geri okuması, `bot_runtime`/`anon` reddi, `llm_calls`'a matristeki 15 sütunla ekleme ve `created_at` reddi.
 Ayrıca `02` veli token kilidi (satır başına), müfredata göre öncelik planı görünürlüğü, transkript kapsamı,
 `create_figure_upload_url`; `03` 'batch_worker cannot edit approved question'; `04` Worker'ın doğrudan yazımları ve
 `recent_messages` üyelik denetimi.
@@ -214,6 +214,15 @@ Ayrıca `02` veli token kilidi (satır başına), müfredata göre öncelik plan
 22. `set_birth_year` yılı `1950 … bu yıl` aralığında ister, aksi `OGR-PII-002 doğum yılı geçersiz`.
 23. `0002`'deki `alter default privileges for role postgres …` yalnız migration rolü `postgres`'in üyesiyse çalışır (Supabase'de
     migration'ı `postgres` uyguladığında üyedir; yerel süper kullanıcı olmayan sahip üye değildir, satır atlanır).
+24. `pilot_metrics` için `batch_worker` **r w u**'dur (blueprint §3.8 satırı `w u`; ek `0018_pilot_metrics_grants.sql`,
+    uygulanmış `0014` yeniden yazılmadı). `kulaklik metrics` haftalık satırları PostgREST upsert'üyle
+    (`resolution=merge-duplicates` → `INSERT … ON CONFLICT (metric, period) DO UPDATE SET metric, period, value, detail,
+    computed_at = EXCLUDED.…`) yazar; PostgreSQL `ON CONFLICT DO UPDATE` için çakışma sütunlarında SELECT yetkisi **ve** var
+    olan satırı gören bir SELECT politikası ister. Yetki yokken upsert `permission denied` ile düşüp düz eklemeye iniyor
+    (aynı haftanın yeniden hesabı yazılamıyordu), `metrics --gate` ve `cost-report` son dönemi okuyamayıp yeniden hesaplıyordu.
+    `0018` `grant select on public.pilot_metrics to batch_worker` ve `pilot_metrics_batch_r` (`using (true)`) ekler; UPDATE
+    zaten tablo düzeyindedir (upsert gövdedeki beş sütunun hepsini, `metric`/`period` dahil, SET eder; daraltmak upsert'ü
+    bozar). Tablo yalnız sayı taşır (öğrenci kimliği yok); `bot_runtime`/`anon` yetkisizdir (`12` testi).
 
 ## Kabul komutu notu
 

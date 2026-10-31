@@ -13,7 +13,9 @@
    bildirim, sağlayıcı oturum boyunca kapalı); hepsinde sıradaki modele geçilir.
 4. Şema (``request.schema_id`` ya da ``validator``) geçmezse aynı modelde **bir** onarım, sonra sıradaki.
 5. Her deneme bir ``llm_calls`` satırıdır (``purpose, provider, model, tokens, status, cost_usd,
-   ref_table, ref_id, student_ref``); ``student_ref`` yalnız ``s_…`` olabilir (uuid/ad asla).
+   ref_table, ref_id, student_ref``); ``student_ref`` yalnız ``s_…`` olabilir (uuid/ad asla). Gövde yalnız
+   ``batch_worker``'ın INSERT yetkisindeki sütunları taşır (``LLM_CALLS_INSERT_COLUMNS``; ``id``/``created_at``
+   DB varsayılanı) ve ``return=minimal`` ile gönderilir (``RETURNING`` yok).
 
 ``LedgeredEmbedding`` embedding çağrılarını da aynı kapıdan geçirir (``purpose='embedding'``, ``embedding``
 zinciri; her toplu çağrı bir ``llm_calls`` satırı).
@@ -33,7 +35,17 @@ from typing import Any
 
 import ogrenmen_contracts as contracts
 
-from .adapters.base import DB, LLM, LLM_PURPOSES, Embedding, LLMRequest, LLMResult, Notifier
+from .adapters.base import (
+    DB,
+    LLM,
+    LLM_PURPOSES,
+    Embedding,
+    LLMRequest,
+    LLMResult,
+    Notifier,
+    insert_minimal,
+    update_minimal,
+)
 from .adapters.router import model_enabled
 from .adapters.structured import parse_json_text
 from .clock import Clock, iso, system_clock
@@ -46,6 +58,18 @@ REPAIR_NOTE = "Önceki yanıtın şemaya uymadı. Yalnızca şemaya uygun JSON d
 COOLDOWN_DEFAULT_S = 60.0
 
 Validator = Callable[[Any], list[str]]
+
+LLM_CALLS_INSERT_COLUMNS: tuple[str, ...] = (
+    "audio_sec", "batch", "cost_usd", "error_code", "images", "latency_ms", "model", "provider", "purpose", "ref_id",
+    "ref_table", "status", "student_ref", "tokens_in", "tokens_out",
+)
+"""``batch_worker``'ın ``llm_calls`` INSERT sütun yetkisi (0014_rls.sql; ``supabase/tests/grants_matrix.json``).
+``id`` ve ``created_at`` gönderilmez — DB varsayılanları (identity, ``now()``) doldurur; test matrisle eşler."""
+
+
+def llm_calls_payload(row: Mapping[str, Any]) -> dict:
+    """``CostLedger.record``'un ``llm_calls``'a gönderdiği gövde: yalnız yetkili sütunlar (sabit sıra)."""
+    return {c: row.get(c) for c in LLM_CALLS_INSERT_COLUMNS}
 
 
 @dataclass
@@ -181,19 +205,19 @@ class CostLedger:
         row = {"purpose": purpose, "provider": provider, "model": model, "tokens_in": int(tokens_in),
                "tokens_out": int(tokens_out), "audio_sec": audio_sec, "images": images, "batch": bool(batch),
                "status": status, "error_code": error_code, "latency_ms": latency_ms, "cost_usd": _round(cost_usd),
-               "ref_table": ref_table, "ref_id": None if ref_id is None else str(ref_id), "student_ref": student_ref,
-               "created_at": iso(self.clock())}
+               "ref_table": ref_table, "ref_id": None if ref_id is None else str(ref_id), "student_ref": student_ref}
         info = (self.models.get("models") or {}).get(model) or {}
         if info.get("neurons_per_1k_tokens") and status in ("ok", "bad_output"):
             self.neurons += (tokens_in + tokens_out) / 1000 * float(info["neurons_per_1k_tokens"])
         if self.db is not None:
-            stored = self.db.insert("llm_calls", row)
-            if stored:
-                row = stored[0]
-        self.calls.append(row)
+            # Yalnız batch_worker'ın INSERT yetkisindeki sütunlar (id ve created_at DB varsayılanı); return=minimal:
+            # RETURNING yok, PostgREST'in dönen sütunlarda SELECT'e ihtiyacı olmaz.
+            insert_minimal(self.db, "llm_calls", llm_calls_payload(row))
+        entry = {**row, "created_at": iso(self.clock())}  # oturum özeti (yerel saat); created_at DB'ye gitmez
+        self.calls.append(entry)
         if cost_usd:
             self.invalidate_gate()
-        return row
+        return entry
 
     def _attempt(self, row: Mapping[str, Any]) -> dict:
         return {"provider": row["provider"], "model": row["model"], "status": row["status"],
@@ -206,7 +230,7 @@ class CostLedger:
         try:
             rows = self.db.select("provider_health", where={"provider": provider}, limit=1)
             if rows:
-                self.db.update("provider_health", {
+                update_minimal(self.db, "provider_health", {
                     "consecutive_errors": int(rows[0].get("consecutive_errors") or 0) + 1,
                     "cooldown_until": iso(self._cooldown[provider]) if provider in self._cooldown else None,
                     "last_error": f"{status}: {detail or ''}"[:200], "updated_at": iso(self.clock())},

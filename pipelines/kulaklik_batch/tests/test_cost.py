@@ -55,10 +55,17 @@ def test_check_ledger_drift_exits_two(tmp_path):
 
 def test_lesson_spend_never_drifts_chat_budget(tmp_path):
     rt = make_rt(tmp_path)
-    rt.db.insert("llm_calls", {"purpose": "lesson_analysis", "provider": "gemini-paid", "model": "gemini-2.5-pro",
-                               "tokens_in": 1, "tokens_out": 1, "status": "ok", "cost_usd": 5.0,
-                               "ref_table": "lessons", "ref_id": "00000000-0000-0000-0000-000000000009",
-                               "created_at": "2026-10-19T10:00:00Z"})
+    # created_at batch_worker'ın INSERT yetkisinde yok: geriye tarihli kurulum satırı yönetici rolüyle yazılır
+    # (insert, seed'den farklı olarak spend_ledger tetikleyicisini çalıştırır — defter llm_calls'la tutarlı kalır)
+    rt.db.role = "postgres"
+    try:
+        rt.db.insert("llm_calls", {"purpose": "lesson_analysis", "provider": "gemini-paid",
+                                   "model": "gemini-2.5-pro", "tokens_in": 1, "tokens_out": 1, "status": "ok",
+                                   "cost_usd": 5.0, "ref_table": "lessons",
+                                   "ref_id": "00000000-0000-0000-0000-000000000009",
+                                   "created_at": "2026-10-19T10:00:00Z"})
+    finally:
+        rt.db.role = "batch_worker"
     data = C.compute(rt.db, month_window("2026-10"), rt.models)
     assert data["chat"]["month_usd"] == 3.0 and data["lesson"]["month_usd"] == 5.9 and data["lesson"]["lessons"] == 3
     assert C.run_check(rt.db, data, rt.clock())["kill_switch"] is False

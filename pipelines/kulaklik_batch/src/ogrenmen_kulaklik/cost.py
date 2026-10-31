@@ -54,7 +54,7 @@ def _providers(models: dict) -> dict[str, str]:
 
 
 def pilot_section(db: Any, now: datetime | None) -> dict[str, Any]:
-    """Son ``pilot_metrics`` dönemi; tablo okunamazsa (``batch_worker``) aynı veriden yeniden hesap."""
+    """Son ``pilot_metrics`` dönemi; tablo okunamazsa (0018 öncesi ``batch_worker``) aynı veriden yeniden hesap."""
     rows = safe_select(db, "pilot_metrics")
     source = "pilot_metrics"
     if rows is None:

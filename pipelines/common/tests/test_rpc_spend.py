@@ -9,8 +9,9 @@ from ogrenmen_common.errors import RpcError
 
 
 def _spend(db, purpose, cost, at="2026-10-20T08:00:00Z", provider="gemini-paid"):
-    db.insert("llm_calls", {"purpose": purpose, "provider": provider, "model": "gemini-2.5-pro", "status": "ok",
-                            "cost_usd": cost, "created_at": at})
+    with as_admin(db):  # created_at batch_worker'ın INSERT yetkisinde yok; geçmiş saat yalnız kurulumda verilir
+        db.insert("llm_calls", {"purpose": purpose, "provider": provider, "model": "gemini-2.5-pro", "status": "ok",
+                                "cost_usd": cost, "created_at": at})
 
 
 def _gate(db, purpose):

@@ -1,11 +1,58 @@
 // Pilot kapısı (ADR-0013, BLUEPRINT §6.2 `kulaklik metrics --gate`, §7 /maliyet, §12 #57).
 // settings.pilot_gate eşikleri son pilot_metrics dönemine uygulanır: ölçüt başına PASS / FAIL / NO_DATA
-// (value=null ya da n < n_min → NO_DATA). required:false ölçütler bilgi satırıdır, kararı etkilemez.
-// Zorunlu ölçütlerin hepsi PASS ise "Kapı: AÇIK", aksi KAPALI — NO_DATA kapıyı açmaz.
+// (satır yok, value=null ya da n < n_min → NO_DATA). required:false ölçütler bilgi satırıdır, kararı etkilemez.
+// Zorunlu ölçütlerin hepsi PASS ise "Kapı: AÇIK", aksi KAPALI — NO_DATA kapıyı açmaz; hiç zorunlu ölçüt yoksa da KAPALI.
+// Eşikler önce doğrulanır (pipelines/kulaklik_batch gate.py `validate_thresholds` ile aynı kural): her giriş ya "pass"
+// dizesi ya da anahtarları yalnız min, max, max_usd, n_min, required olan, sınırları sayı (bool değil), required'ı
+// bool olan ve en az bir min/max/max_usd taşıyan bir nesnedir. Geçersiz eşikte kapı KAPALI kalır ve `error`
+// (OGR-KLK-020) görünür; hiçbir zaman sessizce PASS / AÇIK olmaz. Ortak vakalar: pipelines/kulaklik_batch/tests/gate-cases.json.
 import type { GateResult, GateRow, PilotMetricRow } from './data/types';
 import { decimal, usd } from './format';
 
 type Threshold = { min?: number; max?: number; max_usd?: number; n_min?: number; required?: boolean };
+
+const THRESHOLD_KEYS = new Set(['min', 'max', 'max_usd', 'n_min', 'required']);
+const BOUND_KEYS = ['min', 'max', 'max_usd'] as const;
+const CI_VALUES = ['pass'];
+
+function isNumber(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v);
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+function show(v: unknown): string {
+  return typeof v === 'string' ? `'${v}'` : JSON.stringify(v) ?? String(v);
+}
+
+/**
+ * settings.pilot_gate değerini doğrular (gate.py `validate_thresholds` ile aynı). Geçerliyse null, değilse
+ * `OGR-KLK-020 …` hata metni döner — çağıran kapıyı KAPALI tutar ve metni gösterir.
+ */
+export function validatePilotGate(gate: unknown): string | null {
+  if (!isPlainObject(gate) || Object.keys(gate).length === 0) {
+    return 'OGR-KLK-020 settings.pilot_gate yok; pilot kapısı eşikleri kodda tanımlı değildir (ADR-0013: eşik yalnız settings.pilot_gate + ADR ile değişir)';
+  }
+  for (const [metric, raw] of Object.entries(gate)) {
+    const where = `settings.pilot_gate.${metric}`;
+    if (typeof raw === 'string') {
+      if (!CI_VALUES.includes(raw)) return `OGR-KLK-020 ${where} dize eşiği yalnız "pass" olabilir: ${show(raw)}`;
+      continue;
+    }
+    if (!isPlainObject(raw)) return `OGR-KLK-020 ${where} nesne ya da "pass" olmalı`;
+    const unknown = Object.keys(raw).filter((k) => !THRESHOLD_KEYS.has(k)).sort();
+    if (unknown.length > 0) return `OGR-KLK-020 ${where} bilinmeyen anahtar: ${unknown[0]}`;
+    for (const key of [...BOUND_KEYS, 'n_min']) {
+      if (key in raw && !isNumber(raw[key])) return `OGR-KLK-020 ${where}.${key} sayı olmalı: ${show(raw[key])}`;
+    }
+    if ('n_min' in raw && (raw.n_min as number) < 0) return `OGR-KLK-020 ${where}.n_min negatif olamaz`;
+    if ('required' in raw && typeof raw.required !== 'boolean') return `OGR-KLK-020 ${where}.required true/false olmalı: ${show(raw.required)}`;
+    if (!BOUND_KEYS.some((k) => k in raw)) return `OGR-KLK-020 ${where} en az bir sınır (min, max, max_usd) taşımalı`;
+  }
+  return null;
+}
 
 function sampleSize(detail: Record<string, unknown> | undefined): number | null {
   if (!detail) return null;
@@ -46,12 +93,12 @@ export function ciStatusFromMetrics(metrics: PilotMetricRow[]): Record<string, s
 }
 
 /**
- * @param gate settings.pilot_gate değeri (anahtar sırası korunur)
+ * @param gate settings.pilot_gate değeri (anahtar sırası korunur; doğrulanır — geçersizse KAPALI + `error`)
  * @param metrics pilot_metrics satırları (birden çok dönem olabilir; en son dönem kullanılır)
  * @param ciStatus isolation_tests / key_leak_tests gibi geçti/kaldı ölçütleri (CI'dan); yoksa NO_DATA
  */
 export function evaluatePilotGate(
-  gate: Record<string, unknown>,
+  gate: unknown,
   metrics: PilotMetricRow[],
   ciStatus: Record<string, string> = {},
 ): GateResult {
@@ -59,8 +106,11 @@ export function evaluatePilotGate(
   const numeric = metrics.filter((m) => !(CI_STATUS_METRICS as readonly string[]).includes(m.metric));
   const period = numeric.reduce<string | null>((acc, m) => (acc === null || m.period > acc ? m.period : acc), null);
   const latest = new Map(numeric.filter((m) => m.period === period).map((m) => [m.metric, m]));
+  const error = validatePilotGate(gate);
+  // geçersiz eşik: satır üretilmez, kapı KAPALI ve hata görünür (gate.py OGR-KLK-020 ile durur)
+  if (error !== null) return { rows: [], gate: 'KAPALI', period, error };
   const rows: GateRow[] = [];
-  for (const [metric, raw] of Object.entries(gate)) {
+  for (const [metric, raw] of Object.entries(gate as Record<string, unknown>)) {
     if (typeof raw === 'string') {
       const status = ciStatus[metric];
       rows.push({
@@ -73,24 +123,25 @@ export function evaluatePilotGate(
       });
       continue;
     }
-    const t = (raw ?? {}) as Threshold;
+    const t = raw as Threshold;
     const row = latest.get(metric);
-    const value = row && typeof row.value === 'number' ? row.value : null;
+    const value = row && isNumber(row.value) ? row.value : null;
     const n = sampleSize(row?.detail);
     let verdict: GateRow['verdict'];
     if (value === null) verdict = 'NO_DATA';
-    else if (typeof t.n_min === 'number' && (n === null || n < t.n_min)) verdict = 'NO_DATA';
+    else if (isNumber(t.n_min) && (n === null || n < t.n_min)) verdict = 'NO_DATA';
     else {
-      let ok = true;
-      if (typeof t.min === 'number') ok = ok && value >= t.min;
-      if (typeof t.max === 'number') ok = ok && value <= t.max;
-      if (typeof t.max_usd === 'number') ok = ok && value <= t.max_usd;
-      verdict = ok ? 'PASS' : 'FAIL';
+      const checks: boolean[] = [];
+      if (isNumber(t.min)) checks.push(value >= t.min);
+      if (isNumber(t.max)) checks.push(value <= t.max);
+      if (isNumber(t.max_usd)) checks.push(value <= t.max_usd);
+      verdict = checks.length > 0 && checks.every(Boolean) ? 'PASS' : 'FAIL';
     }
     rows.push({ metric, required: t.required !== false, value, n, threshold: thresholdText(t), verdict });
   }
-  const open = rows.filter((r) => r.required).every((r) => r.verdict === 'PASS');
-  return { rows, gate: open ? 'AÇIK' : 'KAPALI', period };
+  // NO_DATA ve FAIL kapıyı açmaz; zorunlu ölçüt hiç yoksa (boş küme) da kapı KAPALI
+  const open = rows.filter((r) => r.required).every((r) => r.verdict === 'PASS') && rows.some((r) => r.required);
+  return { rows, gate: open ? 'AÇIK' : 'KAPALI', period, error: null };
 }
 
 export const METRIC_LABELS: Record<string, string> = {

@@ -29,12 +29,13 @@ src/ogrenmen_common/
 ├── adapters/router.py      ProviderRouter: models.json sağlayıcısına göre yönlendirme, available(model)
 ├── adapters/media.py       LLMVision, LLMOCR, LLMTranscriber (CostLedger üzerinden; Whisper → diarize pencereleri)
 ├── adapters/openalex.py  semanticscholar.py  arxiv.py  crossref.py  unpaywall.py
-├── adapters/postgrest.py   PostgrestDb (messages sütun listesinde text_raw YOK)
+├── adapters/postgrest.py   PostgrestDb (messages sütun listesinde text_raw YOK; insert/update returning=minimal|representation)
 ├── adapters/storage.py     SupabaseStorage      telegram_notify.py  TelegramNotifier
 ├── fakes/                  FakeLLM, FakeEmbedding, FakeVision, FakeTranscriber, FakeOCR, FakeScholar, FakeArxiv,
 │                           FakeCrossref, FakeUnpaywall, JsonlDb (+ jsonl_rpc.py), LocalDirStorage, FakeNotifier,
 │                           rpc-names.json
 ├── ledger.py               CostLedger, LedgeredEmbedding        batch.py   BatchRunner
+├── grants.py               supabase/tests/grants_matrix.json okuyucusu (çalışma anında; JsonlDb sütun yetkileri)
 ├── ids.py                  STUDENT_REF (s_… biçimi; tek kaynak)   clock.py  saat, ISO, hms_seconds
 ├── pii.py                  scrub_for_llm, label_transcript, name_leaks
 ├── runtime.py              Runtime.from_env(dry_run)
@@ -66,7 +67,8 @@ with cli_base.open_runtime(args) as rt:              # çıkışta out/*.jsonl +
 * **Her model çağrısı `CostLedger.call`'dan geçer** (§6 kural 2): `check_spend` kapısı (ücretli sağlayıcı
   yalnız `paid_allowed` iken; değilse `cap_blocked`), `models.json` zinciri, 429/5xx/zaman aşımı/yapılandırma
   düşüşü (sağlayıcı bekleme süresi `cooldown_skip`; 401/403'te kurucuya bildirim), şema doğrulaması ve tek
-  onarım, her deneme bir `llm_calls` satırı. Ders amaçları (`lesson_analysis`, `transcribe`, `diarize`)
+  onarım, her deneme bir `llm_calls` satırı — gövde yalnız `batch_worker`'ın INSERT yetkisindeki sütunlar
+  (`LLM_CALLS_INSERT_COLUMNS`; `id`/`created_at` DB varsayılanı), `Prefer: return=minimal` ile. Ders amaçları (`lesson_analysis`, `transcribe`, `diarize`)
   `check_spend`'in ayrı ders bütçesine bağlıdır; sohbet/toplu tavanını doldurmaz ve ondan etkilenmez.
 * `student_ref` yalnız `s_…` olabilir; uuid ya da ad verilirse `CostLedger` reddeder (§6 kural 1).
 * **Degraded kip** (`check_spend` `degraded=true` / `state='degraded'`, yani `degraded_mode=true`; §5.6 "LLM yok",
@@ -136,6 +138,17 @@ yükleme hatası parite hatası sayılır.
   `served_question_id, served_at` güncellenir). Anahtar RPC'leri (`register_answer_key`,
   `register_template_question`) SQL'deki gibi **yalnız** `batch_worker` rolüyle çalışır (`postgres` da `OGR-KEY-001`).
   Test kurulumunda `db.role = "postgres"` ya da `db.seed(...)` kısıtları atlar.
+* **Sütun yetkileri** (§12 #57): doğrudan yazımlar ayrıca `supabase/tests/grants_matrix.json`'daki rol yetkisine
+  uyar — dosya **çalışma anında** okunur (`ogrenmen_common.grants`; yoksa/bozuksa `OGR-DB-004`). Yazılan sütunlar
+  INSERT/UPDATE yetkisinde olmalı (ör. `llm_calls.created_at`, `instructor_alerts.id`, `questions.review_note`
+  eklenemez); `on_conflict="merge"` ayrıca UPDATE yetkisi ve çakışma sütunlarında SELECT, `where` sütunları SELECT,
+  `returning="representation"` (`RETURNING *`) tablo düzeyi SELECT ister (ör. `messages`, `proactive_messages`'ta
+  yoktur). İhlal → `DbPermissionError` `OGR-DB-001 permission denied for column … of relation …`. Geçmiş
+  `created_at`'li kurulum satırları `as_admin`/`db.role = "postgres"` ya da `db.seed(...)` ile yazılır.
+* **`returning`** (`PostgrestDb` ve `JsonlDb` aynı): `"minimal"` → `Prefer: return=minimal`, `[]` döner;
+  `"representation"` → satırlar. Varsayılan: tek satır (`Mapping`) eklemesi `representation`, satır dizisi eklemesi
+  ve her `update` `minimal` (toplu yazım). `adapters.base.insert_minimal` / `update_minimal` yardımcıları
+  `returning` almayan DB'lerde de (testlerin yetki taklitleri) minimal yazar.
 * Tetikleyiciler: `llm_calls` → `spend_ledger` (Europe/Istanbul günü), `messages.expires_at`,
   `questions_check_skills` (`OGR-CURR-001`).
 * Çıktı (`flush()` / `Runtime.close()`): yalnız bu çalışmada yazılan satırlar son hâliyle `out/<tablo>.jsonl`;
@@ -147,7 +160,7 @@ yükleme hatası parite hatası sayılır.
 
 **RPC eşlenikleri** (`fakes/rpc-names.json`; M13 `scripts/check-rpc-parity.sh` bu listeyi migration'lardaki
 `create function` adlarıyla eşler): `anonymize_students`, `cap_memory_facts`, `check_spend`,
-`compute_table_sizes`, `confirm_video_deleted`, `cron_idle_sessions`, `profile_for_prompt`,
+`compute_table_sizes`, `confirm_video_deleted`, `cron_idle_sessions`, `cron_open_alerts`, `profile_for_prompt`,
 `recompute_is_minor`, `register_answer_key`, `register_lesson`, `register_template_question`,
 `resolve_lesson_labels`, `rollup_spend`, `run_retention`, `set_runtime_flag`, `write_lesson_analysis`.
 Hepsi §3.9'da `batch_worker`'a açılan fonksiyonlardır; gövdeler SQL'deki hata kodlarını ve yan etkileri
@@ -156,7 +169,9 @@ izler (ör. `register_answer_key` kilitleri `OGR-KEY-001…004`, `not_applicable
 `write_lesson_analysis` `observations` yazmaz, tek `talk` iddiası ve tekilleşen "Ders raporu onay bekliyor"
 alarmı; `run_retention` dört kip + beş `app.retention_*` işleyicisi; `compute_table_sizes`
 `db.size_overrides` ile 450 MB'ı aşınca `storage_pressure` ve `tg_chats.retention_days = 60`).
-Dönüş biçimi PostgREST'inkiyle aynıdır (`check_spend` tek satırlık liste).
+Dönüş biçimi PostgREST'inkiyle aynıdır (`check_spend` tek satırlık liste). `cron_open_alerts` yalnız
+parite için kayıtlıdır ve `OGR-RPC-002` fırlatır: dry-run'da `ogrenmen_kulaklik.alerts.open_alerts`
+Python eşleniği (`via_rpc=False`) çalışır.
 
 Diğer sahteler: `FakeEmbedding` (sha256 → 768 birim vektör), `FakeVision` (`verdicts` ile zorlanabilir),
 `FakeOCR`, `FakeTranscriber`, `FakeScholar` (OpenAlex/S2) ve `FakeArxiv` (`fixtures/kitap`, gerçek
@@ -166,10 +181,14 @@ adaptörlerin normalize fonksiyonlarıyla), `FakeCrossref` (`10.9999/fake` → `
 ## Hata kodları
 
 RPC hataları veritabanı mesajını aynen taşır (`OGR-KEY-003 …`); `error.code` ilk parçadır. Bu modüle
-özgü kodlar: `OGR-RPC-001` (bilinmeyen RPC/parametre), `OGR-DB-001` (yetki), `OGR-DB-002` (tablo, sütun,
+özgü kodlar: `OGR-RPC-001` (bilinmeyen RPC/parametre), `OGR-RPC-002` (JsonlDb'de bilerek çalıştırılmayan RPC), `OGR-DB-001` (yetki), `OGR-DB-002` (tablo, sütun,
 çakışma), `OGR-DB-003` (PostgREST/ağ), `OGR-LLM-001` (zincirde başarılı sağlayıcı yok), `OGR-LLM-002`
 (tavan engeli), `OGR-LLM-003` (bilinmeyen amaç/zincir/model), `OGR-ADP-001` (adaptör yapılandırması),
-`OGR-ADP-002` (fixture yok), `OGR-STO-001` (depolama).
+`OGR-ADP-002` (fixture yok), `OGR-STO-001` (depolama), `OGR-DB-004` (yetki matrisi okunamadı).
+
+Canlı yetki testi: `OGRENMEN_DATABASE_URL` tanımlıysa `tests/test_grants.py` geçici bir veritabanına
+(`ogrenmen_m05_grants_*`, sonunda silinir) `00_local_stub.sql` + tüm migration'ları uygular ve `SET ROLE batch_worker`
+ile `CostLedger`'ın gövdesini PostgREST'in kurduğu INSERT/UPDATE deyimiyle yazar; yoksa atlanır.
 
 ## Sapma notları
 

@@ -87,7 +87,10 @@ def test_batch_worker_cannot_insert(db, table, row):
 
 def test_column_level_write_rules(db):
     msg = db.select("messages", limit=1)[0]
-    assert db.update("messages", {"is_question": True}, where={"id": msg["id"]})[0]["is_question"] is True
+    assert db.update("messages", {"is_question": True}, where={"id": msg["id"]}) == []  # update varsayılanı minimal
+    assert db.get("messages", id=msg["id"])["is_question"] is True
+    with pytest.raises(DbPermissionError, match="RETURNING"):  # messages'ta tablo düzeyi SELECT yok (text_raw)
+        db.update("messages", {"is_question": True}, where={"id": msg["id"]}, returning="representation")
     with pytest.raises(DbPermissionError):
         db.update("messages", {"text_llm": "x"}, where={"id": msg["id"]})
     fig = db.select("figures", limit=1)[0]
@@ -110,14 +113,15 @@ def test_exam_tables_are_not_deletable_by_batch_worker(db, table):
     with pytest.raises(DbPermissionError, match="delete"):
         db.delete(table, where={"id": row["id"]})
     assert db.get(table, id=row["id"]) is not None
-    assert db.update(table, {"updated_at": "2026-10-20T09:00:00Z"}, where={"id": row["id"]})  # u serbest
+    assert db.update(table, {"updated_at": "2026-10-20T09:00:00Z"}, where={"id": row["id"]},
+                     returning="representation")  # u serbest
 
 
 def test_generation_requests_update_only_served_columns(db):
     """W ``u (served_question_id, served_at)`` — ``needs_generation`` ya da başka sütun yazılamaz."""
     gr = db.select("generation_requests", limit=1)[0]
     done = db.update("generation_requests", {"served_question_id": None, "served_at": "2026-10-20T09:00:00Z"},
-                     where={"id": gr["id"]})
+                     where={"id": gr["id"]}, returning="representation")
     assert done[0]["served_at"] == "2026-10-20T09:00:00Z"
     for bad in ({"needs_generation": False}, {"skill_id": "tyt.mat.temel.sayilar"}, {"kind": "exam_variant"}):
         with pytest.raises(DbPermissionError, match=next(iter(bad))):
@@ -147,7 +151,10 @@ def test_upsert_merge_keeps_unsent_columns(db):
     assert {k: v for k, v in merged.items() if k != "label"} == {k: v for k, v in cl.items() if k != "label"}
     alert = db.insert("instructor_alerts", {"kind": "ops", "severity": "warning", "detail": "deneme"})[0]
     db.update("instructor_alerts", {"status": "done"}, where={"id": alert["id"]})
-    again = db.insert("instructor_alerts", {"id": alert["id"], "detail": "güncel"}, on_conflict="merge")[0]
+    with pytest.raises(DbPermissionError, match="column id of relation instructor_alerts"):
+        db.insert("instructor_alerts", {"id": alert["id"], "detail": "güncel"}, on_conflict="merge")  # id yetkisiz
+    with as_admin(db):
+        again = db.insert("instructor_alerts", {"id": alert["id"], "detail": "güncel"}, on_conflict="merge")[0]
     assert again["status"] == "done" and again["detail"] == "güncel" and again["created_at"] == alert["created_at"]
     with pytest.raises(DbError, match="çakışması"):
         db.insert("exam_clusters", {"id": cl["id"], "course_id": cl["course_id"]})
@@ -199,7 +206,9 @@ def test_question_insert_guards(db):
         db.insert("questions", _llm_question(skill_ids=["tyt.mat.yok"]))
     with pytest.raises(DbPermissionError, match="reviewed_by"):
         db.insert("questions", _llm_question(reviewed_by="de70e65e-1410-5026-a773-c5e55a3e6368"))
-    q = db.insert("questions", _llm_question(status="pending_review", review_note="2 deneme başarısız"))[0]
+    with pytest.raises(DbPermissionError, match="review_note"):  # INSERT yetkisinde yok (yalnız inceleme RPC'leri)
+        db.insert("questions", _llm_question(status="pending_review", review_note="2 deneme başarısız"))
+    q = db.insert("questions", _llm_question(status="pending_review"))[0]
     assert q["status"] == "pending_review" and q["verification"]["sympy"] == "pending"
     with pytest.raises(DbError, match="content_hash"):
         db.insert("questions", _llm_question())
@@ -219,9 +228,10 @@ def test_identity_uuid_and_defaults(db, clock):
 
 
 def test_llm_calls_trigger_rolls_up_istanbul_day(db):
-    db.insert("llm_calls", {"purpose": "nightly_facts", "provider": "gemini-paid", "model": "gemini-2.5-flash-lite",
-                            "status": "ok", "tokens_in": 100, "tokens_out": 10, "cost_usd": 0.01,
-                            "created_at": "2026-10-19T22:30:00Z"})
+    with as_admin(db):  # created_at batch_worker'ın INSERT yetkisinde yok; geçmiş saat yalnız kurulumda verilir
+        db.insert("llm_calls", {"purpose": "nightly_facts", "provider": "gemini-paid",
+                                "model": "gemini-2.5-flash-lite", "status": "ok", "tokens_in": 100, "tokens_out": 10,
+                                "cost_usd": 0.01, "created_at": "2026-10-19T22:30:00Z"})
     led = [r for r in db.tables["spend_ledger"] if r["purpose"] == "nightly_facts"]
     by_day = {r["day"]: r for r in led}
     assert by_day["2026-10-20"]["calls"] == 1 and by_day["2026-10-20"]["cost_usd"] == 0.01  # 01:30 TRT

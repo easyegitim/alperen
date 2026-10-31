@@ -113,7 +113,7 @@ blueprint'in istediği plan kimlikleridir). Az veride `value=null` (`question_ac
 **Pilot kapısı** (`metrics --gate`, ADR-0013): eşikler yalnız `settings.pilot_gate` satırından okunur — kodda
 varsayılan eşik yoktur, satır yoksa iş `OGR-KLK-020` ile durur; eşik değişikliği `settings.pilot_gate` + ADR ile
 yapılır. Kapı, `metrics`'in aynı çalışmada hesapladığı dönemin satırlarına uygulanır (tanım gereği son dönem;
-`batch_worker` `pilot_metrics`'i okuyamaz); ölçüt başına `PASS` / `FAIL` / `NO_DATA` (satır yok, `value=null`
+yazım yedeğe düşse bile o çalışmanın değeri); ölçüt başına `PASS` / `FAIL` / `NO_DATA` (satır yok, `value=null`
 ya da `n < n_min`). Eşikler kapı kapalı kalacak biçimde doğrulanır: her giriş ya `"pass"` dizesi ya da anahtarları
 yalnız `min, max, max_usd, n_min, required` olan, sınırları sayı (bool değil), `required`'ı bool olan ve en az bir
 `min`/`max`/`max_usd` taşıyan nesnedir; yazım hatası (`{"mn": 0.9}`), tırnaklı sayı (`{"max": "0.05"}`) ya da boş
@@ -131,8 +131,8 @@ tavana oran, öğrenci başına maliyet, sağlayıcı payı, ücretsiz düşüş
 `lesson_monthly_cap_usd`'ye oran) ve öğrenci başına maliyete dahil edilmez. `--check`: sohbet/toplu için
 `llm_calls` toplamı `spend_ledger`'la karşılaştırılır, fark %5'i aşarsa çıkış kodu 2 ("ledger drift"); ay toplamı
 aylık tavanın %100'üne ulaşmışsa `set_runtime_flag('paid_llm_enabled', false)` çağrılır (tek yönlü kill-switch;
-RPC reddederse hata yükselir, sessiz geçilmez). "Pilot ölçütleri" bölümü `pilot_metrics`'in son döneminden okunur;
-`batch_worker` bu tabloyu okuyamadığı için okuma reddedilirse ölçütler aynı veriden yeniden hesaplanır (bölümde
+RPC reddederse hata yükselir, sessiz geçilmez). "Pilot ölçütleri" bölümü `pilot_metrics`'in son döneminden okunur
+(`batch_worker` 0018'den beri okuyabilir); okuma reddedilirse ölçütler aynı veriden yeniden hesaplanır (bölümde
 "yeniden hesaplandı" yazar) — rapor ve `cost-guard.yml`'nin kill-switch adımı bu yüzden durmaz. Konsol satırı da
 raporla aynı Türkçe biçimi kullanır (`3,00 $`).
 
@@ -146,13 +146,12 @@ işleri çalışmaz.
 ### Dönüşsüz yazımlar
 
 `PostgrestDb.insert/update` her zaman `Prefer: return=representation` gönderir; bu `RETURNING *` demektir ve
-`batch_worker`'ın SELECT yetkisi olmayan sütunda/tabloda yazımı düşürür (`messages`: `text_raw`, `expires_at`;
-`pilot_metrics`: SELECT hiç yok). Bu modül o iki tabloya `common.insert_minimal` / `update_minimal` ile yazar:
-canlıda istek `return=minimal` ile gider, JsonlDb'ye doğrudan yazılır. `pilot_metrics` için önce upsert denenir;
-`ON CONFLICT DO UPDATE` çakışma sütunlarında SELECT istediğinden yetki hatasında satır başına düz eklemeye
-düşülür ve aynı `(metric, period)` varsa satır "zaten yazılmış" sayılır (`metrics_report.json`
-`pilot_metrics_write`). Yerel PG16'da doğrulandı: `batch_worker` ile düz INSERT geçer, ikinci kez 23505 verir,
-upsert ve `RETURNING` "permission denied" verir.
+`batch_worker`'ın SELECT yetkisi olmayan sütunda yazımı düşürür (`messages`: `text_raw`, `expires_at`). Bu modül
+`messages` ve `pilot_metrics`'e `common.insert_minimal` / `update_minimal` ile yazar: canlıda istek `return=minimal`
+ile gider, JsonlDb'ye doğrudan yazılır. `pilot_metrics` upsert'le yazılır (`ON CONFLICT DO UPDATE` çakışma
+sütunlarında SELECT ve SELECT politikası ister; `0018_pilot_metrics_grants.sql` ikisini verir, `metrics_report.json`
+`pilot_metrics_write.mode = "upsert"`). 0018'i almamış bir veritabanında yetki hatası alınırsa satır başına düz
+eklemeye düşülür ve aynı `(metric, period)` varsa satır "zaten yazılmış" sayılır (`mode = "insert"`).
 
 ## Sahte LLM seçimi (dry-run)
 
@@ -177,7 +176,8 @@ null; ayrıntıda kimlik yok; sentetik teşhis/atıf/öncelik vakaları), `test_
 `OGR-KLK-020`, `gate-cases.json` ortak vakaları, kapı az önce hesaplanan satırlarla), `test_cost.py`
 (`test_cost_report_separates_lesson_costs`, CLI `--check` ledger drift → 2 ve stderr, okunamayan `pilot_metrics`,
 kill-switch), `test_grants.py` (`GrantedDb`: `supabase/tests/grants_matrix.json`'daki `batch_worker` sütun
-yetkileri ve `RETURNING *` davranışıyla bütün komutlar uçtan uca; `pilot_metrics` düz ekleme yedeği),
+yetkileri ve `RETURNING *` davranışıyla bütün komutlar uçtan uca; `pilot_metrics` upsert'i ve SELECT'siz
+matriste düz ekleme yedeği; yetki taklidinde istisna yok),
 `test_retention_review.py`, `test_summaries.py` (yasaklı kelimeli gövde reddi), `test_static.py` (`text_raw`
 istenmez, model adı ve kapı eşiği koda yazılmaz).
 
@@ -204,11 +204,10 @@ istenmez, model adı ve kapı eşiği koda yazılmaz).
    `--ci-status` ile beslenir.
 5. **`flagged_response_share.by_reason`** `flag_reason`'ın ilk kelimesiyle gruplanır (`question_accuracy`'deki
    `review_note` kuralıyla aynı; serbest metin ayrıntıya girmez).
-6. **`pilot_metrics` yeniden yazılamaz (yetki açığı, M02'ye bildirildi).** §3.8 `batch_worker` için `w u` verir,
-   SELECT vermez; bu yüzden ne upsert (`ON CONFLICT DO UPDATE` çakışma sütunlarında SELECT ister) ne de `where`'li
-   UPDATE çalışır. Gece işi her gece `metrics` çalıştırdığından dönemin değeri o haftanın **ilk** hesabında kalır.
-   Çözüm M02'dedir: `grant select on public.pilot_metrics to batch_worker` (ya da bir `upsert_pilot_metrics` RPC'si).
-   Yetki verilince `pilot.write` ilk denemedeki upsert'le kendiliğinden güncellemeye başlar; kod değişmez.
+6. **`pilot_metrics` yetkisi (çözüldü: M02 `0018_pilot_metrics_grants.sql`).** §3.8 başta `batch_worker` için
+   yalnız `w u` veriyordu; upsert (`ON CONFLICT DO UPDATE` çakışma sütunlarında SELECT ister) çalışmıyor, dönemin
+   değeri haftanın **ilk** hesabında kalıyordu. 0018 SELECT yetkisi ve SELECT politikası verdi; `pilot.write` kod
+   değişmeden upsert'le yazar. Düz ekleme yedeği 0018'i almamış veritabanları için durur.
 7. **Alarm eşleniği dry-run içindir.** Canlıda `cron_open_alerts()` çağrılır. Python eşleniği `staff.active`'i ve
    `messages.expires_at`'i okuyamaz (yukarıda); mesaj okumaları zaman sınırı almaz, çünkü sessiz öğrenci kuralı
    öğrencinin **son** mesajına bakar ve sınırlı okuma uzun süredir sessiz öğrenciyi hiç görmezdi (SQL de sınırsız
@@ -220,12 +219,10 @@ istenmez, model adı ve kapı eşiği koda yazılmaz).
 ## Entegrasyon notları (başka modüllere)
 
 - **M13 (`scripts/check-all.sh`):** M07'nin beş kabul komutu henüz çalıştırılmıyor; eklenmeli.
-- **M02:** `pilot_metrics` için `batch_worker`'a SELECT (Sapma notu 6).
-- **M05:** `PostgrestDb.insert/update` için `return=minimal` (ya da açık `select=` sütun listesi) seçeneği; bu
-  modül şimdilik `common.insert_minimal/update_minimal` ile `PostgrestDb._send`'i kullanır. Ayrıca
-  `CostLedger.record` `llm_calls`'a `created_at` gönderir, oysa `batch_worker`'ın INSERT yetkisinde bu sütun
-  yoktur — canlıda her LLM/embedding çağrısının defter satırı "permission denied" ile düşer (`tests/grants.py`
-  `UPSTREAM_TOLERATED`'da tek istisna olarak işaretli).
+- **M02:** `pilot_metrics` için `batch_worker`'a SELECT — 0018 ile verildi (Sapma notu 6).
+- **M05:** `CostLedger` artık `llm_calls.created_at`/`id` göndermez; `tests/grants.py`'deki `UPSTREAM_TOLERATED`
+  istisnası kaldırıldı, `GrantedDb` kuralları her çağrıda güncel `grants_matrix.json`'dan (`ogrenmen_common.grants`)
+  alır. Geriye tarihli `llm_calls` kurulum satırları testlerde yönetici rolüyle (`role = "postgres"`) yazılır.
 - **M11 (`apps/panel/lib/pilot-gate.ts`):** aynı eşik doğrulaması (bilinmeyen anahtar, tırnaklı sayı, boş nesne →
   kapı kapalı + hata), zorunlu ölçüt yoksa KAPALI (`&& rows.some(r => r.required)`), ve
   `pipelines/kulaklik_batch/tests/gate-cases.json`'ı test vakası olarak tüketmesi. Panel CI satırlarını

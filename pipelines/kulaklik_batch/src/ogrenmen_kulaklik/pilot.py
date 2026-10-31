@@ -266,13 +266,12 @@ def compute(db: Any, window: Window) -> list[dict]:
 
 
 def write(db: Any, rows: list[dict], now: datetime) -> dict[str, Any]:
-    """``pilot_metrics`` yazımı (PK ``metric, period``; ``batch_worker`` ``w u`` — SELECT yok).
+    """``pilot_metrics`` yazımı (PK ``metric, period``; ``batch_worker`` ``r w u``, 0018_pilot_metrics_grants.sql).
 
-    Yazım ``RETURNING`` olmadan yapılır (``insert_minimal``). Önce upsert (``on_conflict='merge'``) denenir;
-    ``ON CONFLICT DO UPDATE`` çakışma sütunlarında SELECT ister ve ``batch_worker``'da bu yetki yoktur, o yüzden
-    yetki hatasında satır başına düz eklemeye düşülür: aynı ``(metric, period)`` zaten varsa satır "zaten
-    yazılmış" sayılır (değeri o haftanın ilk hesabında kalır). SELECT yetkisi verilince upsert kendiliğinden
-    çalışır (README "Sapma notları")."""
+    Yazım ``RETURNING`` olmadan yapılır (``insert_minimal``) ve upsert'tür (``on_conflict='merge'``; ``ON CONFLICT
+    DO UPDATE`` çakışma sütunlarında SELECT ve SELECT politikası ister — 0018 ikisini de verir). 0018 uygulanmamış
+    bir veritabanında yetki hatası alınırsa satır başına düz eklemeye düşülür: aynı ``(metric, period)`` zaten
+    varsa satır "zaten yazılmış" sayılır (değeri o haftanın ilk hesabında kalır; README "Sapma notları")."""
     stamped = [dict(row, computed_at=iso(now)) for row in rows]
     result: dict[str, Any] = {"mode": "upsert", "written": 0, "already_written": [], "errors": {}}
     try:

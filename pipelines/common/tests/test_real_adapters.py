@@ -286,8 +286,9 @@ def test_postgrest_filters_writes_and_rpc_errors():
     db = PostgrestDb("https://p.example.org/", "j", transport=rec.transport())
     assert db.insert("llm_calls", {"purpose": "ocr"}, on_conflict="ignore") == [{"id": 9}]
     assert rec.requests[0].headers["prefer"] == "return=representation,resolution=ignore-duplicates"
-    assert db.update("lessons", {"status": "analyzed"}, where={"id": "l1"}) == [{"id": 9}]
+    assert db.update("lessons", {"status": "analyzed"}, where={"id": "l1"}, returning="representation") == [{"id": 9}]
     assert rec.requests[1].method == "PATCH" and rec.requests[1].url.params["id"] == "eq.l1"
+    assert rec.requests[1].headers["prefer"] == "return=representation"
     with pytest.raises(RpcError, match="OGR-KEY-003") as exc:
         db.rpc("register_answer_key", {"p_question": "q"})
     assert exc.value.code == "OGR-KEY-003" and rec.requests[2].url.path == "/rest/v1/rpc/register_answer_key"

@@ -1,8 +1,77 @@
 import { describe, expect, it } from 'vitest';
-import { ciStatusFromMetrics, evaluatePilotGate } from '../lib/pilot-gate';
+import { ciStatusFromMetrics, evaluatePilotGate, validatePilotGate } from '../lib/pilot-gate';
 import { createMockDataSource } from '../lib/data/mock';
 import type { PilotMetricRow } from '../lib/data';
 import { readJson } from './helpers';
+
+interface SharedGateCase {
+  name: string;
+  thresholds: unknown;
+  metrics: Omit<PilotMetricRow, 'computed_at'>[];
+  ci_status: Record<string, string>;
+  expected?: { gate: 'AÇIK' | 'KAPALI'; verdicts: Record<string, string> };
+  error?: string;
+}
+
+// M07 gate.py ile ortak vakalar (salt okunur): iki uygulama aynı girdide aynı kararı vermeli.
+const SHARED = readJson<{ cases: SharedGateCase[] }>('pipelines/kulaklik_batch/tests/gate-cases.json').cases;
+
+describe('pilot gate — ortak vakalar (pipelines/kulaklik_batch/tests/gate-cases.json)', () => {
+  it('ortak vaka dosyası okunur ve hata vakaları içerir', () => {
+    expect(SHARED.length).toBeGreaterThan(10);
+    expect(SHARED.some((c) => c.error)).toBe(true);
+  });
+
+  it.each(SHARED.map((c) => [c.name, c] as const))('%s', (_name, c) => {
+    const metrics = c.metrics.map((m) => ({ ...m, computed_at: m.period }));
+    const res = evaluatePilotGate(c.thresholds, metrics, c.ci_status);
+    if (c.error) {
+      // geçersiz eşik: kapı asla AÇIK değil, hata görünür, PASS satırı yok
+      expect(res.gate).toBe('KAPALI');
+      expect(res.error).toContain(c.error);
+      expect(validatePilotGate(c.thresholds)).toContain(c.error);
+      expect(res.rows.filter((r) => r.verdict === 'PASS')).toEqual([]);
+      return;
+    }
+    expect(res.error).toBeNull();
+    expect(validatePilotGate(c.thresholds)).toBeNull();
+    expect(res.gate).toBe(c.expected!.gate);
+    const verdicts = Object.fromEntries(res.rows.map((r) => [r.metric, r.verdict]));
+    for (const [metric, verdict] of Object.entries(c.expected!.verdicts)) expect(verdicts[metric], metric).toBe(verdict);
+  });
+
+  it('gate_stays_closed_on_malformed_or_empty_thresholds (regresyon)', () => {
+    const period = '2026-10-19';
+    const metrics: PilotMetricRow[] = [{ metric: 'degraded_share', period, value: 0.01, detail: { n: 40 }, computed_at: period }];
+    // önceki sürüm bunların hepsinde AÇIK diyordu (tanınmayan anahtar / tırnaklı sayı / boş nesne → kontrol yok → PASS)
+    for (const bad of [
+      { degraded_share: { mx: 0.05 } },
+      { degraded_share: { max: '0.05' } },
+      { degraded_share: {} },
+      { degraded_share: { required: true } },
+      { degraded_share: { max: false } },
+      { degraded_share: { max: 0.05, required: 'true' } },
+      { degraded_share: { max: 0.05, n_min: -1 } },
+      { degraded_share: null },
+      { degraded_share: [0.05] },
+      { isolation_tests: 'yes' },
+      {},
+      null,
+      [],
+    ]) {
+      const res = evaluatePilotGate(bad, metrics, { isolation_tests: 'yes' });
+      expect(res.gate, JSON.stringify(bad)).toBe('KAPALI');
+      expect(res.error, JSON.stringify(bad)).toMatch(/^OGR-KLK-020 /);
+    }
+    // yalnız bilgi satırları: zorunlu ölçüt yok → boş küme kapıyı açmaz
+    const info = evaluatePilotGate({ degraded_share: { max: 0.05, required: false } }, metrics);
+    expect(info.rows[0]).toMatchObject({ verdict: 'PASS', required: false });
+    expect(info.gate).toBe('KAPALI');
+    expect(info.error).toBeNull();
+    // geçerli eşik aynı veride açar (kontrol)
+    expect(evaluatePilotGate({ degraded_share: { max: 0.05 } }, metrics).gate).toBe('AÇIK');
+  });
+});
 
 interface PilotFixture {
   pilot_gate: Record<string, unknown>;

@@ -5,9 +5,11 @@ Hata kodları BLUEPRINT §3.9 deseninde ``OGR-<ALAN>-<NNN>``'dir; RPC hataları 
 (``error.code``). ``ogrenmen_common``'a özgü kodlar:
 
 * ``OGR-RPC-001`` — bilinmeyen RPC (JsonlDb eşleniği yok / PostgREST 404)
+* ``OGR-RPC-002`` — RPC JsonlDb'de bilerek çalıştırılmaz (``cron_open_alerts``: dry-run Python eşleniğini kullanır)
 * ``OGR-DB-001`` — yetki yok (``secure`` şeması, ``messages.text_raw`` sütunu; batch_worker taklidi)
 * ``OGR-DB-002`` — bilinmeyen tablo ya da sütun, birincil anahtar çakışması
 * ``OGR-DB-003`` — PostgREST/ağ hatası
+* ``OGR-DB-004`` — yetki matrisi (``supabase/tests/grants_matrix.json``) okunamadı ya da bozuk
 * ``OGR-LLM-001`` — zincirde hiçbir sağlayıcı başarılı olmadı
 * ``OGR-LLM-002`` — tavan (check_spend) ücretli çağrıyı engelledi ve ücretsiz seçenek yok
 * ``OGR-LLM-003`` — bilinmeyen amaç ya da zincir

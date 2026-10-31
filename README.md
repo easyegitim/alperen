@@ -30,6 +30,7 @@ hesap ve anahtar olmadan kurulur, çalışır ve test edilir. Kaynaklar: `docs/p
 | `apps/worker/` | Cloudflare Worker: Telegram botu, LLM yönlendirici, kota, hafıza, cron | M04 |
 | `pipelines/common/` | `ogrenmen_common`: adaptörler, sahteler, `JsonlDb`, `CostLedger`, `Runtime` | M05 |
 | `pipelines/tablet/` | `ogrenmen_tablet template`: sıfır LLM şablon soruları, `register_template_question` ile onaylı stok | M06T |
+| `pipelines/kulaklik_batch/` | `ogrenmen_kulaklik`: gece olguları, haftalık özet, eğitmen alarmları, pilot ölçütleri ve kapısı, maliyet raporu | M07 |
 | `apps/panel/` | eğitmen paneli: Next.js 14.2 statik export, design-system bundle, mock/live veri | M11 |
 | `scripts/` | `check-all.sh`, `check-rpc-parity.py`, `check-drift.py`, `check-fixtures.py`, `secret-scan.sh` ve testleri | M13L |
 | `.github/workflows/ci.yml` | hesapsız CI: sır taraması + actionlint + `make check-quick`; M04/M11 ağır build'leri; pgvector'lü Postgres ile canlı `make db-test` | M13L |
@@ -92,6 +93,7 @@ yamllint -d relaxed .github/workflows && make -n check
 | M04 | worker typecheck + lint + test; `build` (yalnız tam kipte); kaynakta anahtar/`service_role` yok; `texts.ts`'te ünlem/emoji yok |
 | M05 | `ogrenmen_common` ruff + pytest, `selftest`, `Runtime.from_env(dry_run=True)` → `FakeLLM` |
 | M06T | tablet ruff + pytest, `template --id kesir-modeli-toplama`, `template --fill --min-stock 30 --dry-run`; DB varsa `-k live` (atlanan test FAIL) |
+| M07 | kulaklik_batch ruff + pytest; `facts --day 2026-10-18 --dry-run` (her olguda `source_message_ids` dolu), `metrics --dry-run` (alarmlarda `depresif`/`tembel` yok), `metrics --gate --dry-run` (`pilot_gate.md`'de "Kapı: AÇIK/KAPALI"), `cost-report --month 2026-10 --dry-run` |
 | M11 | panel sync:ds + typecheck + lint + test (üç derleme içerir); mock build + anahtar/CDN taraması (yalnız tam kipte); `lang="tr"` |
 | M12 | 8 hukuk belgesi ve uyarı satırı, yer tutucular `placeholders.json`'da, grup bildirimi ve çocuk dili işaretleri |
 | M13L | BKT/PII kopya sapması, fixtures-valid, RPC adı + parametre paritesi, `scripts/` ruff + pytest, workflow lint'i |
@@ -136,6 +138,11 @@ yamllint -d relaxed .github/workflows && make -n check
   `ogrenmen_test` başka bir koşuyla çakışmasın); bağlanılan veritabanına dokunulmaz.
 - **M04 `texts.ts` taraması** Worker README'sindeki notla aynı biçimde, `LC_ALL=C.UTF-8` ile ve "grep çıkış 1 = temiz"
   ayrımıyla çalışır (POSIX yerel ayarında `! grep -P '\x{1F300}'` hata kodunu da başarı sayardı).
+- **M07 komutları** `pipelines/kulaklik_batch/README.md` "Kurulum ve kabul"daki beş komuttur (§11'in dört komutu +
+  `metrics --gate`); `/tmp/kk-out` ve `/tmp/kk-gate` geçici dizine taşınır. Kurulum adımı ortak tabanı da
+  (`contracts`, `mastery-math`, `pii`, `pipelines/common`) `pip install -e` ile kurar ki `--only M07` tek başına
+  koşsun. `! grep -qiE "depresif|tembel"` denetimi `instructor_alerts.jsonl` yoksa PASS saymasın diye dosyanın
+  varlığı ve grep çıkış kodu (1 = temiz) ayrıca denetlenir.
 - **M06T komutları** BLUEPRINT §11'deki M06 satırı değil, pilot diliminin (`pipelines/tablet/README.md`) komutlarıdır:
   `generate` ertelendi.
 - **Blueprint'in M13 satırı** (`bun install --frozen-lockfile` kökte, `dev-up.sh --check`, `docs-consistency.test.ts`,
@@ -168,8 +175,9 @@ Adımların komutları `docs/runbook/kurucu.md`'dedir. Hiçbir anahtar depoya, `
 Tüm öğrencilere açılış takvime değil `settings.pilot_gate` eşiklerine bağlıdır (soru doğruluğu ≥ 0,90, teşhis
 örtüşmesi ≥ 0,60, öğrenci başına maliyet ≤ 0,10 $, işaretli cevap ve bozulma payı ≤ %5, yalıtım ve anahtar sızıntısı
 testleri geçti). Panel `/maliyet` "Pilot kapısı" bloğu ölçüt başına PASS / FAIL / NO_DATA gösterir; `NO_DATA` kapıyı
-açmaz. Ölçümleri üreten gece işi (`kulaklik metrics --gate`, M07) ertelendiği için pilotun ilk haftalarında kapı
-`KAPALI` ve çoğu ölçüt `NO_DATA` görünür; bu beklenen durumdur.
+açmaz. Ölçümleri üreten iş (`kulaklik metrics --gate`, M07) hazırdır; onu her hafta koşturacak `weekly.yml` ve
+`nightly.yml` (M13 tam) ertelendiği için elle çalıştırılır (`pipelines/kulaklik_batch/README.md`). Ölçüm birikene
+kadar kapı `KAPALI` ve çoğu ölçüt `NO_DATA` görünür; bu beklenen durumdur.
 
 ## Nerede kaldık
 
@@ -186,6 +194,7 @@ Kurucunun kabul ettiği değerlendirme kapsamı 5 öğrencilik TYT pilotunun iht
 | M04 Worker (Telegram botu) | tamam |
 | M05 `ogrenmen_common` | tamam |
 | M06T tablet şablon dilimi | yalnız sıfır LLM `template` komutu (`--id`, `--auto-approve`, `--fill`) |
+| M07 `kulaklik_batch` | tamam (gece olguları, haftalık özet, alarmlar, pilot ölçütleri ve kapısı, maliyet raporu; zamanlanmış koşu `nightly.yml`/`weekly.yml`/`cost-guard.yml` M13 tam ile ertelendi) |
 | M11 eğitmen paneli | tamam |
 | M12 hukuk taslakları | tamam (avukat onayı bekliyor) |
 | M13L yalın entegrasyon | bu dizinler: `scripts/`, `Makefile`, CI, README, kurucu runbook'u |
@@ -195,11 +204,10 @@ Kurucunun kabul ettiği değerlendirme kapsamı 5 öğrencilik TYT pilotunun iht
 | Modül | Ne eksik | Pilota etkisi |
 | --- | --- | --- |
 | M06 LLM üretimi | `tablet generate`, `render --queue`, `vision`, `verify`, `pdf`, `review-queue`, `notes ingest` | pratik soruları yalnız şablonlardan ve eğitmenden; şablonsuz yapraklarda pratik sorusu yok (#53) |
-| M07 `kulaklik_batch` | gece olgu çıkarımı, haftalık özet, panel metrikleri, pilot kapısı, maliyet raporu, `cost-guard` | hafıza yalnız son mesajlarla; kapı `NO_DATA`; harcama tavanını Worker'ın saatlik `check_spend` cron'u korur |
 | M08 `ders` | ders videosu analizi (`register`, `analyze`, `purge`) | ders raporu yok; panel `/dersler` boş |
 | M09 `kalem` | sınav arşivi OCR, kümeleme, öncelik planı | `/oncelik` "plan yok" satırını gösterir |
 | M10 `kitap` | araştırma ajanı | `research_enabled=false` (zaten pilotta kapalı) |
-| M13 tam | `nightly.yml`/`weekly.yml`/`keepalive.yml`/`deploy-*.yml`, ADR'ler, diğer runbook'lar, `dev-up.sh`, `docs-consistency.test.ts`, `set-webhook.ts` | gece şablon dolumu ve haftalık yedek elle (`docs/runbook/kurucu.md`) |
+| M13 tam | `nightly.yml`/`weekly.yml`/`cost-guard.yml`/`keepalive.yml`/`deploy-*.yml`, ADR'ler, diğer runbook'lar, `dev-up.sh`, `docs-consistency.test.ts`, `set-webhook.ts` | gece şablon dolumu ve haftalık yedek elle (`docs/runbook/kurucu.md`); `kulaklik` gece/hafta işleri elle (`pipelines/kulaklik_batch/README.md`) |
 
 **Takip maddeleri (açık uyarılar):**
 

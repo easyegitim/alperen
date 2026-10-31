@@ -170,7 +170,7 @@ def cmd_metrics(ns: argparse.Namespace) -> int:
         result = None
         if ns.gate:
             thresholds = G.load_thresholds(rt.db)
-            # az önce hesaplanan dönem (batch_worker pilot_metrics'i okuyamaz; tanım gereği son dönemdir)
+            # az önce hesaplanan dönem (tanım gereği son dönem; yazım yedeğe düşse de aynı çalışmanın değeri)
             result = G.evaluate(thresholds, rows, ci)
             write_text(ca.out, "pilot_gate.md", G.render_markdown(result))
             _json(ca.out, "pilot_gate.json", result.as_dict())

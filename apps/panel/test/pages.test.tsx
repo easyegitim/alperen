@@ -1,6 +1,6 @@
 // Sayfa davranışları (BLUEPRINT §7 test listesi): mock veri kaynağı + gerçek bundle.js.
 import { describe, expect, it } from 'vitest';
-import { fireEvent, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, waitFor, within } from '@testing-library/react';
 import OverviewPage from '../app/page';
 import DerslerPage from '../app/dersler/page';
 import DersPage from '../app/ders/page';
@@ -15,7 +15,9 @@ import MaliyetPage from '../app/maliyet/page';
 import OnayPage from '../app/onay/page';
 import GirisPage from '../app/giris/page';
 import { MOCK_WEB_TOKEN } from '../lib/data/mock';
-import { buttonsNamed, primaryCount, readJson, renderPage } from './helpers';
+import { GateBlock } from '../components/GateBlock';
+import { evaluatePilotGate } from '../lib/pilot-gate';
+import { buttonsNamed, loadDs, primaryCount, readJson, renderPage } from './helpers';
 
 const ANALYSIS_ID = '6c9f9fd0-59cc-5f1c-94eb-4a41b4edc0af';
 const SOZEL_QUESTION = 'question:0a86bcef-4c31-5214-a19f-7e6d5cf47e9c';
@@ -454,5 +456,16 @@ describe('gruplar ve maliyet', () => {
     fireEvent.click(buttonsNamed(container, /^Ücretli modeli kapat$/)[0]);
     await within(container).findByText('Ücretli modeli yeniden aç');
     expect(container.textContent).toContain('Yalnız ücretsiz katman');
+  });
+
+  it('pilot gate block shows a visible error and stays KAPALI on malformed settings.pilot_gate', () => {
+    loadDs();
+    const period = '2026-10-19';
+    const metrics = [{ metric: 'degraded_share', period, value: 0.01, detail: { n: 40 }, computed_at: period }];
+    const { container } = render(<GateBlock gate={evaluatePilotGate({ degraded_share: { max: '0.05' } }, metrics)} />);
+    const gate = container.querySelector('[data-testid="pilot-gate"]')!;
+    expect(gate.querySelector('[data-gate]')?.textContent).toBe('Kapı: KAPALI');
+    expect(gate.querySelector('[data-testid="pilot-gate-error"]')?.textContent).toContain('OGR-KLK-020 settings.pilot_gate.degraded_share.max sayı olmalı');
+    expect(gate.querySelector('[data-verdict="PASS"]')).toBeNull();
   });
 });
