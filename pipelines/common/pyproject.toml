@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ogrenmen-common"
+version = "0.1.0"
+description = "Öğrenmen pipelines ortak tabanı: adaptör Protocol'leri, gerçek adaptörler, sahteler, JsonlDb, CostLedger, Batch, Runtime"
+readme = "README.md"
+requires-python = ">=3.11"
+# Yerel yol bağımlılıkları (ogrenmen-contracts, ogrenmen-mastery, ogrenmen-pii) aynı pip komutunda
+# `-e <yol>` ile kurulur (BLUEPRINT §2); psycopg yok — veritabanına PostgREST REST üzerinden bağlanılır.
+dependencies = [
+  "httpx==0.28.1",
+  "jsonschema==4.26.0",
+  "numpy==2.5.3",
+  "ogrenmen-contracts==0.1.0",
+  "ogrenmen-mastery==0.1.0",
+  "ogrenmen-pii==0.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.2.0", "ruff==0.17.3"]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ogrenmen_common = ["py.typed", "fakes/rpc-names.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ogrenmen_common"]

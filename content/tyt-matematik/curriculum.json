@@ -1,0 +1,17 @@
+{
+  "code": "TYT-MAT",
+  "authority": "ÖSYM",
+  "year": 2026,
+  "version": "2026.1",
+  "label": "TYT Matematik 2026",
+  "status": "active",
+  "period_label": "YKS 2027",
+  "sources": [
+    "ÖSYM 2026 TYT kılavuzu konu başlıkları",
+    "MEB 2024 Matematik Öğretim Programı"
+  ],
+  "diagnostic_exempt": [
+    "tyt.mat.problem.yas",
+    "tyt.mat.problem.isci"
+  ]
+}

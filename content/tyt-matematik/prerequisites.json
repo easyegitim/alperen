@@ -1,0 +1,146 @@
+[
+  {
+    "skill_id": "tyt.mat.temel.bolunebilme",
+    "prereq_id": "tyt.mat.temel.sayilar",
+    "strength": 1.0,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.temel.ebob-ekok",
+    "prereq_id": "tyt.mat.temel.bolunebilme",
+    "strength": 1.0,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "prereq_id": "tyt.mat.temel.sayilar",
+    "strength": 1.0,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "prereq_id": "tyt.mat.temel.ebob-ekok",
+    "strength": 0.6,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.temel.ondalik",
+    "prereq_id": "tyt.mat.temel.rasyonel-sayilar",
+    "strength": 0.8,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.temel.uslu",
+    "prereq_id": "tyt.mat.temel.sayilar",
+    "strength": 1.0,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.temel.koklu",
+    "prereq_id": "tyt.mat.temel.uslu",
+    "strength": 1.0,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.temel.carpanlara-ayirma",
+    "prereq_id": "tyt.mat.temel.uslu",
+    "strength": 0.8,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.cebir.denklem",
+    "prereq_id": "tyt.mat.temel.sayilar",
+    "strength": 1.0,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.cebir.denklem",
+    "prereq_id": "tyt.mat.temel.rasyonel-sayilar",
+    "strength": 0.8,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.cebir.esitsizlik",
+    "prereq_id": "tyt.mat.cebir.denklem",
+    "strength": 1.0,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.cebir.mutlak-deger",
+    "prereq_id": "tyt.mat.cebir.esitsizlik",
+    "strength": 0.9,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.cebir.mutlak-deger",
+    "prereq_id": "tyt.mat.temel.sayilar",
+    "strength": 0.6,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.cebir.oran-oranti",
+    "prereq_id": "tyt.mat.temel.rasyonel-sayilar",
+    "strength": 0.9,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.problem.sayi",
+    "prereq_id": "tyt.mat.cebir.denklem",
+    "strength": 1.0,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.problem.kesir",
+    "prereq_id": "tyt.mat.temel.rasyonel-sayilar",
+    "strength": 1.0,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.problem.kesir",
+    "prereq_id": "tyt.mat.cebir.denklem",
+    "strength": 0.7,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.problem.yas",
+    "prereq_id": "tyt.mat.problem.sayi",
+    "strength": 0.9,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.problem.yuzde",
+    "prereq_id": "tyt.mat.cebir.oran-oranti",
+    "strength": 1.0,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.problem.yuzde",
+    "prereq_id": "tyt.mat.temel.ondalik",
+    "strength": 0.7,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.problem.hareket",
+    "prereq_id": "tyt.mat.cebir.oran-oranti",
+    "strength": 0.9,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.problem.hareket",
+    "prereq_id": "tyt.mat.cebir.denklem",
+    "strength": 0.8,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.problem.isci",
+    "prereq_id": "tyt.mat.cebir.oran-oranti",
+    "strength": 0.8,
+    "source": "curriculum"
+  },
+  {
+    "skill_id": "tyt.mat.problem.isci",
+    "prereq_id": "tyt.mat.temel.rasyonel-sayilar",
+    "strength": 0.6,
+    "source": "curriculum"
+  }
+]

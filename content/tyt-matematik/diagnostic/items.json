@@ -1,0 +1,689 @@
+[
+  {
+    "code": "DIAG-2026.1-01",
+    "skill_ids": [
+      "tyt.mat.temel.sayilar"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`12 - 3 · (2 - 5)` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`-27`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "B",
+        "text": "`3`",
+        "misconception_tag": "sayilar.negatif-carpim-isaret"
+      },
+      {
+        "key": "C",
+        "text": "`21`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`15`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-02",
+    "skill_ids": [
+      "tyt.mat.temel.uslu"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`2^5 · 2^(-3)` ifadesi aşağıdakilerden hangisine eşittir?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`2^(-15)`",
+        "misconception_tag": "uslu.usleri-carpma"
+      },
+      {
+        "key": "B",
+        "text": "`-2^8`",
+        "misconception_tag": "uslu.negatif-us-isaret"
+      },
+      {
+        "key": "C",
+        "text": "`2^3`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`2^2`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-03",
+    "skill_ids": [
+      "tyt.mat.cebir.denklem"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`x/3 + 2 = x/2 - 1` denkleminin çözümü kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`3`",
+        "misconception_tag": "denklem.paydayla-carpma-eksik"
+      },
+      {
+        "key": "B",
+        "text": "`6/5`",
+        "misconception_tag": "denklem.taraf-degistirme-isaret"
+      },
+      {
+        "key": "C",
+        "text": "`18`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`6`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-04",
+    "skill_ids": [
+      "tyt.mat.temel.sayilar"
+    ],
+    "difficulty": 0.3,
+    "kind": "mcq",
+    "stem": "`-(4 - 9) + 2` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`7`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`-11`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "C",
+        "text": "`-3`",
+        "misconception_tag": "sayilar.negatif-carpim-isaret"
+      },
+      {
+        "key": "D",
+        "text": "`3`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-05",
+    "skill_ids": [
+      "tyt.mat.temel.bolunebilme"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "Beş basamaklı `3a174` sayısı 9 ile tam bölünebiliyor. Buna göre `a` rakamı kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`0`",
+        "misconception_tag": "bolunebilme.3-ile-9-karistirma"
+      },
+      {
+        "key": "B",
+        "text": "`3`",
+        "misconception_tag": null
+      },
+      {
+        "key": "C",
+        "text": "`18`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "D",
+        "text": "`6`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-06",
+    "skill_ids": [
+      "tyt.mat.temel.uslu"
+    ],
+    "difficulty": 0.3,
+    "kind": "mcq",
+    "stem": "`a = 3` için `a^2 · a^3` ifadesinin değeri kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`729`",
+        "misconception_tag": "uslu.usleri-carpma"
+      },
+      {
+        "key": "B",
+        "text": "`5`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "C",
+        "text": "`243`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`81`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-07",
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`3/4 + 1/8` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`4/12`",
+        "misconception_tag": "rasyonel.pay-payda-ayri-toplama"
+      },
+      {
+        "key": "B",
+        "text": "`7/8`",
+        "misconception_tag": null
+      },
+      {
+        "key": "C",
+        "text": "`4/8`",
+        "misconception_tag": "rasyonel.payda-esitlemeden-toplama"
+      },
+      {
+        "key": "D",
+        "text": "`3/32`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-08",
+    "skill_ids": [
+      "tyt.mat.temel.ebob-ekok"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "Kenarları 12 cm ve 18 cm olan dikdörtgen fayanslar aynı yönde yan yana ve alt alta dizilerek boşluksuz bir kare oluşturulacaktır. Oluşturulabilecek en küçük karenin bir kenarı kaç cm'dir?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`6`",
+        "misconception_tag": "ebob-ekok.karistirma"
+      },
+      {
+        "key": "B",
+        "text": "`36`",
+        "misconception_tag": null
+      },
+      {
+        "key": "C",
+        "text": "`216`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`3`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-09",
+    "skill_ids": [
+      "tyt.mat.cebir.denklem"
+    ],
+    "difficulty": 0.3,
+    "kind": "mcq",
+    "stem": "`5x + 3 = 2x - 9` denkleminin çözümü kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`-4`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`-2`",
+        "misconception_tag": "denklem.taraf-degistirme-isaret"
+      },
+      {
+        "key": "C",
+        "text": "`-12`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "D",
+        "text": "`4`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-10",
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar"
+    ],
+    "difficulty": 0.3,
+    "kind": "mcq",
+    "stem": "Şekildeki iki modelden birincisi 3 eş parçaya bölünmüş ve 2 parçası boyalı, ikincisi 6 eş parçaya bölünmüş ve 1 parçası boyalı. Boyalı kısımların gösterdiği kesirlerin toplamı kaçtır?",
+    "stem_values": {
+      "pay_1": 2,
+      "payda_1": 3,
+      "pay_2": 1,
+      "payda_2": 6
+    },
+    "figure": {
+      "tool": "matplotlib",
+      "png_path": "figures/kesir-modeli-10.png",
+      "source_path": "figures/kesir-modeli-10.py",
+      "alt_text": "İki dikdörtgen modeli. Soldaki 3 eş parçaya bölünmüş, 2 parçası boyalı; sağdaki 6 eş parçaya bölünmüş, 1 parçası boyalı."
+    },
+    "options": [
+      {
+        "key": "A",
+        "text": "`3/9`",
+        "misconception_tag": "rasyonel.pay-payda-ayri-toplama"
+      },
+      {
+        "key": "B",
+        "text": "`3/6`",
+        "misconception_tag": "rasyonel.payda-esitlemeden-toplama"
+      },
+      {
+        "key": "C",
+        "text": "`5/6`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`7/6`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-11",
+    "skill_ids": [
+      "tyt.mat.temel.ondalik"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`4,2 · 10 + 0,58 · 100` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`0,4258`",
+        "misconception_tag": "ondalik.virgul-kaydirma-yon"
+      },
+      {
+        "key": "B",
+        "text": "`42`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "C",
+        "text": "`100`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`10`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-12",
+    "skill_ids": [
+      "tyt.mat.temel.koklu"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`2√5 + √5` toplamı aşağıdakilerden hangisine eşittir?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`√45`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`√25`",
+        "misconception_tag": "koklu.toplam-kok-icine"
+      },
+      {
+        "key": "C",
+        "text": "`√15`",
+        "misconception_tag": "koklu.kok-icine-alma-kare"
+      },
+      {
+        "key": "D",
+        "text": "`√35`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-13",
+    "skill_ids": [
+      "tyt.mat.temel.carpanlara-ayirma"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`x + y = 7` ve `x · y = 10` olduğuna göre `x^2 + y^2` kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`49`",
+        "misconception_tag": "carpan.tam-kare-orta-terim"
+      },
+      {
+        "key": "B",
+        "text": "`20`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "C",
+        "text": "`39`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`29`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-14",
+    "skill_ids": [
+      "tyt.mat.cebir.esitsizlik"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`5 - 2x > -3` eşitsizliğini sağlayan en büyük tam sayı kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`5`",
+        "misconception_tag": "esitsizlik.negatifle-carpma-yon"
+      },
+      {
+        "key": "B",
+        "text": "`3`",
+        "misconception_tag": null
+      },
+      {
+        "key": "C",
+        "text": "`-2`",
+        "misconception_tag": "denklem.taraf-degistirme-isaret"
+      },
+      {
+        "key": "D",
+        "text": "`4`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-15",
+    "skill_ids": [
+      "tyt.mat.cebir.mutlak-deger"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "Şekildeki sayı doğrusunda A noktası 3 sayısını gösteriyor. `|x - 3| < 4` eşitsizliğini sağlayan kaç tam sayı vardır?",
+    "stem_values": {
+      "a": 3,
+      "b": 4
+    },
+    "figure": {
+      "tool": "matplotlib",
+      "png_path": "figures/sayi-dogrusu-15.png",
+      "source_path": "figures/sayi-dogrusu-15.py",
+      "alt_text": "-2 ile 8 arasında tam sayı çentikleri olan bir sayı doğrusu; 3 noktası dolu daireyle işaretli ve üstünde A harfi var."
+    },
+    "options": [
+      {
+        "key": "A",
+        "text": "`3`",
+        "misconception_tag": "mutlak.tek-durum"
+      },
+      {
+        "key": "B",
+        "text": "`6`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "C",
+        "text": "`9`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`7`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-16",
+    "skill_ids": [
+      "tyt.mat.cebir.oran-oranti"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "Günde 20 sayfa okuyan Ece bir kitabı 12 günde bitiriyor. Günde 30 sayfa okursa aynı kitabı kaç günde bitirir?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`18`",
+        "misconception_tag": "oran.ters-oran-dogru-gibi"
+      },
+      {
+        "key": "B",
+        "text": "`240`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "C",
+        "text": "`10`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`8`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-17",
+    "skill_ids": [
+      "tyt.mat.problem.sayi"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "Bir sayının 3 katının 5 fazlası 29'dur. Bu sayı kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`8`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`34/3`",
+        "misconception_tag": "denklem.taraf-degistirme-isaret"
+      },
+      {
+        "key": "C",
+        "text": "`24`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "D",
+        "text": "`9`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-18",
+    "skill_ids": [
+      "tyt.mat.problem.kesir"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "Ali parasının `1/3`'ünü kitaba, kalan parasının `1/2`'sini deftere harcıyor ve geriye 40 TL kalıyor. Ali'nin başlangıçta kaç TL'si vardı?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`240 TL`",
+        "misconception_tag": "kesir.kalan-butun-karistirma"
+      },
+      {
+        "key": "B",
+        "text": "`120 TL`",
+        "misconception_tag": null
+      },
+      {
+        "key": "C",
+        "text": "`80 TL`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "D",
+        "text": "`160 TL`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-19",
+    "skill_ids": [
+      "tyt.mat.problem.yuzde"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "Şekildeki grafikte fiyatı 400 TL olan bir ürüne önce %25 zam, sonra %10 indirim yapıldığı gösteriliyor. Ürünün son fiyatı kaç TL'dir?",
+    "stem_values": {
+      "fiyat": 400,
+      "yuzde_1": 25,
+      "yuzde_2": -10
+    },
+    "figure": {
+      "tool": "matplotlib",
+      "png_path": "figures/yuzde-grafik-19.png",
+      "source_path": "figures/yuzde-grafik-19.py",
+      "alt_text": "Üç çubuklu grafik. İlk çubuk başlangıç fiyatı 400 TL; ikinci çubuk %25 zam sonrasını, üçüncü çubuk ardından gelen %10 indirim sonrasını gösteriyor; son iki çubuğun değeri yazılmamış."
+    },
+    "options": [
+      {
+        "key": "A",
+        "text": "`460 TL`",
+        "misconception_tag": "yuzde.ardisik-toplama"
+      },
+      {
+        "key": "B",
+        "text": "`500 TL`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "C",
+        "text": "`440 TL`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`450 TL`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-20",
+    "skill_ids": [
+      "tyt.mat.problem.hareket"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "Saatte 90 km hızla giden bir araç 20 dakikada kaç km yol alır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`30`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`1800`",
+        "misconception_tag": "hareket.birim-donusumu"
+      },
+      {
+        "key": "C",
+        "text": "`1/3`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      },
+      {
+        "key": "D",
+        "text": "`45`",
+        "misconception_tag": null
+      }
+    ]
+  }
+]
