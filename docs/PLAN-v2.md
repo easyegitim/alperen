@@ -331,34 +331,57 @@ supabase/           v2 göçleri, RLS, RPC'ler, pg_cron
 
 ---
 
-## 13. UI/UX planı
-**Öğrenci (alt gezinme):** Koç · Sor (kamera FAB) · Denemeler · Notlarım · Konu haritası · Profil.
-**Veli:** Özet · Sohbet · Raporlar · Bildirimler · Ayarlar.
-**Eğitmen konsolu (kenar çubuğu):** Öğrenciler · Dersler · Müfredatlar (ağaç editörü, öneriler) · Soru tarzları ·
-İçerik (belge incelemesi) · Sınavlar (anahtarlar, atamalar) · Kuyruk · Maliyet · Ayarlar.
+## 13. UI/UX planı — "Sadelik ilkesi" (kurucu kararı, 2026-11-03)
 
-**14 anahtar ekran:** 1 Onboarding (ders seçimi + "kendi dersimi ekle" → akan müfredat ağacı → hedefler) ·
-2 Koç ana (günün planı 3 kart, seri, `TutorMessage` + `ModeToggle`, matematik render) · 3 Sor yakalama (kılavuz
-çerçeve, çoklu çekim, kırp/döndür, "çözümüm de var") · 4 Teşhis sonucu (adım merdiveni, bozulan adım `danger`
-+ ✕ + kelime, neden çipi, kazanım çipi, "Benzer soru") · 5 Deneme yükleme sihirbazı · 6 Sınav oynatıcı
-(zamanlayıcı, `QuizOption`, bayrak, karalama tuvali, ızgara) · 7 Deneme sonucu (netler, kazanım ısı haritası,
-"Nereye kadar geldim?") · 8 Konu haritası (`MasteryMeter` + kanıt sayısı, tarz noktaları, ön koşul ipuçları) ·
-9 Notlarım (durum kartları, KaTeX görüntüleyici, PDF, "Çöz") · 10 Profil → Hafıza (6 dosya, düzeltme iste) ·
-11 Veli Özet · 12 Eğitmen müfredat editörü (sürükle, öneri kutusu, versiyon farkı) · 13 Tarz kütüphanesi ·
-14 Ders iddia incelemesi (zaman damgalı transkript, onayla/düzenle/reddet, eşik kaydırıcı).
+**İlke:** Sınava hazırlanan, yorgun, isteksiz bir öğrenci kullanacak. Öğrenci arayüzü **çok az tuş, çok az yazı**.
+Öğrenci konu/test seçmez; **koç önerir, öğrenci "Başla"ya basar.** Karmaşık her istek (not iste, şu konuyu anlat,
+deneme kur…) **klasik sohbet** üzerinden yapılır (herkesin alıştığı LLM deneyimi). Arka planda her şey (teşhis,
+dossier, kayıt, BKT, tarz kapsama) tam çalışır; yüzeyde yalnız gerekli görünür, **derine inmek isteyen dokunur**
+(progressive disclosure). Eğitmen konsolu karmaşık olabilir; öğrenci ve veli olamaz.
 
-**İlkeler:** kamera-önce, her yerde akış (token, ağaç düğümü, OCR'lanan soru), KaTeX, kanıt-nitelikli bantlar,
-"Öğrenmen sana göre hazırladı" `ai` rozeti, AI iddialarında geri al/düzelt, koyu mod.
-**Tasarım sistemi evrimi:** 19 bileşen gerçek TSX (`packages/design-system/src`), Tailwind 4 + `tokens.json`'dan
-CSS değişkenleri (`tokens-to-css.mjs` yeniden kullanılır), README'ler spesifikasyon; yeni bileşenler
-`CameraSheet, StepLadder, OutcomeHeatmap, TreeNode, DocumentViewer, ExamPlayer, Timer, AnswerGrid,
-MemoryFileCard, ReportChart`; ikon seti **Lucide** (her zaman metin etiketiyle); maskot karşılama/boş durum/
-avatar/PWA ikonu; hareket 150–300 ms; erişilebilirlik (focus-ring, 4.5:1, `lang="tr"`, KaTeX MathML, ≥44px).
-**Önce mockup:** kodlamadan önce **Design artifact** tipinde (mevcut Design System artifact'ı temel) 14 ekran,
-açık/koyu, mobil 390×844 (öğrenci/veli) + masaüstü 1440 (eğitmen). Kurucu onaylar; mockuplar Playwright görsel
-testlerinin referansı olur.
+**Öğrenci (3 sekme, alt gezinme): Bugün · Koç · Gelişim.**
+- **Bugün:** tek bir kahraman kart: "Bugün sana önerim: Rasyonel sayılar · 8 soru · 12 dk" + büyük **Başla**.
+  Altında en fazla 3 öneri kutusu (**Haftalık ödev · Ders tekrarı · Eksik analizi**) — hepsi tek dokunuşla başlar.
+  Küçük bir **"+ Yükle"** (kendi çalışması / okul denemesi fotoğrafı veya PDF'i). Başka hiçbir şey yok.
+- **Koç:** klasik sohbet (metin + kamera/dosya ekle + ses). İpucu/Açıkla/Çözümü göster modları mesaj altında
+  tek bir sade seçici. Not istemek, deneme kurmak, konu anlatımı, "neden böyle oldu" — hepsi burada.
+- **Gelişim:** 3 sayı (bu hafta çözülen soru · net trendi · hedefe kalan gün) + bir haftalık çizgi + "Konular"
+  katlanır listesi (zayıf/orta/iyi kelimeyle, yüzde yok). Detaya dokunursa Konu haritası açılır.
+- **Test akışı (öneri → Başla):** ekranda yalnız soru, şekil, şıklar, ilerleme noktaları, "Sonraki". Zamanlayıcı
+  yalnız deneme kipinde. Bitişte **tek cümle sonuç** ("8 soruda 6 doğru. Takıldığın yer: eksi dağıtırken işaret.")
+  + "Neyi öğrendik" tek satır + **Detay** (isteyen için adım merdiveni, kazanım, kanıt).
+- **Teşhis:** tek cümle + bozulan tek adım; "Detay" ile merdiven; "Koça sor" düğmesi. Çipler, etiketler, meta
+  bilgi varsayılan gizli.
+- **Yükle:** iki seçenek: **Kendi çalışmam** / **Okul denemesi**. Çek veya PDF seç → "Gönder". Gerisini koç yapar
+  (sayfa sınıflama, OCR, anahtar, teşhis) ve sonucu Bugün'de bir kartla ve Koç'ta bir mesajla bildirir.
+- **Belgeler (not, deneme, rapor):** **PDF** üretilir ve uygulama içinde **PDF görüntüleyici** ile sayfa sayfa
+  gösterilir (pdf.js) — görseller, şekiller, şemalar, formüller kesin ve aynı görünür; "İndir / Paylaş" tek düğme.
+  Belge kalitesi hedefi: Claude'un kendi ürettiği PDF'ler düzeyi — her ders için (figürler koddan SVG/matplotlib,
+  KaTeX dizgi, ÖSYM benzeri soru düzeni). Belgeye ulaşım: Bugün'deki kart ("Rasyonel sayılar notun hazır")
+  ve Koç mesajı; ayrı bir "Notlarım" sekmesi yok (Gelişim › Belgelerim altında liste).
+- **Onboarding:** 2 adım: "Hangi sınava/derse hazırlanıyorsun?" (arama + çipler) → "Hedef tarihin?" → bitti.
+  Müfredat ağacı arka planda kurulur; öğrenciye yalnız "Hazırlıyorum… ilk testin birkaç saniyeye hazır" denir.
 
----
+**Veli (2 sekme): Özet · Sohbet.** Özet: tek cümle durum ("Elif bu hafta 4,5 saat çalıştı, matematikte
+ilerliyor.") + 3 sayı + son rapor (PDF) + "Rapor iste" / "Soru sor". Sohbet: klasik.
+
+**Eğitmen konsolu (kenar çubuğu, karmaşık olabilir):** Öğrenciler · Dersler · Müfredatlar · Soru tarzları ·
+İçerik · Sınavlar · Kuyruk · Maliyet · Ayarlar (bkz. mockup S12–S15).
+
+**Ekran listesi (mockup):** S01 Onboarding · S02 Bugün · S03 Koç · S04 Test · S05 Sonuç · S06 Teşhis · S07 Yükle ·
+S08 Gelişim · S09 Belge (PDF görüntüleyici) · S09b Not sayfası A4 · S10 Veli Özet · S10b Veli Sohbet ·
+S12–S15 eğitmen. Design canvas: https://claude.ai/artifact/NCt864XDLk6o6Rrm6dPDuo
+
+**Tasarım kuralları:** ekran başına en fazla 1 birincil düğme; başlık + en fazla 2 satır açıklama; ikon her zaman
+etiketli; sayılar kelimeyle ("6 doğru"), yüzde yerine bant; emoji/ünlem yok; koyu mod; ≥44px hedef; kamera her
+yerde bir dokunuş uzakta. **Tasarım sistemi:** 19 bileşen TSX + yeni `SuggestionCard`, `BigStart`, `OneLineResult`,
+`StepLadder` (katlanır), `PdfViewer`, `UploadSheet`, `ProgressStrip`; Lucide ikonlar; maskot karşılama/boş durum.
+
+**Öneri motoru (arka plan, "koç önerir"):** her gece ve her etkinlik sonrası Bugün kartları yeniden hesaplanır:
+(1) en zayıf 2 yaprak + aralıklı tekrar vadesi → "Eksik analizi/alıştırma" (8–10 soru); (2) eğitmenin haftalık
+ödevi varsa önce o; (3) son ders transkriptinden "Ders tekrarı" (5 soru + 1 sayfa özet); (4) deneme tarihi
+yaklaşıyorsa "Mini deneme". Kart metni tek cümle, süre tahmini, "Başla". Öneriler `suggestions` tablosunda
+(student_id, kind, payload, rank, expires_at) tutulur; Haiku ile kısa metin.
 
 ## 14. İnşa planı (hangi işi hangi model kodlar)
 Her faz: **Tur 1 inşa → Tur 2 bağımsız denetim (kabul ölçütleri, RLS, önbellek alanları, Türkçe metin) →

@@ -134,3 +134,19 @@ block carries `section_no`. `keys[]` = {question_no, correct_option | numeric_va
 `course_insights[]`), `exam-item` (v2 adds format/trick/difficulty), `exam-priority-plan` (+`style_ids`),
 `memory-fact`, `weekly-summary`, `transcript`, `figure-render-report`. Structured-output constraints: no recursive
 schemas, no min/max/multipleOf/minLength/maxLength (validate those client-side), `additionalProperties:false`.
+
+## 6. Simplicity principle (founder decision 2026-11-03) — binding for apps/web
+- Student app has THREE tabs: **Bugün** (today's coach suggestions + Başla), **Koç** (classic chat with camera/file
+  attach; all complex requests live here), **Gelişim** (3 numbers, weekly line, collapsible topics, "Belgelerim").
+  No topic pickers, no settings-heavy screens, at most one primary button per screen, headline + ≤2 lines of text.
+- The coach proposes everything: `suggestions` table (`id`, `student_id`, `kind check in
+  ('practice','weekly_homework','lesson_review','gap_analysis','mini_exam','document_ready','upload_result')`,
+  `title`, `subtitle`, `payload jsonb`, `rank int`, `expires_at`, `consumed_at`, `created_at`) recomputed nightly and
+  after every activity by a worker job `suggestions.refresh`; copy by Haiku (`notification-copy`-style schema).
+- Upload entry has two choices only: **Kendi çalışmam** / **Okul denemesi**; everything downstream is automatic.
+- Results are one sentence first (`OneLineResult`), details behind a single **Detay** disclosure (`StepLadder` collapsed).
+- Generated notes/exams/reports are **PDF** (Chromium from the document AST) and are shown in-app with a PDF viewer
+  (`PdfViewer`, pdf.js) so figures/diagrams/formulas render identically everywhere; one **İndir / Paylaş** button.
+- Parent app: two tabs **Özet · Sohbet**. Instructor console may stay dense.
+- Mockups (binding reference): https://claude.ai/artifact/NCt864XDLk6o6Rrm6dPDuo — S01 Onboarding, S02 Bugün, S03 Koç,
+  S04 Test, S05 Sonuç, S06 Teşhis, S07 Yükle, S08 Gelişim, S09 Belge, S09b A4 note page, S10/S10b parent, S12–S15 instructor.
