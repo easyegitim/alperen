@@ -7,9 +7,11 @@
 -- yanılgı, zayıf yaprak, ustalık değişimi), idempotent; bitince cevap yok. Bankada soru yoksa needs_generation +
 -- practice.generate işi. Yetki: başka öğrenci ve veli setlere erişemez; eğitmen öneriyi başlatamaz (açık OGR-AUTH-001).
 -- Kötüye kullanım sınırları: koç yolunda tek açık set (kesişen kazanımda aynı set; boş bankada üretim işi bir kez),
--- günlük set sınırı (OGR-PRAC-007), tekrar görülen soru ustalığı yükseltmez ve kanıt sayılmaz, bitirilmemiş teşhis
+-- günlük set sınırı (OGR-PRAC-007), tekrar görülen soru ustalığı yükseltmez ve kanıt sayılmaz, atanmış ve bitirilmemiş teşhis
 -- sınavının soruları alıştırmaya girmez (bitince girer), hazırlanan taslak müfredatta OGR-PRAC-006. Canlı içerik: TYT
--- seed anahtarlarıyla set (önce teşhis bitirilmeden teşhis sorusu yok).
+-- seed anahtarlarıyla set (atanmamış teşhisin soruları ilk alıştırmada; atanmış ve bitmemiş teşhisinki değil; 0027).
+-- Sertleştirme (0027): banka yetiyorsa teşhis sorusu seçilmez; öğrenci figures.code/code_hash okuyamaz (42501), personel
+-- v_figures_staff ile okur; anahtarı inferred LLM sorusunun gözlem ağırlığı practice_inferred_key_weight (0.5).
 begin;
 \ir _fixture.sql
 
@@ -320,11 +322,17 @@ begin
   update public.settings st set value = '10'::jsonb where st.key = 'practice_daily_sets';
 end $$;
 
--- Teşhis sınavının soruları: kayıt sınavı bitirmeden alıştırmaya girmez, bitirince girer
+-- Teşhis sınavının soruları (0027): atanmamış teşhis sorusu ilk alıştırmada kullanılır (yeni öğrencinin bankası boş
+-- kalmasın); kayda atanmış (oturumu açık ya da etkin önerisi sınavı gösteriyor) ve bitmemiş teşhisin sorusu girmez;
+-- bitirince yine girer. Deneme/yayımlanmış sınav bitirilmedikçe hiç girmez.
 do $$
 declare
   v_q uuid;
+  v_q2 uuid;
   v_exam uuid;
+  v_deneme uuid;
+  v_sess uuid;
+  v_sug uuid;
   v_s jsonb;
 begin
   insert into public.questions (curriculum_id, skill_ids, kind, stem, options, source, content_hash, status)
@@ -334,26 +342,73 @@ begin
   insert into public.exams (course_id, curriculum_id, kind, source, title, status, question_count)
   values (t.u('course'), t.u('cur'), 'diagnostic', 'instructor', 'Test teşhisi', 'published', 1) returning id into v_exam;
   insert into public.exam_questions (exam_id, no, kind, skill_ids, question_id) values (v_exam, 1, 'mcq', array['t.mat.a'], v_q);
+  -- deneme sorusu: bitirilmedikçe hiçbir kayıtta alıştırmaya girmez
+  insert into public.questions (curriculum_id, skill_ids, kind, stem, options, source, content_hash, status)
+  values (t.u('cur'), array['t.mat.a'], 'mcq', 'deneme sorusu', '[{"key":"A","text":"1"},{"key":"B","text":"2"}]', 'instructor', 'pr-deneme', 'approved')
+  returning id into v_q2;
+  insert into secure.answer_keys (question_id, correct_option, solution, sympy_status, written_by) values (v_q2, 'A', 'x', 'verified', 'seed');
+  insert into public.exams (course_id, curriculum_id, kind, source, title, status, question_count)
+  values (t.u('course'), t.u('cur'), 'deneme', 'instructor', 'Test denemesi', 'ready', 1) returning id into v_deneme;
+  insert into public.exam_questions (exam_id, no, kind, skill_ids, question_id) values (v_deneme, 1, 'mcq', array['t.mat.a'], v_q2);
   update public.settings st set value = '100'::jsonb where st.key = 'practice_daily_sets';
   if not found then
     insert into public.settings (key, value, description) values ('practice_daily_sets', '100'::jsonb, 'test');
   end if;
+  perform t.ok(not app.practice_exam_blocks(t.u('EA'), v_q) and app.practice_exam_blocks(t.u('EA'), v_q2),
+               'yardımcı: atanmamış teşhis serbest, bitirilmemiş deneme dışlı');
+
+  -- atanmamış teşhis: soru alıştırmaya girer (yeni öğrenci), deneme sorusu girmez
+  perform t.as_user(t.u('elif'));
+  v_s := public.start_practice(null, t.u('EA'), array['t.mat.a'], 10);
+  perform t.ok(exists (select 1 from jsonb_array_elements(v_s -> 'items') as e (x) where (e.x ->> 'question_id')::uuid = v_q)
+               and not exists (select 1 from jsonb_array_elements(v_s -> 'items') as e (x) where (e.x ->> 'question_id')::uuid = v_q2)
+               and (v_s ->> 'total')::int = 5, 'atanmamış teşhisin sorusu alıştırmaya girer, deneme sorusu girmez (' || (v_s ->> 'total') || ')');
+  perform public.finish_practice((v_s ->> 'set_id')::uuid);
+
+  -- banka yetiyorsa teşhis sorusu seçilmez (yaprakta en sona; öbür sorular daha önce görülmüş olsa bile)
+  v_s := public.start_practice(null, t.u('EA'), array['t.mat.a'], 4);
+  perform t.ok((v_s ->> 'total')::int = 4
+               and not exists (select 1 from jsonb_array_elements(v_s -> 'items') as e (x) where (e.x ->> 'question_id')::uuid = v_q),
+               'teşhis dışı banka sorusu varken teşhis sorusu seçilmez (' || (v_s ->> 'total') || ')');
+  perform public.finish_practice((v_s ->> 'set_id')::uuid);
+
+  -- etkin öneri teşhisi gösteriyor (atanmış, bitmemiş): girmez
+  perform t.as_admin();
+  insert into public.suggestions (student_id, enrollment_id, kind, title, payload, rank)
+  values (t.u('A'), t.u('EA'), 'mini_exam', 'Teşhis testi', jsonb_build_object('exam_id', v_exam), 5) returning id into v_sug;
+  perform t.ok(app.practice_exam_blocks(t.u('EA'), v_q) and not app.practice_exam_blocks(t.u('EB'), v_q),
+               'öneriyle atanmış teşhis yalnız o öğrencinin kaydında dışlı');
   perform t.as_user(t.u('elif'));
   v_s := public.start_practice(null, t.u('EA'), array['t.mat.a'], 10);
   perform t.ok(not exists (select 1 from jsonb_array_elements(v_s -> 'items') as e (x) where (e.x ->> 'question_id')::uuid = v_q)
-               and (v_s ->> 'total')::int = 4, 'bitirilmemiş teşhis sınavının sorusu alıştırmaya girmez (' || (v_s ->> 'total') || ')');
+               and (v_s ->> 'total')::int = 4, 'öneriyle atanmış ve bitmemiş teşhisin sorusu alıştırmaya girmez (' || (v_s ->> 'total') || ')');
   perform public.finish_practice((v_s ->> 'set_id')::uuid);
+
+  -- öneri gitti ama oturum açık (bitmemiş): yine girmez
   perform t.as_admin();
-  insert into public.exam_sessions (exam_id, enrollment_id, mode, status, finished_at) values (v_exam, t.u('EA'), 'in_app', 'done', now());
+  delete from public.suggestions sg where sg.id = v_sug;
+  insert into public.exam_sessions (exam_id, enrollment_id, mode, status) values (v_exam, t.u('EA'), 'in_app', 'in_progress') returning id into v_sess;
+  perform t.as_user(t.u('elif'));
+  v_s := public.start_practice(null, t.u('EA'), array['t.mat.a'], 10);
+  perform t.ok(not exists (select 1 from jsonb_array_elements(v_s -> 'items') as e (x) where (e.x ->> 'question_id')::uuid = v_q),
+               'oturumu açık (bitmemiş) teşhisin sorusu alıştırmaya girmez');
+  perform public.finish_practice((v_s ->> 'set_id')::uuid);
+
+  -- teşhis bitti: girer
+  perform t.as_admin();
+  update public.exam_sessions es set status = 'done', finished_at = now() where es.id = v_sess;
   perform t.as_user(t.u('elif'));
   v_s := public.start_practice(null, t.u('EA'), array['t.mat.a'], 10);
   perform t.ok(exists (select 1 from jsonb_array_elements(v_s -> 'items') as e (x) where (e.x ->> 'question_id')::uuid = v_q),
                'teşhis bitince sorusu alıştırmaya girer');
   perform public.finish_practice((v_s ->> 'set_id')::uuid);
+
+  -- Can'e teşhis atanmadı: soru onun alıştırmasına da girer; deneme sorusu girmez
   perform t.as_user(t.u('can'));
   v_s := public.start_practice(null, t.u('EB'), array['t.mat.a'], 10);
-  perform t.ok(not exists (select 1 from jsonb_array_elements(v_s -> 'items') as e (x) where (e.x ->> 'question_id')::uuid = v_q),
-               'başka kaydın bitirmesi yetmez: Can''in setinde teşhis sorusu yok');
+  perform t.ok(exists (select 1 from jsonb_array_elements(v_s -> 'items') as e (x) where (e.x ->> 'question_id')::uuid = v_q)
+               and not exists (select 1 from jsonb_array_elements(v_s -> 'items') as e (x) where (e.x ->> 'question_id')::uuid = v_q2),
+               'atanmamış kayıtta (Can) teşhis sorusu girer, bitirilmemiş deneme sorusu girmez');
   perform t.as_admin();
   delete from public.practice_sets ps where ps.enrollment_id = t.u('EB');
 end $$;
@@ -454,6 +509,141 @@ begin
   perform t.as_admin();
 end $$;
 
+-- Worker yazım yolu (0027): register_practice_questions (yalnız worker; şablon + LLM sorusu, gizli anahtar, şablon şekli,
+-- content_hash tekrarsız, geçersiz madde atlanır) → bekleyen set dolar ve in_progress olur; practice_bank_status;
+-- fail_practice_generation kalıcı hatada seti generation_failed ile kapatır
+do $$
+declare
+  v_cur uuid;
+  v_course uuid;
+  v_enr uuid;
+  v_s jsonb;
+  v_r jsonb;
+  v_b jsonb;
+  v_items jsonb;
+  v_st text;
+  v_fig uuid;
+  v_it jsonb;
+begin
+  perform t.as_admin();
+  insert into public.curricula (code, version, label, status) values ('T-URET', '1', 'Üretim', 'active') returning id into v_cur;
+  insert into public.skills (curriculum_id, id, name, is_leaf) values (v_cur, 'uret', 'Kök', false);
+  insert into public.skills (curriculum_id, id, name, is_leaf, parent_id) values (v_cur, 'uret.a', 'Yaprak A', true, 'uret'), (v_cur, 'uret.b', 'Yaprak B', true, 'uret');
+  insert into public.question_templates (id, curriculum_id, skill_id, module_path, engine, params_schema)
+  values ('t-uret-sablon', v_cur, 'uret.a', 'x.py:generate', 'sympy', '{}');
+  insert into public.courses (code, title, curriculum_id, visibility) values ('T-URET', 'Üretim dersi', v_cur, 'shared') returning id into v_course;
+  insert into public.enrollments (student_id, curriculum_id, course_id, period_label) values (t.u('A'), v_cur, v_course, 'YKS 2027') returning id into v_enr;
+
+  v_b := public.practice_bank_status(v_enr, array['uret']);
+  perform t.ok((v_b ->> 'practicable')::boolean and jsonb_array_length(v_b -> 'leaves') = 2
+               and v_b -> 'leaves' -> 0 ->> 'skill_id' = 'uret.a' and (v_b -> 'leaves' -> 0 ->> 'available')::int = 0
+               and v_b -> 'leaves' -> 0 -> 'templates' = '["t-uret-sablon"]'::jsonb and v_b -> 'leaves' -> 1 -> 'templates' = '[]'::jsonb,
+               'banka durumu: iki yaprak, soru yok, şablon listesi (' || v_b::text || ')');
+
+  perform t.as_user(t.u('elif'));
+  v_s := public.start_practice(null, v_enr, array['uret'], 3);
+  perform t.ok(v_s ->> 'status' = 'needs_generation', 'üretim dünyası: boş banka, needs_generation');
+  perform t.raises(format($q$select public.register_practice_questions(%L, '[]'::jsonb, %L)$q$, v_cur, v_s ->> 'set_id'), 'OGR-AUTH-002%',
+                   'öğrenci banka sorusu yazamaz');
+  perform t.raises(format($q$select public.fail_practice_generation(%L, 'x')$q$, v_s ->> 'set_id'), 'OGR-AUTH-002%', 'öğrenci seti üretim hatasıyla kapatamaz');
+  perform t.raises(format($q$select public.practice_bank_status(%L)$q$, v_enr), 'OGR-AUTH-002%', 'öğrenci banka durumunu okuyamaz');
+  perform t.as_admin();
+
+  v_items := jsonb_build_array(
+    -- şablon sorusu (SymPy doğrulanmış, şekilli)
+    jsonb_build_object('source', 'template', 'kind', 'mcq', 'stem', 'Şekildeki kesirlerin toplamı?', 'skill_ids', jsonb_build_array('uret.a'),
+                       'options', '[{"key":"A","text":"1/2","misconception_tag":null},{"key":"B","text":"3/4","misconception_tag":"t.a.isaret-hatasi"},{"key":"C","text":"1","misconception_tag":null},{"key":"D","text":"2","misconception_tag":null}]'::jsonb,
+                       'difficulty', 0.5, 'content_hash', 'uret-tpl-1', 'template_id', 't-uret-sablon', 'template_params', '{"a": 1}'::jsonb,
+                       'figure', jsonb_build_object('code', 'kod', 'code_hash', 'uret-fig-1', 'alt_text', 'İki model', 'png_path', 'figures/uret-fig-1.png', 'width_px', 400, 'height_px', 300, 'bytes', 4000),
+                       'key', jsonb_build_object('correct_option', 'b', 'solution', 'Paydalar eşitlenir.', 'sympy_status', 'verified', 'canonical_expr', 'Rational(3,4)')),
+    -- LLM sorusu (sayısal; anahtar çıkarım)
+    jsonb_build_object('source', 'llm', 'kind', 'numeric', 'stem', 'x + 2 = 5 ise x kaçtır?', 'skill_ids', jsonb_build_array('uret.b', 'yok.boyle'),
+                       'content_hash', 'uret-llm-1', 'model', 'claude-opus-5-5', 'cost_usd', 0.01, 'prompt_version', 'worker-question_generation',
+                       'verification', '{"schema": true, "sympy": "inferred", "render": "not_applicable", "vision": "not_applicable", "attempts": 1, "origin": "llm"}'::jsonb,
+                       'key', jsonb_build_object('numeric_value', '3', 'solution', 'x = 5 - 2 = 3', 'sympy_status', 'not_applicable', 'sympy_report', '{"status": "inferred"}'::jsonb)),
+    -- atlanır: müfredatta olmayan yaprak; mcq'da doğru şık seçeneklerde yok; anahtarsız; SymPy düştü
+    jsonb_build_object('source', 'llm', 'kind', 'mcq', 'stem', 'yanlış yaprak', 'skill_ids', '["yok.boyle"]'::jsonb, 'content_hash', 'uret-bad-1',
+                       'options', '[{"key":"A","text":"1"},{"key":"B","text":"2"},{"key":"C","text":"3"},{"key":"D","text":"4"}]'::jsonb,
+                       'key', '{"correct_option": "A", "solution": "x", "sympy_status": "not_applicable"}'::jsonb),
+    jsonb_build_object('source', 'llm', 'kind', 'mcq', 'stem', 'şıkta yok', 'skill_ids', '["uret.a"]'::jsonb, 'content_hash', 'uret-bad-2',
+                       'options', '[{"key":"A","text":"1"},{"key":"B","text":"2"},{"key":"C","text":"3"},{"key":"D","text":"4"}]'::jsonb,
+                       'key', '{"correct_option": "E", "solution": "x", "sympy_status": "not_applicable"}'::jsonb),
+    jsonb_build_object('source', 'llm', 'kind', 'numeric', 'stem', 'anahtarsız', 'skill_ids', '["uret.a"]'::jsonb, 'content_hash', 'uret-bad-3'),
+    jsonb_build_object('source', 'template', 'kind', 'numeric', 'stem', 'sympy düştü', 'skill_ids', '["uret.a"]'::jsonb, 'content_hash', 'uret-bad-4',
+                       'key', '{"numeric_value": "1", "solution": "x", "sympy_status": "failed"}'::jsonb));
+  v_r := public.register_practice_questions(v_cur, v_items, (v_s ->> 'set_id')::uuid);
+  perform t.ok((v_r ->> 'inserted')::int = 2 and (v_r ->> 'skipped')::int = 4 and (v_r ->> 'reused')::int = 0
+               and (v_r ->> 'filled')::int = 2 and v_r ->> 'status' = 'in_progress', 'worker: 2 soru yazıldı, 4 madde atlandı, set doldu (' || v_r::text || ')');
+  perform t.ok((select q.status = 'approved' and q.source = 'template' and q.figure_id is not null and q.template_id = 't-uret-sablon'
+                       and q.verification ->> 'sympy' = 'verified' and k.correct_option = 'B' and k.sympy_status = 'verified'
+                       and k.written_by = 'worker:practice.generate' and k.verified_at is not null and f.review_status = 'verified'
+                       and f.tool = 'template' and f.png_path = 'figures/uret-fig-1.png'
+                  from public.questions q join secure.answer_keys k on k.question_id = q.id join public.figures f on f.id = q.figure_id
+                 where q.content_hash = 'uret-tpl-1'), 'şablon sorusu: approved, şekli verified, anahtar verified (büyük harf)');
+  perform t.ok((select q.status = 'approved' and q.source = 'llm' and q.skill_ids = array['uret.b'] and q.verification ->> 'sympy' = 'inferred'
+                       and q.model = 'claude-opus-5-5' and k.numeric_value = '3' and k.sympy_status = 'not_applicable' and k.verified_at is null
+                       and k.sympy_report ->> 'status' = 'inferred'
+                  from public.questions q join secure.answer_keys k on k.question_id = q.id where q.content_hash = 'uret-llm-1'),
+               'LLM sorusu: approved ama verification.sympy inferred; müfredat dışı yaprak atıldı');
+  perform t.as_user(t.u('elif'));
+  v_s := public.get_practice_set((v_s ->> 'set_id')::uuid);
+  perform t.ok(v_s ->> 'status' = 'in_progress' and (v_s ->> 'total')::int = 2 and v_s -> 'items' -> 0 -> 'figure' ->> 'png_path' is not null
+               and position('correct_option' in v_s::text) = 0 and position('misconception_tag' in v_s::text) = 0,
+               'öğrenci seti görür: şekilli şablon sorusu, anahtar ve yanılgı etiketi yok');
+  -- şekil kaynağı (şablon parametreleri: cevabı taşıyabilir) öğrenciye kapalı; gösterim sütunları açık (0027)
+  v_fig := (v_s -> 'items' -> 0 -> 'figure' ->> 'id')::uuid;
+  perform t.raises(format($q$select f.code from public.figures f where f.id = %L$q$, v_fig), '42501', 'öğrenci figures.code okuyamaz');
+  perform t.raises(format($q$select f.code_hash from public.figures f where f.id = %L$q$, v_fig), '42501', 'öğrenci figures.code_hash okuyamaz');
+  perform t.raises('select * from public.figures', '42501', 'öğrenci figures select=* yapamaz');
+  perform t.ok(t.n(format($q$select f.id, f.png_path, f.alt_text, f.width_px from public.figures f where f.id = %L$q$, v_fig)) = 1,
+               'öğrenci şeklin gösterim sütunlarını okur');
+  perform t.ok(t.n('select 1 from public.v_figures_staff') = 0, 'öğrenci personel şekil görünümünde satır görmez');
+  perform t.as_user(t.u('inst'));
+  perform t.ok((select v.code = 'kod' and v.code_hash = 'uret-fig-1' from public.v_figures_staff v where v.id = v_fig),
+               'eğitmen şeklin kaynağını v_figures_staff ile okur');
+  -- anahtarı doğrulanmamış (inferred) LLM sorusu: gözlem ağırlığı practice_inferred_key_weight (0.5); şablon sorusu 1
+  perform t.as_user(t.u('elif'));
+  for v_it in select x from jsonb_array_elements(v_s -> 'items') as e (x) loop
+    perform public.answer_practice_item((v_s ->> 'set_id')::uuid, (v_it ->> 'question_id')::uuid,
+                                        case when v_it ->> 'kind' = 'numeric' then '3' else 'B' end);
+  end loop;
+  perform t.as_admin();
+  perform t.ok((select bool_and(o.weight = case when q.source = 'llm' then 0.5 else 1 end and o.counts_for_mastery and o.value = 1)
+                       and count(*) = 2
+                  from public.attempts a join public.questions q on q.id = a.question_id
+                  join public.observations o on o.source_type = 'attempt' and o.source_id = a.id::text
+                 where a.session_id = (v_s ->> 'set_id')::uuid),
+               'inferred anahtarlı LLM sorusunun gözlem ağırlığı 0.5, doğrulanmış şablon sorusununki 1');
+  perform t.as_user(t.u('elif'));
+  perform public.finish_practice((v_s ->> 'set_id')::uuid);
+  perform t.as_admin();
+
+  -- tekrar yazım tekrarsız (content_hash); set yoksa yalnız banka
+  v_r := public.register_practice_questions(v_cur, v_items);
+  perform t.ok((v_r ->> 'inserted')::int = 0 and (v_r ->> 'reused')::int = 2 and v_r ->> 'status' is null, 'aynı sorular yeniden yazılmaz (reused)');
+  perform t.ok((public.practice_bank_status(v_enr, array['uret']) -> 'leaves' -> 0 ->> 'available')::int = 1, 'banka durumu yeni soruyu sayar');
+  perform t.raises(format($q$select public.register_practice_questions(%L, '{}'::jsonb)$q$, v_cur), 'OGR-PRAC-009%', 'p_items dizi olmalı');
+  perform t.raises(format($q$select public.register_practice_questions(%L, '[]'::jsonb, %L)$q$, t.u('cur'), (v_s ->> 'set_id')), 'OGR-PRAC-001%',
+                   'set başka müfredatın');
+
+  -- kalıcı üretim hatası: soru yoksa set generation_failed ile hemen kapanır (istemci 600 sn beklemez)
+  delete from secure.answer_keys k using public.questions q where q.id = k.question_id and q.curriculum_id = v_cur;
+  perform t.as_user(t.u('elif'));
+  v_s := public.start_practice(null, v_enr, array['uret.b'], 3);
+  perform t.as_admin();
+  v_st := public.fail_practice_generation((v_s ->> 'set_id')::uuid, 'LLM reddetti');
+  perform t.as_user(t.u('elif'));
+  v_s := public.get_practice_set((v_s ->> 'set_id')::uuid);
+  perform t.ok(v_st = 'abandoned' and v_s ->> 'status' = 'abandoned' and (v_s ->> 'generation_failed')::boolean
+               and v_s -> 'summary' ->> 'reason' = 'generation_failed' and v_s -> 'summary' ->> 'detail' = 'LLM reddetti',
+               'fail_practice_generation: abandoned + generation_failed (' || (v_s - 'items')::text || ')');
+  perform t.as_admin();
+  perform t.ok(public.fail_practice_generation((v_s ->> 'set_id')::uuid) = 'abandoned', 'kapanmış sette tekrar çağrı durumu döner');
+  perform t.ok(exists (select 1 from audit.events e where e.diff ->> 'name' = 'suggestions.refresh'
+                        and e.diff -> 'data' ->> 'reason' = 'practice.generation_failed' and e.diff -> 'data' ->> 'set_id' = v_s ->> 'set_id'),
+               'üretim hatasında suggestions.refresh işi');
+end $$;
+
 -- Canlı içerik: TYT-MAT seed anahtarlarıyla (seed-keys.py --schema v2) set kurulur ve notlanır
 insert into t.cfg values ('have_keys', :'have_keys');
 do $$
@@ -472,16 +662,34 @@ begin
   select c.id into v_cur from public.curricula c where c.code = 'TYT-MAT' and c.version = '2026.1';
   insert into public.enrollments (student_id, curriculum_id, period_label) values (t.u('B'), v_cur, 'YKS 2027') returning id into v_enr;
   perform t.as_user(t.u('can'));
+  -- yeni öğrenci (teşhis atanmadı): TYT teşhis soruları ilk alıştırmada bankadır (0027)
   v_s := public.start_practice(null, v_enr, array['tyt.mat.temel'], 4);
-  perform t.ok(not exists (select 1 from jsonb_array_elements(v_s -> 'items') as e (x)
-                            join public.exam_questions eq on eq.question_id = (e.x ->> 'question_id')::uuid
-                            join public.exams x on x.id = eq.exam_id and x.kind = 'diagnostic'),
-               'TYT: bitirilmemiş teşhisin sorusu alıştırmada yok (' || (v_s ->> 'status') || ', ' || (v_s ->> 'total') || ' soru)');
+  perform t.as_admin();  -- exam_questions öğrenciye kapalı (RLS): denetim admin olarak
+  perform t.ok(v_s ->> 'status' = 'in_progress' and (v_s ->> 'total')::int = 4
+               and (select count(*) from jsonb_array_elements(v_s -> 'items') as e (x)
+                     where exists (select 1 from public.exam_questions eq join public.exams x on x.id = eq.exam_id and x.kind = 'diagnostic'
+                                    where eq.question_id = (e.x ->> 'question_id')::uuid)) = 4,
+               'TYT: atanmamış teşhisin soruları ilk alıştırmada (' || (v_s ->> 'status') || ', ' || (v_s ->> 'total') || ' soru)');
+  perform t.as_user(t.u('can'));
   perform public.finish_practice((v_s ->> 'set_id')::uuid);
-  -- teşhis bitince (oturum finished_at) seed soruları alıştırmaya girer
+  -- teşhis atandı (oturum açık, bitmedi): soruları alıştırmaya girmez; şablonlu yaprakta boş banka → practice.generate
   perform t.as_admin();
-  insert into public.exam_sessions (exam_id, enrollment_id, mode, status, finished_at)
-  select x.id, v_enr, 'in_app', 'done', now() from public.exams x where x.kind = 'diagnostic' and x.curriculum_id = v_cur;
+  insert into public.exam_sessions (exam_id, enrollment_id, mode, status)
+  select x.id, v_enr, 'in_app', 'in_progress' from public.exams x where x.kind = 'diagnostic' and x.curriculum_id = v_cur;
+  perform t.as_user(t.u('can'));
+  v_s := public.start_practice(null, v_enr, array['tyt.mat.temel.sayilar'], 4);
+  perform t.ok(v_s ->> 'status' = 'needs_generation' and (v_s ->> 'total')::int = 0,
+               'TYT: atanmış ve bitmemiş teşhisin sorusu alıştırmada yok (' || (v_s ->> 'status') || ', ' || (v_s ->> 'total') || ' soru)');
+  perform t.as_admin();
+  perform t.ok(exists (select 1 from audit.events e where e.diff ->> 'name' = 'practice.generate' and e.diff -> 'data' ->> 'set_id' = v_s ->> 'set_id'
+                        and e.diff -> 'data' -> 'template_ids' = '["islem-onceligi"]'::jsonb), 'TYT: practice.generate işinde şablon (islem-onceligi)');
+  perform t.ok((public.practice_bank_status(v_enr, array['tyt.mat.temel.sayilar']) -> 'leaves' -> 0 ->> 'available')::int = 0,
+               'TYT: banka durumu atanmış teşhisin sorularını saymaz');
+  perform t.as_user(t.u('can'));
+  perform public.finish_practice((v_s ->> 'set_id')::uuid);
+  -- teşhis bitince (oturum finished_at) seed soruları yine alıştırmaya girer
+  perform t.as_admin();
+  update public.exam_sessions es set status = 'done', finished_at = now() where es.enrollment_id = v_enr;
   perform t.as_user(t.u('can'));
   v_s := public.start_practice(null, v_enr, array['tyt.mat.temel'], 4);
   perform t.ok(v_s ->> 'status' = 'in_progress' and (v_s ->> 'total')::int = 4, 'teşhis bitince TYT seed sorularıyla 4 soruluk set (' || (v_s ->> 'total') || ')');

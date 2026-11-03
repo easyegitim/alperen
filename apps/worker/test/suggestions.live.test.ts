@@ -30,7 +30,7 @@ describe.skipIf(!live)('öneri motoru + gece işleri (gerçek Postgres)', () => 
     enr = String(
       (await q(
         `insert into public.enrollments (student_id, curriculum_id, course_id, period_label, target_exam, exam_date)
-         values ($1, $2, $3, 'YKS 2027', 'TYT', current_date + 10) returning id`,
+         values ($1, $2, $3, 'YKS 2027', 'TYT', (now() at time zone 'Europe/Istanbul')::date + 10) returning id`,
         [elif, tmp.curriculumId, course],
       )).rows[0]!.id,
     );

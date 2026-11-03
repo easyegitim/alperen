@@ -13,6 +13,23 @@ export default defineConfig([
     },
   },
   {
+    // web veritabanına yalnız kullanıcının JWT'siyle (Supabase) gider; doğrudan Postgres bağlantısı yok (PLAN-v2-detail §2.4).
+    // pg yalnız testlerde (test/*.db.test.ts, e2e) geliştirme bağımlılığıdır.
+    files: ['src/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: 'pg', message: 'apps/web doğrudan Postgres bağlantısı açmaz: kullanıcının JWT\'siyle Supabase RPC kullan.' },
+            { name: 'postgres', message: 'apps/web doğrudan Postgres bağlantısı açmaz: kullanıcının JWT\'siyle Supabase RPC kullan.' },
+          ],
+          patterns: [{ group: ['pg/*', 'pg-*'], message: 'apps/web doğrudan Postgres bağlantısı açmaz.' }],
+        },
+      ],
+    },
+  },
+  {
     files: ['scripts/**/*.mjs', 'e2e/**/*.mjs', '*.mjs'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly', Buffer: 'readonly' } },
   },

@@ -23,8 +23,10 @@ COPY packages/mastery-math/package.json packages/mastery-math/package.json
 COPY packages/pii/package.json packages/pii/package.json
 RUN bun install --frozen-lockfile --production --filter @ogrenmen/worker
 
-# Chromium ve sistem bağımlılıkları (yalnız pdf süreci kullanır; imaj tek).
+# Chromium ve sistem bağımlılıkları (yalnız pdf süreci kullanır; imaj tek). Şablon doldurucu (practice.generate:
+# py/template_fill.py, `python3 -I`) için SymPy + matplotlib (Debian paketleri; yoksa iş LLM yoluna düşer).
 RUN node apps/worker/node_modules/playwright-core/cli.js install --with-deps chromium \
+    && apt-get update && apt-get install -y --no-install-recommends python3-sympy python3-matplotlib python3-numpy \
     && rm -rf /var/lib/apt/lists/*
 
 # Yalnız gereken dosyalar (yerel .env* / node_modules imaja girmesin; kökteki .dockerignore da bunları dışlamalı).
@@ -34,6 +36,10 @@ COPY packages/contracts/package.json packages/contracts/tsconfig.json packages/c
 COPY packages/contracts/src packages/contracts/src
 COPY packages/llm/package.json packages/llm/tsconfig.json packages/llm/
 COPY packages/llm/src packages/llm/src
+# Parametrik soru şablonları (sıfır LLM) ve doldurucu
+COPY apps/worker/py apps/worker/py
+COPY content/tyt-matematik/curriculum.json content/tyt-matematik/
+COPY content/tyt-matematik/templates content/tyt-matematik/templates
 
 WORKDIR /app/apps/worker
 USER node

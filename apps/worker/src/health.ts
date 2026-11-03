@@ -3,6 +3,8 @@ import { createServer, type Server } from 'node:http';
 
 export interface HealthReport {
   ok: boolean;
+  /** Gövdedeki durum; verilmezse ok → 'ok', değilse 'unhealthy'. Başlangıç denetimi düşünce 'degraded' (503). */
+  status?: string;
   /** Ek bilgi (sır yok). */
   details: Record<string, unknown>;
 }
@@ -26,7 +28,7 @@ export function createHealthServer(opts: { host: string; port: number; check: ()
       .catch((err: unknown): HealthReport => ({ ok: false, details: { error: (err as Error).message } }))
       .then((r) => {
         res.writeHead(r.ok ? 200 : 503, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
-        res.end(req.method === 'HEAD' ? undefined : JSON.stringify({ status: r.ok ? 'ok' : 'unhealthy', ...r.details }));
+        res.end(req.method === 'HEAD' ? undefined : JSON.stringify({ status: r.status ?? (r.ok ? 'ok' : 'unhealthy'), ...r.details }));
       });
   });
   server.keepAliveTimeout = 5_000;

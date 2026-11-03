@@ -25,8 +25,8 @@ function body(route: RouteName, opts: { batch?: boolean } = {}) {
 }
 
 describe('rota tablosu', () => {
-  it('görevdeki 26 rota + curriculum_research (müfredat iki adım) + suggestions_copy (Bugün kartları) tanımlı', () => {
-    expect(ROUTE_NAMES).toHaveLength(28);
+  it('görevdeki 26 rota + curriculum_research (müfredat iki adım) + suggestions_copy (Bugün kartları) + question_generation (alıştırma bankası) tanımlı', () => {
+    expect(ROUTE_NAMES).toHaveLength(29);
     for (const n of ROUTE_NAMES) expect(ROUTES[n].name).toBe(n);
   });
 

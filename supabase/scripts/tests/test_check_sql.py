@@ -207,6 +207,8 @@ def test_halfvec_dimension(mig, capsys):
 
 
 def test_public_execute_leak(mig, capsys):
-    append(mig, "0016_cron.sql", "grant execute on function public.enqueue_job(text, jsonb) to public;")
+    # son dosyaya: enqueue_job'u yeniden tanımlayan sonraki göç (0029) yetkiyi yeniden kurar
+    last = sorted(p.name for p in mig.glob("*.sql"))[-1]
+    append(mig, last, "grant execute on function public.enqueue_job(text, jsonb) to public;")
     code, out = run(mig, capsys)
     assert code == 1 and "PUBLIC'e EXECUTE" in out

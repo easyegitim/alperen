@@ -151,13 +151,23 @@ export function uploadIdsOf(m: Pick<StoredMessage, 'content'>): string[] {
   return m.content.map(uploadRef).filter((x): x is string => x !== null);
 }
 
-/** Saklanan bloklar → API blokları (yükleme başvuruları çözülür). */
+/**
+ * Saklanan bloklar → API blokları (yükleme başvuruları çözülür). Görsel ve PDF yalnız yükleme başvurusuyla saklanır;
+ * başka kaynaklı (url, file, base64) `image`/`document` bloğu bu yoldan yazılmamıştır ve düşer. Saklanan bloklardaki
+ * `cache_control` de atılır: kesme noktalarını geçit koyar (en çok 4); fazlası sohbetin her turunu 400 yapardı.
+ */
 export async function hydrateBlocks(blocks: readonly StoredBlock[], load: UploadLoader): Promise<BetaContentBlockParam[]> {
   const out: BetaContentBlockParam[] = [];
   for (const b of blocks) {
     const ref = uploadRef(b);
     if (ref) {
       out.push((await load(ref)) ?? { type: 'text', text: MISSING_UPLOAD_TEXT });
+      continue;
+    }
+    if (b.type === 'image' || b.type === 'document') continue;
+    if ('cache_control' in b) {
+      const { cache_control: _cc, ...rest } = b;
+      out.push(rest as unknown as BetaContentBlockParam);
       continue;
     }
     out.push(b as unknown as BetaContentBlockParam);

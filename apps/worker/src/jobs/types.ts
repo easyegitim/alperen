@@ -3,6 +3,7 @@ import type { Gateway } from '@ogrenmen/llm';
 import type { WorkerConfig, WorkerProcess } from '../config.js';
 import type { Db } from '../db.js';
 import type { Logger } from '../log.js';
+import type { OutboxDrainResult } from '../outbox.js';
 import type { PdfRendererLike } from '../pdf/render.js';
 import type { PushSender } from '../push.js';
 import type { StorageLike } from '../storage.js';
@@ -21,6 +22,8 @@ export interface JobDeps {
   /** Bu işin ürettiği yeni işler (zincirleme). Tekilleştirme için `dedupe.ts` (debounced / oncePer) kullanılır. */
   enqueue(name: string, data: object, opts?: EnqueueOptions): Promise<string | null>;
   now(): Date;
+  /** secure.job_outbox → pg-boss aktarımı (`outbox.drain`); outbox yoksa ya da süreç aktarmıyorsa tanımsız. */
+  drainOutbox?(): Promise<OutboxDrainResult>;
 }
 
 /**

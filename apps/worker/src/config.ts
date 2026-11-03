@@ -5,6 +5,10 @@
 export type WorkerProcess = 'worker' | 'pdf' | 'all';
 export type ScheduleMode = 'auto' | 'on' | 'off';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+/** Başlangıç denetimleri (`src/startup-checks.ts`): `strict` düşerse çıkış 78, `warn` sağlık 'degraded' ile sürer, `off` kapalı. */
+export type StartupCheckMode = 'strict' | 'warn' | 'off';
+/** `auto`: enqueue_job sahibinin pgboss yetkisi eksikse ve bağlantı rolü verebiliyorsa verir; `off`: yalnız denetler. */
+export type PgbossGrantMode = 'auto' | 'off';
 
 export interface WorkerConfig {
   /** Çalışan süreç: `worker` (genel işler + zamanlayıcı), `pdf` (yalnız pdf.render), `all` (yerel geliştirme). */
@@ -29,6 +33,12 @@ export interface WorkerConfig {
   pdfConcurrency: number;
   /** Kapanışta süren işlere tanınan süre (ms). */
   shutdownTimeoutMs: number;
+  startupChecks: StartupCheckMode;
+  pgbossGrant: PgbossGrantMode;
+  /** Denetim düşünce çıkıştan önce sağlığın 'degraded' göründüğü süre (ms). */
+  startupExitDelayMs: number;
+  /** secure.job_outbox → pg-boss aktarım aralığı (ms; `outbox.drain`). 0: zamanlayıcı kapalı (iş elle atılabilir). */
+  outboxDrainIntervalMs: number;
 }
 
 type Env = Record<string, string | undefined>;
@@ -106,6 +116,10 @@ export function loadConfig(env: Env = process.env, argv: readonly string[] = pro
     pdfChromiumPath: str(env, 'PDF_CHROMIUM_PATH'),
     pdfConcurrency: int(env, 'PDF_CONCURRENCY', 2, 1, 16),
     shutdownTimeoutMs: int(env, 'SHUTDOWN_TIMEOUT_MS', 30_000, 1_000, 600_000),
+    startupChecks: oneOf(env, 'WORKER_STARTUP_CHECKS', ['strict', 'warn', 'off'] as const, 'strict'),
+    pgbossGrant: oneOf(env, 'WORKER_PGBOSS_GRANT', ['auto', 'off'] as const, 'auto'),
+    startupExitDelayMs: int(env, 'WORKER_STARTUP_EXIT_DELAY_MS', 2_000, 0, 60_000),
+    outboxDrainIntervalMs: int(env, 'OUTBOX_DRAIN_INTERVAL_MS', 30_000, 0, 3_600_000),
   };
 }
 
@@ -128,5 +142,8 @@ export function describeConfig(c: WorkerConfig): Record<string, unknown> {
     storage: c.supabaseUrl && c.supabaseServiceKey ? 'supabase' : 'kapalı',
     push: c.vapid ? 'vapid' : 'kapalı',
     pdfConcurrency: c.pdfConcurrency,
+    startupChecks: c.startupChecks,
+    pgbossGrant: c.pgbossGrant,
+    outboxDrainMs: c.outboxDrainIntervalMs,
   };
 }

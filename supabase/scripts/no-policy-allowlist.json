@@ -3,6 +3,9 @@
   "tables": [
     {"name": "secure.answer_keys", "reason": "Soru bankası cevap anahtarları; yalnız peek_answer_key (eğitmen/admin) ve worker."},
     {"name": "secure.exam_answer_keys", "reason": "Sınav anahtarları; yalnız grade_exam_session, set_exam_key, peek_answer_key ve worker."},
+    {"name": "secure.server_keys", "reason": "Sunucu HMAC anahtarları (web_coach: koç sunucu jetonu); yalnız SECURITY DEFINER app.coach_server_ok okur, service_role yönetir."},
+    {"name": "secure.coach_turns", "reason": "Koç turu kiraları; yalnız coach_claim_turn / coach_release_turn / coach_history (SECURITY DEFINER)."},
+    {"name": "secure.job_outbox", "reason": "pg-boss'a yazılamayan SQL işleri (0029); yalnız SECURITY DEFINER enqueue_job yazar, worker (service_role) outbox.drain ile aktarır."},
     {"name": "audit.events", "reason": "Yalnız eklemeli denetim izi; tetikleyiciler ve fonksiyonlar yazar, service_role okur."}
   ]
 }

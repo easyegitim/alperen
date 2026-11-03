@@ -106,6 +106,7 @@ export const ROUTE_NAMES = [
   'style_definition',
   'priority_plan',
   'style_question_gen',
+  'question_generation',
   'speaker_label',
   'lesson_analysis',
   'parent_chat',
@@ -264,6 +265,12 @@ export const ROUTES = {
     // (`question-generation` adı v1 tablet zarfı olarak legacy'de duruyor).
     model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'style-question-generation',
     tools: ['code_execution'], cache: SHARED, mode: 'sync', batchable: true, maxTokens: 16000,
+  }),
+  question_generation: route('question_generation', {
+    purpose: 'Alıştırma sorusu üretimi (practice.generate; şablon yetmezse 1-10 soru, ayrı anahtar, şekilsiz)',
+    // Tarz zorunlu değil (exam-generation biçimi: style_id null olabilir); öğrenci beklerken çalışır: araçsız, akışsız.
+    model: MODELS.opus, effort: 'medium', thinking: 'adaptive', schema: 'exam-generation',
+    tools: [], cache: PRODUCT_ONLY, mode: 'sync', maxTokens: 16000,
   }),
   speaker_label: route('speaker_label', {
     purpose: 'Ders transkriptinde konuşmacı etiketleme',

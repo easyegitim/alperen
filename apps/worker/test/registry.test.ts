@@ -30,7 +30,12 @@ describe('iş kayıt defteri', () => {
   });
 
   it('işleyicisi olmayan SQL iş adları da kuyruk olarak kayıtlıdır', () => {
-    for (const n of ['exam.report', 'document.generate', 'practice.generate', 'memory.correction']) expect(getJob(n)?.handler).toBeNull();
+    for (const n of ['exam.report', 'document.generate', 'memory.correction']) expect(getJob(n)?.handler).toBeNull();
+  });
+
+  it('practice.generate ve practice.prewarm işleyicili (ilk Başla çıkmazı kapandı)', () => {
+    expect(getJob('practice.generate')?.handler).toBeTypeOf('function');
+    expect(getJob('practice.prewarm')?.handler).toBeTypeOf('function');
   });
 
   it('yük şemaları geçersiz yükü reddeder', () => {

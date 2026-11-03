@@ -74,8 +74,21 @@ export function ResumeCard({ setId, line }: { setId: string; line: string }) {
   );
 }
 
-/** Öneri yokken: koç ilk önerisini hazırlarken tek düğmeyle ilk test. */
-export function FirstPracticeCard({ drafting }: { drafting: boolean }) {
+/**
+ * Öneri yokken: koç ilk önerisini hazırlarken tek düğmeyle ilk test. Eğitmen onayı bekleyen taslakta (otopilot kapalı)
+ * düğme yoktur: alıştırma yayından sonra açılır, ilk kart Bugün'e o zaman gelir.
+ */
+export function FirstPracticeCard({ drafting, awaitingApproval = false }: { drafting: boolean; awaitingApproval?: boolean }) {
+  if (awaitingApproval) {
+    return (
+      <section aria-labelledby="oneri-baslik" data-testid="kahraman" className="flex flex-col gap-2 rounded-lg border border-line bg-surface-raised p-6 shadow-sm">
+        <h2 id="oneri-baslik" className="text-title-2 m-0 text-ink">
+          Planın eğitmen onayında
+        </h2>
+        <p className="text-body m-0 text-ink-muted">Eğitmenin planı onaylayınca ilk testin burada açılır.</p>
+      </section>
+    );
+  }
   return (
     <section aria-labelledby="oneri-baslik" data-testid="kahraman" className="flex flex-col gap-6 rounded-lg border border-line bg-surface-raised p-6 shadow-sm">
       <div className="flex flex-col gap-2">

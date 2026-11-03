@@ -15,6 +15,8 @@ import { dossierRenderJob } from './dossierRender.js';
 import { llmPingJob } from './llmPing.js';
 import { memoryCompactJob } from './memoryCompact.js';
 import { noopJob } from './noop.js';
+import { outboxDrainJob } from './outboxDrain.js';
+import { practiceGenerateJob, practicePrewarmJob } from './practice-generate.js';
 import { pdfRenderJob } from './pdfRender.js';
 import { pushSendJob } from './pushSend.js';
 import { suggestionsRefreshJob } from './suggestionsRefresh.js';
@@ -50,13 +52,17 @@ export const JOBS: readonly AnyJobDefinition[] = [
   diagnosisFollowupJob,
   pending('exam.report', 'Deneme raporu (P2): grade_exam_session RPC ekler.', z.object({ session_id: uuid })),
   pending('document.generate', 'Belge üretimi (P3): request_document RPC ekler.', z.object({ document_id: uuid, kind: z.string().min(1) })),
-  // 0021/0023 RPC'lerinin kuyruğa attığı işler (kuyruk açık değilse enqueue_job düşer, iş kaybolur); işleyiciler P1'de
-  pending('practice.generate', 'Alıştırma sorusu üretimi (P1): start_practice bankada soru yoksa ekler.', z.object({ set_id: uuid, enrollment_id: uuid }).passthrough()),
+  // start_practice (0021) bankada soru yoksa practice.generate atar; ön ısıtma curriculum.draft ve suggestions.refresh'ten
+  practiceGenerateJob,
+  practicePrewarmJob,
+  // 0023 RPC'lerinin kuyruğa attığı işler (kuyruk açık değilse enqueue_job düşer, iş kaybolur); işleyiciler P1'de
   pending('memory.correction', 'Hafıza düzeltme isteği (P1): request_memory_correction ekler.', z.object({ correction_id: uuid, student_id: uuid }).passthrough()),
   curriculumDraftJob,
   curriculumMergeJob,
   proposalsReviewJob,
   proposalsCollectJob,
+  // secure.job_outbox (0029): enqueue_job'un pgboss'a yazamadığı işler; worker her 30 sn aktarır
+  outboxDrainJob,
 ];
 
 const BY_NAME = new Map(JOBS.map((j) => [j.name, j]));

@@ -76,7 +76,10 @@ insert into expected_columns values
     ('public.suggestions', 'id student_id enrollment_id kind title subtitle payload rank expires_at consumed_at created_at'),
     ('public.practice_sets', 'id enrollment_id suggestion_id status skill_ids target_count summary started_at finished_at created_at'),
     ('public.practice_set_items', 'set_id no question_id attempt_id answered_at created_at'),
-    ('public.memory_corrections', 'id student_id path text status requested_by resolved_by resolution_note resolved_at created_at');
+    ('public.memory_corrections', 'id student_id path text status requested_by resolved_by resolution_note resolved_at created_at'),
+    ('secure.server_keys', 'name secret rotated_at created_at'),
+    ('secure.coach_turns', 'conversation_id token expires_at created_at'),
+    ('secure.job_outbox', 'id name data reason attempts last_error created_at retried_at');
 
 do $$
 declare
@@ -95,7 +98,7 @@ begin
      and not exists (select 1 from expected_columns e where e.tbl = n.nspname || '.' || c.relname);
   perform t.ok(v_extra is null, 'listede olmayan tablo yok (fazla: ' || coalesce(v_extra, '-') || ')');
   select count(*) into v_n from expected_columns;
-  perform t.ok(v_n = 65, 'v2 tabanı 61 tablo + P1 ekleri 4 tablo (' || v_n || ')');
+  perform t.ok(v_n = 68, 'v2 tabanı 61 tablo + P1 ekleri 4 tablo + koç üretim yolu 2 tablo + iş outbox''ı 1 tablo (' || v_n || ')');
   perform t.ok(to_regclass('public.staff') is null and to_regclass('public.messages') is null and to_regclass('public.consents') is null
                and to_regclass('public.tg_chats') is null and to_regclass('public.quota_usage') is null
                and to_regclass('public.diagnostic_tests') is null and to_regclass('public.legal_texts') is null
@@ -193,7 +196,7 @@ begin
   select string_agg(n.nspname || '.' || c.relname, ', ') into v_bad
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where c.relkind = 'r' and n.nspname = 'public'
-     and ((not has_table_privilege('authenticated', c.oid, 'select') and c.relname not in ('question_styles', 'curricula'))
+     and ((not has_table_privilege('authenticated', c.oid, 'select') and c.relname not in ('question_styles', 'curricula', 'figures'))
           or has_table_privilege('authenticated', c.oid, 'insert') or has_table_privilege('authenticated', c.oid, 'update')
           or (has_table_privilege('authenticated', c.oid, 'delete') and c.relname not in ('notification_rules', 'push_subscriptions'))
           or has_table_privilege('authenticated', c.oid, 'truncate'));
@@ -204,6 +207,14 @@ begin
                and (select count(*) from information_schema.columns c where c.table_schema = 'public' and c.table_name = 'question_styles'
                        and not has_column_privilege('authenticated', 'public.question_styles', c.column_name, 'select')) = 2,
                'question_styles: authenticated exemplar_item_ids ve embedding dışındaki sütunları okur');
+  perform t.ok(not has_column_privilege('authenticated', 'public.figures', 'code', 'select')
+               and not has_column_privilege('authenticated', 'public.figures', 'code_hash', 'select')
+               and not has_column_privilege('authenticated', 'public.figures', 'vision_report', 'select')
+               and not has_column_privilege('authenticated', 'public.figures', 'render_log', 'select')
+               and has_column_privilege('authenticated', 'public.figures', 'png_path', 'select')
+               and has_column_privilege('authenticated', 'public.figures', 'alt_text', 'select')
+               and has_table_privilege('authenticated', 'public.v_figures_staff', 'select'),
+               'figures: authenticated kaynak sütunlarını (code, code_hash, vision_report, render_log) okumaz; personel v_figures_staff (0027)');
   select string_agg(c.relname, ', ' order by c.relname) into v_bad
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where c.relkind = 'r' and n.nspname = 'public'
@@ -333,7 +344,7 @@ begin
                         and not (e.diff ? 'invite_token_hash')), 'guardian_links INSERT denetim izi (token hash hariç)');
 end $$;
 
--- enqueue_job: pgboss tablosu yoksa audit + null; varsa satır (ayarlar pgboss.queue'dan); kuyruk yoksa OGR-JOB-001;
+-- enqueue_job: pgboss tablosu yoksa audit + outbox + null; varsa satır (ayarlar pgboss.queue'dan); kuyruk yoksa outbox (0029);
 -- geçersiz ad → OGR-JOB-002
 do $$
 declare
@@ -372,7 +383,10 @@ begin
                        and abs(extract(epoch from (j.keep_until - j.start_after)) - 86400) < 1
                   from pgboss.job j where j.id = v_id),
                'iş ayarları kuyruktan kopyalanır (yeniden deneme, süre aşımı, saklama, kalp atışı; tablo varsayılanları değil)');
-  perform t.raises($q$select public.enqueue_job('yok-kuyruk', '{}')$q$, 'OGR-JOB-001 kuyruk yok%', 'kuyruk yoksa açık hata (OGR-JOB-001)');
+  v_id := public.enqueue_job('yok-kuyruk', '{}');
+  perform t.ok(v_id is null
+               and exists (select 1 from secure.job_outbox o where o.name = 'yok-kuyruk' and o.reason like 'OGR-JOB-001 kuyruk yok%'),
+               'kuyruk yoksa iş kaybolmaz: secure.job_outbox (0029; neden OGR-JOB-001)');
   v_id := app.try_enqueue('yok-kuyruk', '{}');
   perform t.ok(v_id is null
                and exists (select 1 from audit.events e where e.action = 'job.enqueue_failed' and e.diff ->> 'name' = 'yok-kuyruk'),

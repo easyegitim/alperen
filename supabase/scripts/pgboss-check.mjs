@@ -3,7 +3,7 @@
 //   node pgboss-check.mjs <test-veritabanı-url> <migration-sahibi-rol>
 // Adımlar: pg-boss kurulur (start), bir kuyruk createQueue seçenekleriyle açılır, migration sahibine (enqueue_job'un
 // SECURITY DEFINER sahibi) pgboss şemasında USAGE + SELECT/INSERT verilir, SQL'den iş eklenir; işin ayarları kuyruğunkiyle
-// aynı olmalı, kuyruk yoksa OGR-JOB-001 'kuyruk yok' yükselmeli ve pg-boss işi fetch ile almalı.
+// aynı olmalı, kuyruk yoksa iş secure.job_outbox'a düşmeli (0029; neden OGR-JOB-001) ve pg-boss işi fetch ile almalı.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -50,13 +50,11 @@ try {
   ok(j && j.retry_limit === 7 && j.retry_delay === 11 && j.retry_backoff === true && j.expire_seconds === 5400
        && j.deletion_seconds === 3000 && j.heartbeat_seconds === 45 && j.keep === 7200 && j.state === 'created',
      `iş ayarları createQueue seçenekleriyle aynı (${JSON.stringify(j)})`);
-  let msg = '';
-  try {
-    await c.query(`select public.enqueue_job('yok.kuyruk', '{}')`);
-  } catch (e) {
-    msg = e.message;
-  }
-  ok(msg.startsWith('OGR-JOB-001 kuyruk yok'), `kuyruk yoksa OGR-JOB-001 (${msg})`);
+  // 0029: kuyruk yoksa iş kaybolmaz; null döner ve secure.job_outbox'a düşer (worker outbox.drain aktarır)
+  const miss = (await c.query(`select public.enqueue_job('yok.kuyruk', '{"probe":1}') as id`)).rows[0].id;
+  const ob = (await c.query(`select reason from secure.job_outbox where name = 'yok.kuyruk'`)).rows[0];
+  ok(miss === null && ob && String(ob.reason).startsWith('OGR-JOB-001 kuyruk yok'), `kuyruk yoksa null + outbox (${ob?.reason ?? 'satır yok'})`);
+  await c.query(`delete from secure.job_outbox where name = 'yok.kuyruk'`);
   const jobs = await boss.fetch('exam.report');
   ok(jobs.length === 1 && jobs[0].id === id && jobs[0].data?.session_id === 's1', 'pg-boss SQL\'den eklenen işi fetch ile alır');
 } catch (e) {

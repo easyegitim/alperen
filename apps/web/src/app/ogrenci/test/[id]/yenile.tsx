@@ -2,46 +2,47 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
-/** En çok bu kadar yenileme (5 sn'den 30 sn'ye uzayan aralıkla yaklaşık 2 dakika). */
-export const MAX_REFRESHES = 12;
-
-/** n. yenilemeden önceki bekleme: everyMs'den başlar, her adımda yarım kat artar, 30 sn'yi geçmez. */
-export function refreshDelay(everyMs: number, n: number): number {
-  return Math.min(30_000, Math.round(everyMs * 1.5 ** n));
-}
+import { LinkButton } from '@/components/LinkButton';
+import { elapsedSince, pollDelay, SLOW_AFTER_MS } from '@/server/practice/wait';
 
 /**
- * Sunucu bileşenini aralıklarla yeniden çizer (soru üretimi bitince oynatıcı açılır). Bekleme notunu da çizer.
- * Aralık uzar, sekme gizliyken durur, üst sınırda bırakır; sınır dolunca not tek cümleye döner.
+ * Soru hazırlanırken bekleme notu ve yoklama: sunucu bileşeni aralıklarla yeniden çizilir (sorular gelince oynatıcı
+ * açılır, üretim düşerse sonuç). Süre setin açılışından sayılır (yeniden yüklemede sıfırlanmaz); sekme gizliyken
+ * yoklama beklemede kalır. 60 sn'yi geçince not tek cümleye döner ve Koç bağlantısı çıkar.
  */
-export function Yenile({ everyMs }: { everyMs: number }) {
+export function Yenile({ startedAt, slow: slowAtRender = false }: { startedAt: string | null | undefined; slow?: boolean }) {
   const router = useRouter();
-  const [gaveUp, setGaveUp] = useState(false);
+  const [slow, setSlow] = useState(slowAtRender);
   useEffect(() => {
-    let n = 0;
+    const t0 = Date.now() - elapsedSince(startedAt, Date.now());
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let stopped = false;
     const schedule = () => {
-      if (n >= MAX_REFRESHES) {
-        setGaveUp(true);
-        return;
-      }
+      const elapsed = Date.now() - t0;
+      if (elapsed >= SLOW_AFTER_MS) setSlow(true);
+      const delay = pollDelay(elapsed);
+      if (delay === null || stopped) return;
       timer = setTimeout(() => {
-        if (document.visibilityState === 'hidden') {
-          schedule(); // gizliyken saymadan bekle
-          return;
-        }
-        n += 1;
-        router.refresh();
+        if (document.visibilityState !== 'hidden') router.refresh();
         schedule();
-      }, refreshDelay(everyMs, n));
+      }, delay);
     };
     schedule();
-    return () => clearTimeout(timer);
-  }, [router, everyMs]);
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [router, startedAt]);
   return (
-    <p className="text-body m-0 text-ink-muted" data-testid="hazirlaniyor-not">
-      {gaveUp ? 'Sorular hazır olunca Bugün’de kart olarak göreceksin.' : 'Hazır olunca bu ekran kendiliğinden açılır.'}
-    </p>
+    <>
+      <p className="text-body m-0 max-w-prose text-ink-muted" data-testid="hazirlaniyor-not">
+        {slow ? 'Biraz uzun sürdü, Koç’a sorabilirsin.' : 'Birkaç saniye sürer; hazır olunca bu ekran kendiliğinden açılır.'}
+      </p>
+      {slow ? (
+        <LinkButton href="/ogrenci/koc" variant="secondary" size="lg">
+          Koç’a sor
+        </LinkButton>
+      ) : null}
+    </>
   );
 }

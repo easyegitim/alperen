@@ -101,6 +101,8 @@ export function practiceErrorMessage(code: string | null): string {
       return 'Önce bir cevap seç.';
     case 'OGR-PRAC-006':
       return 'Planın kuruluyor; birkaç saniye sonra yeniden dene.';
+    case 'OGR-PRAC-008':
+      return "Planın eğitmen onayında; onaylanınca ilk testin Bugün'de açılır.";
     case 'OGR-PRAC-007':
       return 'Bugünlük alıştırma sınırına ulaştın; yarın yeni test açılır.';
     case 'OGR-SUG-001':

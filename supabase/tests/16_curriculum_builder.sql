@@ -75,6 +75,7 @@ end $$;
 do $$
 declare
   v_r jsonb;
+  v_queued boolean;
 begin
   perform t.as_user(t.u('elif'));
   perform t.raises(format($q$select public.save_curriculum_draft(%L, %L::jsonb)$q$, t.v('D'), t.draft('kim')), '42501', 'öğrenci taslak yazamaz');
@@ -101,6 +102,17 @@ begin
   perform t.ok(not exists (select 1 from public.suggestions s where s.enrollment_id in (t.u('ED'), t.u('EDD')))
                and exists (select 1 from public.suggestions s where s.enrollment_id = t.u('ET') and s.kind = 'practice' and s.rank = 0),
                'öneri satırları: D kayıtlarında yok, T kaydında var');
+  -- ilk kartı alan kayda kartın yaprakları için practice.prewarm (0027 app.first_practice_suggestion); pg-boss yoksa outbox
+  v_queued := exists (select 1 from secure.job_outbox o where o.name = 'practice.prewarm' and o.data ->> 'enrollment_id' = t.v('ET')
+                        and o.data ->> 'reason' = 'curriculum_ready' and o.data -> 'skill_ids' = '["kim.u1.a", "kim.u1.b"]'::jsonb);
+  if not v_queued and to_regclass('pgboss.job') is not null then
+    execute $q$select exists (select 1 from pgboss.job j where j.name = 'practice.prewarm' and j.data ->> 'enrollment_id' = $1
+                                and j.data ->> 'reason' = 'curriculum_ready' and j.data -> 'skill_ids' = '["kim.u1.a", "kim.u1.b"]'::jsonb)$q$
+      into v_queued using t.v('ET');
+  end if;
+  perform t.ok(v_queued, 'otopilotlu taslağın ilk kartı practice.prewarm işini kuyruğa atar (kartın yaprakları)');
+  perform t.ok(not exists (select 1 from secure.job_outbox o where o.name = 'practice.prewarm' and o.data ->> 'enrollment_id' in (t.v('ED'), t.v('EDD'))),
+               'otopilotsuz taslakta SQL ön ısıtma atmaz');
   perform t.ok((select c.draft_meta -> 'tags_dropped' = '["t.a.isaret-hatasi"]'::jsonb from public.curricula c where c.id = t.u('D')),
                'draft_meta.tags_dropped yazıldı');
 end $$;

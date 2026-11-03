@@ -9,6 +9,7 @@ import { FakeTransport, Gateway, InMemoryLedger } from '@ogrenmen/llm';
 import { loadPrompt } from '@ogrenmen/prompts';
 import {
   buildHistory,
+  hydrateBlocks,
   MEDIA_BUDGET_B64,
   sanitizeHistory,
   SEED_PREFIX,
@@ -24,7 +25,8 @@ import { DEMO_COURSE_BLOCK, DEMO_DOSSIER_BLOCK, DEMO_SEED_ID, MemoryChatStore } 
 import { assertBodySize, assertJsonBody, assertSameOrigin, CHAT_BODY_MAX, parseChatRequest, UPLOAD_BODY_MAX, uploadKindFor } from '@/server/chat/request';
 import { encodeEvent } from '@/server/chat/sse';
 import { storeKindFor } from '@/server/chat/store-kind';
-import { checkDbRole } from '@/server/chat/deps';
+import { mintServerToken } from '@/server/chat/server-token';
+import { SupabaseChatStore, type CoachDbClient } from '@/server/chat/supabase-store';
 import { ChatError, executeTurn, prepareTurn, type ChatEvent, type TurnDeps } from '@/server/chat/turn';
 import type { ChatStudent, StoredMessage } from '@/server/chat/types';
 import { parseSseChunk } from '@/components/chat/sse-client';
@@ -173,6 +175,23 @@ describe('koç turu: mod kuralı ve araç döngüsü', () => {
     expect(firstUser.role).toBe('user');
     expect((firstUser.content as { text: string }[])[0]!.text).toBe(`${SUMMARY_PREFIX}\nÖğrenci kesirlerde payda eşitlemeyi çalıştı.`);
     expect(hist.filter((m) => m.role === 'system').every((m) => typeof m.content === 'string')).toBe(true);
+  });
+
+  it('hydrateBlocks: yükleme başvurusu olmayan görsel/PDF düşer, saklanan cache_control atılır', async () => {
+    const out = await hydrateBlocks(
+      [
+        { type: 'image', source: { type: 'url', url: 'https://example.com/a.png' } },
+        { type: 'document', source: { type: 'file', file_id: 'file_x' } },
+        { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } },
+        { type: 'image', source: { type: 'upload', upload_id: 'u1' } },
+        { type: 'text', text: 'soru', cache_control: { type: 'ephemeral' } },
+      ],
+      async (id) => (id === 'u1' ? { type: 'image', source: { type: 'file', file_id: 'file_u1' } } : null),
+    );
+    expect(out).toEqual([
+      { type: 'image', source: { type: 'file', file_id: 'file_u1' } },
+      { type: 'text', text: 'soru' },
+    ]);
   });
 });
 
@@ -325,9 +344,11 @@ describe('istek, akış ve yapılandırma', () => {
   it('depo seçimi: bellek deposu yalnız sahte LLM ile', () => {
     expect(storeKindFor({ OGRENMEN_CHAT_STORE: 'memory', OGRENMEN_LLM: 'fake' })).toBe('memory');
     expect(() => storeKindFor({ OGRENMEN_CHAT_STORE: 'memory' })).toThrow(ChatError);
-    expect(storeKindFor({ OGRENMEN_WEB_COACH_DATABASE_URL: 'postgresql://x' })).toBe('pg');
-    // Depo genelindeki yönetici adresi koçu açmaz.
+    expect(storeKindFor({ OGRENMEN_WEB_COACH_KEY: 'a'.repeat(64) })).toBe('supabase');
+    expect(() => storeKindFor({ OGRENMEN_WEB_COACH_KEY: 'kisa' })).toThrow(ChatError);
+    // Veritabanı adresleri (yönetici adresi, eski güvenilir koç bağlantısı) koçu açmaz: web'de doğrudan Postgres yok.
     expect(storeKindFor({ OGRENMEN_DATABASE_URL: 'postgresql://postgres@x' })).toBeNull();
+    expect(storeKindFor({ OGRENMEN_WEB_COACH_DATABASE_URL: 'postgresql://x', OGRENMEN_WEB_COACH_TRUSTED_DEV: '1' })).toBeNull();
     expect(storeKindFor({})).toBeNull();
   });
 });
@@ -535,31 +556,64 @@ describe('koç turu: rota, tur kilidi, pencere ve ek bütçesi', () => {
   });
 });
 
-describe('sunucu bağlantı rolü', () => {
-  const db = (row: { rolsuper: boolean; rolbypassrls: boolean }) => ({ query: async () => ({ rows: [{ name: 'r', ...row }] }) }) as never;
-  it('kapalı başarısızlık: RLS aşan rol üretimde hep, yerelde bayraksız reddedilir; RLS’e tabi rol geçer', async () => {
+describe('üretim deposu (SupabaseChatStore): yalnız JWT + koç RPC\'leri, güvenilir yazımlar sunucu jetonuyla', () => {
+  const KEY = 'ab'.repeat(32);
+  const CONV = '11111111-1111-4111-8111-111111111111';
+  function client(reply: (fn: string, args: Record<string, unknown>) => unknown = () => null) {
+    const calls: { fn: string; args: Record<string, unknown> }[] = [];
+    const db = {
+      rpc: async (fn: string, args: Record<string, unknown> = {}) => {
+        calls.push({ fn, args });
+        return { data: reply(fn, args), error: null };
+      },
+      storage: { from: () => ({ upload: async () => ({ error: null }), download: async () => ({ data: null, error: { message: 'yok' } }) }) },
+      from: () => ({ insert: async () => ({ error: null }) }),
+    } as CoachDbClient;
+    return { db, calls };
+  }
+
+  it('jeton: v1.<bitiş>.<hmac>, sohbete ve süreye bağlı (DB app.coach_server_ok ile aynı ileti)', async () => {
+    const t = mintServerToken(KEY, CONV, NOW);
+    const exp = Math.floor(NOW.getTime() / 1000) + 900;
+    const { createHmac } = await import('node:crypto');
+    expect(t).toBe(`v1.${exp}.${createHmac('sha256', KEY).update(`coach:${CONV}:${exp}`).digest('hex')}`);
+    expect(mintServerToken(KEY, '22222222-2222-4222-8222-222222222222', NOW)).not.toBe(t);
+    expect(mintServerToken('cd'.repeat(32), CONV, NOW)).not.toBe(t);
+  });
+
+  it('model tarafı yazımları, defter, hafıza ve yönlendirme sunucu jetonu taşır; okumalar yalnız RPC', async () => {
+    const { db, calls } = client((fn) => (fn === 'coach_append_turn' ? [7, 8] : fn === 'coach_append_message' ? 6 : fn === 'coach_log_llm_call' ? 41 : fn === 'coach_escalate' ? true : fn === 'coach_memory_write' ? {} : fn === 'coach_context' ? { memory: [] } : null));
+    const store = new SupabaseChatStore(db, KEY, () => NOW);
+    const want = mintServerToken(KEY, CONV, NOW);
+    expect(await store.appendMessages(CONV, [{ role: 'user', content: [{ type: 'text', text: 'x' }] }])).toEqual([6]);
+    expect(await store.appendMessages(CONV, [
+      { role: 'system', content: [{ type: 'text', text: 'Mod' }] },
+      { role: 'assistant', content: [{ type: 'text', text: 'y' }], llmCallId: 41 },
+    ])).toEqual([7, 8]);
+    expect(await store.ledger().write({ route: 'coach_chat', purpose: 'coach_chat', provider: 'anthropic', model: 'm', effort: 'medium', prompt_version: 'v1', tokens_in: 1, tokens_out: 1, cache_read_tokens: 0, cache_write_tokens: 0, images: null, batch: false, status: 'ok', error_code: null, stop_reason: null, latency_ms: 5, cost_usd: 0.001, ref_table: 'conversations', ref_id: CONV, student_ref: 's_abcdef12' })).toBe(41);
+    await store.memoryStore(CONV).write('ogrenci', '/memories/notes.md', 'not', 'create', 'coach');
+    expect(await store.memoryStore(CONV).read('ogrenci', '/memories/notes.md')).toBe('not');
+    expect(await store.escalate({ student: { profileId: PROFILE, studentId: 's', publicRef: 's_x', courseId: null, enrollmentId: null }, conversationId: CONV, reason: 'refusal', category: 'cyber', note: null })).toBe(true);
+    const writes = calls.filter((c) => ['coach_append_message', 'coach_append_turn', 'coach_log_llm_call', 'coach_memory_write', 'coach_escalate'].includes(c.fn));
+    expect(writes.map((c) => c.fn)).toEqual(['coach_append_message', 'coach_append_turn', 'coach_log_llm_call', 'coach_memory_write', 'coach_escalate']);
+    for (const c of writes) expect(c.args.p_server_token).toBe(want);
+    expect(calls.find((c) => c.fn === 'coach_log_llm_call')!.args.p_conversation).toBe(CONV);
+    expect(calls.find((c) => c.fn === 'coach_escalate')!.args.p_body).toContain('güvenlik');
+    // Sohbete bağlı olmayan defter satırı yazılmaz (jeton sohbete bağlıdır).
     const err = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const refused = { code: 'misconfigured', status: 503 };
-    const prod = { NODE_ENV: 'production' };
-    const flag = { OGRENMEN_WEB_COACH_TRUSTED_DEV: '1' };
-    await expect(checkDbRole(db({ rolsuper: true, rolbypassrls: true }), prod)).rejects.toMatchObject(refused);
-    await expect(checkDbRole(db({ rolsuper: false, rolbypassrls: true }), prod)).rejects.toMatchObject(refused);
-    // Üretimde bayrak açamaz.
-    await expect(checkDbRole(db({ rolsuper: false, rolbypassrls: true }), { ...prod, ...flag })).rejects.toMatchObject(refused);
-    expect(err.mock.calls.at(-1)?.[0]).toMatch(/OGR-CHAT-011/);
-    // Yerel: bayraksız reddedilir, bayrakla uyarıyla açılır.
-    await expect(checkDbRole(db({ rolsuper: true, rolbypassrls: true }), { NODE_ENV: 'development' })).rejects.toMatchObject(refused);
-    expect(err.mock.calls.at(-1)?.[0]).toMatch(/OGR-CHAT-014/);
-    await checkDbRole(db({ rolsuper: true, rolbypassrls: true }), { NODE_ENV: 'development', ...flag });
-    expect(warn.mock.calls.at(-1)?.[0]).toMatch(/OGR-CHAT-012/);
-    warn.mockClear();
-    // RLS'e tabi rol sessiz geçer.
-    await checkDbRole(db({ rolsuper: false, rolbypassrls: false }), prod);
-    expect(warn).not.toHaveBeenCalled();
-    // Rol satırı yoksa da kapalı.
-    await expect(checkDbRole({ query: async () => ({ rows: [] }) } as never, prod)).rejects.toMatchObject(refused);
+    expect(await store.ledger().write({ route: 'coach_chat', ref_table: null, ref_id: null } as never)).toBeNull();
     err.mockRestore();
-    warn.mockRestore();
+  });
+
+  it('yetki hatası (42501: başka öğrencinin sohbeti, veli) null/false olur; diğer hatalar fırlar', async () => {
+    const db = {
+      rpc: async (fn: string) => ({ data: null, error: fn === 'coach_seed' ? { message: 'bağlantı', code: '08006' } : { message: 'OGR-AUTH-001 bu koç sohbeti için yetki yok', code: '42501' } }),
+    } as unknown as CoachDbClient;
+    const store = new SupabaseChatStore(db, KEY);
+    const s: ChatStudent = { profileId: PROFILE, studentId: 's', publicRef: 's_x', courseId: null, enrollmentId: null };
+    expect(await store.resolveStudent(PROFILE)).toBeNull();
+    expect(await store.getConversation(s, CONV)).toBeNull();
+    expect(await store.setMode(s, CONV, 'solve')).toBe(false);
+    await expect(store.getSeed(s, CONV)).rejects.toThrow(/bağlantı/);
   });
 });

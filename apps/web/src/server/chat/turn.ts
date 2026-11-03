@@ -222,7 +222,7 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
     });
     const userBlocks = await hydrateBlocks(content, load);
     const product = await deps.product(route);
-    const blocks = await store.systemBlocks(student, conversation.courseId ?? student.courseId);
+    const blocks = await store.systemBlocks(student, conversation.id);
 
     let turnMeta: TurnMeta | null = null;
     const runners: ToolRunners = {
@@ -247,7 +247,7 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
       promptVersion: product.version,
       studentRef: student.publicRef,
       ref: { table: 'conversations', id: conversation.id },
-      tools: { runners, memory: { store: store.memoryStore(), studentId: student.studentId, actor: 'coach' } },
+      tools: { runners, memory: { store: store.memoryStore(conversation.id), studentId: student.studentId, actor: 'coach' } },
       onEvent,
       ...(req.signal ? { signal: req.signal } : {}),
     });

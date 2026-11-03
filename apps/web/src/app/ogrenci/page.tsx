@@ -8,7 +8,7 @@ import { requireRole } from '@/server/auth';
 import { studentDb } from '@/server/practice/client';
 import { findResumableSet } from '@/server/practice/resume';
 import { practiceErrorMessage } from '@/server/practice/present';
-import { curriculumDraftState } from '@/server/progress/read';
+import { curriculumDraftState, draftPracticable } from '@/server/progress/read';
 import { draftDone } from '@/server/progress/present';
 import { arrangeToday, boxLine, MAX_BOXES, KIND_LABELS, metaLine, noticeLine } from '@/server/suggestions/arrange';
 import { listToday } from '@/server/suggestions/service';
@@ -20,7 +20,8 @@ export const metadata: Metadata = { title: 'Bugün' };
 type Search = Promise<Record<string, string | string[] | undefined>>;
 
 // Bugün (mockup S02; PLAN-v2 §13): koçun önerisi tek kahraman kartta (tek birincil "Başla"), altında en çok 3 kutu,
-// "+ yükle" bağlantısı ve belge/yükleme sonucu kartları. Öneri yoksa tek "İlk testine başla" ve arka planda yenileme.
+// "+ yükle" bağlantısı ve belge/yükleme sonucu kartları. Öneri yoksa tek "İlk testine başla" ve arka planda yenileme;
+// eğitmen onayı bekleyen taslakta düğmesiz tek cümle.
 export default async function BugunSayfasi({ searchParams }: { searchParams: Search }) {
   const { user, displayName } = await requireRole('student', 'admin');
   const sp = await searchParams;
@@ -35,8 +36,14 @@ export default async function BugunSayfasi({ searchParams }: { searchParams: Sea
   const today = resume ? { hero: null, boxes: [...(arranged.hero ? [arranged.hero] : []), ...arranged.boxes].slice(0, MAX_BOXES), notices: arranged.notices } : arranged;
 
   // Öneri yokken taslak sürüyorsa "Planın kuruluyor"; öneri yenilemesini onboarding_enroll/finish_practice zaten kuyruğa atar.
+  // Taslak bitti ama otopilot kapalıysa (üniversite dersi) öğrenci eğitmen onayını bekler: düğme çizilmez (OGR-PRAC-008).
   let drafting = false;
-  if (!resume && !today.hero && ctx?.enrollment) drafting = !draftDone(await curriculumDraftState(ctx.enrollment.curriculum_id));
+  let awaitingApproval = false;
+  if (!resume && !today.hero && ctx?.enrollment) {
+    const state = await curriculumDraftState(ctx.enrollment.curriculum_id);
+    drafting = !draftDone(state);
+    if (!drafting && state?.status === 'draft') awaitingApproval = !(await draftPracticable(db, ctx.enrollment.curriculum_id));
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
@@ -52,7 +59,7 @@ export default async function BugunSayfasi({ searchParams }: { searchParams: Sea
       ) : today.hero ? (
         <HeroCard suggestionId={today.hero.id} title={today.hero.title} meta={metaLine(today.hero)} />
       ) : (
-        <FirstPracticeCard drafting={drafting} />
+        <FirstPracticeCard drafting={drafting} awaitingApproval={awaitingApproval} />
       )}
 
       {today.boxes.length > 0 ? (

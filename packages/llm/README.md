@@ -86,6 +86,7 @@ yeniden gönderilir; Batch içinde onarım turu yapılmaz.
 | style_definition | Sonnet · medium | style-definition | — | Batch |
 | priority_plan | Opus · medium | exam-priority-plan | — | akış |
 | style_question_gen | Opus · high | style-question-generation | code_execution | senkron (+Batch) |
+| question_generation | Opus · medium | exam-generation | — | senkron (practice.generate: şablon yetmezse; şekilsiz, tarzsız; sahte kipte `fixtures/question_generation/` 8 soru) |
 | speaker_label | Sonnet · low · kapalı | transcript | — | akış |
 | lesson_analysis | Opus · high | lesson-analysis | — | akış |
 | parent_chat | Sonnet · low | — | get_child_summary, get_mastery_overview, get_recent_activity, get_exam_sessions, get_reports, request_report (strict) | akış |
@@ -175,14 +176,17 @@ await gateway.call('coach_chat', { system, … });   // buildSystemBlocks → 1 
 - `/memories/parent_summary.md` veliye açıktır (RLS): yalnız gece işi (`actor: 'memory-compact'` ya da açık
   `allowParentSummary`) yazar, ≤ 1.5 KB (OGR-MEM-007). Koç sohbeti yazamaz; aksi halde sohbet içeriği veliye sızar.
   `PgStore` service_role ile çalıştığından RPC bu kuralı uygulamaz; depo da ayrıca `assertParentSummaryWrite` ile denetler.
+  apps/web koçunun yazım yolu `coach_memory_write` bu dosyayı DB'de reddeder (OGR-MEM-007).
 - `applyMemoryDelta(opts | handlers, ops)`: `memory_delta` (Haiku) çıktısını AYNI işleyicilerden geçirir (yol izin
   listesi, 8 KB, ≤ 12 dosya, parent_summary koruması, sürüm satırı; actor `memory-delta`). En çok 3 işlem; işlemler
   bağımsızdır (biri düşerse diğerleri denenir), sonuç işlem başına `{ ok, code }`; dosya yokken `insert_line: 0`
   dosyayı oluşturur. apps/worker `diagnosis.followup` kullanır.
-- Yazım kimliği (0023): `upsert_memory_file`'ı yalnız güvenilir çağıran (service_role / doğrudan Postgres: worker ve
-  apps/web koç turunun sunucuya özel `pg` bağlantısı, `src/server/chat/pg-store.ts`), owner eğitmen ve admin
-  çağırabilir; öğrenci ve veli JWT'siyle OGR-AUTH-001 (öğrenci düzeltmeyi `request_memory_correction` ile ister).
-- Depolar: `PgStore` (service_role `pg`: apps/worker ve apps/web koç sohbeti; hafıza yazımları bu yoldan) ve
+- Yazım kimliği (0023): `upsert_memory_file`'ı yalnız güvenilir çağıran (service_role / doğrudan Postgres: worker),
+  owner eğitmen ve admin çağırabilir; öğrenci ve veli JWT'siyle OGR-AUTH-001 (öğrenci düzeltmeyi
+  `request_memory_correction` ile ister). apps/web koç sohbeti Postgres'e bağlanmaz: hafıza aracı yazımları öğrencinin
+  JWT'siyle `coach_memory_write` (0028; aynı gövde `app.memory_apply`, actor `coach:<sohbet>`, sohbete bağlı sunucu
+  jetonu `OGRENMEN_WEB_COACH_KEY`) üzerinden gider.
+- Depolar: `PgStore` (service_role `pg`: apps/worker; hafıza yazımları bu yoldan) ve
   `RpcMemoryStore` (kullanıcı JWT'li supabase-js: okuma; yazım yalnız owner eğitmen / admin oturumunda, öğrenci ve
   veli JWT'si OGR-AUTH-001). İkisi de yazımı `public.upsert_memory_file(p_student, p_path, p_content, p_op, p_actor,
   p_new_path, p_expected_hash)` ile yapar; öğrenci kilidi, sınırlar ve sürümleme DB'de tek yoldadır. DB hataları

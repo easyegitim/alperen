@@ -11,9 +11,10 @@ const realtime = vi.hoisted(() => {
   const channel = { on: () => channel, subscribe: (f: (s: string) => void) => ((state.cb = f), channel), unsubscribe: () => undefined };
   return { state, channel };
 });
-vi.mock('@/lib/supabase/browser', () => ({ createSupabaseBrowserClient: () => ({ channel: () => realtime.channel }) }));
+vi.mock('@/lib/supabase/browser', () => ({ createSupabaseBrowserClient: () => ({ channel: () => realtime.channel, removeChannel: async () => 'ok' }) }));
 
-import { DraftProgress, POLL_MS, REALTIME_GRACE_MS } from '@/components/curriculum/DraftProgress';
+import { DraftProgress } from '@/components/curriculum/DraftProgress';
+import { LIVE_DEFAULTS } from '@/lib/live';
 import { EditorActions } from '@/components/curriculum/EditorActions';
 import { ProposalsBox } from '@/components/curriculum/ProposalsBox';
 import { TreeEditor, type TreeChange } from '@/components/curriculum/TreeEditor';
@@ -297,23 +298,27 @@ describe('ProposalsBox ve EditorActions', () => {
 });
 
 describe('DraftProgress', () => {
-  it('Realtime bağlanınca yoklamaz; bağlanamazsa 5 sn yoklar; ilerleme sayı olarak yazılmaz', () => {
+  it('Realtime bağlıyken yalnız seyrek nabız; kopunca 2 sn → 3 sn yoklar; ilerleme sayı olarak yazılmaz', async () => {
     vi.useFakeTimers();
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321');
     try {
       router.refresh.mockClear();
       const view = render(<DraftProgress curriculumId="c1" status="drafting" progress={45} />);
       expect(screen.getByText('Ağaç kuruluyor')).toBeInTheDocument();
       expect(screen.queryByText(/45/)).not.toBeInTheDocument();
       realtime.state.cb!('SUBSCRIBED');
-      vi.advanceTimersByTime(REALTIME_GRACE_MS + POLL_MS * 3);
+      await vi.advanceTimersByTimeAsync(LIVE_DEFAULTS.heartbeatMs - 1_000);
       expect(router.refresh).not.toHaveBeenCalled();
       realtime.state.cb!('CHANNEL_ERROR');
-      vi.advanceTimersByTime(POLL_MS * 2);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(router.refresh).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(3_000);
       expect(router.refresh).toHaveBeenCalledTimes(2);
       view.unmount();
-      vi.advanceTimersByTime(POLL_MS * 2);
+      await vi.advanceTimersByTimeAsync(20_000);
       expect(router.refresh).toHaveBeenCalledTimes(2);
     } finally {
+      vi.unstubAllEnvs();
       vi.useRealTimers();
     }
   });

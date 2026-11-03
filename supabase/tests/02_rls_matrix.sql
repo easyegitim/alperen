@@ -190,22 +190,22 @@ end $$;
 do $$
 begin
   perform t.as_user(t.u('elif'));
-  insert into public.conversation_messages (conversation_id, role, content)
-  values ('40000000-0000-4000-8000-0000000000a1', 'user', '[{"type":"text","text":"Teşekkürler"}]');
-  perform t.ok(true, 'öğrenci kendi koç sohbetine mesaj yazar');
+  perform t.ok(public.coach_append_message('40000000-0000-4000-8000-0000000000a1', 'user', '[{"type":"text","text":"Teşekkürler"}]') is not null,
+               'öğrenci kendi koç sohbetine (coach_append_message ile) mesaj yazar');
+  perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content)
+                     values ('40000000-0000-4000-8000-0000000000a1', 'user', '[{"type":"text","text":"Doğrudan"}]')$q$,
+                   '42501', 'koç sohbetine doğrudan INSERT kapalı (yalnız coach_* RPC)');
   perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content)
                      values ('40000000-0000-4000-8000-0000000000a1', 'system', '[]')$q$, '42501', 'öğrenci system mesajı yazamaz');
   perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content)
                      values ('40000000-0000-4000-8000-0000000000a1', 'assistant', '[{"type":"text","text":"Sahte koç turu"}]')$q$,
                    '42501', 'öğrenci assistant (koç) turu yazamaz');
-  insert into public.conversation_messages (conversation_id, role, content, upload_ids)
-  values ('40000000-0000-4000-8000-0000000000a1', 'user', '[]', array[t.u('UP_' || t.v('elif'))]);
-  perform t.ok(true, 'öğrenci kendi yüklemesini mesaja ekler');
-  perform t.raises(format($q$insert into public.conversation_messages (conversation_id, role, content, upload_ids)
-                            values ('40000000-0000-4000-8000-0000000000a1', 'user', '[]', array[%L]::uuid[])$q$, t.u('UP_' || t.v('can'))),
+  perform t.ok(public.coach_append_message('40000000-0000-4000-8000-0000000000a1', 'user', '[]', array[t.u('UP_' || t.v('elif'))]) is not null,
+               'öğrenci kendi yüklemesini mesaja ekler');
+  perform t.raises(format($q$select public.coach_append_message('40000000-0000-4000-8000-0000000000a1', 'user', '[]', array[%L]::uuid[])$q$,
+                          t.u('UP_' || t.v('can'))),
                    '42501', 'başkasının yüklemesi mesaja eklenemez');
-  perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content, upload_ids)
-                     values ('40000000-0000-4000-8000-0000000000a1', 'user', '[]', array[gen_random_uuid()])$q$,
+  perform t.raises($q$select public.coach_append_message('40000000-0000-4000-8000-0000000000a1', 'user', '[]', array[gen_random_uuid()])$q$,
                    '42501', 'olmayan yükleme kimliği mesaja eklenemez');
   -- soru tarzları: örnek maddeler (exemplar_item_ids) ve gömme öğrenciye gizli
   perform t.ok(t.n($q$select id, code, status, skill_ids from public.question_styles where code = 'ST-RLS'$q$) = 1,
@@ -224,6 +224,9 @@ begin
   perform t.as_user(t.u('parent'));
   perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content)
                      values ('40000000-0000-4000-8000-0000000000a1', 'user', '[]')$q$, '42501', 'veli koç sohbetine yazamaz');
+  insert into public.conversation_messages (conversation_id, role, content)
+  values ('40000000-0000-4000-8000-0000000000a2', 'user', '[{"type":"text","text":"Teşekkürler"}]');
+  perform t.ok(true, 'veli kendi veli sohbetine doğrudan yazar (0018 hakkı koç dışı sohbetlerde kalır)');
   insert into public.conversations (student_id, kind, participant_id) values (t.u('A'), 'parent', auth.uid());
   perform t.ok(true, 'veli çocuğu için veli sohbeti açar');
   perform t.raises(format($q$insert into public.conversations (student_id, kind, participant_id) values (%L, 'parent', auth.uid())$q$, t.u('B')),

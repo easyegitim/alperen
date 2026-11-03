@@ -3,7 +3,7 @@ import { copyModeFromEnv, writeCopy, type CopySource } from '../suggestions/copy
 import { planSuggestions, type SuggestionKind } from '../suggestions/rules.js';
 import { collectSignals } from '../suggestions/signals.js';
 import { systemPrompt } from '../prompts.js';
-import { debounced } from './dedupe.js';
+import { debounced, oncePer } from './dedupe.js';
 import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
 
@@ -35,6 +35,26 @@ async function fanOut(ctx: JobContext): Promise<SuggestionsRefreshResult> {
   }
   ctx.log.info('suggestions.refresh yayıldı', { students: n });
   return { mode: 'fanout', students: n };
+}
+
+/**
+ * İlk 'practice' kartının yaprakları için soru bankasını ısıtır (practice.prewarm; yaprak kümesi başına saatte bir):
+ * öğrenci Başla'ya bastığında set bankadan hemen dolsun, "hazırlıyorum" beklemesi olmasın. Kuyruk hatası yenilemeyi
+ * düşürmez.
+ */
+async function prewarmFirstPractice(ctx: JobContext, cards: readonly { kind: string; enrollment_id?: string | null; payload: Record<string, unknown> }[]): Promise<void> {
+  const card = cards.find((c) => c.kind === 'practice' && c.enrollment_id && Array.isArray(c.payload.skill_ids) && c.payload.skill_ids.length > 0);
+  if (!card) return;
+  const skillIds = (card.payload.skill_ids as unknown[]).filter((x): x is string => typeof x === 'string').sort();
+  try {
+    await ctx.enqueue(
+      'practice.prewarm',
+      { enrollment_id: card.enrollment_id, skill_ids: skillIds, reason: 'suggestions.refresh' },
+      oncePer(`prewarm:${card.enrollment_id}:${skillIds.join(',')}`, 3600),
+    );
+  } catch (err) {
+    ctx.log.warn('practice.prewarm kuyruğa atılamadı', { error: (err as Error).message });
+  }
 }
 
 /**
@@ -91,6 +111,7 @@ export const suggestionsRefreshJob: JobDefinition<z.infer<typeof payload>, Sugge
     const copy: Partial<Record<CopySource, number>> = {};
     for (const c of copies) copy[c.source] = (copy[c.source] ?? 0) + 1;
     ctx.log.info('öneriler yenilendi', { reason: p.reason ?? null, written, kinds: cards.map((c) => c.kind), copy });
+    await prewarmFirstPractice(ctx, cards);
     return { mode: 'student', studentId, written, kinds: cards.map((c) => c.kind), copy };
   },
 };

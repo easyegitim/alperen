@@ -2,6 +2,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseServerClient } from '@/server/supabase';
 import { studentContext } from '@/server/suggestions/student';
+import type { RpcClient } from '@/server/practice/rpc';
 import type { CurriculumRow, GeneratedDocumentRow, MasteryViewRow, ProgressDatabase } from './db-types';
 import { daysUntil, examDative, lastSevenDays, netOf, topicRows, type DayPoint, type TopicRow } from './present';
 
@@ -77,4 +78,14 @@ export async function curriculumDraftState(curriculumId: string): Promise<Pick<C
   const db = await progressClient();
   const { data } = await db.from('curricula').select('status, draft_status, draft_progress').eq('id', curriculumId).maybeSingle();
   return data ?? null;
+}
+
+/**
+ * Taslak müfredatta alıştırma açık mı (curriculum_autopilot_state.effective)? Otopilotsuz taslakta öğrenci eğitmenin
+ * yayınını bekler (start_practice OGR-PRAC-008). Okunamazsa true döner: ekran düğmeyi çizer, hata tek cümleye çevrilir.
+ */
+export async function draftPracticable(db: RpcClient, curriculumId: string): Promise<boolean> {
+  const { data, error } = await db.rpc('curriculum_autopilot_state', { p_curriculum: curriculumId });
+  if (error || !data || typeof data !== 'object') return true;
+  return (data as { effective?: unknown }).effective === true;
 }

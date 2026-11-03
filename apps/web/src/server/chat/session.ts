@@ -3,7 +3,7 @@ import 'server-only';
 import { getCurrentProfile } from '@/server/auth';
 import { createSupabaseServerClient } from '@/server/supabase';
 import { chatDeps } from './deps';
-import type { UserStorageClient } from './pg-store';
+import type { CoachDbClient } from './supabase-store';
 import { ChatError, type TurnDeps } from './turn';
 import type { ChatStudent } from './types';
 
@@ -17,7 +17,7 @@ export async function chatSession(): Promise<ChatSession> {
   if (!current) throw new ChatError('unauthenticated', 401, 'Oturumun kapanmış. Yeniden giriş yap.');
   if (current.profile?.role !== 'student') throw new ChatError('forbidden', 403, 'Koç yalnız öğrenci hesabında açılır.');
   const supabase = await createSupabaseServerClient();
-  const deps = await chatDeps(supabase as unknown as UserStorageClient);
+  const deps = await chatDeps(supabase as unknown as CoachDbClient);
   const student = await deps.store.resolveStudent(current.user.id);
   if (!student) throw new ChatError('no_student', 403, 'Öğrenci kaydın bulunamadı.');
   return { deps, student };

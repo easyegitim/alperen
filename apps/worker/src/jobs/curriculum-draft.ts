@@ -16,6 +16,8 @@
  *   5. Doğrulama (checkDraft: tek kök, döngüsüz, derinlik ≤ 4, kod benzersiz) → public.save_curriculum_draft tek
  *      işlemde: kazanımlar + kind'a göre BKT varsayılanları + ön koşullar + yanılgı etiketleri; otopilot etkinse
  *      (TYT/AYT/LGS) kayıtlı öğrencilere ilk 'practice' önerisi — kapalıysa öneri eğitmenin yayınıyla gelir.
+ *   6. Kaydı açan öğrenci için practice.prewarm (ilk öneri için soru bankası; ai_draft dersin bankası hep boştu); otopilotta
+ *      ilk kartla birlikte SQL atar (app.first_practice_suggestion), eğitmen yayınında da (curriculum_publish).
  * Hata: draft_status = 'failed' + draft_error; geçici hatalar pg-boss ile yeniden denenir (bir sonraki deneme durumu
  * yeniden researching'e çeker); kalıcı hatada eğitmen editörde "Taslağı yeniden kur" der (curriculum_draft_retry).
  * Sahte taşımada (OGRENMEN_LLM=fake) taslak packages/llm/fixtures/curriculum_draft'tan
@@ -39,6 +41,7 @@ import {
 } from '../curriculum/draft.js';
 import type { Db } from '../db.js';
 import { routePrompt } from '../curriculum/prompt.js';
+import { oncePer } from './dedupe.js';
 import { PermanentJobError } from './errors.js';
 import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
@@ -239,6 +242,15 @@ export async function runCurriculumDraft(p: CurriculumDraftPayload, ctx: JobCont
   const tagsDropped = Array.isArray(r.tags_dropped) ? (r.tags_dropped as unknown[]).filter((x): x is string => typeof x === 'string') : [];
   if (tagsDropped.length > 0) ctx.log.warn('yanılgı etiketleri çakıştı, yazılmadı', { curriculum: cur.id, tags: tagsDropped });
   ctx.log.info('müfredat taslağı kaydedildi', { curriculum: cur.id, ...check.stats, costUsd, autopilot: r.autopilot === true });
+  // ilk öneri için soru bankasını ısıt (practice.prewarm; alıştırması açılamayan taslakta iş ücretli üretim yapmaz).
+  // Otopilotta ilk kartı ekleyen app.first_practice_suggestion (0027) kartın yapraklarına ön ısıtmayı zaten attı.
+  if (p.enrollment_id && !(Number(r.suggestions ?? 0) > 0)) {
+    try {
+      await ctx.enqueue('practice.prewarm', { enrollment_id: p.enrollment_id, reason: 'curriculum.draft' }, oncePer(`prewarm:${p.enrollment_id}:draft`, 3600));
+    } catch (err) {
+      ctx.log.warn('practice.prewarm kuyruğa atılamadı', { curriculum: cur.id, error: (err as Error).message });
+    }
+  }
   return {
     curriculum_id: cur.id,
     status: 'ready',

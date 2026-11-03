@@ -1,6 +1,6 @@
 /**
  * Süreç içi depo: yalnız sahte LLM ile (OGRENMEN_CHAT_STORE=memory + OGRENMEN_LLM=fake) E2E ve veritabanısız yerel
- * geliştirme içindir. Gerçek veriye dokunmaz; sunucu yeniden başlayınca sıfırlanır. Davranışı `PgChatStore` ile aynı
+ * geliştirme içindir. Gerçek veriye dokunmaz; sunucu yeniden başlayınca sıfırlanır. Davranışı `SupabaseChatStore` ile aynı
  * sözleşmeye uyar (kapsam, mod, yükleme, teşhis bağlamı, yönlendirme) ve testlerde gövde denetimi için kullanılır.
  */
 import { createHash, randomUUID } from 'node:crypto';
@@ -260,7 +260,8 @@ export class MemoryChatStore implements ChatStore {
     return true;
   }
 
-  async systemBlocks(_s: ChatStudent, courseId: string | null): Promise<{ course: string | null; dossier: string | null }> {
+  async systemBlocks(s: ChatStudent, conversationId: string): Promise<{ course: string | null; dossier: string | null }> {
+    const courseId = this.state.conversations.get(conversationId)?.courseId ?? s.courseId;
     return courseId ? { course: DEMO_COURSE_BLOCK, dossier: DEMO_DOSSIER_BLOCK } : { course: null, dossier: null };
   }
 
@@ -279,7 +280,7 @@ export class MemoryChatStore implements ChatStore {
     };
   }
 
-  memoryStore(): MemoryStore {
+  memoryStore(_conversationId: string): MemoryStore {
     return this.state.memory;
   }
 

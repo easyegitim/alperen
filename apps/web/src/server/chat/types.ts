@@ -1,7 +1,7 @@
 /**
  * Koç sohbeti (PLAN-v2 §2 Akış 1, §3.3, §6): sunucu tarafı tipleri. Depo (`ChatStore`) iki biçimde gelir:
- *   - `PgChatStore` (üretim): sunucuya özel güvenilir Postgres bağlantısı + kullanıcının JWT'li Supabase istemcisi
- *     (Storage ve yükleme satırı RLS ile). Her sorgu oturumdan çözülen öğrenci kimliğiyle açıkça kapsanır.
+ *   - `SupabaseChatStore` (üretim): yalnız kullanıcının JWT'li Supabase istemcisi; okuma ve yazımlar 0028 koç RPC'leri,
+ *     güvenilir yazımlar sunucu jetonuyla (server-token.ts). service_role ve doğrudan Postgres bağlantısı yok.
  *   - `MemoryChatStore` (yalnız OGRENMEN_LLM=fake ile; E2E ve yerel geliştirme): süreç içi, deterministik.
  */
 import type { CoachMode, ToolRunners } from '@ogrenmen/llm';
@@ -110,7 +110,7 @@ export interface TurnClaim {
 }
 
 export interface ChatStore {
-  readonly kind: 'pg' | 'memory';
+  readonly kind: 'supabase' | 'memory';
   /** Oturum kullanıcısının öğrenci kaydı; öğrenci değilse null. */
   resolveStudent(profileId: string): Promise<ChatStudent | null>;
   /** Öğrencinin en son koç sohbeti. */
@@ -142,12 +142,12 @@ export interface ChatStore {
   getSeed(student: ChatStudent, solutionAnalysisId: string): Promise<SeedContext | null>;
   /** Eğitmene yönlendirme notu (instructor_notes + eğitmen bildirimi); yazıldıysa true. */
   escalate(input: EscalationInput): Promise<boolean>;
-  /** system[1] ders ve system[2] dossier blokları (yoksa null). */
-  systemBlocks(student: ChatStudent, courseId: string | null): Promise<{ course: string | null; dossier: string | null }>;
+  /** system[1] ders ve system[2] dossier blokları (sohbetin dersi, yoksa etkin kaydın dersi; yoksa null). */
+  systemBlocks(student: ChatStudent, conversationId: string): Promise<{ course: string | null; dossier: string | null }>;
   /** Koç araçlarının çalıştırıcıları (search_evidence, get_mastery, get_recent_exams). record_turn_meta turda bağlanır. */
   toolRunners(student: ChatStudent): ToolRunners;
-  /** Hafıza aracı deposu (memory_20250818). */
-  memoryStore(): MemoryStore;
-  /** Defter (llm_calls) yazıcısı. */
+  /** Hafıza aracı deposu (memory_20250818); yazımlar bu sohbete bağlı (actor coach:<sohbet>). */
+  memoryStore(conversationId: string): MemoryStore;
+  /** Defter (llm_calls) yazıcısı (satır `ref` ile sohbete bağlıdır). */
   ledger(): import('@ogrenmen/llm').LedgerWriter;
 }

@@ -175,7 +175,8 @@ test.describe('öğrenci çekirdeği: Onboarding → Bugün → Test → Sonuç 
     await page.screenshot({ path: `${SCREEN_DIR}/bugun-bos-390.png` });
     await page.getByRole('button', { name: 'İlk testine başla' }).click();
     await page.waitForURL(/\/ogrenci\/test\/[0-9a-f-]{36}$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Bu konu için soruları hazırlıyorum' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Soruları hazırlıyorum…' })).toBeVisible();
+    await expect(page.getByTestId('hazirlaniyor-not')).toHaveText(/kendiliğinden açılır/);
     await expect(page.getByRole('link', { name: 'Bugün’e dön' })).toHaveAttribute('href', '/ogrenci');
     const st = await fakePractice();
     expect(st.sets.at(-1)).toMatchObject({ status: 'needs_generation', suggestion_id: null });

@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 vi.mock('@/server/uploads/actions', () => ({ submitUploads: vi.fn(async () => ({ ok: true, href: '/ogrenci/sonuc?yukleme=x', uploadIds: [], kind: 'own_work' })) }));
 
 import { AdimMerdiveni } from '@/app/ogrenci/teshis/[id]/adim-merdiveni';
-import { pollDelay } from '@/app/ogrenci/sonuc/bekleme';
+import { backoffDelay, LIVE_DEFAULTS } from '@/lib/live';
 import { YukleAkisi } from '@/app/ogrenci/yukle/yukle-akisi';
 import { bandWord, coachHref, isLowEvidence, ladderRows, primarySkill, readAnalysis, summarySentence } from '@/server/diagnosis/present';
 import { getDiagnosis } from '@/server/diagnosis/read';
@@ -153,10 +153,11 @@ describe('getUploadState (bekleme yoklaması)', () => {
     expect(await getUploadState(fakeClient(tables('ready', true)).client, 'olmayan')).toEqual({ state: 'missing' });
   });
 
-  it('yoklama aralığı: önce sık, sonra seyrek, 4 dakikada durur', () => {
-    expect(pollDelay(0)).toBe(2_000);
-    expect(pollDelay(60_000)).toBe(5_000);
-    expect(pollDelay(300_000)).toBeNull();
+  it('yoklama aralığı (bekleme ekranı useLive): 2 sn ile başlar, 5 sn tavana çekilir, 120 sn bütçe', () => {
+    expect(backoffDelay(0)).toBe(2_000);
+    expect(backoffDelay(1)).toBe(3_000);
+    expect(backoffDelay(10)).toBe(5_000);
+    expect(LIVE_DEFAULTS.maxElapsedMs).toBe(120_000);
   });
 });
 

@@ -23,5 +23,6 @@ insert into public.settings (key, value, description) values
   ('practice_daily_sets', '10'::jsonb, 'Koç yolundan (öneri olmadan) kayıt başına son 24 saatte en çok yeni alıştırma seti (start_practice, OGR-PRAC-007)'),
   ('practice_generation_timeout_s', '600'::jsonb, 'Bankası boş alıştırma setinin (needs_generation) üretim için beklediği en çok süre (saniye); aşınca set generation_timeout ile kapanır'),
   ('practice_repeat_wrong_weight', '0.5'::jsonb, 'Daha önce görülmüş soruya yanlış cevabın gözlem ağırlığı (doğru tekrar 0; kanıt sayılmaz)'),
+  ('practice_inferred_key_weight', '0.5'::jsonb, 'Anahtarı SymPy ile doğrulanmamış (questions.verification.sympy = inferred) alıştırma sorusunun gözlem ağırlığı (answer_practice_item; 0–1)'),
   ('onboarding_created_daily', '3'::jsonb, 'Öğrencinin onboarding''de son 24 saatte en çok açabileceği yeni ders taslağı (OGR-ONB-003)')
 on conflict (key) do nothing;

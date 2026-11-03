@@ -7,7 +7,9 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }), usePathname: () => '/ogrenci/gelisim' }));
 vi.mock('@/server/practice/actions', () => ({ answerPracticeAction: vi.fn(), finishPracticeAction: vi.fn() }));
+vi.mock('@/server/suggestions/actions', () => ({ openNotice: vi.fn(), startFirstPractice: vi.fn(), startSuggestion: vi.fn() }));
 
+import { FirstPracticeCard } from '@/app/ogrenci/bugun/kartlar';
 import { OneLineResult } from '@/components/result';
 import { isFocusPath, shellTabs, TabShell } from '@/components/shell';
 import { courseTextOf, nextAfterEnroll, onboardingErrorMessage, parseCourseText } from '@/app/ogrenci/onboarding/shared';
@@ -212,6 +214,7 @@ describe('Test: set biçimi ve sunum', () => {
     expect(practiceErrorMessage('OGR-PRAC-005')).toBe('Önce bir cevap seç.');
     expect(practiceErrorMessage('OGR-PRAC-006')).toMatch(/^Planın kuruluyor/);
     expect(practiceErrorMessage('OGR-PRAC-007')).toMatch(/^Bugünlük alıştırma sınırı/);
+    expect(practiceErrorMessage('OGR-PRAC-008')).toMatch(/^Planın eğitmen onayında/);
     expect(practiceErrorMessage('bilinmeyen')).toMatch(/^Kaydedemedim/);
   });
 
@@ -373,12 +376,32 @@ describe('Gelişim tipleri göçlerle uyumlu', () => {
   });
 });
 
-describe('Test bekleme ekranı: yenileme aralığı', () => {
-  it('aralık uzar ve 30 sn ile sınırlanır', async () => {
-    const { refreshDelay, MAX_REFRESHES } = await import('../src/app/ogrenci/test/[id]/yenile');
-    expect(refreshDelay(5000, 0)).toBe(5000);
-    expect(refreshDelay(5000, 1)).toBe(7500);
-    expect(refreshDelay(5000, 20)).toBe(30_000);
-    expect(MAX_REFRESHES).toBeGreaterThan(0);
+describe('Test bekleme ekranı: yoklama aralığı', () => {
+  it('ilk dakika 2 sn, sonra 10 sn; 10 dakikada durur; süre setin açılışından sayılır', async () => {
+    const { pollDelay, elapsedSince, SLOW_AFTER_MS, GIVE_UP_AFTER_MS } = await import('../src/server/practice/wait');
+    expect(pollDelay(0)).toBe(2_000);
+    expect(pollDelay(SLOW_AFTER_MS - 1)).toBe(2_000);
+    expect(pollDelay(SLOW_AFTER_MS)).toBe(10_000);
+    expect(pollDelay(GIVE_UP_AFTER_MS)).toBeNull();
+    expect(SLOW_AFTER_MS).toBe(60_000);
+    const now = Date.parse('2026-11-03T10:01:30Z');
+    expect(elapsedSince('2026-11-03T10:00:00Z', now)).toBe(90_000);
+    expect(elapsedSince('2026-11-03T10:05:00Z', now)).toBe(0);
+    expect(elapsedSince(null, now)).toBe(0);
+    expect(elapsedSince('bozuk', now)).toBe(0);
+  });
+});
+
+describe('Bugün: öneri yokken ilk test kartı', () => {
+  it('taslak hazırsa tek "İlk testine başla"; sürerken düğmesiz; eğitmen onayı beklerken düğmesiz tek cümle', () => {
+    const { unmount } = render(<FirstPracticeCard drafting={false} />);
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['İlk testine başla']);
+    unmount();
+    const drafting = render(<FirstPracticeCard drafting />);
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    drafting.unmount();
+    render(<FirstPracticeCard drafting={false} awaitingApproval />);
+    expect(screen.getByRole('heading', { name: 'Planın eğitmen onayında' })).toBeTruthy();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });

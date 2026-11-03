@@ -43,6 +43,9 @@ export const practiceSetSchema = z.object({
   enrollment_id: z.string(),
   suggestion_id: z.string().nullable().optional(),
   status: z.enum(PRACTICE_STATUSES),
+  /** Üretim zaman aşımı ya da kalıcı üretim hatası (0027): istemci beklemeyi bırakır. */
+  generation_failed: z.boolean().optional(),
+  started_at: z.string().nullable().optional(),
   skill_ids: z.array(z.string()).default([]),
   target_count: z.number(),
   total: z.number(),

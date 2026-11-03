@@ -23,7 +23,8 @@ describe.skipIf(!live)('açılışta prompt eşlemesi', () => {
 
   it('start() prompt_versions yazar', async () => {
     const db = Object.assign(routedDb([[/insert into public\.prompt_versions/, () => [{ id: 1 }]]]), { end: async () => undefined });
-    const config = loadConfig({ DATABASE_URL: url, PGBOSS_SCHEMA: schema, HEALTH_HOST: '127.0.0.1', HEALTH_PORT: '0', WORKER_SCHEDULES: 'off' }, ['--process=all']);
+    // Sahte uygulama havuzu: başlangıç denetimleri (gerçek veritabanı ister) burada kapalı; onları startup.live.test.ts sınar.
+    const config = loadConfig({ DATABASE_URL: url, PGBOSS_SCHEMA: schema, HEALTH_HOST: '127.0.0.1', HEALTH_PORT: '0', WORKER_SCHEDULES: 'off', WORKER_STARTUP_CHECKS: 'off' }, ['--process=all']);
     const app = createApp(config, { log: silentLogger, db, pdf: { render: async () => ({ pdf: Buffer.from('%PDF-1.4'), pages: 1, bytes: 8 }), close: async () => undefined } });
     await app.start();
     try {

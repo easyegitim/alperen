@@ -1344,6 +1344,20 @@
         "delete": "*"
       }
     },
+    "secure.coach_turns": {
+      "columns": [
+        "conversation_id",
+        "created_at",
+        "expires_at",
+        "token"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
     "secure.exam_answer_keys": {
       "columns": [
         "confidence",
@@ -1352,6 +1366,38 @@
         "exam_question_id",
         "numeric_value",
         "source"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "secure.job_outbox": {
+      "columns": [
+        "attempts",
+        "created_at",
+        "data",
+        "id",
+        "last_error",
+        "name",
+        "reason",
+        "retried_at"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "secure.server_keys": {
+      "columns": [
+        "created_at",
+        "name",
+        "rotated_at",
+        "secret"
       ],
       "service_role": {
         "select": "*",

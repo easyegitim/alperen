@@ -8,7 +8,9 @@
  *      `request.jwt.claims` + `set local role authenticated|anon|service_role` ile koşar: RLS, RPC'ler ve Storage
  *      politikaları (storage.objects) gerçektir; yalnız HTTP katmanı taklittir. Realtime yok (ekranlar yoklamaya düşer).
  *   3. apps/worker (gerçek pg-boss, OGRENMEN_LLM=fake, Storage = bu köprü, service_role JWT'si).
- *   4. apps/web `next dev` (.next-journey; OGRENMEN_LLM=fake; koç: PgChatStore, yerel güvenilir bağlantı).
+ *   4. apps/web `next dev` (.next-journey; OGRENMEN_LLM=fake; koç: SupabaseChatStore — yalnız kullanıcının JWT'si ile bu
+ *      köprünün RPC yolu (0028 koç RPC'leri) + sunucu anahtarı OGRENMEN_WEB_COACH_KEY (göçün ürettiği secure.server_keys
+ *      'web_coach' değeri); web'e veritabanı adresi verilmez).
  *
  * Uçlar: /__ready (hepsi hazırsa 200), /__info ({dbUrl}); SIGTERM/SIGINT'te çocuklar durur, veritabanı silinir.
  */
@@ -629,6 +631,7 @@ async function main() {
     env: { ...process.env, PGOPTIONS: '-c role=ogrenmen_owner' },
   });
   log(`veritabanı hazır: ${db.name}`);
+  const coachKey = String((await db.pool.query(`select secret from secure.server_keys where name = 'web_coach'`)).rows[0]?.secret ?? '');
 
   const server = http.createServer((req, res) => {
     void (async () => {
@@ -678,8 +681,8 @@ async function main() {
     NEXT_PUBLIC_SITE_URL: JOURNEY_WEB_URL,
     NEXT_TELEMETRY_DISABLED: '1',
     OGRENMEN_LLM: 'fake',
-    OGRENMEN_WEB_COACH_DATABASE_URL: db.url,
-    OGRENMEN_WEB_COACH_TRUSTED_DEV: '1',
+    // Kurucunun üretimde yaptığı gibi: göçün ürettiği anahtar web sunucusunun ortamına kopyalanır (tarayıcıya gitmez).
+    OGRENMEN_WEB_COACH_KEY: coachKey,
   });
 }
 
