@@ -50,7 +50,7 @@ def test_enums_agree_with_contracts_and_sql():
     assert sorted(row_kinds) == sorted(kinds.PLAN_KINDS)
     item = json.loads((schemas / "exam-item.schema.json").read_text(encoding="utf-8"))
     assert sorted(item["properties"]["kind"]["enum"]) == sorted(kinds.EXAM_KINDS)
-    sql = (repo_root() / "supabase" / "migrations" / "0009_kalem.sql").read_text(encoding="utf-8")
+    sql = (repo_root() / "supabase" / "migrations" / "0009_exams.sql").read_text(encoding="utf-8")
     assert "check (kind in ('proof', 'calc', 'mc', 'other'))" in sql
     gen = json.loads((schemas / "generation-request.schema.json").read_text(encoding="utf-8"))
     qk = gen["properties"]["question_kind"]["oneOf"][1]["enum"]

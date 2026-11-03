@@ -1,7 +1,8 @@
 -- tests/07_memory_files.sql — hafıza aracı deposu (upsert_memory_file): işlemler (create, str_replace, insert, compact,
 -- delete, rename), sürümler (memory_file_versions, yol başına artan), sınırlar (≤ 12 dosya OGR-MEM-001, ≤ 8 KB
 -- OGR-MEM-002), /memories/ izin listesi (OGR-MEM-003), geçersiz işlem (OGR-MEM-004), olmayan dosya (OGR-MEM-005),
--- hedef var (OGR-MEM-006), parent_summary.md yalnız worker (OGR-MEM-007); okuma RLS'i.
+-- hedef var (OGR-MEM-006), parent_summary.md yalnız worker (OGR-MEM-007); aktör yalnız worker'dan alınır (kullanıcı
+-- oturumunda '<rol>:<uid>'); okuma RLS'i.
 begin;
 \ir _fixture.sql
 
@@ -9,7 +10,7 @@ do $$
 declare
   v_r jsonb;
 begin
-  perform t.as_user(t.u('elif'));
+  perform t.as_service();   -- worker'ın hafıza aracı (packages/llm memory) bağlamı
   v_r := public.upsert_memory_file(t.u('A'), '/memories/profile.md', E'# Profil\nSınıf: 11', 'create', 'coach');
   perform t.ok(v_r ->> 'version' = '1' and (v_r ->> 'bytes')::int = octet_length(E'# Profil\nSınıf: 11'), 'create: sürüm 1, bayt (UTF-8)');
   v_r := public.upsert_memory_file(t.u('A'), '/memories/profile.md', E'# Profil\nSınıf: 11\nHedef: TYT', 'insert', 'coach');
@@ -37,6 +38,16 @@ begin
                'delete sürümü içeriksiz');
 end $$;
 
+-- Kullanıcı oturumunda aktör sabitlenir: öğrenci 'worker' diye yazamaz
+do $$
+begin
+  perform t.as_user(t.u('elif'));
+  perform public.upsert_memory_file(t.u('A'), '/memories/profile.md', E'# Profil\nSınıf: 12\nHedef: AYT', 'str_replace', 'worker');
+  perform t.as_admin();
+  perform t.ok((select v.actor from public.memory_file_versions v where v.student_id = t.u('A') and v.path = '/memories/profile.md' and v.version = 4)
+               = 'student:' || t.v('elif'), 'öğrenci oturumu: aktör student:<uid> (verilen ''worker'' yok sayılır)');
+end $$;
+
 -- Sınırlar ve hatalar
 do $$
 declare
@@ -52,7 +63,9 @@ begin
   perform t.raises(format($q$select public.upsert_memory_file(%L, '/memories/a/b/c/d.md', 'x', 'create', 'coach')$q$, t.u('A')), 'OGR-MEM-003%', '3 düzeyden derin');
   perform t.raises(format($q$select public.upsert_memory_file(%L, '/memories/x.exe', 'x', 'create', 'coach')$q$, t.u('A')), 'OGR-MEM-003%', 'izin verilmeyen uzantı');
   perform t.raises(format($q$select public.upsert_memory_file(%L, '/memories/x.md', 'x', 'view', 'coach')$q$, t.u('A')), 'OGR-MEM-004%', 'geçersiz işlem');
-  perform t.raises(format($q$select public.upsert_memory_file(%L, '/memories/x.md', 'x', 'create', '')$q$, t.u('A')), 'OGR-MEM-004%', 'aktör gerekli');
+  perform t.as_service();
+  perform t.raises(format($q$select public.upsert_memory_file(%L, '/memories/x.md', 'x', 'create', '')$q$, t.u('A')), 'OGR-MEM-004%', 'aktör gerekli (worker)');
+  perform t.as_user(t.u('elif'));
   perform t.raises(format($q$select public.upsert_memory_file(%L, '/memories/yok.md', 'x', 'str_replace', 'coach')$q$, t.u('A')), 'OGR-MEM-005%',
                    'olmayan dosyada str_replace');
   perform t.raises(format($q$select public.upsert_memory_file(%L, '/memories/yok.md', null, 'delete', 'coach')$q$, t.u('A')), 'OGR-MEM-005%', 'olmayan dosyayı silme');

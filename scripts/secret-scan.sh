@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 # scripts/secret-scan.sh — depodaki izlenen ve izlenmeye aday (yok sayılmayan) dosyalarda gerçek görünümlü anahtar
-# taraması (M13L; BLUEPRINT §8 "gitleaks" işinin hesapsız, ikilisiz eşdeğeri; README "Kabul komutu notu").
+# taraması (gitleaks işinin hesapsız, ikilisiz eşdeğeri; docs/PLAN-v2.md §12; README "Kabul komutu notu").
 #
 #   bash scripts/secret-scan.sh [--root <depo>]
 #
 # Çıkış: 0 = bulgu yok; 1 = bulgu var (dosya:satır ve desen adı yazılır, değerin kendisi maskelenir); 2 = kullanım ya da
-# git/grep hatası. Desenler değerin biçimine bakar (önek + yeterli uzunluk); "AIza|gsk_" gibi düzenli ifade metinleri ve
+# git/grep hatası. Desenler değerin biçimine bakar (önek + yeterli uzunluk); "AIza|gsk_" gibi düzenli ifade metinleri
 # belgelerdeki ad geçişleri eşleşmez. .gitignore'daki dosyalar (.dev.vars, node_modules, derleme çıktıları) taranmaz.
+# v2 sırları (Resend, Voyage, Fly, VAPID özel anahtarı; docs/PLAN-v2.md §12) da aynı biçim kuralıyla taranır.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 while [ $# -gt 0 ]; do
   case "$1" in
     --root) ROOT="$(cd "${2:?--root dizin ister}" && pwd)"; shift 2 ;;
-    -h|--help) sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "HATA: bilinmeyen seçenek $1" >&2; exit 2 ;;
   esac
 done
@@ -28,6 +29,10 @@ PATTERNS=(
   "supabase-secret-key|sb_secret_[0-9A-Za-z_-]{10,}"
   "telegram-bot-token|[0-9]{8,10}:AA[0-9A-Za-z_-]{33}"
   "private-key|-----BEGIN ([A-Z]+ )?PRIVATE KEY-----"
+  "resend-key|(^|[^0-9A-Za-z_])re_[0-9A-Za-z]{8}_[0-9A-Za-z]{16,}"
+  "voyage-key|(^|[^0-9A-Za-z_-])pa-[0-9A-Za-z_-]{40,}"
+  "fly-token|FlyV1 fm[12][a-z]?_[0-9A-Za-z_+/=-]{20,}"
+  "vapid-private-key|VAPID_PRIVATE_KEY[[:space:]]*[=:][[:space:]]*[\"']?[0-9A-Za-z_-]{40,}"
 )
 
 git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "HATA: $ROOT bir git çalışma ağacı değil" >&2; exit 2; }

@@ -92,6 +92,23 @@ export class BatchError extends LlmError {
   }
 }
 
+/** Geçersiz `student_ref` (yalnız `students.public_ref`; uuid ya da ad asla). API isteğinden önce fırlatılır. */
+export class StudentRefError extends LlmError {
+  constructor(ref: string) {
+    super('OGR-LLM-008', `student_ref yalnız students.public_ref olabilir (s_xxxx): ${ref.slice(0, 4)}…`, { status: 'error' });
+    this.name = 'StudentRefError';
+  }
+}
+
+/**
+ * Model ortadaki `role:"system"` mesajını desteklemiyor mu (400 `role 'system' is not supported on this model`;
+ * claude-api shared/prompt-caching.md). Geçit bu durumda bir kez `<system-reminder>` yedeğiyle yeniden dener.
+ */
+export function isSystemRoleUnsupported(err: unknown): boolean {
+  if (!(err instanceof APIError) || err.status !== 400) return false;
+  return /role\W{0,3}system\W{0,3}(is\s+)?not\s+supported/i.test(err.message);
+}
+
 /** SDK hatasını defter durumuna eşler (sınıf adına göre; ileti metni eşlenmez). */
 export function classifyError(err: unknown): { status: LedgerStatus; retryable: boolean; code: string } {
   if (err instanceof LlmError) return { status: err.status, retryable: err.retryable, code: err.code };

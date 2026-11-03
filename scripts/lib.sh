@@ -49,9 +49,12 @@ ogr_tmpdir() {
 }
 
 # Kök bun çalışma alanını kurar. Paralel koşular aynı anda kurmasın diye kilitlidir.
+# CI'da (CI tanımlı) --frozen-lockfile: bun.lock sessizce yeniden yazılmaz, sapma burada hata verir.
+# Yerelde kilit dosyası gerekirse güncellenir (geliştirici `git diff bun.lock` ile görür).
 ogr_bun_install() {
   command -v bun >/dev/null || { echo "HATA: bun yok (bun 1.4 gerekir)" >&2; return 1; }
-  flock /tmp/ogrenmen-bun.lock bun install --cwd "$OGR_ROOT" >/dev/null
+  # shellcheck disable=SC2086
+  flock /tmp/ogrenmen-bun.lock bun install --cwd "$OGR_ROOT" ${CI:+--frozen-lockfile} >/dev/null
 }
 
 # pip install -e <yol>... (kilitli, sessiz). Yerel paket yolları mutlak olmalı.

@@ -1,4 +1,4 @@
-"""fakes/rpc-names.json ↔ JsonlDb.rpc() eşlenikleri ↔ BLUEPRINT'teki batch_worker RPC'leri."""
+"""fakes/rpc-names*.json ↔ JsonlDb.rpc() eşlenikleri ↔ v2 migration'ları (v2 küme) / legacy-v1 küme."""
 
 from __future__ import annotations
 
@@ -6,61 +6,44 @@ import json
 import re
 from importlib import resources
 
-import pytest
-
 from conftest import REPO
-from ogrenmen_common.errors import RpcError
-from ogrenmen_common.fakes import rpc_names
+from ogrenmen_common.fakes import legacy_rpc_names, rpc_names
 from ogrenmen_common.fakes.jsonl_rpc import RPCS
 
-BLUEPRINT = (REPO / "docs" / "BLUEPRINT.md").read_text(encoding="utf-8")
-BATCH_WORKER_RPCS = {
-    # §3.9 grant satırları (batch_worker'a execute verilenler) + §3.0 profile_for_prompt
-    "register_lesson", "write_lesson_analysis", "resolve_lesson_labels", "confirm_video_deleted",
-    "register_template_question", "register_answer_key", "run_retention", "compute_table_sizes",
-    "recompute_is_minor", "rollup_spend", "cap_memory_facts", "anonymize_students", "cron_due_proactive",
-    "cron_open_alerts", "cron_idle_sessions", "check_spend", "set_runtime_flag", "profile_for_prompt",
-}
+MIGRATIONS = "\n".join(p.read_text(encoding="utf-8") for p in sorted((REPO / "supabase" / "migrations").glob("*.sql")))
+CREATED = set(re.findall(r"create\s+(?:or\s+replace\s+)?function\s+public\.([a-z_][a-z0-9_]*)\s*\(", MIGRATIONS, re.I))
 
 
-def test_rpc_names_file_matches_registry_sorted_unique():
-    raw = json.loads(resources.files("ogrenmen_common.fakes").joinpath("rpc-names.json").read_text(encoding="utf-8"))
-    assert isinstance(raw, list) and all(isinstance(n, str) for n in raw)
-    assert raw == sorted(set(raw)) == rpc_names()
-    assert raw == sorted(RPCS)
+def _raw(name: str) -> list:
+    return json.loads(resources.files("ogrenmen_common.fakes").joinpath(name).read_text(encoding="utf-8"))
 
 
-def test_every_name_is_a_batch_worker_rpc_in_blueprint():
-    for name in rpc_names():
-        assert name in BATCH_WORKER_RPCS, name
-        assert re.search(rf"\b(public\.)?{name}\b", BLUEPRINT), name
+def test_rpc_names_files_are_sorted_unique_and_match_registry():
+    for name, loaded in (("rpc-names.json", rpc_names()), ("rpc-names-legacy-v1.json", legacy_rpc_names())):
+        raw = _raw(name)
+        assert isinstance(raw, list) and all(isinstance(n, str) for n in raw)
+        assert raw == sorted(set(raw)) == loaded
+    assert sorted(RPCS) == sorted(rpc_names() + legacy_rpc_names())
+    assert not set(rpc_names()) & set(legacy_rpc_names())
 
 
 def test_names_are_plain_identifiers():
-    assert all(re.fullmatch(r"[a-z_][a-z0-9_]*", n) for n in rpc_names())
+    assert all(re.fullmatch(r"[a-z_][a-z0-9_]*", n) for n in rpc_names() + legacy_rpc_names())
 
 
-MIGRATIONS = "\n".join(p.read_text(encoding="utf-8") for p in sorted((REPO / "supabase" / "migrations").glob("*.sql")))
-
-
-def test_every_name_is_created_and_granted_to_batch_worker_in_migrations():
-    created = set(re.findall(r"create\s+(?:or\s+replace\s+)?function\s+public\.([a-z_][a-z0-9_]*)\s*\(",
-                             MIGRATIONS, re.I))
-    granted: set[str] = set()
-    for m in re.finditer(r"grant\s+execute\s+on\s+function\s+(.*?)\s+to\s+([^;]*);", MIGRATIONS, re.I | re.S):
-        if re.search(r"\bbatch_worker\b", m.group(2)):
-            granted |= set(re.findall(r"public\.([a-z_][a-z0-9_]*)\s*\(", m.group(1)))
+def test_v2_names_are_created_in_migrations():
+    assert rpc_names()
     for name in rpc_names():
-        assert name in created, name
-        assert name in granted, name
+        assert name in CREATED, name
 
 
-def test_cron_open_alerts_fake_refuses_and_points_to_python_port(db):
-    """Dry-run alarmları Python eşleniğiyle (``open_alerts(db, now)``) üretir; RPC eşleniği bilerek çalışmaz."""
-    writes = len(db.write_log)
-    with pytest.raises(RpcError, match="OGR-RPC-002") as exc:
-        db.rpc("cron_open_alerts", {})
-    assert exc.value.code == "OGR-RPC-002" and exc.value.rpc == "cron_open_alerts"
-    assert "Python eşleniği" in exc.value.message and "via_rpc=False" in exc.value.message
-    assert len(db.write_log) == writes
-    assert db.rpc_log[-1]["rpc"] == "cron_open_alerts" and db.rpc_log[-1]["error"].startswith("OGR-RPC-002")
+def test_legacy_names_have_no_v2_function():
+    """legacy-v1 kümesi v2'de karşılığı olmayanlardır; bir ad v2'de doğarsa bu listeden v2 listesine taşınmalıdır."""
+    for name in legacy_rpc_names():
+        assert name not in CREATED, f"{name} artık v2'de var: rpc-names.json'a taşıyın ve parite imzasını eşleyin"
+
+
+def test_v1_retention_and_telegram_rpcs_are_gone():
+    gone = {"run_retention", "compute_table_sizes", "recompute_is_minor", "rollup_spend", "cap_memory_facts",
+            "anonymize_students", "cron_due_proactive", "cron_open_alerts", "cron_idle_sessions"}
+    assert not gone & set(RPCS)

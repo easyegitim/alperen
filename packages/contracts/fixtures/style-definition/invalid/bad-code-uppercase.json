@@ -5,7 +5,7 @@
       "code": "Tablo_Yuzde",
       "name": "Tablo yorumlu yüzde",
       "description": "Tablodaki verilerden yüzde artış ve azalış hesaplatan çok adımlı sorular.",
-      "format": "mcq",
+      "format": "text",
       "trick": "Birim ve baz değişimi saklıdır",
       "difficulty_band": "medium",
       "skill_ids": [

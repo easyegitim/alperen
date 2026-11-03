@@ -121,5 +121,33 @@ select gl.parent_id,
  where gl.status = 'active' and (gl.parent_id = auth.uid() or app.is_admin() or app.is_trusted());
 comment on view public.v_parent_child_overview is 'Veli özet kartı (aktif bağ başına): kayıtlar, etkinlik, deneme, ustalık bantları, açık yanılgılar; koç sohbeti yok.';
 
-grant select on public.mastery_view, public.v_exam_questions_student, public.v_questions_student, public.v_parent_child_overview
+-- Soru tarzları (personel): tam satır (exemplar_item_ids, embedding dahil). authenticated question_styles tablosunda bu iki
+-- sütunu okuyamaz (0018 sütun yetkileri).
+create view public.v_question_styles_staff with (security_barrier = true) as
+select qs.id,
+       qs.course_id,
+       qs.curriculum_id,
+       qs.code,
+       qs.name,
+       qs.description,
+       qs.format,
+       qs.trick,
+       qs.difficulty_band,
+       qs.skill_ids,
+       qs.years_hit,
+       qs.years_total,
+       qs.recency_score,
+       qs.frequency_score,
+       qs.exemplar_item_ids,
+       qs.embedding,
+       qs.source,
+       qs.status,
+       qs.created_by,
+       qs.created_at
+  from public.question_styles as qs
+ where app.is_trusted() or app.is_staff();
+comment on view public.v_question_styles_staff is 'Soru tarzlarının tam satırı (örnek maddeler, gömme); yalnız eğitmen/admin ve worker.';
+
+grant select on public.mastery_view, public.v_exam_questions_student, public.v_questions_student, public.v_parent_child_overview,
+  public.v_question_styles_staff
 to authenticated, service_role;

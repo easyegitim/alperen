@@ -48,6 +48,8 @@ export interface QueuePolicy {
   expireInSeconds: number;
   /** Tamamlanan işin saklama süresi (sn). */
   deleteAfterSeconds?: number;
+  /** Bekleyen (created/retry) işin silinmeden önce bekleyebileceği süre (sn); verilmezse pg-boss varsayılanı (14 gün). */
+  retentionSeconds?: number;
 }
 
 export interface JobDefinition<P = unknown, R = unknown> {
@@ -57,11 +59,11 @@ export interface JobDefinition<P = unknown, R = unknown> {
   /** Bu işi hangi süreç çalıştırır. */
   process: Exclude<WorkerProcess, 'all'>;
   /** Yük şeması; geçersiz yük yeniden denenmez (dead_letter). */
-  payload: z.ZodType<P>;
+  payload: z.ZodType<P, unknown>;
   /** Aynı süreçte eşzamanlı çalışan sayısı. */
   concurrency: number | ((c: WorkerConfig) => number);
   retry: QueuePolicy;
-  /** null: yalnız kuyruk açılır (iş eklenebilir, işleyici P1+'da gelir; iş kaybolmaz, bekler). */
+  /** null: yalnız kuyruk açılır (iş eklenebilir, işleyici P1+'da gelir; iş kuyruğun retentionSeconds süresi kadar bekler, sonra silinir). */
   handler: ((payload: P, ctx: JobContext) => Promise<R>) | null;
   /** Gerçek mantığı henüz yok. */
   skeleton?: boolean;

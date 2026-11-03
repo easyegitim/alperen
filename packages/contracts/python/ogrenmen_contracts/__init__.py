@@ -4,15 +4,17 @@
   veriyi olduğu gibi döner.
 * ``errors(schema_id, data)`` — hata listesi (geçerliyse boş).
 * ``is_valid(schema_id, data)``.
-* ``gemini_schema(schema_id)`` — TS ``toGeminiSchema`` ile aynı düzleştirme.
+* ``gemini_schema(schema_id)`` — yalnız ``pipelines/common`` Gemini bağdaştırıcıları için anında düzleştirme
+  (TS karşılığı yok).
 * ``load_models()`` — ``models.json`` (şemaya karşı doğrulanmış).
 
 ``schema_id`` kısa ad (``"question-item"``), ``$id``
 (``"https://ogrenmen.easy/schemas/question-item.json"``) ya da tek tanıma parçalı başvuru
 (``"transcript#/$defs/segment"``, ``"…/curriculum.json#/$defs/skill"``) olabilir. Doğrulama
 ``jsonschema.Draft202012Validator`` + ``FormatChecker`` ile yapılır; ``x-forbidden-words``
-``validators.extend`` ile eklenir; biçimler ve ``pattern`` Ajv (TS) ile aynı kararı verir
-(``_core``). Pipelines çıktıyı DB'ye yazmadan önce mutlaka ``validate`` eder.
+``validators.extend`` ile eklenir; biçim ve ``pattern`` kararları ``_core``'da toplanır
+(JavaScript ``u`` bayraklı RegExp anlamı).
+Pipelines çıktıyı DB'ye yazmadan önce mutlaka ``validate`` eder.
 """
 
 from __future__ import annotations
@@ -158,7 +160,7 @@ def _pattern(validator, pattern, instance, _schema):
 
 def _pattern_properties(validator, pattern_properties, instance, _schema):
     """``patternProperties`` — anahtarlar ``pattern`` gibi ECMAScript anlamıyla eşleşir
-    (Python ``re.search`` ``$``'ı sondaki satır sonundan önce de eşler; Ajv eşlemez)."""
+    (Python ``re.search`` ``$``'ı sondaki satır sonundan önce de eşler; JavaScript eşlemez)."""
     if not validator.is_type(instance, "object"):
         return
     for pattern, subschema in pattern_properties.items():
@@ -224,7 +226,7 @@ def _used_formats(node: Any) -> set[str]:
 def _format_checker():
     from jsonschema import FormatChecker
 
-    # jsonschema bilinmeyen biçimi sessizce geçer; Ajv strict ise derlemede düşer. Aynı kararı
+    # jsonschema bilinmeyen biçimi sessizce geçer; burada reddedilir. Aynı kararı
     # vermek için şemalardaki her biçimin _core.FORMATS'ta tanımlı olması zorunludur.
     unknown = sorted(_used_formats(list(_documents().values())) - set(_core.FORMATS))
     if unknown:
@@ -253,7 +255,7 @@ def _registry():
 @cache
 def _validator(ref_id: str):
     """``ref_id``: tam ``$id`` ya da ``$id#/$defs/<tanım>`` (``schema_id`` çıktısı). Parçalı
-    başvuruda yalnız o tanım uygulanır (kökteki ``x-forbidden-words`` dahil değildir; Ajv ile aynı)."""
+    başvuruda yalnız o tanım uygulanır (kökteki ``x-forbidden-words`` dahil değildir)."""
     cls = _validator_class()
     name = schema_name(ref_id)
     doc = _documents()[name]
@@ -305,7 +307,7 @@ def validate(name_or_id: str, data: Any) -> Any:
 
 
 def gemini_schema(name_or_id: str) -> dict:
-    """Gemini ``responseSchema`` (TS ``toGeminiSchema`` ve ``schemas/gemini/<ad>.json`` ile aynı)."""
+    """Gemini ``responseSchema`` (anında düzleştirme; commit edilmiş kopya ve TS karşılığı yoktur)."""
     name, definition = _parse_ref(name_or_id)
     if definition is not None:
         raise KeyError(f"OGR-SCHEMA-001 Gemini şeması yalnız tam sözleşme için üretilir: {name_or_id}")

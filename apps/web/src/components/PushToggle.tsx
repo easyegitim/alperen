@@ -29,19 +29,31 @@ export function PushToggle({ userId, vapidPublicKey }: { userId: string; vapidPu
     };
   }, [vapidPublicKey]);
 
+  /** Aboneliği bu kullanıcı adına yazar: 'ok' | 'conflict' (uç nokta başka satırda) | 'error'. */
+  async function persist(sub: PushSubscription): Promise<'ok' | 'conflict' | 'error'> {
+    const row = serializeSubscription(sub);
+    if (!row) return 'error';
+    const supabase = createSupabaseBrowserClient();
+    const { error } = await supabase.from('push_subscriptions').insert({ user_id: userId, ...row, ua: navigator.userAgent.slice(0, 200) });
+    if (!error) return 'ok';
+    return error.code === '23505' ? 'conflict' : 'error';
+  }
+
   async function enable() {
     if (!vapidPublicKey) return;
     setPhase('busy');
     try {
-      const sub = await subscribeToPush(vapidPublicKey);
+      let sub = await subscribeToPush(vapidPublicKey);
       if (!sub) return setPhase(Notification.permission === 'denied' ? 'denied' : 'off');
-      const row = serializeSubscription(sub);
-      if (!row) return setPhase('error');
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.from('push_subscriptions').insert({ user_id: userId, ...row, ua: navigator.userAgent.slice(0, 200) });
-      // 23505: aynı uç nokta zaten kayıtlı (başka oturumda eklenmiş); abonelik geçerli.
-      if (error && error.code !== '23505') return setPhase('error');
-      setPhase('on');
+      let result = await persist(sub);
+      if (result === 'conflict') {
+        // 23505: bu uç nokta başka bir hesaba ait (paylaşılan cihazda önceki kullanıcı). Satır bize ait olmadığından
+        // "açık" sayılmaz: tarayıcı aboneliği iptal edilip yeni uç noktayla yeniden kaydedilir.
+        await sub.unsubscribe();
+        sub = await subscribeToPush(vapidPublicKey);
+        result = sub ? await persist(sub) : 'error';
+      }
+      setPhase(result === 'ok' ? 'on' : 'error');
     } catch {
       setPhase('error');
     }
@@ -53,7 +65,8 @@ export function PushToggle({ userId, vapidPublicKey }: { userId: string; vapidPu
       const sub = await currentSubscription();
       if (sub) {
         const supabase = createSupabaseBrowserClient();
-        await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+        const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+        if (error) return setPhase('error');
         await sub.unsubscribe();
       }
       setPhase('off');

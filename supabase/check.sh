@@ -19,7 +19,14 @@ if ogr_is_live; then
   ogr_step "supabase: db-test.sh (canlı Postgres)"
   ogr_live_env
   export OGRENMEN_TEST_DB="${OGRENMEN_TEST_DB:-ogrenmen_check_$$}"
-  out="$(bash "$HERE/scripts/db-test.sh" 2>&1)" || { printf '%s\n' "$out" | grep -v NOTICE | tail -60; exit 1; }
+  # düşerse önce hata satırları (tail kesse bile görünür), sonra son satırlar
+  out="$(bash "$HERE/scripts/db-test.sh" 2>&1)" || {
+    echo "-- hata satırları:"
+    printf '%s\n' "$out" | grep -E 'FAIL|ERROR|HATA' || true
+    echo "-- son satırlar:"
+    printf '%s\n' "$out" | grep -v NOTICE | tail -40
+    exit 1
+  }
   printf '%s\n' "$out" | grep -v NOTICE | tail -25
   if grep -q '^SKIP: no database' <<<"$out"; then echo "HATA: canlı kipte db-test.sh veritabanı bulamadı" >&2; exit 1; fi
 else

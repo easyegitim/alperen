@@ -14,7 +14,7 @@ export interface MisconceptionItemProps extends Omit<ComponentPropsWithRef<'arti
   /** Yanılgı, tek cümle; öğrenciyi değil hatayı anlatır. */
   text: string;
   skill?: string;
-  /** En az bir kanıt; kanıtsız yanılgı gösterilmez. */
+  /** En az bir kaynaklı kanıt; kanıtsız yanılgı gösterilmez. */
   evidence?: EvidenceRef[];
   firstSeen?: string;
   resolved?: boolean;
@@ -34,7 +34,8 @@ export function MisconceptionItem({
   children,
   ...rest
 }: MisconceptionItemProps) {
-  if (evidence.length === 0) return null;
+  const sourced = evidence.filter((e) => e.source);
+  if (sourced.length === 0) return null;
   return (
     <article
       {...rest}
@@ -46,7 +47,7 @@ export function MisconceptionItem({
       </div>
       <p className={cn('text-body m-0', resolved ? 'font-medium text-ink-muted' : 'font-semibold text-ink')}>{text}</p>
       <div className="flex flex-col gap-2">
-        {evidence.map((e, i) => (
+        {sourced.map((e, i) => (
           <EvidenceQuote key={i} kind={e.kind} source={e.source} href={e.href}>
             {e.quote}
           </EvidenceQuote>

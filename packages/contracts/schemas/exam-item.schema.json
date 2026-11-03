@@ -98,10 +98,11 @@
       "default": "other",
       "type": "string",
       "enum": [
-        "mcq",
-        "numeric",
-        "open",
-        "proof",
+        "text",
+        "table",
+        "graph",
+        "geometry_figure",
+        "word_problem",
         "other"
       ]
     },

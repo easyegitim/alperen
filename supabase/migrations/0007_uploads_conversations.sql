@@ -8,7 +8,7 @@ create table public.uploads (  -- Yüklenen her dosya (fotoğraf, PDF, video, se
   owner_id uuid not null references public.profiles (id) on delete cascade,  -- Yükleyen profil
   student_id uuid references public.students (id) on delete cascade,  -- İlgili öğrenci (eğitmen arşivi: boş)
   kind text not null check (kind in ('photo', 'pdf', 'video', 'audio', 'transcript', 'document', 'canvas')),  -- Dosya türü
-  storage_path text not null,  -- Storage yolu ('uploads/<owner>/<id>.jpg')
+  storage_path text not null,  -- Storage nesne adı, kova öneki yok: '<owner_id>/<upload_id>.<ext>' (ilk klasör yükleyen; uploads_path_owner)
   mime text,  -- MIME türü
   bytes bigint,  -- Boyut (bayt)
   sha256 text,  -- İçerik özeti (tekrar yükleme tespiti)
@@ -19,7 +19,12 @@ create table public.uploads (  -- Yüklenen her dosya (fotoğraf, PDF, video, se
   status text not null default 'stored' check (status in ('stored', 'processing', 'ready', 'failed')),  -- İşlem durumu
   extracted_text text,  -- Çıkarılan metin (OCR / transkript)
   embedding halfvec(1024),  -- Metnin gömmesi (Voyage, 1024)
-  created_at timestamptz not null default now()  -- Oluşturulma zamanı
+  created_at timestamptz not null default now(),  -- Oluşturulma zamanı
+  -- Storage politikası (0018 ogrenmen_uploads_*) ilk klasörü yükleyenle eşler: başka öğrencinin nesnesine işaret eden
+  -- satır (dolayısıyla indirme ve app.uploads_ok ile ekleme) yazılamaz; '.'/'..' parçası ve boş parça yok.
+  constraint uploads_path_owner check (split_part(storage_path, '/', 1) = owner_id::text
+                                       and storage_path ~ '^[^/]+(/[^/]+)+$'
+                                       and storage_path !~ '(^|/)\.{1,2}(/|$)')
 );
 -- begin comments public.uploads
 comment on table public.uploads is 'Yüklenen her dosya (fotoğraf, PDF, video, ses, transkript, belge, tuval); ikili Storage''da.';
@@ -27,7 +32,7 @@ comment on column public.uploads.id is 'Yükleme kimliği';
 comment on column public.uploads.owner_id is 'Yükleyen profil';
 comment on column public.uploads.student_id is 'İlgili öğrenci (eğitmen arşivi: boş)';
 comment on column public.uploads.kind is 'Dosya türü';
-comment on column public.uploads.storage_path is 'Storage yolu (''uploads/<owner>/<id>.jpg'')';
+comment on column public.uploads.storage_path is 'Storage nesne adı, kova öneki yok: ''<owner_id>/<upload_id>.<ext>'' (ilk klasör yükleyen; uploads_path_owner)';
 comment on column public.uploads.mime is 'MIME türü';
 comment on column public.uploads.bytes is 'Boyut (bayt)';
 comment on column public.uploads.sha256 is 'İçerik özeti (tekrar yükleme tespiti)';

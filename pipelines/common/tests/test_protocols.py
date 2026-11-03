@@ -5,16 +5,12 @@ from __future__ import annotations
 import pytest
 
 from ogrenmen_common.adapters import base
-from ogrenmen_common.adapters.base import LLMRequest, ScholarRecord
+from ogrenmen_common.adapters.base import LLMRequest
 from ogrenmen_common.fakes import (
-    FakeArxiv,
-    FakeCrossref,
     FakeEmbedding,
     FakeNotifier,
     FakeOCR,
-    FakeScholar,
     FakeTranscriber,
-    FakeUnpaywall,
     FakeVision,
     LocalDirStorage,
     cosine,
@@ -91,30 +87,6 @@ def test_fake_transcriber_by_audio_name(tmp_path):
     assert t["segments"][0]["speaker"] in ("ÖĞRENCİ", "EĞİTMEN")
     forced = FakeTranscriber(transcript={"segments": [{"t": "00:00:00", "speaker": "EĞİTMEN", "text": "x"}]})
     assert forced.transcribe(tmp_path / "a.wav")["segments"][0]["text"] == "x"
-
-
-def test_fake_scholars_normalize_fixture_shapes():
-    oa = FakeScholar().search("spaced repetition matematik")
-    assert oa and all(isinstance(r, ScholarRecord) and r.source == "openalex" for r in oa)
-    assert oa[0].doi == "10.1037/0033-2909.132.3.354" and oa[0].authors[0] == "Nicholas J. Cepeda"
-    s2 = FakeScholar(source="semantic_scholar").search("x", limit=2)
-    assert len(s2) == 2 and s2[0].tldr and s2[0].source == "semantic_scholar"
-    ax = FakeArxiv().search("x")
-    nodoi = next(r for r in ax if r.doi is None)
-    assert nodoi.oa_pdf_url.startswith("https://arxiv.org/pdf/") and nodoi.external_id.startswith("arXiv:")
-    with pytest.raises(ValueError):
-        FakeScholar(source="google")
-
-
-def test_fake_crossref_and_unpaywall():
-    cr = FakeCrossref()
-    assert cr.resolve("10.9999/fake") is None
-    assert cr.resolve("10.1037/0033-2909.132.3.354")["title"][0].startswith("Distributed practice")
-    assert cr.resolve("10.0000/hic-yok") is None
-    up = FakeUnpaywall()
-    assert up.lookup("10.1007/s11251-007-9015-8") == {"doi": "10.1007/s11251-007-9015-8", "is_oa": True,
-                                                      "pdf_url": "https://example.org/oa/rohrer-2007.pdf"}
-    assert up.lookup("10.0000/hic-yok") is None
 
 
 def test_local_storage_contract(tmp_path):

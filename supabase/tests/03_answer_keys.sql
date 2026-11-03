@@ -132,4 +132,55 @@ begin
   perform t.as_admin();
 end $$;
 
+-- Üretilen belgeler: öğrencinin okuyabildiği satırlarda anahtar yok; kind='answer_key' yalnız personelde
+do $$
+declare
+  v_doc uuid;
+  v_gexam uuid;
+  v_q uuid;
+begin
+  perform t.raises(format($q$insert into public.generated_documents (student_id, course_id, kind, title, status, content)
+                            values (%L, %L, 'mock_exam', 'Anahtarlı', 'published',
+                                    '{"kind":"mock_exam","blocks":[],"keys":[{"question_no":1,"correct_option":"C"}]}')$q$, t.u('A'), t.u('course')),
+                   '23514', 'mock_exam content.keys dolu yazılamaz (generated_documents_no_keys)');
+  perform t.raises(format($q$insert into public.generated_documents (student_id, course_id, kind, title, status, content)
+                            values (%L, %L, 'notes', 'Bozuk', 'published', '[1, 2]')$q$, t.u('A'), t.u('course')),
+                   '23514', 'content nesne olmalı');
+  insert into public.generated_documents (student_id, course_id, kind, title, status, content)
+  values (t.u('A'), t.u('course'), 'mock_exam', 'Elif kişisel deneme', 'published',
+          '{"kind":"mock_exam","title":"Elif kişisel deneme","blocks":[{"type":"question","no":1,"section_no":1,"stem":"2+2?","options":[]}],"keys":[]}')
+  returning id into v_doc;
+  insert into public.generated_documents (student_id, course_id, kind, title, status, content)
+  values (t.u('A'), t.u('course'), 'answer_key', 'Elif kişisel deneme · anahtar', 'published',
+          '{"kind":"answer_key","keys":[{"question_no":1,"correct_option":"C"}]}');
+  -- anahtar worker'dan secure.exam_answer_keys'e (source='generated')
+  insert into public.exams (curriculum_id, course_id, kind, source, title, status, generated_document_id)
+  values (t.u('cur'), t.u('course'), 'practice', 'generated', 'Elif kişisel deneme', 'ready', v_doc) returning id into v_gexam;
+  insert into public.exam_questions (exam_id, no, kind, skill_ids) values (v_gexam, 1, 'mcq', array['t.mat.a']) returning id into v_q;
+  perform t.as_service();
+  perform public.set_exam_key(v_q, 'C', null, 'generated', 1);
+  perform t.as_admin();
+
+  perform t.ok(t.sees(t.u('elif'), $q$select 1 from public.generated_documents where kind = 'mock_exam'$q$) = 1
+               and t.sees(t.u('elif'), $q$select 1 from public.generated_documents where kind = 'answer_key'$q$) = 0,
+               'öğrenci kendi denemesini görür, anahtar belgesini görmez');
+  perform t.ok(t.sees(t.u('elif'), $q$select 1 from public.generated_documents where content -> 'keys' <> '[]'::jsonb$q$) = 0
+               and t.sees(t.u('elif'), $q$select 1 from public.generated_documents where content::text like '%correct_option%'$q$) = 0,
+               'öğrencinin okuduğu hiçbir belgede anahtar yok');
+  perform t.ok(t.sees(t.u('parent'), $q$select 1 from public.generated_documents where kind in ('mock_exam', 'answer_key')$q$) = 0,
+               'veli deneme ve anahtar belgesini görmez');
+  perform t.ok(t.sees(t.u('inst'), $q$select 1 from public.generated_documents where kind = 'answer_key'$q$) = 1
+               and t.sees(t.u('admin'), $q$select 1 from public.generated_documents where kind = 'answer_key'$q$) = 1,
+               'bağlı eğitmen ve admin anahtar belgesini görür');
+  perform t.ok(t.sees(t.u('elif'), format('select 1 from public.exams where id = %L', v_gexam)) = 1
+               and t.sees(t.u('can'), format('select 1 from public.exams where id = %L', v_gexam)) = 0,
+               'kişiye üretilmiş sınav yalnız o öğrenciye görünür');
+  perform t.as_user(t.u('elif'));
+  perform t.ok(public.start_exam_session(v_gexam, t.u('EA')) is not null, 'öğrenci kendine üretilmiş denemeyi başlatır');
+  perform t.as_user(t.u('can'));
+  perform t.raises(format($q$select public.start_exam_session(%L, %L)$q$, v_gexam, t.u('EB')), 'OGR-AUTH-001%',
+                   'başka öğrenciye üretilmiş deneme başlatılamaz');
+  perform t.as_admin();
+end $$;
+
 rollback;

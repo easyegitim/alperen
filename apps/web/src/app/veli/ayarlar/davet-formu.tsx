@@ -4,11 +4,11 @@ import { useActionState } from 'react';
 import { Button, TextField } from '@/ds';
 import { acceptInvite, type DavetState } from './actions';
 
-export function DavetFormu() {
+export function DavetFormu({ defaultToken = '' }: { defaultToken?: string }) {
   const [state, action, pending] = useActionState<DavetState, FormData>(acceptInvite, {});
   return (
     <form action={action} className="flex max-w-md flex-col gap-3" noValidate>
-      <TextField label="Davet kodu" name="token" mono autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="gi_…" error={state.error} />
+      <TextField label="Davet kodu" name="token" defaultValue={defaultToken} mono autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="gi_…" error={state.error} />
       <div>
         <Button type="submit" variant="secondary" disabled={pending}>
           {pending ? 'Doğrulanıyor' : 'Daveti kabul et'}

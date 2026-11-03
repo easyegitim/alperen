@@ -6,10 +6,13 @@
 #   veritabanına DOKUNMAZ — "ogrenmen" adı reddedilir), sırayla uygular:
 #     tests/00_local_stub.sql (süper kullanıcıyla) → migrations/*.sql → seed/*.sql → müfredat seed'i
 #     (content/tyt-matematik/scripts/export-sql.py --schema v2, çalışma anında üretilir; betik yoksa "SKIP: no content")
-#     → seed'ler ve müfredat seed'i ikinci kez (tekrar uygulanabilirlik) → tests/[0-9][0-9]_*.sql (psql -v ON_ERROR_STOP=1).
+#     → seed'ler ve müfredat seed'i ikinci kez (tekrar uygulanabilirlik) → tests/[0-9][0-9]_*.sql (psql -v ON_ERROR_STOP=1)
+#     → scripts/pgboss-check.mjs (enqueue_job ↔ gerçek pg-boss şeması; apps/worker'ın pg-boss'u yoksa SKIP).
 #   Migration ve seed adımları süper kullanıcı OLMAYAN migration sahibiyle (ogrenmen_owner, 00_local_stub.sql; Supabase'de
-#   "postgres"in eşleniği) çalışır; testler bağlanan kullanıcıyla. Cevap anahtarları (content seed-keys.py) v1 tabanına
-#   yazar (public.staff), v2'de atlanır: "SKIP: no keys".
+#   "postgres"in eşleniği) çalışır; testler bağlanan kullanıcıyla. v2'de cevap anahtarları yalnız public.set_exam_key()
+#   ile secure.answer_keys'e yazılır (testler kendi anahtarlarını böyle kurar); TYT içeriği için v2 anahtar seed'i henüz
+#   yok (TODO content: set_exam_key çağıran seed): "SKIP: no keys".
+#   01_schema.sql pg_cron zamanlamalarını apps/worker/src/schedules.ts SCHEDULES ile karşılaştırır (dosya yoksa SKIP).
 #   Çıktıda FAIL geçerse ya da bir adım düşerse 1 ile çıkar.
 #
 # Seçenekler:  --keep  test veritabanını bırak (incelemek için)
@@ -112,10 +115,13 @@ fi
 apply_seeds "$TESTURL"
 apply_seeds "$TESTURL"   # ikinci kez: seed'ler ve müfredat seed'i tekrar uygulanabilir
 echo "  seed'ler iki kez uygulandı; have_content=$HAVE_CONTENT"
-echo "  SKIP: no keys (content seed-keys.py v1 tabanına yazar; v2 anahtar seed'i B2/içerik güncellemesinde)"
+echo "  SKIP: no keys (TYT içeriği için v2 anahtar seed'i yok: set_exam_key/secure.answer_keys; TODO content)"
 unset PGOPTIONS
 
 PII_CASES="$("$PY" -c "import json,sys;print(json.dumps(json.load(open(sys.argv[1]))['hash_cases']))" "$ROOT/packages/pii/cases.json" 2>/dev/null || echo '[]')"
+# apps/worker SCHEDULES → 'iş|cron' satırları (01_schema.sql pg_cron ↔ worker zamanlama eşliği; yoksa boş → SKIP)
+WORKER_SCHEDULES="$(grep -oE "job: '[^']+', cron: '[^']+'" "$ROOT/apps/worker/src/schedules.ts" 2>/dev/null \
+  | sed -E "s/job: '([^']+)', cron: '([^']+)'/\1|\2/" | paste -sd ';' - || true)"
 BKT_VECTORS="$("$PY" -c "import json,sys;print(json.dumps(json.load(open(sys.argv[1]))))" "$ROOT/packages/mastery-math/fixtures/bkt-vectors.json" 2>/dev/null || echo '{"vectors":[]}')"
 
 for f in "$DIR"/tests/[0-9][0-9]_*.sql; do
@@ -123,7 +129,7 @@ for f in "$DIR"/tests/[0-9][0-9]_*.sql; do
   [ "$name" = "00_local_stub.sql" ] && continue
   echo "== $name"
   if run_file "$TESTURL" "$f" -v have_content="$HAVE_CONTENT" -v seed2="$WORK/seed2.sql" \
-       -v pii_hash_cases="$PII_CASES" -v bkt_vectors="$BKT_VECTORS" >"$WORK/out.log" 2>&1; then
+       -v pii_hash_cases="$PII_CASES" -v bkt_vectors="$BKT_VECTORS" -v worker_schedules="$WORKER_SCHEDULES" >"$WORK/out.log" 2>&1; then
     :
   else
     FAILED=1
@@ -132,6 +138,16 @@ for f in "$DIR"/tests/[0-9][0-9]_*.sql; do
   if grep -q 'FAIL' "$WORK/out.log"; then FAILED=1; fi
   if grep -q '^psql:.*ERROR' "$WORK/out.log"; then FAILED=1; fi
 done
+
+# enqueue_job ↔ gerçek pg-boss şeması (apps/worker'ın pg-boss'u; yoksa SKIP). Testler geri alındığından veritabanı temizdir.
+echo "== pg-boss (gerçek şema)"
+if command -v node >/dev/null 2>&1; then
+  if node "$DIR/scripts/pgboss-check.mjs" "$TESTURL" "$MIGRATION_ROLE" >"$WORK/pgboss.log" 2>&1; then :; else FAILED=1; fi
+  grep -E '^(OK|SKIP|FAIL)' "$WORK/pgboss.log" | sed 's/^/  /'
+  if ! grep -qE '^(OK|SKIP)' "$WORK/pgboss.log"; then cat "$WORK/pgboss.log"; FAILED=1; fi
+else
+  echo "  SKIP: no node"
+fi
 
 if [ "$KEEP" = 0 ]; then
   "${PSQL[@]}" -d "$OGRENMEN_DATABASE_URL" -c "drop database if exists \"$TESTDB\" with (force)" >/dev/null 2>&1 || true

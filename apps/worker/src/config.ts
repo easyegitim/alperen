@@ -86,6 +86,8 @@ export function loadConfig(env: Env = process.env, argv: readonly string[] = pro
 
   const schema = str(env, 'PGBOSS_SCHEMA') ?? 'pgboss';
   if (!/^[a-z_][a-z0-9_]{0,62}$/.test(schema)) throw new ConfigError(`PGBOSS_SCHEMA geçersiz: ${schema}`);
+  // SQL tarafındaki public.enqueue_job() şemayı 'pgboss' olarak sabit kullanır; üretimde başka şema işleri sessizce kaybeder.
+  if (str(env, 'NODE_ENV') === 'production' && schema !== 'pgboss') throw new ConfigError(`PGBOSS_SCHEMA üretimde 'pgboss' olmalı (SQL enqueue_job yalnız bu şemada çalışır; verilen: ${schema})`);
 
   return {
     process: procRaw as WorkerProcess,

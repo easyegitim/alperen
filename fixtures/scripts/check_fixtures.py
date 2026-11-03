@@ -15,7 +15,6 @@ Denetimler:
      callback_data ≤ 64 bayt ve tam UUID'lere çözülür; lesson-morale analizleri tam ve maliyeti llm_calls ile aynı.
   6. PII: LLM'e giden her alan (messages.text_llm, bot_responses.prompt_text, memory_facts.text, llm/diarize,
      llm/lesson_analysis, ders/analysis-01) temizleyiciye göre sabit noktadır: scrub(metin, tüm ad hash'leri) == metin.
-     Yasaklı kelimeler packages/contracts'ın `find_forbidden_word`'üyle (aynı Türkçe katlama) aranır.
 
 Kullanım: python fixtures/scripts/check_fixtures.py   (hata varsa 1 ile çıkar)
 """
@@ -37,7 +36,6 @@ SCHEMAS = ROOT / "packages" / "contracts" / "schemas"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(ROOT / "packages" / "contracts" / "python"))
-from ogrenmen_contracts._core import find_forbidden_word  # noqa: E402
 
 from fxlib import NEWCOMER, UNCONSENTED, all_name_hashes, name_token_hashes, scrub  # noqa: E402
 
@@ -88,13 +86,6 @@ def errs(name: str, obj: Any) -> list[str]:
         v = validator(name[:-2])
         return [f"[{i}] {e.message}" for i, o in enumerate(obj) for e in v.iter_errors(o)]
     return [e.message for e in validator(name).iter_errors(obj)]
-
-
-def forbidden_words(name: str, obj: Any) -> list[str]:
-    """Şemanın `x-forbidden-words` listesinden ilk isabet (packages/contracts ile aynı kural)."""
-    s = json.loads((SCHEMAS / f"{name}.schema.json").read_text(encoding="utf-8"))
-    hit = find_forbidden_word(obj, s.get("x-forbidden-words", []))
-    return [f"yasaklı kelime: {hit}"] if hit is not None else []
 
 
 def strings(obj: Any) -> list[str]:
@@ -322,7 +313,7 @@ def check_seed() -> None:
     if len(approved) != 1:
         fail("dev-seed: tam bir onaylı öncelik planı")
     for p in s["exam_priority_plans"]:
-        e = errs("exam-priority-plan", p["plan"]) + forbidden_words("exam-priority-plan", p["plan"])
+        e = errs("exam-priority-plan", p["plan"])
         if e:
             fail(f"dev-seed: plan {p['id']}: {e[:2]}")
     if errs("research-output", s["research_outputs"][0]["output"]):
@@ -332,16 +323,12 @@ def check_seed() -> None:
     body = next(t["body_md"] for t in s["legal_texts"] if t["kind"] == "kvkk_aydinlatma")
     if "<!-- ogrenmen:cocuk-dili:start -->" not in body or "{{" in json.dumps(s["legal_texts"], ensure_ascii=False):
         fail("dev-seed: aydınlatma metninde çocuk dili işaretleri yok ya da çözülmemiş yer tutucu var")
-    for r in s["bot_responses"]:
-        row = {k: v for k, v in r.items() if k not in ("id", "student_id", "flagged", "flagged_by", "flag_reason",
-                                                       "flagged_at", "review_week", "created_at")}
-        e = errs("bot-response-log", dict(row, schema_version="1.0"))
-        if e:
-            fail(f"dev-seed: bot cevabı {r['id']} bot-response-log'a uymuyor: {e[:2]}")
+    # bot_responses (v1 Telegram botu) v2'de bırakıldı; bot-response-log şeması da kaldırıldı (docs/PLAN-v2-detail.md
+    # "dropped"). Bu satırların PII sabit noktası check_pii'de denetlenmeye devam eder.
     import panel  # noqa: PLC0415
     for a in panel.alerts(s):
         c = {k: v for k, v in a.items() if k not in ("id", "status", "student_label")}
-        e = errs("instructor-alert", c) + forbidden_words("instructor-alert", c)
+        e = errs("instructor-alert", c)
         if e:
             fail(f"dev-seed: alarm {a['id']}: {e[:2]}")
 

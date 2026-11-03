@@ -145,6 +145,12 @@ grant execute on function app.can_read_student_data(uuid), app.can_read_enrollme
 -- --- authenticated yetkileri -----------------------------------------------------------------------
 
 grant select on all tables in schema public to authenticated;
+-- question_styles: exemplar_item_ids (tarzın örnek sınav maddeleri) ve embedding öğrenciye gizli; personel tam satırı
+-- v_question_styles_staff görünümüyle okur (0019). İstemci sütunları açıkça seçmeli (select=* izin hatası verir).
+revoke select on public.question_styles from authenticated;
+grant select (id, course_id, curriculum_id, code, name, description, format, trick, difficulty_band, skill_ids, years_hit,
+              years_total, recency_score, frequency_score, source, status, created_by, created_at)
+on public.question_styles to authenticated;
 grant insert (id, role, display_name, locale, tz, avatar_path) on public.profiles to authenticated;
 grant update (display_name, locale, tz, avatar_path, onboarded_at) on public.profiles to authenticated;
 grant update (grade, school) on public.students to authenticated;
@@ -194,6 +200,7 @@ using (app.can_read_curriculum(curriculum_id));
 create policy courses_select on public.courses for select to authenticated using (app.can_read_course(id));
 create policy syllabus_topics_select on public.syllabus_topics for select to authenticated using (app.can_read_course(course_id));
 create policy enrollments_select on public.enrollments for select to authenticated using (app.can_read_student(student_id));
+-- ders ↔ müfredat eşleşmesini her yazan için app.enrollments_course_curriculum tetikleyicisi (aşağıda) zorlar
 create policy enrollments_insert_self on public.enrollments for insert to authenticated
 with check (student_id = app.my_student_id() and app.can_read_curriculum(curriculum_id)
             and (course_id is null or app.can_read_course(course_id)));
@@ -232,8 +239,9 @@ create policy question_templates_select_staff on public.question_templates for s
 create policy attempts_select on public.attempts for select to authenticated using (app.can_read_enrollment(enrollment_id, false));
 create policy content_pool_select on public.content_pool for select to authenticated
 using (app.is_staff() or (status = 'approved' and app.can_read_curriculum(curriculum_id)));
+-- veli tarzları görmez (hile/biçim açıklaması sınav içeriğidir; docs/PLAN-v2-detail.md §2.4)
 create policy question_styles_select on public.question_styles for select to authenticated
-using (app.can_read_course(course_id) and (status = 'active' or app.is_staff()));
+using (app.can_read_course(course_id) and app.role() is distinct from 'parent' and (status = 'active' or app.is_staff()));
 create policy style_coverage_select on public.style_coverage for select to authenticated
 using (app.can_read_enrollment(enrollment_id, false));
 
@@ -241,8 +249,11 @@ using (app.can_read_enrollment(enrollment_id, false));
 
 create policy uploads_select on public.uploads for select to authenticated
 using (owner_id = auth.uid() or app.can_read_student_data(student_id));
+-- storage_path'in ilk klasörü yükleyenin kendisi olmalı (Storage'da yalnız kendi klasörüne yazar; 0007 uploads_path_owner):
+-- başka öğrencinin nesnesine işaret eden sahte satırla indirme ya da mesaja/sınava ekleme yapılamaz.
 create policy uploads_insert_own on public.uploads for insert to authenticated
 with check (owner_id = auth.uid()
+            and split_part(storage_path, '/', 1) = auth.uid()::text
             and (student_id is null or student_id = app.my_student_id() or app.is_admin()
                  or student_id in (select m.sid from app.my_students() as m (sid))));
 
@@ -257,10 +268,13 @@ using (participant_id = auth.uid()) with check (participant_id = auth.uid());
 
 create policy conversation_messages_select on public.conversation_messages for select to authenticated
 using (app.can_read_conversation(conversation_id));
+-- kullanıcı yalnız kendi (role='user') mesajını yazar; assistant/system turlarını worker (service_role) yazar: öğrenci
+-- model çıktısı taklit edemez. Eklenen yüklemeler yazana ya da sohbetin öğrencisine ait olmalı.
 create policy conversation_messages_insert_own on public.conversation_messages for insert to authenticated
-with check (role in ('user', 'assistant')
+with check (role = 'user'
             and exists (select 1 from public.conversations as c
-                         where c.id = conversation_messages.conversation_id and c.participant_id = auth.uid()));
+                         where c.id = conversation_messages.conversation_id and c.participant_id = auth.uid()
+                           and app.uploads_ok(conversation_messages.upload_ids, c.student_id)));
 
 -- veli yalnız parent_summary.md'yi okur (gece işinin yazdığı veli özeti)
 create policy memory_files_select on public.memory_files for select to authenticated
@@ -273,17 +287,14 @@ create policy weekly_summaries_select on public.weekly_summaries for select to a
 
 -- --- denemeler -------------------------------------------------------------------------------------
 
--- Öğrenci: oturumu olan sınavlar, kendine üretilen sınavlar, kayıtlı dersinin/müfredatının yayımlanmış sınavları;
--- veli: çocuğunun oturumu olan sınavlar (başlık); personel: hepsi. Soru metinleri v_exam_questions_student'tadır.
+-- Öğrenci: oturumu olan sınavlar + app.exam_visible (kendi oluşturduğu, kendine üretilen, kayıtlı dersinin/müfredatının
+-- yayımlanmış sınavları; başka öğrenciye üretilen sınav görünmez); veli: çocuğunun oturumu olan sınavlar (başlık);
+-- personel: hepsi. Soru metinleri v_exam_questions_student'tadır. Oturum yalnız görünür sınavda açılır (start_exam_session).
 create policy exams_select on public.exams for select to authenticated
 using (app.is_staff()
        or created_by = auth.uid()
        or exists (select 1 from public.exam_sessions as es where es.exam_id = exams.id)
-       or exists (select 1 from public.generated_documents as gd where gd.id = exams.generated_document_id)
-       or (status in ('ready', 'published') and kind in ('published', 'practice', 'diagnostic')
-           and exists (select 1 from public.enrollments as e
-                        where e.student_id = app.my_student_id()
-                          and (e.course_id = exams.course_id or e.curriculum_id = exams.curriculum_id))));
+       or app.exam_visible(id, app.my_student_id()));
 create policy exam_questions_select_staff on public.exam_questions for select to authenticated using (app.is_staff());
 create policy exam_sessions_select on public.exam_sessions for select to authenticated
 using (app.can_read_enrollment(enrollment_id, true));
@@ -297,12 +308,18 @@ using (app.is_staff() or (status = 'approved' and app.can_read_course(course_id)
 
 -- --- belgeler --------------------------------------------------------------------------------------
 
+-- kind='answer_key' belgelerini yalnız personel görür; diğer türlerde content anahtarsızdır (0010 generated_documents_no_keys).
+-- Veli yalnız çocuğunun raporlarını görür: ders geneli yayımlanmış belgeler (deneme, not; soru metni içerir) veliye kapalı
+-- (can_read_course çocuğun kaydını da sayar; docs/PLAN-v2-detail.md §2.4).
 create policy generated_documents_select on public.generated_documents for select to authenticated
-using (created_by = auth.uid()
-       or app.is_admin()
-       or (student_id is not null and app.can_read_student_data(student_id))
-       or (kind = 'report' and student_id in (select c.sid from app.my_children() as c (sid)))
-       or (student_id is null and (app.is_staff() or (status = 'published' and app.can_read_course(course_id)))));
+using ((kind <> 'answer_key' or app.is_staff())
+       and (created_by = auth.uid()
+            or app.is_admin()
+            or (student_id is not null and app.can_read_student_data(student_id))
+            or (kind = 'report' and student_id in (select c.sid from app.my_children() as c (sid)))
+            or (student_id is null
+                and (app.is_staff()
+                     or (status = 'published' and app.role() is distinct from 'parent' and app.can_read_course(course_id))))));
 create policy library_documents_select_staff on public.library_documents for select to authenticated using (app.is_staff());
 create policy library_chunks_select_staff on public.library_chunks for select to authenticated using (app.is_staff());
 
@@ -344,8 +361,9 @@ create policy prompt_versions_select_admin on public.prompt_versions for select 
 create policy eval_cases_select_admin on public.eval_cases for select to authenticated using (app.is_admin());
 create policy eval_runs_select_admin on public.eval_runs for select to authenticated using (app.is_admin());
 
--- --- Storage (yalnız barındırılan Supabase'de; yerelde storage.objects yoksa atlanır) -------------------------
--- uploads kovası: yükleyen kendi klasörüne (<auth.uid()>/…) yazar; okuma uploads satırının RLS'ine bağlıdır.
+-- --- Storage (storage.objects yoksa atlanır; yerel testlerde tests/00_local_stub.sql eşleniği vardır) -------------
+-- uploads kovası: yükleyen kendi klasörüne (<auth.uid()>/…) yazar; okuma, okuyanın RLS'iyle görünen ve sahibi nesnenin
+-- ilk klasörüyle aynı olan uploads satırına bağlıdır (sahte yolla başkasının nesnesi indirilemez).
 -- documents: generated_documents satırının RLS'i (html_path | pdf_path). lessons: yalnız eğitmen/admin.
 do $$
 begin
@@ -358,7 +376,10 @@ begin
            with check (bucket_id = 'uploads' and (storage.foldername(name))[1] = auth.uid()::text)$p$;
   execute $p$drop policy if exists ogrenmen_uploads_select on storage.objects$p$;
   execute $p$create policy ogrenmen_uploads_select on storage.objects for select to authenticated
-           using (bucket_id = 'uploads' and exists (select 1 from public.uploads u where u.storage_path = storage.objects.name))$p$;
+           using (bucket_id = 'uploads'
+                  and exists (select 1 from public.uploads u
+                               where u.storage_path = storage.objects.name
+                                 and u.owner_id::text = (storage.foldername(storage.objects.name))[1]))$p$;
   execute $p$drop policy if exists ogrenmen_documents_select on storage.objects$p$;
   execute $p$create policy ogrenmen_documents_select on storage.objects for select to authenticated
            using (bucket_id = 'documents' and exists (select 1 from public.generated_documents gd

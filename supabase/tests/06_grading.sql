@@ -116,6 +116,29 @@ begin
                  where r.session_id = t.u('S') and r.exam_question_id = t.u('Q2')), 'bitmiş oturumda "nereye kadar geldim" yazılır, cevap korunur');
 end $$;
 
+-- Tekrar deneme: aynı sınav + kayıt için ikinci notlanan oturum ustalığı değiştirmez (anahtar avı / kanıt şişirme yok)
+do $$
+declare
+  v_sess uuid;
+  v_p0 numeric;
+  v_n0 int;
+begin
+  select m.p, m.evidence_count into v_p0, v_n0 from public.mastery m where m.enrollment_id = t.u('EA') and m.skill_id = 't.mat.a';
+  perform t.as_user(t.u('elif'));
+  v_sess := public.start_exam_session(t.u('X'), t.u('EA'));
+  perform t.ok(v_sess <> t.u('S'), 'bitmiş oturumdan sonra yeni oturum açılır');
+  perform public.record_exam_response(v_sess, t.u('Q1'), 'B');
+  perform public.record_exam_response(v_sess, t.u('Q2'), 'B');
+  perform public.grade_exam_session(v_sess);
+  perform t.as_admin();
+  perform t.ok((select m.p = v_p0 and m.evidence_count = v_n0 from public.mastery m where m.enrollment_id = t.u('EA') and m.skill_id = 't.mat.a'),
+               'tekrar deneme: p ve kanıt sayısı değişmez');
+  perform t.ok(exists (select 1 from public.observations o join public.exam_responses r on r.id::text = o.source_id where r.session_id = v_sess)
+               and not exists (select 1 from public.observations o join public.exam_responses r on r.id::text = o.source_id
+                                where r.session_id = v_sess and (o.weight <> 0 or o.counts_for_mastery)),
+               'tekrar deneme gözlemleri ağırlık 0 ve kanıt dışı');
+end $$;
+
 -- Hata kodları ve yetki
 do $$
 declare

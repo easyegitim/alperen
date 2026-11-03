@@ -1,9 +1,10 @@
 /** style-definition — Sonnet 5.5 tarz adlandırma (PLAN-v2 §11): kümeye ad, tanım ve özellikler. Örnek soru metni taşımaz. */
 import { z } from 'zod';
-import { skillCode, styleCode } from './common.js';
+import { DIFFICULTY_BANDS, PRESENTATION_FORMATS, skillCode, styleCode } from './common.js';
 import { addIssue, defineContract } from './kit.js';
 
-export const STYLE_FORMATS = ['mcq', 'numeric', 'open', 'proof', 'other'] as const;
+/** Sunuş biçimi (tablo, grafik, sözel problem …); cevap türü değildir. */
+export const STYLE_FORMATS = PRESENTATION_FORMATS;
 
 export const styleDefinition = defineContract({
   name: 'style-definition',
@@ -20,7 +21,7 @@ export const styleDefinition = defineContract({
           description: c.str({ min: 10, max: 500, desc: 'Tarzın tanımı; soru metninden alıntı yapmaz' }),
           format: z.enum(STYLE_FORMATS),
           trick: c.str({ max: 200 }).nullable().describe('Soruyu tuzaklı yapan unsur; yoksa null'),
-          difficulty_band: z.enum(['easy', 'medium', 'hard']),
+          difficulty_band: z.enum(DIFFICULTY_BANDS),
           skill_ids: c.arr(skillCode(c), { max: 5 }),
         }),
         { min: 1, max: 60 },

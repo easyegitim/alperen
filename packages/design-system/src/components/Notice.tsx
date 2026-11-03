@@ -34,15 +34,17 @@ export interface NoticeProps extends Omit<ComponentPropsWithRef<'div'>, 'title'>
   action?: ReactNode;
   /** Yalnızca info tonunda kapatma düğmesi gösterilir. */
   onDismiss?: () => void;
+  /** Sayfa açıldıktan sonra dinamik eklenen uyarı: true ise warning tonu role="alert" alır; aksi hâlde role="note". */
+  live?: boolean;
 }
 
 /** Akışın içindeki kısa bildirim: bilgi, uyarı, yasal bildirim ya da insana yönlendirme notu. */
-export function Notice({ tone = 'info', title, action, onDismiss, className, children, ...rest }: NoticeProps) {
+export function Notice({ tone = 'info', title, action, onDismiss, live, className, children, ...rest }: NoticeProps) {
   const Icon = ICONS[tone];
   const heading = title ?? (tone === 'handoff' ? 'Hocana yönlendirildi' : undefined);
   return (
     <div
-      role={tone === 'warning' ? 'alert' : tone === 'info' ? 'status' : 'note'}
+      role={tone === 'warning' && live ? 'alert' : tone === 'info' ? 'status' : 'note'}
       {...rest}
       className={cn(
         'text-small box-border flex max-w-160 items-start gap-3 rounded-md border px-4 py-3 text-ink',

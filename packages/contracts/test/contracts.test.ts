@@ -91,7 +91,8 @@ describe('lesson-analysis v2', () => {
     const parsed = lessonAnalysis.parse(v1);
     expect(parsed.course_insights).toEqual([]);
     expect(lessonAnalysis.strict.safeParse(v1).success).toBe(false);
-    expect(lessonAnalysis.strict.safeParse(parsed).success).toBe(true);
+    const { model_notes: _mn, ...modelOutput } = parsed;
+    expect(lessonAnalysis.strict.safeParse(modelOutput).success).toBe(true);
   });
 });
 
@@ -111,5 +112,59 @@ describe('document-ast', () => {
     expect(contractRegistry['document-ast'].isValid(doc)).toBe(true);
     expect(contractRegistry['document-ast'].isValid({ ...doc, keys: [] })).toBe(false);
     expect(contractRegistry['document-ast'].isValid(valid('document-ast', 'personal-notes'))).toBe(true);
+  });
+});
+
+describe('saklama biçimi ve düzeltmeler', () => {
+  it('splitDocumentKeys: anahtarı ayırır, saklanan içerik anahtarsızdır', async () => {
+    const { splitDocumentKeys, storedDocumentAst, documentAst } = await import('../src/index.js');
+    const doc = documentAst.parse(valid('document-ast', 'mock-exam'));
+    expect(doc.keys.length).toBeGreaterThan(0);
+    const { content, keys } = splitDocumentKeys(doc);
+    expect(keys).toEqual(doc.keys);
+    expect(content.keys).toEqual([]);
+    expect(JSON.stringify(content)).not.toContain('correct_option');
+    expect(storedDocumentAst.safeParse(content).success).toBe(true);
+    expect(storedDocumentAst.safeParse(doc).success).toBe(false);
+  });
+
+  it('zorluk bandı tek kaynaktan: style-definition ve exam-generation aynı değerleri kullanır', async () => {
+    const { DIFFICULTY_BANDS } = await import('../src/index.js');
+    expect([...DIFFICULTY_BANDS]).toEqual(['easy', 'medium', 'hard']);
+    const sd = valid('style-definition', 'one-style') as { styles: { difficulty_band: string }[] };
+    for (const b of DIFFICULTY_BANDS) {
+      sd.styles[0]!.difficulty_band = b;
+      expect(strictSchemaRegistry['style-definition'].safeParse(sd).success).toBe(true);
+    }
+    sd.styles[0]!.difficulty_band = 'mid';
+    expect(strictSchemaRegistry['style-definition'].safeParse(sd).success).toBe(false);
+  });
+
+  it('exam-priority-plan model çıktısı olarak işaretli', () => {
+    expect(contractRegistry['exam-priority-plan'].llmOutput).toBe(true);
+  });
+
+  it('lesson-analysis strict şemasında model_notes yok, loose kipte isteğe bağlı', () => {
+    const data = valid('lesson-analysis', 'empty-low-signal');
+    delete data.model_notes;
+    expect(lessonAnalysis.safeParse(data).success).toBe(true);
+    expect(JSON.stringify(lessonAnalysis.strict.toJSONSchema?.() ?? lessonAnalysis.strict.def)).not.toContain('model_notes');
+  });
+
+  it('uiText tam genişlikli ünlemi ve ‼ ⁉ işaretlerini reddeder', () => {
+    const data = valid('lesson-analysis', 'full-lesson') as { next_step: { for_student: string } };
+    for (const bad of ['Harika！', 'Tamam‼', 'Neden⁉']) {
+      data.next_step.for_student = bad;
+      expect(lessonAnalysis.safeParse(data).success).toBe(false);
+    }
+  });
+
+  it('memory-delta: create reddedilir, yol DB kuralıyla aynı', () => {
+    const op = (path: string) => ({ ops: [{ op: 'insert', path, insert_line: 0, text: 'x' }] });
+    expect(memoryDelta.safeParse(op('/memories/patterns.md')).success).toBe(true);
+    expect(memoryDelta.safeParse(op('/memories/a/b/c.txt')).success).toBe(true);
+    expect(memoryDelta.safeParse(op('/memories/x')).success).toBe(false);
+    expect(memoryDelta.safeParse(op('/memories/a/b/c/d.md')).success).toBe(false);
+    expect(memoryDelta.safeParse({ ops: [{ op: 'create', path: '/memories/p.md', text: 'x' }] }).success).toBe(false);
   });
 });

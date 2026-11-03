@@ -438,19 +438,13 @@
               "source": {
                 "type": "string",
                 "enum": [
-                  "svg",
-                  "upload"
+                  "svg"
                 ]
               },
               "svg": {
                 "type": "string",
                 "maxLength": 60000,
                 "description": "source=svg ise satır içi SVG"
-              },
-              "upload_id": {
-                "type": "string",
-                "format": "uuid",
-                "description": "source=upload ise uploads.id"
               },
               "alt": {
                 "type": "string",
@@ -518,195 +512,6 @@
               "section_no",
               "header",
               "rows"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "const": "question"
-              },
-              "id": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 40,
-                "description": "Belge içinde tekil blok kimliği"
-              },
-              "section_no": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 60
-              },
-              "no": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 500
-              },
-              "stem": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 2500
-              },
-              "options": {
-                "maxItems": 5,
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "enum": [
-                        "A",
-                        "B",
-                        "C",
-                        "D",
-                        "E"
-                      ]
-                    },
-                    "text": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 600
-                    }
-                  },
-                  "required": [
-                    "key",
-                    "text"
-                  ],
-                  "additionalProperties": false
-                }
-              },
-              "figure": {
-                "type": "object",
-                "properties": {
-                  "source": {
-                    "type": "string",
-                    "enum": [
-                      "svg",
-                      "upload"
-                    ]
-                  },
-                  "svg": {
-                    "type": "string",
-                    "maxLength": 60000,
-                    "description": "source=svg ise satır içi SVG"
-                  },
-                  "upload_id": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "source=upload ise uploads.id"
-                  },
-                  "alt": {
-                    "type": "string",
-                    "minLength": 5,
-                    "maxLength": 400,
-                    "description": "Şekli kelimelerle anlatır"
-                  }
-                },
-                "required": [
-                  "source",
-                  "alt"
-                ],
-                "additionalProperties": false
-              },
-              "skill_ids": {
-                "maxItems": 3,
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
-                }
-              },
-              "style_id": {
-                "type": "string",
-                "format": "uuid",
-                "description": "question_styles.id"
-              }
-            },
-            "required": [
-              "type",
-              "id",
-              "section_no",
-              "no",
-              "stem",
-              "options",
-              "skill_ids"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "const": "answer_sheet"
-              },
-              "id": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 40,
-                "description": "Belge içinde tekil blok kimliği"
-              },
-              "section_no": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 60
-              },
-              "title": {
-                "type": "string",
-                "maxLength": 120
-              },
-              "question_count": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 500
-              },
-              "options_per_question": {
-                "type": "integer",
-                "minimum": 2,
-                "maximum": 5
-              }
-            },
-            "required": [
-              "type",
-              "id",
-              "section_no",
-              "title",
-              "question_count",
-              "options_per_question"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "const": "answer_key_page"
-              },
-              "id": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 40,
-                "description": "Belge içinde tekil blok kimliği"
-              },
-              "section_no": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 60
-              },
-              "title": {
-                "type": "string",
-                "maxLength": 120
-              }
-            },
-            "required": [
-              "type",
-              "id",
-              "section_no",
-              "title"
             ],
             "additionalProperties": false
           },
@@ -795,67 +600,11 @@
       }
     },
     "keys": {
-      "maxItems": 500,
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "question_no": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 500
-          },
-          "correct_option": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "A",
-                  "B",
-                  "C",
-                  "D",
-                  "E"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "MCQ ise doğru şık, değilse null"
-          },
-          "numeric_value": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 80
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Sayısal soru ise SymPy dizesi ('7/8', '2*sqrt(3)'), değilse null"
-          },
-          "canonical_expr": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 300
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "sympy.sympify edilebilir ifade ya da null"
-          }
-        },
-        "required": [
-          "question_no",
-          "correct_option",
-          "numeric_value",
-          "canonical_expr"
-        ],
-        "additionalProperties": false
-      }
+        "not": {}
+      },
+      "description": "Raporda boş: rapor cevap anahtarı taşımaz"
     }
   },
   "required": [

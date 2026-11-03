@@ -7,7 +7,7 @@
 - Bir kazanımda gözlem sayısı eşiğin (varsayılan 5) altındaysa `MasteryMeter` yüzde göstermez; "Henüz yeterli kanıt yok" yazar. Dolgu yok, tahminî değer yok.
 - Her ustalık değeri, kavram yanılgısı ve ders raporu maddesi en az bir `EvidenceQuote` taşır: alıntı ve kaynak (ders kaydı zaman damgası, soru numarası, sohbet mesajı). Kanıtı olmayan iddia gösterilmez.
 - Kavram yanılgısı çözülene kadar "Açık" kalır; "✓ Çözüldü" yalnızca yeni kanıt ve eğitmen onayıyla.
-- Ders raporu eğitmen onaylamadan öğrenci profiline işlenmez; öğrenciye "raporun hazırlanıyor" denir, taslak gösterilmez.
+- Ders iddiaları güven eşiğinin (varsayılan 0,8, ders başına ayarlanır) üstündeyse otomatik işlenir; eşiğin altındakiler eğitmen onaylamadan öğrenci profiline işlenmez ve "Onay bekliyor" taşır. Öğrenciye "raporun hazırlanıyor" denir, taslak gösterilmez.
 
 ## Tahmin değil öncelik
 

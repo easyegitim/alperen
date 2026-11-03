@@ -10,6 +10,9 @@ export function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+/** Yalnız loose kipte bulunan, model çıktısı olmayan alanlar (strict şemada yok; boru hattı yazar). */
+export const LOOSE_ONLY_KEYS: Record<string, string[]> = { 'lesson-analysis': ['model_notes'] };
+
 export interface FixtureFile {
   name: string;
   data: unknown;

@@ -174,7 +174,7 @@ def check_dev_seed(root: Path, rep: Report) -> dict | None:
         if c.get("status") == "active":
             by_code[c.get("code")] = by_code.get(c.get("code"), 0) + 1
     if not by_code:
-        rep.fail("dev-seed.json: status='active' müfredat yok (resolve_telegram OGR-ENR-001 verir)")
+        rep.fail("dev-seed.json: aktif müfredat yok (status='active')")
     for code, n in sorted(by_code.items()):
         if n != 1:
             rep.fail(f"dev-seed.json: {code} için {n} aktif müfredat (tam bir tane olmalı)")

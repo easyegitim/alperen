@@ -1,6 +1,6 @@
 """JsonlDb — fixtures JSON'dan bellek içi tablolar; ``out/<tablo>.jsonl`` yazar (§12 #42).
 
-``batch_worker`` rolünün PostgREST'ten gördüğü dünyanın sahtesidir:
+Pipeline'ların (``service_role``; v2'de uygulama rolü yoktur) PostgREST'ten gördüğü dünyanın sahtesidir:
 
 * **Yükleme.** Taban dünya ``fixtures/db/dev-seed.json``'dur. ``from_fixtures(<dizin>)`` ayrıca o
   dizindeki tablo dosyalarını okur; dizindeki bir tablo tabandaki aynı tablonun **yerine geçer**
@@ -8,12 +8,10 @@
   ``messages``), yoksa ad (``-`` → ``_``) bir tablo adıysa o tablo; çok tablolu dosyalar
   (``{"lessons": [...], ...}``) anahtar başına; sözleşme örnekleri (ör. ``facts-day.json``) atlanır.
   Aynı dizinde aynı tabloya düşen dosyalar birincil anahtara göre birleşir (ad sırası).
-* **Yetki taklidi.** ``secure.*`` ve ``audit.events`` okunamaz, ``messages.text_raw`` hiçbir zaman
-  dönmez (sütun yetkisi yok); yazma ``BATCH_WORKER_WRITES`` matrisine uyar (ör. ``observations``'a
-  yazılamaz, ``questions.status``/``reviewed_*`` yalnız RPC ile) **ve** sütun yetkileri çalışma anında
-  ``supabase/tests/grants_matrix.json``'dan denetlenir (INSERT/UPDATE sütunları, ``merge`` için UPDATE + çakışma
-  sütunlarında SELECT, ``where`` için SELECT, ``returning='representation'`` için tablo düzeyi SELECT).
-  İhlal → ``DbPermissionError`` (``OGR-DB-001``); matris okunamazsa ``OGR-DB-004``.
+* **Şema denetimi.** ``fakes/grants-v2.json`` (migration'lardan üretilir, ``scripts/gen_grants_v2.py``) tablo ve
+  sütun listesidir: olmayan tabloya ya da sütuna yazım/okuma canlıda hata vereceği için reddedilir
+  (``OGR-DB-002``); rol yetkisi ``grants.require`` ile denetlenir (``service_role`` tam yetkili; ``postgres`` ve
+  ``service_role`` dışındaki roller matriste tanımlı olmalıdır). Matris okunamazsa ``OGR-DB-004``.
 * **Tetikleyiciler.** ``llm_calls`` eklemesi ``spend_ledger``'ı günceller (``app.spend_rollup``);
   ``messages`` eklemesi ``expires_at``'i yazar; ``questions``'ta ``app.questions_check_skills``.
 * **RPC'ler.** ``rpc(ad, parametreler)`` ``fakes/jsonl_rpc.py``'deki eşlenikleri çağırır; adlar
@@ -30,7 +28,7 @@ import json
 import re
 import uuid
 from collections.abc import Iterable, Mapping, Sequence
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -44,184 +42,170 @@ NAMESPACE_OGRENMEN = uuid.uuid5(uuid.NAMESPACE_DNS, "ogrenmen.easy")
 """fixtures/README.md ile aynı ad alanı (deterministik kimlikler)."""
 
 PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
-    "quota_tiers": ("tier",),
-    "quota_limits": ("tier", "kind"),
     "settings": ("key",),
     "runtime_flags": ("key",),
-    "retention_policies": ("id",),
     "skills": ("curriculum_id", "id"),
     "skill_prerequisites": ("curriculum_id", "skill_id", "prereq_id"),
     "misconception_tags": ("tag",),
     "secure.answer_keys": ("question_id",),
-    "secure.student_pii": ("student_id",),
-    "secure.telegram_identities": ("telegram_user_id",),
-    "secure.auth_links": ("auth_user_id",),
-    "staff_students": ("staff_id", "student_id"),
+    "secure.exam_answer_keys": ("question_id",),
     "preferences": ("student_id",),
-    "tg_chats": ("chat_id",),
-    "chat_roles": ("chat_id", "telegram_user_id"),
-    "tg_updates": ("update_id",),
-    "sessions": ("student_id", "chat_id"),
     "spend_ledger": ("day", "purpose", "provider"),
-    "provider_health": ("provider",),
     "mastery": ("enrollment_id", "skill_id"),
     "misconception_evidence": ("misconception_id", "observation_id"),
-    "pilot_metrics": ("metric", "period"),
-    "table_sizes_daily": ("day", "table_name"),
+    "style_coverage": ("enrollment_id", "style_id"),
+    "memory_files": ("student_id", "path"),
+    "notification_rules": ("recipient_id", "kind"),
+    "student_dossier_cache": ("student_id", "course_id"),
     "lesson_labels": ("hash",),
+    # pipeline mirası (aşağıda LEGACY_PIPELINE_TABLES)
+    "staff_students": ("staff_id", "student_id"),
+    "secure.student_pii": ("student_id",),
+    "provider_health": ("provider",),
 }
 """Birincil anahtarı ``id`` olmayan tablolar (§3)."""
 
 IDENTITY_TABLES = frozenset({
-    "messages", "observations", "mastery_history", "memory_facts", "bot_responses", "llm_calls", "quota_usage",
-    "attempts", "library_chunks", "retention_runs", "storage_deletions", "audit.events",
+    "observations", "mastery_history", "attempts", "conversation_messages", "memory_file_versions", "memory_facts",
+    "library_chunks", "llm_calls", "audit.events",
 })
 """``bigint generated always as identity`` birincil anahtarlı tablolar."""
 
-KNOWN_TABLES = frozenset({
-    "quota_tiers", "students", "secure.student_pii", "secure.telegram_identities", "secure.staff_codes",
-    "secure.auth_links", "secure.guardian_codes", "staff", "staff_students", "legal_texts", "consents", "settings",
-    "retention_policies", "curricula", "skills", "skill_prerequisites", "misconception_tags", "enrollments",
-    "observations", "mastery", "mastery_history", "misconceptions", "misconception_evidence", "instructor_notes",
-    "preferences", "figures", "questions", "secure.answer_keys", "question_templates", "attempts", "diagnostic_tests",
-    "diagnostic_sessions", "content_pool", "generation_requests", "tg_chats", "chat_roles", "tg_updates", "messages",
-    "sessions", "memory_facts", "weekly_summaries", "bot_responses", "llm_calls", "spend_ledger", "runtime_flags",
-    "provider_health", "quota_limits", "quota_usage", "escalations", "instructor_alerts", "proactive_messages",
-    "pilot_metrics", "lessons", "lesson_analyses", "lesson_claims", "courses", "syllabus_topics", "exam_sources",
-    "exam_items", "exam_clusters", "exam_priority_plans", "research_requests", "research_outputs", "citations",
-    "library_documents", "library_chunks", "audit.events", "retention_runs", "table_sizes_daily",
-    "storage_deletions", "lesson_labels",
-})
-"""§3 tabloları; ``lesson_labels`` yalnız sahte dünyadadır (``resolve_lesson_labels`` yanıtı, ``ders/labels.json``)."""
-
 FIXTURE_TABLE_ALIASES: dict[str, str] = {
-    "messages-day": "messages",
-    "bot-responses-week": "bot_responses",
     "llm-calls-month": "llm_calls",
     "spend-ledger-month": "spend_ledger",
     "memory-facts": "memory_facts",
     "questions-review": "questions",
-    "chats": "tg_chats",
-    "requests": "research_requests",
     "labels": "lesson_labels",
 }
 """fixtures dosya adı (uzantısız) → tablo (fixtures/README.md "Dizinler" tablosu)."""
 
-HIDDEN_TABLES = frozenset({"audit.events"})
-"""batch_worker'ın okuyamadığı ``secure`` dışı tablolar."""
+LEGACY_PIPELINE_TABLES = frozenset({
+    "generation_requests", "exam_clusters", "instructor_alerts", "proactive_messages", "provider_health",
+    "diagnostic_tests", "staff", "staff_students", "secure.student_pii",
+})
+"""v2 şemasında bulunmayan ama pipelines/{tablet,kalem,ders} ile ``CostLedger``'ın (Gemini zinciri) hâlâ kullandığı v1
+tabloları. Sahte dünyada **sütun denetimi olmadan** tutulur; ilgili kod yolları P3/P5 servislerine taşındıkça bu
+liste küçülür ve boşalınca silinir (docs/PLAN-v2-detail.md §13)."""
 
-DENIED_READ_COLUMNS: dict[str, frozenset[str]] = {"messages": frozenset({"text_raw"})}
-"""batch_worker sütun yetkisinde olmayan sütunlar (§3.8: ``messages.text_raw``)."""
-
-_ALL = "*"
-BATCH_WORKER_WRITES: dict[str, dict[str, Any]] = {
-    # tablo: {"insert": bool, "update": "*" | {sütunlar}, "delete": bool, "deny_columns": {...}}
-    "curricula": {"insert": True, "update": _ALL},
-    "skills": {"insert": True, "update": _ALL},
-    "skill_prerequisites": {"insert": True, "update": _ALL},
-    "misconception_tags": {"insert": True, "update": _ALL},
-    "question_templates": {"insert": True, "update": _ALL},
-    "preferences": {"insert": False, "update": _ALL},
-    "figures": {"insert": True, "update": _ALL, "deny_columns": {"review_status", "reviewed_by", "reviewed_at"}},
-    "questions": {"insert": True, "update": _ALL, "deny_columns": {"reviewed_by", "reviewed_at"},
-                  "guard_status": True},
-    "content_pool": {"insert": True, "update": False},
-    # W: "w (`exam_variant`, kalem) u (`served_question_id, served_at`, tablet)"
-    "generation_requests": {"insert": True, "update": {"served_question_id", "served_at"},
-                            "insert_where": {"kind": "exam_variant"}},
-    "messages": {"insert": False, "update": {"is_question", "answered_at"}},
-    "memory_facts": {"insert": True, "update": _ALL},
-    "weekly_summaries": {"insert": True, "update": False},
-    "bot_responses": {"insert": False, "update": {"review_week"}},
-    "llm_calls": {"insert": True, "update": False},
-    "provider_health": {"insert": False, "update": _ALL},
-    "escalations": {"insert": False, "update": _ALL},
-    "instructor_alerts": {"insert": True, "update": _ALL},
-    "proactive_messages": {"insert": True, "update": False},
-    "lessons": {"insert": False, "update": {"status", "transcript_path", "frames_count", "video_deleted_at"}},
-    "lesson_analyses": {"insert": True, "update": False},
-    "lesson_claims": {"insert": True, "update": False},
-    "courses": {"insert": True, "update": _ALL},
-    "syllabus_topics": {"insert": True, "update": _ALL},
-    "exam_sources": {"insert": True, "update": _ALL},
-    "exam_items": {"insert": True, "update": _ALL},  # W "r w u" — silme yok
-    "exam_clusters": {"insert": True, "update": _ALL},  # W "r w u" — silme yok
-    "exam_priority_plans": {"insert": True, "update": _ALL, "deny_columns": {"status", "approved_by", "approved_at"}},
-    "research_requests": {"insert": False, "update": _ALL},
-    "research_outputs": {"insert": True, "update": _ALL},
-    "citations": {"insert": True, "update": _ALL},
-    "pilot_metrics": {"insert": True, "update": _ALL},
-    "library_documents": {"insert": True, "update": False},
-    "library_chunks": {"insert": True, "update": False},
-    "retention_runs": {"insert": True, "update": False},
-    "table_sizes_daily": {"insert": True, "update": False},
-    "storage_deletions": {"insert": True, "update": {"done_at", "error"}},
+LEGACY_PIPELINE_COLUMNS: dict[str, frozenset[str]] = {
+    "exam_items": frozenset({"cluster_id"}),
+    "exam_sources": frozenset({"legal_basis", "instructor_alias", "uploaded_by"}),
+    "courses": frozenset({"instructor_alias"}),
+    "students": frozenset({"deleted_at", "is_minor", "tier", "tz"}),
+    "preferences": frozenset({"voice_reply"}),
+    "lessons": frozenset({"deletion_notified_at", "staff_id", "video_deleted_at", "video_ref"}),
+    "questions": frozenset({"guard_status"}),
 }
-"""batch_worker'ın doğrudan yazabildikleri (§3.8 W sütunu); listede olmayan tabloya yazım → yetki hatası."""
+"""v2 tablosunda olmayan ama aynı pipeline'ların hâlâ yazdığı sütunlar (tablo başına izinli küme)."""
+
+LEGACY_V1_TABLES = frozenset({
+    "quota_tiers", "quota_limits", "retention_policies", "legal_texts", "diagnostic_sessions",
+    "secure.telegram_identities", "secure.guardian_codes", "secure.staff_codes", "secure.auth_links", "consents",
+    "tg_chats", "chat_roles", "tg_updates", "sessions", "messages", "bot_responses", "quota_usage", "escalations",
+    "research_requests", "research_outputs", "citations", "pilot_metrics", "retention_runs", "table_sizes_daily",
+    "storage_deletions",
+})
+"""v1'de olup ne v2'de ne pipeline'larda kullanılan tablolar (Telegram, kota, oturum, saklama, bilimsel kaynak,
+pilot metrikleri): eski fixture dosyalarında geçebilir, yüklenirken **atlanır**; yazılamaz/okunamaz
+(``tests/test_jsonl_db.py::test_legacy_v1_tables_are_dropped``)."""
+
+def _known_tables() -> frozenset[str]:
+    """Migration'lardaki tablolar (``public.`` öneksiz; ``secure.*`` ve ``audit.events`` şemalı) + sahte dünyaya özgü
+    ``lesson_labels``."""
+    names = {t.removeprefix("public.") for t in grants.load_matrix()["tables"]}
+    return frozenset(names | {"lesson_labels"} | LEGACY_PIPELINE_TABLES)
+
+
+KNOWN_TABLES = _known_tables()
+"""v2 tabloları (grants-v2.json) + ``LEGACY_PIPELINE_TABLES``; ``lesson_labels`` yalnız sahte dünyadadır."""
+
+LLM_CALL_STATUSES = frozenset({"ok", "error", "rate_limited", "overloaded", "timeout", "cap_blocked", "bad_output",
+                               "refusal", "max_tokens"})
+"""``llm_calls.status`` check kısıtı (0014_llm_ledger.sql)."""
 
 _NOW = object()
 _TODAY = object()
 
 TABLE_DEFAULTS: dict[str, dict[str, Any]] = {
-    "llm_calls": {"tokens_in": 0, "tokens_out": 0, "audio_sec": None, "images": None, "batch": False,
-                  "error_code": None, "latency_ms": None, "cost_usd": 0, "ref_table": None, "ref_id": None,
-                  "student_ref": None, "created_at": _NOW},
-    "lessons": {"status": "uploaded", "video_deleted_at": None, "deletion_notified_at": None, "transcript_path": None,
-                "frames_count": None, "created_at": _NOW},
-    "lesson_analyses": {"version": 1, "status": "draft", "cost_usd": 0, "approved_by": None, "approved_at": None,
-                        "created_at": _NOW},
-    "lesson_claims": {"status": "pending", "edited_value": None, "decided_by": None, "decided_at": None,
-                      "misconception_tag": None, "misconception_id": None, "skill_id": None, "t_end_sec": None},
-    "questions": {"stem_values": {}, "figure_id": None, "options": None, "difficulty": None, "template_id": None,
-                  "template_params": None, "status": "draft", "model": None, "cost_usd": 0, "prompt_version": None,
-                  "reviewed_by": None, "reviewed_at": None, "review_note": None, "created_at": _NOW,
-                  "verification": {"schema": True, "sympy": "pending", "render": "not_applicable",
-                                   "vision": "not_applicable", "attempts": 0}},
-    "figures": {"png_path": None, "svg_path": None, "width_px": None, "height_px": None, "bytes": None,
-                "render_status": "pending", "vision_status": "pending", "vision_report": None, "attempts": 0,
-                "review_status": "pending", "reviewed_by": None, "reviewed_at": None, "render_log": None,
-                "created_at": _NOW},
-    "instructor_alerts": {"student_id": None, "staff_id": None, "since": None, "ref": {}, "status": "open",
-                          "created_at": _NOW, "resolved_at": None, "resolved_by": None},
-    "proactive_messages": {"chat_id": None, "recipient": "student", "params": {}, "sent_at": None,
-                           "telegram_message_id": None, "status": "scheduled"},
-    "memory_facts": {"source_message_ids": [], "source_lesson_claim_id": None, "confidence": 0.7,
-                     "requires_approval": False, "approved": False, "approved_by": None, "valid_from": _TODAY,
-                     "valid_until": None, "morale_signal": None, "status": "active", "embedding": None,
-                     "model": None, "cost_usd": 0, "created_at": _NOW},
+    "llm_calls": {
+        "tokens_in": 0, "tokens_out": 0, "audio_sec": None, "images": None, "batch": False, "error_code": None,
+        "latency_ms": None, "cost_usd": 0, "ref_table": None, "ref_id": None, "student_ref": None,
+        "created_at": _NOW, "provider": "anthropic", "cache_read_tokens": 0, "cache_write_tokens": 0, "route": None,
+        "effort": None, "prompt_version": None
+    },
+    "lessons": {
+        "status": 'uploaded', "transcript_path": None, "frames_count": None, "created_at": _NOW,
+        "student_visible": False, "auto_apply_threshold": 0.8
+    },
+    "lesson_analyses": {
+        "version": 1, "status": "draft", "cost_usd": 0, "approved_by": None, "approved_at": None, "created_at": _NOW
+    },
+    "lesson_claims": {
+        "status": "pending", "edited_value": None, "decided_by": None, "decided_at": None, "misconception_tag": None,
+        "misconception_id": None, "skill_id": None, "t_end_sec": None
+    },
+    "questions": {
+        "stem_values": {}, "figure_id": None, "options": None, "difficulty": None, "template_id": None,
+        "template_params": None, "status": "draft", "model": None, "cost_usd": 0, "prompt_version": None,
+        "reviewed_by": None, "reviewed_at": None, "review_note": None, "created_at": _NOW,
+        "verification": {"schema": True, "sympy": "pending", "render": "not_applicable",
+                         "vision": "not_applicable", "attempts": 0},
+        "kind": "mcq"
+    },
+    "figures": {
+        "png_path": None, "svg_path": None, "width_px": None, "height_px": None, "bytes": None,
+        "render_status": "pending", "vision_status": "pending", "vision_report": None, "attempts": 0,
+        "review_status": "pending", "reviewed_by": None, "reviewed_at": None, "render_log": None, "created_at": _NOW
+    },
+    "memory_facts": {
+        "source_message_ids": [], "source_lesson_claim_id": None, "confidence": 0.7, "requires_approval": False,
+        "approved": False, "approved_by": None, "valid_from": _TODAY, "valid_until": None, "morale_signal": None,
+        "status": 'active', "embedding": None, "model": None, "cost_usd": 0, "created_at": _NOW
+    },
     "weekly_summaries": {"facts_used": [], "model": None, "cost_usd": 0, "created_at": _NOW},
+    "exam_sources": {
+        "status": 'uploaded', "error": None, "instructor_alias": None, "uploaded_by": None, "created_at": _NOW
+    },
+    "exam_items": {
+        "topic": None, "kind": None, "points": None, "curriculum_id": None, "skill_id": None, "ocr_text": None,
+        "embedding": None
+    },
+    "exam_priority_plans": {"status": 'pending_review', "approved_by": None, "approved_at": None, "created_at": _NOW},
+    "content_pool": {
+        "misconception_tag": None, "status": 'pending_review', "model": None, "cost_usd": 0, "hit_count": 0,
+        "approved_by": None, "approved_at": None, "created_at": _NOW
+    },
+    "library_documents": {"curriculum_id": None, "pages": None, "uploaded_by": None, "created_at": _NOW},
+    "library_chunks": {"page": None, "embedding": None},
+    "audit.events": {"actor_id": None, "row_id": None, "diff": None},
+    "runtime_flags": {"updated_at": _NOW, "updated_by": None},
+    "mastery_history": {"created_at": _NOW},
+    "misconceptions": {
+        "status": 'pending_review', "evidence_count": 0, "first_seen": _NOW, "last_seen": _NOW, "resolved_at": None,
+        "resolved_by": None, "resolution_observation_id": None, "rejected_by": None, "reject_note": None
+    },
+    "courses": {"kind": 'other', "visibility": 'private'},
+    "syllabus_topics": {"skill_ids": []},
+    "question_templates": {"enabled": True, "has_figure": True},
+}
+TABLE_DEFAULTS.update({
     "generation_requests": {"kind": "pool_miss", "difficulty_band": "mid", "topic": None, "question_kind": None,
                             "points": None, "plan_id": None, "requested_by": None, "requested_by_staff": None,
                             "served_question_id": None, "served_at": None, "needs_generation": False,
                             "created_at": _NOW},
-    "exam_sources": {"status": "uploaded", "error": None, "instructor_alias": None, "uploaded_by": None,
-                     "created_at": _NOW},
-    "exam_items": {"topic": None, "kind": None, "points": None, "curriculum_id": None, "skill_id": None,
-                   "ocr_text": None, "embedding": None, "cluster_id": None},
     "exam_clusters": {"kind": None, "curriculum_id": None, "skill_id": None, "item_count": 0, "years_hit": [],
                       "years_total": 0, "avg_points": None, "updated_at": _NOW},
-    "exam_priority_plans": {"status": "pending_review", "approved_by": None, "approved_at": None,
-                            "created_at": _NOW},
-    "research_outputs": {"bibtex": None, "apa": None, "model": None, "status": "pending_review", "created_at": _NOW},
-    "citations": {"doi": None, "authors": None, "venue": None, "year": None, "crossref_status": "pending",
-                  "title_similarity": None, "verified_at": None, "oa_pdf_url": None, "tldr": None, "status": "kept",
-                  "removed_reason": None, "relevance": None, "relevance_by": None, "relevance_at": None},
-    "pilot_metrics": {"value": None, "detail": {}, "computed_at": _NOW},
-    "content_pool": {"misconception_tag": None, "status": "pending_review", "model": None, "cost_usd": 0,
-                     "hit_count": 0, "approved_by": None, "approved_at": None, "created_at": _NOW},
-    "library_documents": {"curriculum_id": None, "pages": None, "uploaded_by": None, "created_at": _NOW},
-    "library_chunks": {"page": None, "embedding": None},
-    "retention_runs": {"detail": None, "ran_at": _NOW},
-    "storage_deletions": {"requested_at": _NOW, "done_at": None, "error": None},
-    "audit.events": {"at": _NOW, "actor_id": None, "row_id": None, "diff": None},
-    "runtime_flags": {"updated_at": _NOW, "updated_by": None},
-    "mastery_history": {"created_at": _NOW},
-    "misconceptions": {"status": "pending_review", "evidence_count": 0, "first_seen": _NOW, "last_seen": _NOW,
-                       "resolved_at": None, "resolved_by": None, "resolution_observation_id": None,
-                       "rejected_by": None, "reject_note": None},
-    "table_sizes_daily": {"row_estimate": None},
-}
-"""Migration'lardaki ``default`` değerleri (yalnız eksik sütunlara uygulanır)."""
+    "instructor_alerts": {"student_id": None, "staff_id": None, "since": None, "ref": {}, "status": "open",
+                          "created_at": _NOW, "resolved_at": None, "resolved_by": None},
+    "proactive_messages": {"recipient": "student", "params": {}, "sent_at": None, "status": "scheduled"},
+})
+TABLE_DEFAULTS["exam_items"] = {**TABLE_DEFAULTS.get("exam_items", {}), "cluster_id": None}
+TABLE_DEFAULTS["exam_sources"] = {**TABLE_DEFAULTS.get("exam_sources", {}), "error": None, "instructor_alias": None,
+                                  "uploaded_by": None}
+TABLE_DEFAULTS["lessons"] = {**TABLE_DEFAULTS.get("lessons", {}), "video_deleted_at": None,
+                             "deletion_notified_at": None}
+"""Migration ``default`` değerleri (yalnız eksik sütunlara uygulanır) + pipeline mirası tabloların varsayılanları."""
 
 REDACTED_RPC_PARAMS: dict[str, tuple[str, ...]] = {
     "register_answer_key": ("p_key",),
@@ -339,10 +323,10 @@ def _order_key(col: str, desc: bool):
 
 
 class JsonlDb:
-    """``DB`` Protocol'ünün sahtesi (``batch_worker`` görünümü)."""
+    """``DB`` Protocol'ünün sahtesi (``service_role`` görünümü)."""
 
     def __init__(self, tables: Mapping[str, Sequence[Mapping[str, Any]]] | None = None, *,
-                 out_dir: Path | str | None = None, clock: Clock | None = None, role: str = "batch_worker"):
+                 out_dir: Path | str | None = None, clock: Clock | None = None, role: str = "service_role"):
         self.tables: dict[str, list[dict]] = {}
         for name, rows in (tables or {}).items():
             self.tables[name] = [copy.deepcopy(dict(r)) for r in rows]
@@ -363,7 +347,7 @@ class JsonlDb:
     @classmethod
     def from_fixtures(cls, fixtures: Path | str | None = None, *, out_dir: Path | str | None = None,
                       clock: Clock | None = None, base: Path | str | bool | None = True,
-                      role: str = "batch_worker") -> JsonlDb:
+                      role: str = "service_role") -> JsonlDb:
         """Taban ``dev-seed.json`` (``base=False`` ile kapatılır) + ``fixtures`` dizinindeki tablolar."""
         tables: dict[str, list[dict]] = {}
         if base:
@@ -411,53 +395,34 @@ class JsonlDb:
         return self.role in ("service_role", "postgres")
 
     def _check_read(self, table: str, columns: Sequence[str] | None) -> None:
-        if self._privileged():
+        """Olmayan tablo/sütun okuması canlıda hata verir; yetki matrisi service_role dışı roller içindir."""
+        if self._via != "direct":
             return
-        if table.startswith("secure."):
-            raise DbPermissionError("OGR-DB-001 permission denied for schema secure")
-        if table in HIDDEN_TABLES:
-            raise DbPermissionError(f"OGR-DB-001 permission denied for table {table}")
-        denied = DENIED_READ_COLUMNS.get(table, frozenset())
+        known = grants.columns(table)
+        if known is None:
+            return
+        known = known | LEGACY_PIPELINE_COLUMNS.get(table, frozenset())
         for col in columns or ():
-            if col in denied:
-                raise DbPermissionError(f"OGR-DB-001 permission denied for column {col} of relation {table}")
+            if col not in known:
+                raise DbError(f"OGR-DB-002 {table}.{col} v2 şemasında yok")
+        if not self._privileged():
+            grants.require(self.role, table, "select", columns or [])
 
     def _check_write(self, table: str, op: str, values: Mapping[str, Any]) -> None:
-        if self._privileged() or self._via != "direct":
+        """Doğrudan (PostgREST) yazımda sütunlar v2 şemasında olmalıdır (RPC/tetikleyici yolları denetlenmez)."""
+        if self._via != "direct" or self.role == "postgres":
             return
-        if table.startswith("secure."):
-            raise DbPermissionError("OGR-DB-001 permission denied for schema secure")
-        policy = BATCH_WORKER_WRITES.get(table)
-        if policy is None:
-            raise DbPermissionError(f"OGR-DB-001 permission denied for table {table} ({op})")
-        if op == "insert" and not policy.get("insert"):
-            raise DbPermissionError(f"OGR-DB-001 permission denied for table {table} (insert)")
-        if op == "delete" and not policy.get("delete"):
-            raise DbPermissionError(f"OGR-DB-001 permission denied for table {table} (delete)")
-        if op == "insert":
-            for col, wanted in (policy.get("insert_where") or {}).items():
-                value = values.get(col, TABLE_DEFAULTS.get(table, {}).get(col))
-                if value != wanted:
-                    raise DbPermissionError(f"OGR-DB-001 new row violates row-level security policy for table {table}"
-                                            f" ({col}={value!r}; batch_worker yalnız {col}={wanted!r} ekler)")
-        if op == "update":
-            allowed = policy.get("update")
-            if not allowed:
-                raise DbPermissionError(f"OGR-DB-001 permission denied for table {table} (update)")
-            if allowed != _ALL:
-                extra = set(values) - set(allowed)
-                if extra:
-                    raise DbPermissionError(
-                        f"OGR-DB-001 permission denied for column {sorted(extra)[0]} of relation {table}")
-        deny = set(policy.get("deny_columns", ()))
-        if op == "insert":
-            defaults = TABLE_DEFAULTS.get(table, {})
-            hit = sorted(c for c in deny & set(values) if values[c] != defaults.get(c))
-        else:
-            hit = sorted(deny & set(values))
-        if hit:
-            raise DbPermissionError(f"OGR-DB-001 permission denied for column {hit[0]} of relation {table}")
-        if policy.get("guard_status"):
+        known = grants.columns(table)
+        if known is None:
+            if table in LEGACY_PIPELINE_TABLES:
+                known = frozenset(values)  # pipeline mirası: sütun denetimi yok
+            else:
+                raise DbError(f"OGR-DB-002 {table} v2 şemasında yok")
+        known = known | LEGACY_PIPELINE_COLUMNS.get(table, frozenset())
+        unknown = sorted(set(values) - known)
+        if unknown:
+            raise DbError(f"OGR-DB-002 {table}.{unknown[0]} v2 şemasında yok (sütunlar: grants-v2.json)")
+        if table == "questions":
             if op == "update" and {"status", "review_note"} & set(values):
                 raise RpcError("OGR-Q-004 inceleme sütunları yalnız onay RPC'leriyle değişir")
             if op == "insert" and values.get("status") == "approved":
@@ -465,10 +430,10 @@ class JsonlDb:
 
     def _check_grants(self, table: str, op: str, columns: Iterable[str], *, where: Where | None = None,
                       on_conflict: str | None = None, returning: str = "minimal") -> None:
-        """Sütun yetkileri ``supabase/tests/grants_matrix.json``'dan (çalışma anında okunur; §3.8): yazılan sütunlar
-        rolün INSERT/UPDATE yetkisinde olmalı; ``on_conflict='merge'`` (``ON CONFLICT DO UPDATE SET`` tüm gönderilen
-        sütunlar) ayrıca UPDATE ve çakışma sütunlarında SELECT; ``where`` sütunları SELECT; ``returning=
-        'representation'`` (``RETURNING *``) tablo düzeyi SELECT ister. İhlal → ``OGR-DB-001``."""
+        """Rol yetkisi (``grants-v2.json``; çalışma anında okunur). ``service_role`` ve ``postgres`` tam yetkilidir
+        (RLS'i aşar); matriste tanımlı başka bir rol için: yazılan sütunlar INSERT/UPDATE yetkisinde, ``merge`` için
+        ayrıca UPDATE ve çakışma sütunlarında SELECT, ``where`` sütunları SELECT, ``returning='representation'``
+        tablo düzeyi SELECT ister. İhlal → ``OGR-DB-001``."""
         if self._privileged() or self._via != "direct":
             return
         cols = list(columns)
@@ -526,10 +491,9 @@ class JsonlDb:
             rows.sort(key=_order_key(col, desc), reverse=desc)  # null: ASC'de sonda, DESC'de başta
         if limit is not None:
             rows = rows[: max(0, int(limit))]
-        denied = DENIED_READ_COLUMNS.get(table, frozenset()) if not self._privileged() else frozenset()
         out = []
         for r in rows:
-            item = {k: copy.deepcopy(v) for k, v in r.items() if k not in denied}
+            item = {k: copy.deepcopy(v) for k, v in r.items()}
             if columns:
                 item = {c: item.get(c) for c in columns}
             out.append(item)
@@ -628,22 +592,15 @@ class JsonlDb:
                 raise DbError("OGR-DB-002 figures.code_hash benzersiz olmalı")
 
     def _before_insert(self, table: str, row: dict) -> None:
-        if table == "messages" and row.get("sent_at") and not row.get("expires_at"):
-            chat = next((c for c in self._rows("tg_chats") if c.get("chat_id") == row.get("chat_id")), None)
-            days = int((chat or {}).get("retention_days") or 90)
-            row["expires_at"] = iso(parse_ts(row["sent_at"]) + timedelta(days=days))
         if table in ("questions", "syllabus_topics") and row.get("skill_ids"):
             skills = {(s.get("curriculum_id"), s.get("id")) for s in self._rows("skills")}
             for sid in row["skill_ids"]:
                 if (row.get("curriculum_id"), sid) not in skills:
                     raise RpcError(f"OGR-CURR-001 kazanım müfredatta yok: {sid}")
         if table == "llm_calls":
-            from ..adapters.base import LLM_PURPOSES
-
-            if row.get("purpose") not in LLM_PURPOSES:
-                raise DbError(f"OGR-DB-002 llm_calls.purpose geçersiz: {row.get('purpose')}")
-            if row.get("status") not in ("ok", "error", "rate_limited", "timeout", "cap_blocked", "cooldown_skip",
-                                         "bad_output"):
+            if not row.get("purpose"):
+                raise DbError("OGR-DB-002 llm_calls.purpose boş olamaz")
+            if row.get("status") not in LLM_CALL_STATUSES:
                 raise DbError(f"OGR-DB-002 llm_calls.status geçersiz: {row.get('status')}")
 
     def _after_insert(self, table: str, row: dict) -> None:
@@ -658,11 +615,13 @@ class JsonlDb:
         led = next((r for r in rows if (r.get("day"), r.get("purpose"), r.get("provider")) == key), None)
         if led is None:
             led = {"day": day, "purpose": call["purpose"], "provider": call["provider"], "calls": 0, "tokens_in": 0,
-                   "tokens_out": 0, "cost_usd": 0.0}
+                   "tokens_out": 0, "cache_read_tokens": 0, "cache_write_tokens": 0, "cost_usd": 0.0}
             rows.append(led)
         led["calls"] = int(led.get("calls") or 0) + 1
         led["tokens_in"] = int(led.get("tokens_in") or 0) + int(call.get("tokens_in") or 0)
         led["tokens_out"] = int(led.get("tokens_out") or 0) + int(call.get("tokens_out") or 0)
+        for col in ("cache_read_tokens", "cache_write_tokens"):
+            led[col] = int(led.get(col) or 0) + int(call.get(col) or 0)
         led["cost_usd"] = round(float(led.get("cost_usd") or 0) + float(call.get("cost_usd") or 0), 6)
         prev, self._via = self._via, "trigger:spend_rollup"
         try:
@@ -732,8 +691,7 @@ class JsonlDb:
         """Bu çalışmada yazılan/güncellenen satırların son hâli (yazım sırasıyla)."""
         keys = self._written.get(table, {})
         index = {self._key(table, r): r for r in self._rows(table)}
-        denied = DENIED_READ_COLUMNS.get(table, frozenset())  # out/ batch_worker görünümüdür: text_raw yazılmaz
-        return [{c: copy.deepcopy(v) for c, v in index[k].items() if c not in denied} for k in keys if k in index]
+        return [copy.deepcopy(index[k]) for k in keys if k in index]
 
     def written_tables(self) -> list[str]:
         return [t for t, keys in self._written.items() if keys]
@@ -776,6 +734,8 @@ def load_multi_table(path: Path) -> dict[str, list[dict]]:
         raise DbError(f"OGR-DB-002 çok tablolu fixture bekleniyordu: {path}")
     out = {}
     for name, rows in data.items():
+        if name in LEGACY_V1_TABLES:
+            continue
         if name not in KNOWN_TABLES:
             raise DbError(f"OGR-DB-002 {path.name}: bilinmeyen tablo {name}")
         if not isinstance(rows, list):
@@ -800,8 +760,9 @@ def load_fixture_dir(folder: Path) -> dict[str, list[dict]]:
         except json.JSONDecodeError as exc:
             raise DbError(f"OGR-DB-002 bozuk fixture: {path}: {exc}") from exc
         pieces: dict[str, list] = {}
-        if isinstance(data, dict) and data and all(k in KNOWN_TABLES and isinstance(v, list) for k, v in data.items()):
-            pieces = data
+        if isinstance(data, dict) and data and all(
+                (k in KNOWN_TABLES or k in LEGACY_V1_TABLES) and isinstance(v, list) for k, v in data.items()):
+            pieces = {k: v for k, v in data.items() if k in KNOWN_TABLES}
         elif isinstance(data, list) and all(isinstance(r, dict) for r in data):
             table = fixture_table_name(path.stem)
             if table is not None:

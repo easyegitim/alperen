@@ -130,6 +130,7 @@ def test_confirm_video_deleted_queues_two_notices_once(db):
     db.rpc("confirm_video_deleted", {"p_lesson": LESSON})
     assert db.get("lessons", id=LESSON)["video_deleted_at"] == "2026-10-20T09:00:00Z"
     rows = [p for p in db.tables["proactive_messages"] if p["template_id"] == "video_deleted"]
-    assert sorted((r["recipient"], r["chat_id"]) for r in rows) == [("guardian", None), ("student", 700000001)]
+    assert sorted(r["recipient"] for r in rows) == ["guardian", "student"]
+    assert all("chat_id" not in r and "telegram_message_id" not in r for r in rows)
     db.rpc("confirm_video_deleted", {"p_lesson": LESSON})
     assert len([p for p in db.tables["proactive_messages"] if p["template_id"] == "video_deleted"]) == 2

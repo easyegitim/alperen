@@ -1,19 +1,5 @@
 [
-  "anonymize_students",
-  "cap_memory_facts",
   "check_spend",
-  "compute_table_sizes",
-  "confirm_video_deleted",
-  "cron_idle_sessions",
-  "cron_open_alerts",
-  "profile_for_prompt",
-  "recompute_is_minor",
-  "register_answer_key",
-  "register_lesson",
-  "register_template_question",
-  "resolve_lesson_labels",
-  "rollup_spend",
-  "run_retention",
-  "set_runtime_flag",
-  "write_lesson_analysis"
+  "log_llm_call",
+  "set_runtime_flag"
 ]

@@ -52,7 +52,7 @@
     {
       "question_no": 2,
       "correct_option": null,
-      "numeric_value": "6",
+      "numeric_value": 6,
       "canonical_expr": "Eq(x/2+x/3,5)",
       "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
     }

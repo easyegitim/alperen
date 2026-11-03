@@ -1,0 +1,59 @@
+{
+  "kind": "report",
+  "title": "Deneme 3 analizi",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": null,
+    "generated_on": "2026-11-02",
+    "language": "tr",
+    "personalized": true,
+    "duration_min": null
+  },
+  "sections": [
+    {
+      "no": 1,
+      "title": "Genel görünüm"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "id": "r1",
+      "section_no": 1,
+      "level": 1,
+      "text": "Genel görünüm"
+    },
+    {
+      "type": "paragraph",
+      "id": "r2",
+      "section_no": 1,
+      "text": "Matematik bölümünde 24 doğru, 9 yanlış yaptın; netin 21,75 oldu."
+    },
+    {
+      "type": "chart",
+      "id": "r3",
+      "section_no": 1,
+      "chart_kind": "score_by_section",
+      "title": "Bölümlere göre net",
+      "data_ref": "exam_session.score.sections"
+    },
+    {
+      "type": "summary_box",
+      "id": "r4",
+      "section_no": 1,
+      "title": "Önümüzdeki hafta",
+      "bullets": [
+        "Rasyonel sayılarda paydaları eşitleme alıştırması yap."
+      ]
+    },
+    {
+      "type": "answer_sheet",
+      "id": "ra1",
+      "section_no": 1,
+      "title": "Kağıt",
+      "question_count": 10,
+      "options_per_question": 5
+    }
+  ],
+  "keys": []
+}

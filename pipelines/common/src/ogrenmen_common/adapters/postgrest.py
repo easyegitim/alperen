@@ -1,12 +1,12 @@
-"""PostgrestDb — ``DB`` Protocol'ünün gerçek uygulaması (Supabase PostgREST, ``batch_worker`` JWT).
+"""PostgrestDb — ``DB`` Protocol'ünün gerçek uygulaması (Supabase PostgREST).
 
-* Başlıklar: ``apikey: SUPABASE_ANON_KEY``, ``Authorization: Bearer SUPABASE_BATCH_JWT``. ``service_role``
-  bu kodda yoktur; ``secure`` şeması PostgREST'e açık değildir ve istek atılmadan reddedilir.
-* ``messages`` okumasının varsayılan sütun listesi ``MESSAGES_COLUMNS``'tır: ``text_raw`` **yoktur**
-  (``batch_worker``'ın sütun yetkisinde değildir; §3.8, §6 kural 5 — statik test bunu denetler);
-  ``text_raw`` isteyen çağrı ağa gitmeden ``DbPermissionError``.
-* Yazımlar ``returning`` alır: ``"minimal"`` → ``Prefer: return=minimal`` (``RETURNING`` yok; ``batch_worker``'ın
-  SELECT yetkisi olmayan tablolarda da çalışır), toplu yazımın (satır dizisi eklemesi ve ``update``) varsayılanıdır.
+* Başlıklar: ``apikey: SUPABASE_ANON_KEY``, ``Authorization: Bearer SUPABASE_BATCH_JWT`` (v1 adı korunur).
+  v2'de ``Runtime`` bu adaptörü kurmaz (PLAN §12: ``service_role`` yalnız ``apps/worker``'da); yalnız eski
+  ``tablet`` yolu ve testler kullanır, P3/P5 HTTP servisleri gelince kalkar.
+  ``secure`` ve ``audit`` şemaları PostgREST'e açık değildir ve istek atılmadan reddedilir.
+* Okuma varsayılanı ``*``'dır; sütun yetkisi v2'de RLS/GRANT ile DB'dedir (v1'in ``messages.text_raw`` ayrımı kalktı).
+* Yazımlar ``returning`` alır: ``"minimal"`` → ``Prefer: return=minimal`` (``RETURNING`` yok), toplu yazımın (satır
+  dizisi eklemesi ve ``update``) varsayılanıdır.
 * RPC hataları (``{"code":"P0001","message":"OGR-…"}``) ``RpcError`` olarak, mesaj aynen taşınır.
 """
 
@@ -22,30 +22,6 @@ from ..clock import iso
 from ..errors import DbError, DbPermissionError, RpcError
 from .base import Filter, Where, resolve_returning
 from .http import make_client
-
-MESSAGES_COLUMNS: tuple[str, ...] = (
-    "id", "chat_id", "telegram_message_id", "sender_role", "student_id", "staff_id", "reply_to_telegram_message_id",
-    "text_llm", "attachments", "mentions_bot", "is_question", "answered_at", "sent_at", "created_at",
-)
-"""batch_worker'ın ``messages`` sütun yetkisi (0014_rls.sql ``grant select (…)``) — ``text_raw`` YOK."""
-
-DEFAULT_COLUMNS: dict[str, tuple[str, ...]] = {"messages": MESSAGES_COLUMNS}
-DENIED_COLUMNS: dict[str, frozenset[str]] = {"messages": frozenset({"text_raw"})}
-
-
-def base_column(item: str) -> str:
-    """PostgREST seçim öğesinin taban sütunu: takma ad (``raw:text_raw``), tür dönüşümü (``text_raw::text``),
-    JSON yolu (``meta->a``, ``meta->>a``) ve boşluklar soyulur — yasak sütun denetimi buna bakar."""
-    text = str(item).strip()
-    cast = text.find("::")
-    if cast != -1:
-        text = text[:cast]
-    if ":" in text:  # takma ad: "ad:sütun" (tür dönüşümü yukarıda ayrıldı)
-        text = text.split(":")[-1]
-    arrow = text.find("->")
-    if arrow != -1:
-        text = text[:arrow]
-    return text.strip().strip('"')
 
 
 def _literal(value: Any) -> str:
@@ -124,12 +100,7 @@ class PostgrestDb:
             raise DbPermissionError(f"OGR-DB-001 permission denied for schema {table.split('.')[0]}")
 
     def select_columns(self, table: str, columns: Sequence[str] | None) -> str:
-        cols = list(columns) if columns else list(DEFAULT_COLUMNS.get(table, ("*",)))
-        denied = DENIED_COLUMNS.get(table, frozenset())
-        bad = [c for c in cols if (base := base_column(c)) in denied or (base == "*" and denied)]
-        if bad:
-            raise DbPermissionError(f"OGR-DB-001 permission denied for column {bad[0]} of relation {table}")
-        return ",".join(cols)
+        return ",".join(columns) if columns else "*"
 
     def _raise(self, response: httpx.Response, rpc: str | None = None) -> None:
         try:

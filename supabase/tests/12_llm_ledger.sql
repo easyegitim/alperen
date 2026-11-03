@@ -1,6 +1,7 @@
 -- tests/12_llm_ledger.sql — LLM defteri: log_llm_call(jsonb) → llm_calls (+route, effort, önbellek token'ları) →
--- tetikleyici spend_ledger'ı (Istanbul günü × amaç × sağlayıcı) toplar; doğrulama (OGR-LLM-001); öğrenci oturumunda
--- student_ref sabitlenir; created_at yalnız worker verir (Batch sonuçları); defter yalnız admin'e görünür.
+-- tetikleyici spend_ledger'ı (Istanbul günü × amaç × sağlayıcı) toplar; doğrulama (OGR-LLM-001; negatif sayaç/maliyet
+-- yok); öğrenci/veli oturumu yazamaz (OGR-AUTH-002); personelde çağrı başına maliyet üst sınırı; created_at yalnız worker
+-- verir (Batch sonuçları); defter yalnız admin'e görünür.
 begin;
 \ir _fixture.sql
 
@@ -38,21 +39,41 @@ begin
   perform t.ok(exists (select 1 from public.llm_calls c where c.purpose = 'memory_compact' and c.batch), 'batch bayrağı');
 end $$;
 
--- doğrulama ve öğrenci oturumu
+-- doğrulama, öğrenci/veli oturumu, personel üst sınırı
 do $$
 declare
   v_id bigint;
+  v_before numeric;
 begin
   perform t.as_user(t.u('elif'));
+  perform t.raises($q$select public.log_llm_call('{"purpose":"chat","model":"x","status":"ok","cost_usd":-9999}')$q$, 'OGR-AUTH-002%',
+                   'öğrenci deftere yazamaz (tavanı negatif kayıtla sıfırlayamaz)');
+  perform t.raises($q$select public.log_llm_call('{"purpose":"chat","model":"x","status":"ok","cost_usd":9999}')$q$, 'OGR-AUTH-002%',
+                   'öğrenci deftere büyük maliyet yazamaz (herkes için tavan DoS yok)');
+  perform t.as_user(t.u('parent'));
+  perform t.raises($q$select public.log_llm_call('{"purpose":"chat","model":"x","status":"ok"}')$q$, 'OGR-AUTH-002%', 'veli deftere yazamaz');
+  perform t.as_service();
   perform t.raises($q$select public.log_llm_call('{"model":"x","status":"ok"}')$q$, 'OGR-LLM-001%', 'purpose gerekli');
   perform t.raises($q$select public.log_llm_call('[]')$q$, 'OGR-LLM-001%', 'nesne olmalı');
   perform t.raises($q$select public.log_llm_call('{"purpose":"chat","model":"x","status":"belki"}')$q$, 'OGR-LLM-001%', 'durum enum');
   perform t.raises($q$select public.log_llm_call('{"purpose":"chat","model":"x","status":"ok","effort":"turbo"}')$q$, 'OGR-LLM-001%', 'effort enum');
   perform t.raises($q$select public.log_llm_call('{"purpose":"chat","model":"x","status":"ok","tokens_in":"çok"}')$q$, 'OGR-LLM-001%', 'sayı alanı');
-  v_id := public.log_llm_call('{"purpose":"chat","model":"claude-haiku-5-5","status":"ok","student_ref":"s_baskasi0000","created_at":"2020-01-01T00:00:00Z"}');
+  select coalesce(sum(l.cost_usd), 0) into v_before from public.spend_ledger l;
+  perform t.raises($q$select public.log_llm_call('{"purpose":"chat","model":"x","status":"ok","cost_usd":-9999}')$q$, 'OGR-LLM-001%',
+                   'negatif maliyet reddedilir (worker da)');
+  perform t.raises($q$select public.log_llm_call('{"purpose":"chat","model":"x","status":"ok","tokens_out":-5}')$q$, 'OGR-LLM-001%',
+                   'negatif token reddedilir');
   perform t.as_admin();
-  perform t.ok((select c.student_ref = (select s.public_ref from public.students s where s.id = t.u('A')) and c.created_at > now() - interval '1 minute'
-                  from public.llm_calls c where c.id = v_id), 'öğrenci oturumu: student_ref kendi ref''i, created_at yok sayılır');
+  perform t.raises($q$insert into public.spend_ledger (day, purpose, provider, cost_usd) values (current_date, 'x', 'y', -1)$q$, '23514',
+                   'spend_ledger negatif maliyet kabul etmez');
+  perform t.ok((select coalesce(sum(l.cost_usd), 0) from public.spend_ledger l) = v_before, 'reddedilen kayıtlar toplamı değiştirmez');
+  perform t.as_user(t.u('inst'));
+  perform t.raises($q$select public.log_llm_call('{"purpose":"chat","model":"x","status":"ok","cost_usd":9999}')$q$, 'OGR-LLM-001%',
+                   'personel: çağrı başına maliyet üst sınırı (settings.llm_call_max_cost_usd)');
+  v_id := public.log_llm_call('{"purpose":"chat","model":"claude-haiku-5-5","status":"ok","cost_usd":0.5,"student_ref":"s_aaaaaaaaaaaa","created_at":"2020-01-01T00:00:00Z"}');
+  perform t.as_admin();
+  perform t.ok((select c.student_ref = 's_aaaaaaaaaaaa' and c.cost_usd = 0.5 and c.created_at > now() - interval '1 minute'
+                  from public.llm_calls c where c.id = v_id), 'personel oturumu yazar; created_at yok sayılır');
   perform t.ok(t.sees(t.u('elif'), 'select 1 from public.llm_calls') = 0 and t.sees(t.u('inst'), 'select 1 from public.llm_calls') = 0
                and t.sees(t.u('admin'), 'select 1 from public.llm_calls') = 4 and t.sees(t.u('admin'), 'select 1 from public.spend_ledger') = 2,
                'defter yalnız admin''e görünür');

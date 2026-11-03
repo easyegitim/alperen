@@ -4,14 +4,17 @@ import { PushToggle } from '@/components/PushToggle';
 import { SignOutButton } from '@/components/SignOutButton';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getPublicEnv } from '@/lib/env';
+import { parseInviteToken } from '@/lib/validation';
 import { requireRole } from '@/server/auth';
 import { DavetFormu } from './davet-formu';
 
 export const metadata: Metadata = { title: 'Ayarlar' };
 
-export default async function VeliAyarlar() {
+export default async function VeliAyarlar({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { user, displayName } = await requireRole('parent', 'admin');
   const vapid = getPublicEnv().vapidPublicKey;
+  const params = await searchParams;
+  const defaultToken = parseInviteToken(Array.isArray(params.kod) ? params.kod[0] : params.kod) ?? '';
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <PageHeader title="Ayarlar" description={`${displayName ?? 'Hesabın'}${user.email ? ` · ${user.email}` : ''}`} />
@@ -21,7 +24,7 @@ export default async function VeliAyarlar() {
           Çocuk ekle
         </h2>
         <p className="text-body m-0 max-w-prose text-ink-muted">Bir davet kodun daha varsa girerek yeni bir çocuk bağlayabilirsin.</p>
-        <DavetFormu />
+        <DavetFormu defaultToken={defaultToken} />
       </section>
 
       <section aria-labelledby="bildirim" className="flex flex-col gap-3">

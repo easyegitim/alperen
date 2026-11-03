@@ -1,11 +1,14 @@
 import { z } from 'zod';
-import { uuid } from './schemas.js';
+import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobDefinition } from './types.js';
 
-const payload = z.object({
-  /** Tek öğrenci; verilmezse hafızası olan tüm öğrenciler (gece çalışması). */
-  studentId: uuid.optional(),
-});
+const payload = acceptCamelAliases(
+  { studentId: 'student_id' },
+  z.object({
+    /** Tek öğrenci; verilmezse hafızası olan tüm öğrenciler (gece çalışması). */
+    student_id: uuid.optional(),
+  }),
+);
 
 /**
  * İSKELET (P1+): gece hafıza sıkıştırma. Gerçek mantık `memory_compaction` rotasını Batch ile çağırır, çıktıyı
@@ -21,8 +24,8 @@ export const memoryCompactJob: JobDefinition<z.infer<typeof payload>, { skeleton
   retry: { retryLimit: 2, retryDelay: 60, retryBackoff: true, retryDelayMax: 900, expireInSeconds: 1800, deleteAfterSeconds: 604_800 },
   skeleton: true,
   handler: async (p, ctx) => {
-    const r = p.studentId
-      ? await ctx.db.query('select count(distinct student_id)::int as n from public.memory_files where student_id = $1', [p.studentId])
+    const r = p.student_id
+      ? await ctx.db.query('select count(distinct student_id)::int as n from public.memory_files where student_id = $1', [p.student_id])
       : await ctx.db.query('select count(distinct student_id)::int as n from public.memory_files');
     const students = Number(r.rows[0]?.n ?? 0);
     ctx.log.info('memory.compact iskelet', { students });

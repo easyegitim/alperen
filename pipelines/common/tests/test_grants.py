@@ -1,12 +1,15 @@
-"""Yazımlar ``batch_worker`` sütun yetkisine uyar (§3.8, §12 #57): ``CostLedger`` yalnız yetkili ``llm_calls``
-sütunlarını ``return=minimal`` ile gönderir; ``JsonlDb`` ``supabase/tests/grants_matrix.json``'ı çalışma anında okur.
+"""v2 yetki matrisi (``fakes/grants-v2.json``): migration'larla uyum, ``CostLedger`` gövdesi, JsonlDb denetimi.
+
+v2'de uygulama rolü yoktur (``batch_worker`` kaldırıldı); pipeline'lar ``service_role`` ile yazar ve RLS'i aşar.
+Matrisin değeri tablo ve SÜTUN listesidir: ``CostLedger`` yalnız v2 ``llm_calls`` sütunlarını ``return=minimal`` ile
+gönderir, JsonlDb olmayan sütunu reddeder.
 
 Canlı test (``OGRENMEN_DATABASE_URL`` yoksa atlanır): geçici veritabanına tüm migration'lar uygulanır,
-``SET ROLE batch_worker`` ile ``CostLedger``'ın ürettiği gövde PostgREST'in kurduğu INSERT/UPDATE deyimiyle yazılır.
+``SET ROLE service_role`` ile ``CostLedger``'ın ürettiği gövde PostgREST'in kurduğu INSERT deyimiyle yazılır.
 """
-
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import shutil
@@ -17,15 +20,14 @@ from pathlib import Path
 import httpx
 import pytest
 
-from conftest import REPO, as_admin
+from conftest import REPO
 from ogrenmen_common import grants
-from ogrenmen_common.adapters.base import insert_minimal, update_minimal
 from ogrenmen_common.adapters.postgrest import PostgrestDb
 from ogrenmen_common.errors import DbError, DbPermissionError
 from ogrenmen_common.fakes import FakeLLM, JsonlDb
 from ogrenmen_common.ledger import LLM_CALLS_INSERT_COLUMNS, CostLedger, llm_calls_payload
 
-MATRIX = REPO / "supabase" / "tests" / "grants_matrix.json"
+MATRIX = grants.grants_matrix_path()
 
 
 class Capture:
@@ -63,10 +65,63 @@ def _record_all_columns(ledger: CostLedger) -> dict:
 # --- matris ↔ kod ----------------------------------------------------------------------------------------
 
 
-def test_ledger_columns_equal_batch_worker_insert_grant():
-    granted = grants.grant("batch_worker", "llm_calls", "insert")
-    assert granted != "*" and set(LLM_CALLS_INSERT_COLUMNS) == set(granted)
+# --- matris ↔ kod ----------------------------------------------------------------------------------------
+
+
+def _load_generator():
+    spec = importlib.util.spec_from_file_location("gen_grants_v2", REPO / "pipelines" / "common" / "scripts"
+                                                  / "gen_grants_v2.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_matrix_file_matches_migrations():
+    """grants-v2.json elle düzenlenmez: migration'lardaki tablo + sütun listesinden üretilir
+    (``python pipelines/common/scripts/gen_grants_v2.py``)."""
+    gen = _load_generator()
+    assert json.loads(MATRIX.read_text(encoding="utf-8")) == gen.build(), "grants-v2.json eski; betikle yeniden üretin"
+    assert gen.main(["--check"]) == 0
+
+
+def test_matrix_covers_v2_tables_and_no_v1_tables():
+    tables = set(json.loads(MATRIX.read_text(encoding="utf-8"))["tables"])
+    assert {"public.llm_calls", "public.questions", "secure.answer_keys", "audit.events", "public.profiles"} <= tables
+    for gone in ("tg_chats", "chat_roles", "tg_updates", "sessions", "quota_tiers", "diagnostic_sessions", "messages",
+                 "bot_responses", "retention_policies", "pilot_metrics", "provider_health"):
+        assert f"public.{gone}" not in tables, gone
+    assert "secure.telegram_identities" not in tables
+
+
+def test_service_role_is_the_only_role_and_legacy_names_map_to_it():
+    data = json.loads(MATRIX.read_text(encoding="utf-8"))
+    assert data["roles"] == ["service_role"]
+    assert grants.grant("service_role", "llm_calls", "insert") == "*"
+    assert grants.grant("batch_worker", "llm_calls", "insert") == "*"  # eski ad
+    assert grants.grant("authenticated", "llm_calls", "insert") is None
+    assert grants.columns("llm_calls") >= {"route", "effort", "prompt_version", "cache_read_tokens"}
+    assert grants.columns("tg_chats") is None
+
+
+def test_audit_events_is_append_only():
+    """0002: audit şemasında service_role yalnız select + insert alır; update/delete canlıda reddedilir."""
+    assert grants.grant("service_role", "audit.events", "select") == "*"
+    assert grants.grant("service_role", "audit.events", "insert") == "*"
+    for op in ("update", "delete"):
+        assert grants.grant("service_role", "audit.events", op) is None
+        with pytest.raises(DbPermissionError, match="OGR-DB-001"):
+            grants.require("service_role", "audit.events", op, ["actor_id"])
+
+
+def test_ledger_columns_exist_in_v2_llm_calls():
+    cols = grants.columns("llm_calls")
+    assert set(LLM_CALLS_INSERT_COLUMNS) <= cols
     assert "created_at" not in LLM_CALLS_INSERT_COLUMNS and "id" not in LLM_CALLS_INSERT_COLUMNS
+
+
+def test_cooldown_skip_is_written_as_rate_limited():
+    body = llm_calls_payload({"purpose": "chat", "provider": "groq", "model": "m", "status": "cooldown_skip"})
+    assert body["status"] == "rate_limited" and body["error_code"] == "cooldown_skip"
 
 
 def test_ledger_insert_sends_only_granted_columns_with_return_minimal(clock):
@@ -78,19 +133,17 @@ def test_ledger_insert_sends_only_granted_columns_with_return_minimal(clock):
     assert req.headers["prefer"] == "return=minimal"
     body = json.loads(req.content)
     assert isinstance(body, list) and len(body) == 1
-    granted = grants.grant("batch_worker", "llm_calls", "insert")
-    assert set(body[0]) <= set(granted) and "created_at" not in body[0] and "id" not in body[0]
+    assert set(body[0]) <= grants.columns("llm_calls") and "created_at" not in body[0] and "id" not in body[0]
     assert body[0]["ref_id"] == "42" and body[0]["student_ref"] == "s_qk7m2rx4tn5a"
     assert ledger.calls[-1]["status"] == "ok" and row["created_at"] == "2026-10-20T09:00:00Z"  # yalnız oturum özeti
 
 
-def test_provider_health_update_is_minimal_and_granted(clock):
+def test_provider_health_update_is_minimal(clock):
     ledger, cap = _ledger_over_postgrest(clock)
     ledger._note_provider_error("groq", "rate_limited", "429")
     (req,) = cap.writes()
     assert req.method == "PATCH" and req.headers["prefer"] == "return=minimal"
     assert req.url.params["provider"] == "eq.groq"
-    grants.require("batch_worker", "provider_health", "update", json.loads(req.content))
 
 
 def test_postgrest_returning_option_and_defaults():
@@ -107,18 +160,15 @@ def test_postgrest_returning_option_and_defaults():
         db.insert("llm_calls", {"purpose": "ocr"}, returning="headers-only")
 
 
-# --- JsonlDb sütun yetkisi -------------------------------------------------------------------------------
+# --- JsonlDb ---------------------------------------------------------------------------------------------
 
 
-def test_jsonl_db_rejects_ungranted_insert_column(db):
-    """Sahte dünya artık canlının reddini gizlemez: eski ledger gövdesi (``created_at``'li) reddedilir."""
-    old_body = {**llm_calls_payload({"purpose": "chat", "provider": "groq", "model": "llama-3.3-70b",
-                                     "status": "ok"}), "created_at": "2026-10-20T09:00:00Z"}
-    with pytest.raises(DbPermissionError, match="OGR-DB-001 permission denied for column created_at of relation "
-                                                "llm_calls"):
-        db.insert("llm_calls", old_body)
-    with as_admin(db):  # kurulum rolü kısıtsız
-        db.insert("llm_calls", old_body)
+def test_jsonl_db_rejects_unknown_insert_column(db):
+    """Sahte dünya canlının reddini gizlemez: v2'de olmayan sütun yazımı reddedilir."""
+    body = {**llm_calls_payload({"purpose": "chat", "provider": "groq", "model": "llama-3.3-70b", "status": "ok"}),
+            "chat_id": 1}
+    with pytest.raises(DbError, match="llm_calls.chat_id v2 şemasında yok"):
+        db.insert("llm_calls", body)
 
 
 def test_ledger_rows_land_in_jsonl_db_with_db_defaults(db, clock):
@@ -127,41 +177,26 @@ def test_ledger_rows_land_in_jsonl_db_with_db_defaults(db, clock):
     _record_all_columns(ledger)
     (row,) = db.written("llm_calls")
     assert row["id"] == before + 1 and row["created_at"] == "2026-10-20T09:00:00Z"  # DB varsayılanları
+    assert row["provider"] == "gemini-paid" and row["cache_read_tokens"] == 0
     assert db.write_log[0] == {"table": "llm_calls", "op": "insert", "key": [before + 1], "via": "direct"}
 
 
-def test_jsonl_db_update_and_merge_grants(db):
-    msg = db.select("messages", limit=1)[0]
-    with pytest.raises(DbPermissionError, match="text_llm"):
-        db.update("messages", {"text_llm": "x"}, where={"id": msg["id"]})
-    with pytest.raises(DbPermissionError, match="column expires_at"):  # where sütunu SELECT ister
-        db.update("messages", {"is_question": True}, where={"expires_at": "2027-01-01"})
-    update_minimal(db, "messages", {"answered_at": "2026-10-20T09:00:00Z"}, where={"id": msg["id"]})
-    assert db.get("messages", id=msg["id"])["answered_at"] == "2026-10-20T09:00:00Z"
-    # merge = ON CONFLICT DO UPDATE SET <gönderilen sütunlar>: UPDATE yetkisi de gerekir
-    with pytest.raises(DbPermissionError, match="update"):
-        db.insert("lesson_analyses", [{"lesson_id": "x", "analysis": {}, "model": "m", "cost_usd": 0, "version": 1}],
-                  on_conflict="merge")
-
-
-def test_jsonl_db_representation_needs_table_select(db):
-    row = {"student_id": db.tables["students"][0]["id"], "template_id": "hatirlatma", "params": {},
-           "scheduled_for": "2026-10-21T09:00:00Z"}
-    with pytest.raises(DbPermissionError, match="RETURNING"):  # proactive_messages: batch_worker'da SELECT yok
-        db.insert("proactive_messages", row, returning="representation")
-    assert db.insert("proactive_messages", row, returning="minimal") == []
-    insert_minimal(db, "proactive_messages", {**row, "template_id": "ikinci"})
-    assert [r["template_id"] for r in db.written("proactive_messages")] == ["hatirlatma", "ikinci"]
+def test_jsonl_db_non_service_role_needs_matrix_grant(db):
+    guest = JsonlDb(db.tables, role="authenticated")
+    with pytest.raises(DbPermissionError, match="OGR-DB-001"):
+        guest.insert("llm_calls", {"purpose": "chat", "model": "m", "status": "ok"})
+    with pytest.raises(DbPermissionError, match="OGR-DB-001"):
+        guest.select("students")
 
 
 def test_jsonl_db_reads_matrix_at_runtime(db, tmp_path, monkeypatch):
     data = json.loads(MATRIX.read_text(encoding="utf-8"))
-    data["tables"]["public.llm_calls"]["batch_worker"]["insert"].remove("latency_ms")
+    data["tables"]["public.llm_calls"]["columns"].remove("latency_ms")
     path = tmp_path / "grants_matrix.json"
     path.write_text(json.dumps(data), encoding="utf-8")
     monkeypatch.setenv(grants.GRANTS_MATRIX_ENV, str(path))
     ledger = CostLedger(db, FakeLLM(), clock=db.clock)
-    with pytest.raises(DbPermissionError, match="latency_ms"):
+    with pytest.raises(DbError, match="latency_ms"):
         _record_all_columns(ledger)
     monkeypatch.setenv(grants.GRANTS_MATRIX_ENV, str(tmp_path / "yok.json"))
     with pytest.raises(DbError, match="OGR-DB-004"):
@@ -242,41 +277,23 @@ def scratch_db():
               f'drop database if exists "{name}" with (force)', check=False)
 
 
-def _as_batch_worker(url: str, sql: str, payload: object, tmp_path: Path, *, check: bool = True):
+def _as_service_role(url: str, sql: str, payload: object, tmp_path: Path, *, check: bool = True):
     script = tmp_path / "stmt.sql"
-    script.write_text(f"set role batch_worker;\n{sql}\nreset role;\n", encoding="utf-8")
+    script.write_text(f"set role service_role;\n{sql}\nreset role;\n", encoding="utf-8")
     return _psql(url, "-v", f"payload={json.dumps(payload, ensure_ascii=False)}", "-f", str(script), check=check)
 
 
 @live_db
-def test_live_batch_worker_can_insert_exactly_what_ledger_sends(scratch_db, clock, tmp_path):
+def test_live_service_role_can_insert_exactly_what_ledger_sends(scratch_db, clock, tmp_path):
     ledger, cap = _ledger_over_postgrest(clock)
     _record_all_columns(ledger)
     ledger.record("chat", provider="groq", model="llama-3.3-70b", status="rate_limited", error_code="http_429")
+    ledger.record("chat", provider="groq", model="llama-3.3-70b", status="cooldown_skip")
     for req in cap.writes():
         body = json.loads(req.content)
         assert req.headers["prefer"] == "return=minimal"
-        _as_batch_worker(scratch_db, _postgrest_insert_sql("llm_calls", body), body, tmp_path)
+        _as_service_role(scratch_db, _postgrest_insert_sql("llm_calls", body), body, tmp_path)
     out = _psql(scratch_db, "-c", "select count(*), bool_and(created_at is not null), min(id) > 0 from "
                                   "public.llm_calls").stdout.strip()
-    assert out == "2|t|t"
-    assert _psql(scratch_db, "-c", "select sum(calls) from public.spend_ledger").stdout.strip() == "2"  # tetikleyici
-
-    # Negatif kontrol: düzeltmeden önceki gövde (created_at'li) canlıda reddedilir — test hatayı yakalardı.
-    old = [{**json.loads(cap.writes()[0].content)[0], "created_at": "2026-10-20T09:00:00Z"}]
-    proc = _as_batch_worker(scratch_db, _postgrest_insert_sql("llm_calls", old), old, tmp_path, check=False)
-    assert proc.returncode != 0 and "permission denied" in proc.stderr
-
-
-@live_db
-def test_live_batch_worker_can_update_provider_health_like_ledger(scratch_db, clock, tmp_path):
-    _psql(scratch_db, "-c", "insert into public.provider_health (provider) values ('groq') on conflict do nothing")
-    ledger, cap = _ledger_over_postgrest(clock)
-    ledger._note_provider_error("groq", "rate_limited", "429")
-    (req,) = cap.writes()
-    values = json.loads(req.content)
-    _as_batch_worker(scratch_db, _postgrest_update_sql("provider_health", values,
-                                                       "\"public\".\"provider_health\".\"provider\" = 'groq'"),
-                     values, tmp_path)
-    assert _psql(scratch_db, "-c", "select consecutive_errors from public.provider_health where provider = 'groq'"
-                 ).stdout.strip() == "3"
+    assert out == "3|t|t"
+    assert _psql(scratch_db, "-c", "select sum(calls) from public.spend_ledger").stdout.strip() == "3"  # tetikleyici

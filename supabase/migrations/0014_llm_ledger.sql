@@ -51,6 +51,10 @@ comment on column public.llm_calls.ref_id is 'İlgili satır';
 comment on column public.llm_calls.student_ref is 'students.public_ref; asla uuid ya da ad';
 comment on column public.llm_calls.created_at is 'Oluşturulma zamanı';
 -- end comments public.llm_calls
+-- Sayaçlar ve maliyet negatif olamaz (negatif kayıt harcama tavanlarını sıfırlayabilirdi)
+alter table public.llm_calls add constraint llm_calls_nonnegative
+check (tokens_in >= 0 and tokens_out >= 0 and cache_read_tokens >= 0 and cache_write_tokens >= 0 and cost_usd >= 0
+       and coalesce(audio_sec, 0) >= 0 and coalesce(images, 0) >= 0 and coalesce(latency_ms, 0) >= 0);
 create index llm_calls_created on public.llm_calls (created_at desc);
 create index llm_calls_route_created on public.llm_calls (route, created_at desc);
 create index llm_calls_student_ref on public.llm_calls (student_ref, created_at desc);
@@ -88,6 +92,8 @@ comment on column public.spend_ledger.cost_usd is 'Maliyet toplamı';
 comment on column public.spend_ledger.created_at is 'Oluşturulma zamanı';
 comment on column public.spend_ledger.updated_at is 'Son toplama';
 -- end comments public.spend_ledger
+alter table public.spend_ledger add constraint spend_ledger_nonnegative
+check (calls >= 0 and tokens_in >= 0 and tokens_out >= 0 and cache_read_tokens >= 0 and cache_write_tokens >= 0 and cost_usd >= 0);
 alter table public.spend_ledger enable row level security;
 alter table public.spend_ledger force row level security;
 

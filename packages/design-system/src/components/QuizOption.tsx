@@ -35,12 +35,15 @@ export function QuizOption({ letter, state = 'idle', feedback, className, childr
   return (
     <button
       type={type}
-      aria-pressed={state === 'selected' ? true : undefined}
+      aria-pressed={state === 'selected'}
       {...rest}
-      disabled={disabled || locked}
+      disabled={disabled}
+      aria-disabled={locked || undefined}
+      onClick={locked ? undefined : rest.onClick}
       className={cn(
         'text-body box-border flex min-h-13 w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-ink',
         'og-motion cursor-pointer transition-colors disabled:cursor-default',
+        locked && 'cursor-default',
         STATES[state],
         FOCUS_RING,
         className,

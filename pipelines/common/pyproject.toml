@@ -12,9 +12,7 @@ requires-python = ">=3.11"
 # `-e <yol>` ile kurulur (BLUEPRINT §2); psycopg yok — veritabanına PostgREST REST üzerinden bağlanılır.
 # §6 ağacı: httpx, jsonschema, numpy, typer, rich. typer/rich alt pipeline CLI'ları için gelir (ortak bayraklar
 # cli_base'de argparse ile kurulur; typer kullanan modül cli_base.add_common_args eşdeğerini kendi kurar).
-# defusedxml: arXiv Atom yanıtı (güvenilmez XML) güvenli ayrıştırılır.
 dependencies = [
-  "defusedxml==0.7.1",
   "httpx==0.28.1",
   "jsonschema==4.26.0",
   "numpy==2.5.3",
@@ -35,7 +33,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-ogrenmen_common = ["py.typed", "fakes/rpc-names.json"]
+ogrenmen_common = ["py.typed", "fakes/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

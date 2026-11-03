@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 // Öğrenmen servis çalışanı (Serwist). Derleme: next build --webpack -> public/sw.js.
 //  - Önceden önbellek: derleme çıktısı (JS/CSS/yazı tipleri) + /cevrimdisi yedek sayfası = çevrimdışı kabuk.
-//  - Çalışma zamanı: /_next/static ve yazı tipleri CacheFirst, simgeler StaleWhileRevalidate.
+//  - Çalışma zamanı: /_next/static ve yazı tipleri CacheFirst, simgeler StaleWhileRevalidate; /_next/image ve Storage ağdan.
 //  - Sayfa gezintileri (kişisel veri) ve /api ASLA önbelleğe alınmaz: ağ yoksa /cevrimdisi gösterilir.
 //  - Web-push: 'push' ve 'notificationclick'.
 import { CacheFirst, ExpirationPlugin, NetworkOnly, Serwist, StaleWhileRevalidate } from 'serwist';
@@ -20,6 +20,11 @@ const YEAR = 365 * 24 * 60 * 60;
 
 const runtimeCaching: RuntimeCaching[] = [
   {
+    // Kişisel görseller (avatar, yüklenen soru fotoğrafı, PDF küçük resmi) cihaz önbelleğine girmez.
+    matcher: ({ url }) => url.pathname.startsWith('/_next/image') || url.pathname.includes('/storage/v1/'),
+    handler: new NetworkOnly(),
+  },
+  {
     // Derlemenin içeriğe göre adlandırılmış (değişmez) dosyaları: token CSS'i, JS parçaları, yazı tipleri.
     matcher: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/_next/static/'),
     handler: new CacheFirst({
@@ -35,7 +40,7 @@ const runtimeCaching: RuntimeCaching[] = [
     }),
   },
   {
-    matcher: ({ url, sameOrigin, request }) => sameOrigin && (url.pathname.startsWith('/icons/') || request.destination === 'image'),
+    matcher: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/icons/'),
     handler: new StaleWhileRevalidate({
       cacheName: 'og-images',
       plugins: [new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 })],

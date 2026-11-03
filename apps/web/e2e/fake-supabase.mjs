@@ -7,6 +7,7 @@ import { makeSession, userObject } from './jwt.mjs';
 
 const tables = seedTables();
 const requests = [];
+const invites = new Map();
 
 function readBody(req) {
   return new Promise((resolve) => {
@@ -124,9 +125,22 @@ const server = http.createServer(async (req, res) => {
   const rpc = /^\/rest\/v1\/rpc\/(\w+)$/.exec(path);
   if (rpc && req.method === 'POST') {
     const body = await readBody(req);
+    const caller = userFromAuth(req);
+    const token = `gi_${Array.from({ length: 32 }, () => 'abcdefghijklmnopqrstuvwxyz234567'[Math.floor(Math.random() * 32)]).join('')}`;
+    if (rpc[1] === 'create_guardian_invite') {
+      if (!caller) return send(res, 401, { code: '42501', message: 'OGR-AUTH-001 oturum gerekli', details: null, hint: null });
+      invites.set(token, { studentId: body.p_student, relation: body.p_relation ?? null });
+      return send(res, 200, { link_id: `l-${invites.size}`, token, expires_at: new Date(Date.now() + 72 * 3600_000).toISOString() });
+    }
     if (rpc[1] === 'accept_guardian_invite') {
-      if (String(body.p_token).startsWith('gi_gecersiz')) return send(res, 400, { code: 'P0001', message: 'OGR-INV-001 davet bulunamadı ya da kullanılmış', details: null, hint: null });
-      return send(res, 200, { link_id: 'l1', student_id: 's1' });
+      const invite = invites.get(String(body.p_token));
+      if (!caller || !invite) return send(res, 400, { code: 'P0001', message: 'OGR-INV-001 davet bulunamadı ya da kullanılmış', details: null, hint: null });
+      invites.delete(String(body.p_token)); // tek kullanımlık
+      if (!tables.profiles.some((p) => p.id === caller.id)) {
+        tables.profiles.push({ id: caller.id, role: 'parent', display_name: null, locale: 'tr', tz: 'Europe/Istanbul', avatar_path: null, onboarded_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      }
+      tables.guardian_links.push({ id: `gl-${invites.size}-${Date.now()}`, parent_id: caller.id, student_id: invite.studentId, relation: invite.relation, status: 'active', created_at: new Date().toISOString() });
+      return send(res, 200, { link_id: 'l1', student_id: invite.studentId });
     }
     return send(res, 404, { message: 'rpc yok' });
   }

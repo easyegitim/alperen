@@ -37,11 +37,31 @@ schemaRegistry['solution-diagnosis'];                    // ad -> loose zod; str
 
 Model çıktısı (`llmOutput`, strict kısıt testli): `solution-diagnosis`, `curriculum-draft`, `page-class`,
 `exam-page-items`, `answer-sheet`, `inferred-keys`, `exam-report`, `report-ast`, `document-ast`, `exam-generation`,
-`style-definition`, `memory-delta`, `memory-compaction`, `conversation-summary`, `notification-copy`, `eval-verdict`,
+`style-definition`, `exam-priority-plan` (sınıflandırma tek yerde: model çıktısı, Opus rotası; veri/DB listesinde değil), `proposal-review`, `style-question-generation`, `memory-delta`, `memory-compaction`, `conversation-summary`, `notification-copy`, `eval-verdict`,
 `lesson-analysis` (v2: +`course_insights`), `exam-item` (v2), `memory-fact`, `transcript`, `figure-render-report`.
 
-Veri/DB sözleşmeleri (model çıktısı değil): `question-item`, `answer-key`, `exam-priority-plan` (v2: +`style_ids`),
-`weekly-summary`, `curriculum`.
+Veri/DB sözleşmeleri (model çıktısı değil): `question-item`, `answer-key`, `weekly-summary`, `curriculum`.
+
+Saklama kuralları: `document-ast` anahtarlı model çıktısıdır; saklarken `splitDocumentKeys(doc)` ile `keys` ayrılıp
+`secure.exam_answer_keys`'e yazılır, `generated_documents.content` yalnız `storedDocumentAst` (keys boş) olur.
+`lesson-analysis.model_notes` model çıktısı değildir (strict şemada yok); boru hattı parse sonrası yazar.
+`memory-delta` yalnız `str_replace`/`insert` taşır (`create` hafıza aracı işleyicilerinde ve `memory-compaction`'dadır).
+Zorluk bandı `easy|medium|hard` (`DIFFICULTY_BANDS`); `exam_questions.difficulty` (numeric 0..1) bu bandın
+`DIFFICULTY_BAND_VALUE` karşılığından yazılır ({easy: 0.3, medium: 0.55, hard: 0.8}; tek kaynak); tarz/soru `format` sunuş biçimidir (`PRESENTATION_FORMATS`).
+
+Anahtar satırı (`keyEntryShape`): `numeric_value` ondalık sayıdır (`secure.exam_answer_keys.numeric_value numeric`;
+`grade_exam_session` 1e-6 toleransla karşılaştırır); kesin SymPy biçimi `canonical_expr`'de kalır. `secure.answer_keys`
+(v1, text) için `answer-key` sözleşmesi aynen SymPy dizesi taşır.
+
+Rapor kipi (`kinds` yalnız `['report']`: `exam-report`, `report-ast`): veli okur, bu yüzden `question`, `answer_sheet`
+ve `answer_key_page` blokları, `figure.source='upload'` (ham `uploads`) ve boş olmayan `keys[]` loose doğrulamada
+reddedilir; veliye görünen bütün metin alanlarında ünlem ve emoji yasaktır (`latex` ve `svg` hariç).
+
+Strict kipte `minItems: 1` (loose'ta en az 1 isteyen dizilerde) ile `uuid`/`date`/`date-time` biçimleri korunur; API bunları destekler.
+
+Tarza özel soru üretimi sözleşmesi `style-question-generation` adıyla kayıtlıdır (PLAN-v2 rota tablosundaki
+`question-generation`): v1 tablet zarfı (`{item, key}`) aynı adla legacy dosya olarak yaşadığı için ad çakışmasın diye
+ayrıldır. `style_id` zorunlu, 1-10 soru, soru/anahtar biçimi `exam-generation` ile ortaktır.
 
 Plan listesine eklenenler (kısa gerekçe):
 - `report-ast` (veli/haftalık/konu/trend raporu) ve `memory-compaction` (gece hafıza sıkıştırma): PLAN-v2 rota tablosunda
@@ -85,12 +105,21 @@ kalan) Python'da dosyanın düşürmesi gereken anahtar kelimeyi yazar. Depo kö
 
 ### Legacy şemalar
 
-`src/legacy-schemas.ts` listesindeki 15 v1 dosyası (`bot-response-log`, `common`, `diagnostic-keys`, `diagnostic-test`,
+`src/legacy-schemas.ts` listesindeki 13 v1 dosyası (`common`, `diagnostic-keys`, `diagnostic-test`,
 `generation-request`, `instructor-alert`, `misconception-tags`, `models`, `nightly-facts-output`, `query-expand`,
-`question-generation`, `research-output`, `telegram-update`, `template-params`, `tutor-reply`) elle bakımlıdır, zod
+`question-generation`, `research-output`, `template-params`, `tutor-reply`) elle bakımlıdır, zod
 karşılığı yoktur ve `export` dokunmaz. Yalnız Python boru hatları, `fixtures/scripts` ve Python paketi okur;
 `x-forbidden-words` anahtar kelimesi yalnız bu dosyalarda ve Python doğrulayıcıda yaşar. Tüketicileri budanınca
 liste, dosyalar ve ilgili fikstür klasörleri silinir.
+
+## Plandan bilinçli sapmalar
+
+- PLAN-v2 §2.2 "forbidden-word validators" kalemini düşürür; yine de Python `_core.find_forbidden_word` ve `instructor-alert`
+  `x-forbidden-words` yerinde kalır: `pipelines/ders` `analysis.py` ve diğer tüketiciler budanana kadar.
+- `gemini_schema` (Python) `pipelines/common` `adapters/structured.py` yüzünden kalır.
+- `exam-priority-plan` model çıktısıdır (Opus rotası); veri/DB sözleşmesi değildir.
+- Tarza özel üretim sözleşmesi plandaki `question-generation` adıyla değil `style-question-generation` adıyla kayıtlıdır (yukarıya bak).
+- `bot-response-log` silindi (`bot_responses` tablosu planda düşer).
 
 ## Kaldırılanlar (v1'den)
 

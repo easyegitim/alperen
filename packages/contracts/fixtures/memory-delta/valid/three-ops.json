@@ -13,9 +13,10 @@
       "text": "- 2026-11-02 işlem hatası: eksi işareti dağıtma"
     },
     {
-      "op": "create",
+      "op": "insert",
       "path": "/memories/profile.md",
-      "text": "# Profil\n\n- Sınıf: 12\n- Hedef: TYT"
+      "insert_line": 0,
+      "text": "- Hedef: TYT"
     }
   ]
 }

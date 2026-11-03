@@ -210,6 +210,33 @@ create index enrollments_course on public.enrollments (course_id);
 alter table public.enrollments enable row level security;
 alter table public.enrollments force row level security;
 
+-- Ders ↔ müfredat: course_id doluysa kaydın müfredatı dersin o anki müfredatı olmalı (OGR-CURR-004). Her yazan için
+-- (öğrenci politikası, RPC, worker); yalnız course_id/curriculum_id yazılınca denetlenir: ders yeni sürüme geçince eski
+-- kayıtlar eski sürümde kalır, yeni kayıt ve sürüm taşıma dersin müfredatıyla yapılır.
+create or replace function app.enrollments_course_curriculum() returns trigger
+language plpgsql
+security definer
+set search_path = public, app, extensions, pg_temp
+as $$
+declare
+  v_cur uuid;
+begin
+  if new.course_id is null then
+    return new;
+  end if;
+  select co.curriculum_id into v_cur from public.courses co where co.id = new.course_id;
+  if v_cur is distinct from new.curriculum_id then
+    raise exception using errcode = 'P0001',
+      message = format('OGR-CURR-004 kaydın müfredatı dersin müfredatı değil (%s <> %s)', new.curriculum_id, coalesce(v_cur::text, 'yok'));
+  end if;
+  return new;
+end
+$$;
+comment on function app.enrollments_course_curriculum() is 'BEFORE INSERT/UPDATE: course_id doluysa enrollments.curriculum_id = courses.curriculum_id; değilse OGR-CURR-004.';
+revoke all on function app.enrollments_course_curriculum() from public;
+create trigger enrollments_course_curriculum before insert or update of course_id, curriculum_id on public.enrollments
+for each row execute function app.enrollments_course_curriculum();
+
 create table public.curriculum_proposals (  -- Müfredat inceltme önerileri (teşhisten ya da eğitmenden); kabul yeni sürüm üretebilir.
   id uuid primary key default gen_random_uuid(),  -- Öneri kimliği
   curriculum_id uuid not null references public.curricula (id) on delete cascade,  -- Müfredat sürümü

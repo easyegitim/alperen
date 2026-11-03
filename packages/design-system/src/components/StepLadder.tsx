@@ -1,5 +1,8 @@
-import type { ComponentPropsWithRef } from 'react';
-import { cn } from '../lib/cn';
+'use client';
+
+import { useId, useState } from 'react';
+import type { ComponentPropsWithRef, ReactNode } from 'react';
+import { cn, FOCUS_RING } from '../lib/cn';
 import { ERROR_CAUSE_LABELS, type ErrorCause } from '../lib/labels';
 import { MathText } from '../math';
 import { Badge } from './Badge';
@@ -19,6 +22,19 @@ export interface StepLadderProps extends Omit<ComponentPropsWithRef<'section'>, 
   cause?: ErrorCause;
   studentTitle?: string;
   expectedTitle?: string;
+  /** Bozulan adımın kazanım çipleri. */
+  skills?: string[];
+  /** Eylemler, ör. "Benzer soru" düğmesi. */
+  actions?: ReactNode;
+  /**
+   * Katlanır görünüm (varsayılan açık): kapalıyken yalnız `summary` cümlesi ve bozulan adım görünür;
+   * "Detay" ile iki sütunlu merdiven, kazanım çipleri ve neden rozeti açılır.
+   */
+  collapsible?: boolean;
+  /** collapsible iken başlangıçta açık mı (varsayılan false). */
+  defaultOpen?: boolean;
+  /** Teşhis özeti: tek cümle. */
+  summary?: ReactNode;
 }
 
 type StepState = 'ok' | 'failing' | 'after';
@@ -37,16 +53,55 @@ export function StepLadder({
   cause,
   studentTitle = 'Senin adımların',
   expectedTitle = 'Beklenen adımlar',
+  skills,
+  actions,
+  collapsible = true,
+  defaultOpen = false,
+  summary,
   className,
   ...rest
 }: StepLadderProps) {
+  const detailId = useId();
+  const [openState, setOpen] = useState(defaultOpen);
+  const open = !collapsible || openState;
+  const failing = failingStepNo != null ? studentSteps.find((s) => s.no === failingStepNo) : undefined;
   return (
     <section aria-label="Adım merdiveni" {...rest} className={cn('flex flex-col gap-3', className)}>
+      {collapsible ? (
+        <div className="flex flex-col gap-2">
+          {summary ? <p className="text-body m-0 text-ink">{summary}</p> : null}
+          {failingStepNo != null ? (
+            <p data-testid="failing-step" className="text-small m-0 flex flex-wrap items-baseline gap-2 text-ink">
+              <Badge tone="danger">✕ {failingStepNo}. adımda bozuldu</Badge>
+              {failing ? <MathText>{failing.text}</MathText> : null}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={detailId}
+            onClick={() => setOpen((v) => !v)}
+            className={cn('text-label inline-flex min-h-11 cursor-pointer items-center self-start rounded-md bg-transparent px-2 text-primary hover:bg-primary-soft', FOCUS_RING)}
+          >
+            Detay
+          </button>
+        </div>
+      ) : null}
+      <div id={detailId} hidden={!open} className="flex flex-col gap-3">
       {failingStepNo != null && cause ? (
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="danger">✕ {failingStepNo}. adımda bozuldu</Badge>
+          {collapsible ? null : <Badge tone="danger">✕ {failingStepNo}. adımda bozuldu</Badge>}
           <Badge tone="neutral">{ERROR_CAUSE_LABELS[cause]}</Badge>
         </div>
+      ) : null}
+      {skills && skills.length > 0 ? (
+        <ul aria-label="Kazanımlar" className="m-0 flex list-none flex-wrap gap-2 p-0">
+          {skills.map((sk) => (
+            <li key={sk}>
+              <Badge tone="primary">{sk}</Badge>
+            </li>
+          ))}
+        </ul>
       ) : null}
       <div className="grid gap-4 md:grid-cols-2">
         <div>
@@ -106,6 +161,8 @@ export function StepLadder({
           </ol>
         </div>
       </div>
+      </div>
+      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
     </section>
   );
 }

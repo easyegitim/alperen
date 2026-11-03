@@ -12,7 +12,7 @@
     {
       "question_no": 2,
       "correct_option": null,
-      "numeric_value": "7/8",
+      "numeric_value": 0.875,
       "canonical_expr": "Rational(7,8)",
       "solution_summary": "Kesirler ortak paydada toplanır.",
       "confidence": 0.55,

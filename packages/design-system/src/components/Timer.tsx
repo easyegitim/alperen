@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef, useState } from 'react';
 import type { ComponentPropsWithRef } from 'react';
 import { Clock } from 'lucide-react';

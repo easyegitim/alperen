@@ -7,7 +7,9 @@ import { SignOutButton } from '@/components/SignOutButton';
 import { Notice } from '@/ds';
 import { roleHome } from '@/lib/roles';
 import { needsOnboarding } from '@/lib/routing';
+import { parseInviteToken } from '@/lib/validation';
 import { getCurrentProfile } from '@/server/auth';
+import { hasActiveGuardianLink, listEnrollableCourses } from '@/server/queries';
 import { OgrenciFormu, VeliFormu } from './formlar';
 
 export const metadata: Metadata = { title: 'Hoş geldin' };
@@ -26,6 +28,12 @@ export default async function HosGeldinPage({ searchParams }: { searchParams: Pr
   const existing: Choice | null = profile?.role === 'student' ? 'ogrenci' : profile?.role === 'parent' ? 'veli' : null;
   const choice: Choice | null = existing ?? (raw === 'ogrenci' || raw === 'veli' || raw === 'egitmen' ? raw : null);
   const defaultName = profile?.display_name ?? '';
+  const kodRaw = Array.isArray(params.kod) ? params.kod[0] : params.kod;
+  const defaultToken = parseInviteToken(kodRaw) ?? '';
+  // Davet kabul edilmiş ama kurulum tamamlanmamışsa kod zaten tüketilmiştir: yalnız ad istenir.
+  const tokenOptional = choice === 'veli' && profile?.role === 'parent' && (await hasActiveGuardianLink(user.id));
+
+  const courses = choice === 'ogrenci' ? await listEnrollableCourses() : [];
 
   return (
     <main id="icerik" className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-8 px-4 py-10">
@@ -34,7 +42,7 @@ export default async function HosGeldinPage({ searchParams }: { searchParams: Pr
         <div>
           <h1 className="text-title-1 m-0 text-ink">Hoş geldin</h1>
           <p className="text-body mt-1 mb-0 text-ink-muted">
-            {choice === 'ogrenci' ? 'Seni tanımam için birkaç bilgi yeterli.' : choice === 'veli' ? 'Çocuğunla bağlantı kurmak için davet kodunu gir.' : 'Öğrenmen’i nasıl kullanacaksın?'}
+            {choice === 'ogrenci' ? 'İki küçük soru yeterli.' : choice === 'veli' ? 'Çocuğunla bağlantı kurmak için davet kodunu gir.' : 'Öğrenmen’i nasıl kullanacaksın?'}
           </p>
           <p className="text-small mt-2 mb-0 text-ink-muted">{user.email}</p>
         </div>
@@ -54,12 +62,12 @@ export default async function HosGeldinPage({ searchParams }: { searchParams: Pr
         </nav>
       ) : null}
 
-      {choice === 'ogrenci' ? <OgrenciFormu defaultName={defaultName} /> : null}
-      {choice === 'veli' ? <VeliFormu defaultName={defaultName} /> : null}
+      {choice === 'ogrenci' ? <OgrenciFormu defaultName={defaultName} courses={courses} /> : null}
+      {choice === 'veli' ? <VeliFormu defaultName={defaultName} defaultToken={defaultToken} tokenOptional={tokenOptional} /> : null}
       {choice === 'egitmen' ? (
         <div className="flex flex-col gap-4">
-          <Notice tone="info" title="Eğitmen hesapları davetle açılır">
-            Eğitmen ve yönetici hesaplarını easy ekibi açar. Davet aldıysan, davetin geldiği e-posta adresiyle giriş yaptığında konsol kendiliğinden açılır. Hesabın hazır değilse easy ile iletişime geç.
+          <Notice tone="info" title="Eğitmen hesabını easy ekibi açar">
+            Eğitmen hesabını easy ekibi açar. Hesabın açıldığında aynı e-posta adresiyle giriş yap; konsol açılır.
           </Notice>
           <LinkButton href="/hos-geldin" variant="quiet">
             Başka bir rol seç

@@ -1,3 +1,5 @@
+'use client';
+
 import { useRef, useState } from 'react';
 import type { ComponentPropsWithRef, KeyboardEvent } from 'react';
 import { cn, FOCUS_RING } from '../lib/cn';
@@ -11,7 +13,7 @@ export interface ModeToggleProps extends Omit<ComponentPropsWithRef<'div'>, 'onC
   /** Kontrolsüz başlangıç; varsayılan "hint" (İpucu). Sistem modu kendiliğinden değiştirmez, öğrenci değiştirir. */
   defaultValue?: TutorMode;
   onChange?: (mode: TutorMode) => void;
-  /** Dar alanda alt satırları gizler. */
+  /** Alt satırları gizler (varsayılan açık: sade tek satırlık seçici); açıklama title ile kalır. */
   compact?: boolean;
   disabled?: boolean;
   /** Erişilebilir grup adı. */
@@ -23,7 +25,7 @@ export function ModeToggle({
   value,
   defaultValue = 'hint',
   onChange,
-  compact,
+  compact = true,
   disabled,
   label = 'Yanıt modu',
   className,
@@ -75,6 +77,7 @@ export function ModeToggle({
             aria-checked={on}
             tabIndex={on ? 0 : -1}
             disabled={disabled}
+            title={m.sub}
             onClick={() => select(m.value)}
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(

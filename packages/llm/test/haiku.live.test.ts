@@ -28,4 +28,22 @@ describe.skipIf(!live)('canlı: Haiku 5.5 parse + önbellek', () => {
     expect(ledger.rows.length).toBeGreaterThanOrEqual(2);
     expect(ledger.rows.every((r) => r.model === 'claude-haiku-5-5' && r.cost_usd > 0)).toBe(true);
   });
+
+  it('tur bağlamı: role:"system" kabul edilir ya da 400 sonrası <system-reminder> yedeğiyle tek yeniden deneme', async () => {
+    const ledger = new InMemoryLedger();
+    const g = new Gateway({ transport: new AnthropicTransport(), ledger });
+    const res = await g.call('notification_copy', {
+      system: { product: PRODUCT },
+      user: 'Öğrenci bugün 3 soru çözdü. Veliye kısa bildirim yaz.',
+      turn: { date: '2026-11-03', mode: 'hint' },
+      promptVersion: 'live-test',
+    });
+    expect((contractRegistry['notification-copy'] as Contract).isValid(res.data)).toBe(true);
+    const statuses = ledger.rows.map((r) => r.status);
+    // Belgeler çelişkili (prompt-caching.md Haiku 5.5'i saymıyor, model-migration.md destekliyor): iki sonuç da geçerli.
+    expect([['ok'], ['error', 'ok']]).toContainEqual(statuses);
+    const usedFallback = statuses.length === 2;
+    console.info(`Haiku 5.5 ortadaki sistem mesajı: ${usedFallback ? '400 → <system-reminder> yedeği' : 'destekleniyor'}`);
+    expect(res.transcript.some((m) => (m.role as string) === 'system')).toBe(!usedFallback);
+  });
 });

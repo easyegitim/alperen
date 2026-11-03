@@ -1,7 +1,8 @@
 -- tests/05_evidence_chain.sql — kanıt zinciri: apply_diagnosis → solution_analyses → observations
 -- (source_type='solution_analysis') → apply_observation → mastery / mastery_history / misconceptions / style_coverage;
 -- careless/time ağırlığı 0.5; deneme bağlamında ağırlık 0; okunamayan çözüm gözlem üretmez; doğrulama hataları
--- (OGR-DIAG-00x); alt kazanım önerisi ve otopilot; decide_proposal.
+-- (OGR-DIAG-00x); alt kazanım önerisi ve otopilot; decide_proposal. apply_diagnosis'i teşhis hattı (worker,
+-- service_role), owner eğitmen ya da admin çağırır; öğrenci kendi ustalığını yazamaz (OGR-AUTH-001).
 begin;
 \ir _fixture.sql
 
@@ -18,14 +19,31 @@ begin
   insert into t.cfg values ('style_other', v_style::text);
 end $$;
 
--- 1) öğrenci JWT'siyle yanlış teşhis (işlem hatası, yanılgı etiketli, tarzlı)
+-- 0) öğrenci kendi kaydına teşhis yazamaz (ustalık sahteciliği); veli de yazamaz
+do $$
+begin
+  perform t.as_user(t.u('elif'));
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'correct',
+                            'skill_ids', jsonb_build_array('t.mat.a'), 'analysis', '{}'::jsonb))$q$, t.u('EA')),
+                   'OGR-AUTH-001%', 'öğrenci kendi kaydına apply_diagnosis çağıramaz');
+  perform t.as_user(t.u('parent'));
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'correct',
+                            'skill_ids', jsonb_build_array('t.mat.a'), 'analysis', '{}'::jsonb))$q$, t.u('EA')),
+                   'OGR-AUTH-001%', 'veli apply_diagnosis çağıramaz');
+  perform t.as_admin();
+  perform t.ok(not exists (select 1 from public.observations o where o.enrollment_id = t.u('EA'))
+               and not exists (select 1 from public.solution_analyses sa where sa.enrollment_id = t.u('EA')),
+               'reddedilen çağrılar gözlem ya da teşhis satırı bırakmaz');
+end $$;
+
+-- 1) worker (service_role) teşhis hattı: yanlış teşhis (işlem hatası, yanılgı etiketli, tarzlı)
 do $$
 declare
   v_id uuid;
   v_o public.observations%rowtype;
   v_p numeric;
 begin
-  perform t.as_user(t.u('elif'));
+  perform t.as_service();
   v_id := public.apply_diagnosis(jsonb_build_object(
     'enrollment_id', t.u('EA'), 'verdict', 'wrong', 'error_cause', 'procedure', 'failing_step_no', 2,
     'skill_ids', jsonb_build_array('t.mat.a'), 'misconception_tags', jsonb_build_array('t.a.isaret-hatasi'),
@@ -40,7 +58,7 @@ begin
   select o.* into v_o from public.observations o where o.source_type = 'solution_analysis' and o.source_id = v_id::text;
   perform t.ok(v_o.kind = 'practice' and v_o.value = 0 and v_o.weight = 1 and v_o.error_cause = 'procedure'
                and v_o.misconception_tag = 't.a.isaret-hatasi' and v_o.applied_at is not null and v_o.confidence = 0.9
-               and v_o.quote = '2 − 3 − 5' and v_o.created_by_role = 'authenticated', 'gözlem: practice, değer 0, ağırlık 1, kaynak teşhis, uygulandı');
+               and v_o.quote = '2 − 3 − 5' and v_o.created_by_role = 'service_role', 'gözlem: practice, değer 0, ağırlık 1, kaynak teşhis, uygulandı');
   select m.p into v_p from public.mastery m where m.enrollment_id = t.u('EA') and m.skill_id = 't.mat.a';
   perform t.ok(abs(v_p - app.bkt_step(0.3, false, 0.25, 0.1, 0.1)) < 0.00001, 'ustalık BKT ile düştü (0.30 → 0.14865)');
   perform t.ok(exists (select 1 from public.mastery_history h where h.observation_id = v_o.id and h.method = 'bkt'), 'mastery_history satırı');
@@ -65,7 +83,7 @@ declare
   v_id uuid;
   v_n int;
 begin
-  perform t.as_user(t.u('can'));
+  perform t.as_service();
   v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EB'), 'verdict', 'wrong', 'error_cause', 'careless',
             'skill_ids', jsonb_build_array('t.mat.b'), 'analysis', '{}'::jsonb));
   perform t.as_admin();
@@ -114,7 +132,7 @@ begin
   v_resp := public.record_exam_response(v_sess, v_q, 'C');
   insert into t.cfg values ('RESP', v_resp::text);
   select m.p, m.evidence_count into v_p0, v_n0 from public.mastery m where m.enrollment_id = t.u('EA') and m.skill_id = 't.mat.a';
-  perform t.as_user(t.u('elif'));
+  perform t.as_service();
   v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EA'), 'exam_response_id', v_resp, 'verdict', 'wrong',
             'error_cause', 'time', 'skill_ids', jsonb_build_array('t.mat.a'), 'analysis', '{}'::jsonb));
   perform t.as_admin();
@@ -125,10 +143,10 @@ begin
   perform t.ok((select r.solution_analysis_id = v_id from public.exam_responses r where r.id = v_resp), 'exam_responses.solution_analysis_id bağlandı');
 end $$;
 
--- 4) doğrulama hataları
+-- 4) doğrulama hataları (worker bağlamı)
 do $$
 begin
-  perform t.as_user(t.u('elif'));
+  perform t.as_service();
   perform t.raises($q$select public.apply_diagnosis('[]')$q$, 'OGR-DIAG-001%', 'girdi nesne olmalı');
   perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'wrong'))$q$, t.u('EA')),
                    'OGR-DIAG-001%', 'analysis alanı gerekli');
@@ -151,6 +169,28 @@ begin
   perform t.as_admin();
 end $$;
 
+-- 4b) owner eğitmen teşhis yazar; yüklemeler öğrenciye ait olmalı
+do $$
+declare
+  v_up_a uuid;
+  v_up_b uuid;
+  v_id uuid;
+begin
+  insert into public.uploads (owner_id, student_id, kind, storage_path) values (t.u('elif'), t.u('A'), 'photo', t.u('elif') || '/d.jpg') returning id into v_up_a;
+  insert into public.uploads (owner_id, student_id, kind, storage_path) values (t.u('can'), t.u('B'), 'photo', t.u('can') || '/d.jpg') returning id into v_up_b;
+  perform t.as_user(t.u('inst'));
+  v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EA'), 'verdict', 'correct', 'skill_ids', jsonb_build_array('t.mat.b'),
+            'upload_ids', jsonb_build_array(v_up_a), 'analysis', '{}'::jsonb));
+  perform t.ok(v_id is not null, 'owner eğitmen öğrencinin kendi yüklemesiyle teşhis yazar');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'correct',
+                            'upload_ids', jsonb_build_array(%L), 'analysis', '{}'::jsonb))$q$, t.u('EA'), v_up_b),
+                   'OGR-DIAG-005%', 'başka öğrencinin yüklemesi teşhise eklenemez');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'correct',
+                            'upload_ids', jsonb_build_array(gen_random_uuid()), 'analysis', '{}'::jsonb))$q$, t.u('EA')),
+                   'OGR-DIAG-005%', 'olmayan yükleme kimliği reddedilir');
+  perform t.as_admin();
+end $$;
+
 -- 5) alt kazanım önerisi, decide_proposal, otopilot
 do $$
 declare
@@ -158,7 +198,7 @@ declare
   v_prop uuid;
   v_res jsonb;
 begin
-  perform t.as_user(t.u('elif'));
+  perform t.as_service();
   v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EA'), 'verdict', 'wrong', 'analysis', '{}'::jsonb,
             'proposed_subskill', jsonb_build_object('parent_id', 't.mat.a', 'name', 'Parantez önünde eksi', 'description', 'Eksiyi dağıtma')));
   perform t.as_admin();
@@ -187,7 +227,7 @@ begin
 
   -- otopilot: ai_draft müfredat + ders türü exam_track (runtime_flags.curriculum_autopilot) → öneri hemen kabul
   update public.curricula c set origin = 'ai_draft' where c.id = t.u('cur');
-  perform t.as_user(t.u('can'));
+  perform t.as_service();
   v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EB'), 'verdict', 'wrong', 'analysis', '{}'::jsonb,
             'proposed_subskill', jsonb_build_object('parent_id', 't.mat.b', 'id', 't.mat.b.1', 'name', 'Çift eksi')));
   perform t.as_admin();

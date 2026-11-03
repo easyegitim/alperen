@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { INSTRUCTOR_NAV, isNavActive } from '@/lib/nav';
@@ -18,19 +18,34 @@ export function InstructorShell({ brand, footer, children }: { brand: ReactNode;
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const root = INSTRUCTOR_NAV[0]?.href ?? '/egitmen';
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLElement>(null);
+
+  // Menü açıkken: odak ilk bağlantıya gider; Escape menüyü kapatıp odağı düğmeye geri verir.
+  useEffect(() => {
+    if (!open) return;
+    menu.current?.querySelector<HTMLElement>('a[href]')?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setOpen(false);
+      menuButton.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
 
   const list = (onNavigate?: () => void) => (
     <ul className="m-0 flex list-none flex-col gap-1 p-0">
       {INSTRUCTOR_NAV.map((it) => {
         const active = isNavActive(it.href, pathname, root);
         return (
-          <li key={it.id} className="contents">
+          <li key={it.id}>
             <Link
               href={it.href}
               aria-current={active ? 'page' : undefined}
               onClick={onNavigate}
               className={cn(
-                'text-label flex min-h-11 items-center gap-3 rounded-md px-3 no-underline',
+                'text-label flex min-h-11 w-full items-center gap-3 rounded-md px-3 no-underline',
                 FOCUS,
                 active ? 'bg-primary-soft text-primary' : 'text-ink hover:bg-surface-sunken',
               )}
@@ -56,9 +71,10 @@ export function InstructorShell({ brand, footer, children }: { brand: ReactNode;
         <header className="flex min-h-14 items-center justify-between gap-2 border-b border-line bg-surface-raised px-4 md:hidden">
           {brand}
           <button
+            ref={menuButton}
             type="button"
             aria-expanded={open}
-            aria-controls="egitmen-mobil-menu"
+            aria-controls={open ? 'egitmen-mobil-menu' : undefined}
             onClick={() => setOpen((v) => !v)}
             className={cn('text-label inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-line-strong bg-surface-raised px-3 text-ink', FOCUS)}
           >
@@ -67,7 +83,7 @@ export function InstructorShell({ brand, footer, children }: { brand: ReactNode;
           </button>
         </header>
         {open ? (
-          <nav id="egitmen-mobil-menu" aria-label="Eğitmen konsolu (menü)" className="flex flex-col gap-3 border-b border-line bg-surface-raised p-3 md:hidden">
+          <nav ref={menu} id="egitmen-mobil-menu" aria-label="Eğitmen konsolu (menü)" className="flex flex-col gap-3 border-b border-line bg-surface-raised p-3 md:hidden">
             {list(() => setOpen(false))}
             <div className="flex flex-col gap-3 border-t border-line pt-3">{footer}</div>
           </nav>

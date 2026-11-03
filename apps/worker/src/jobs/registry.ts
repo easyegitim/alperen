@@ -17,13 +17,13 @@ import { weeklySummaryJob } from './weeklySummary.js';
 /** Dead letter kuyruğu: yeniden denemeleri biten ve kalıcı hata veren işler buraya kopyalanır. */
 export const DEAD_LETTER_QUEUE = 'dead_letter';
 
-const anyPayload = z.object({}).passthrough();
+const uuid = z.string().uuid();
 
-const PENDING_RETRY: QueuePolicy = { retryLimit: 3, retryDelay: 30, retryBackoff: true, retryDelayMax: 900, expireInSeconds: 900, deleteAfterSeconds: 604_800 };
+const PENDING_RETRY: QueuePolicy = { retryLimit: 3, retryDelay: 30, retryBackoff: true, retryDelayMax: 900, expireInSeconds: 900, deleteAfterSeconds: 604_800, retentionSeconds: 90 * 86_400 };
 
-/** RPC'lerin (0017_rpc.sql) kuyruğa attığı, işleyicisi sonraki aşamalarda gelen işler. */
-function pending(name: string, description: string): JobDefinition<object, never> {
-  return { name, description, process: 'worker', payload: anyPayload, concurrency: 1, retry: PENDING_RETRY, handler: null, skeleton: true };
+/** RPC'lerin (0017_rpc.sql) kuyruğa attığı (yük anahtarları snake_case: SQL sözleşmesi), işleyicisi sonraki aşamalarda gelen işler. */
+function pending(name: string, description: string, payload: z.ZodType<object>): JobDefinition<object, never> {
+  return { name, description, process: 'worker', payload, concurrency: 1, retry: PENDING_RETRY, handler: null, skeleton: true };
 }
 
 export const JOBS: readonly AnyJobDefinition[] = [
@@ -34,10 +34,10 @@ export const JOBS: readonly AnyJobDefinition[] = [
   pdfRenderJob,
   pushSendJob,
   weeklySummaryJob,
-  pending('diagnosis.followup', 'Teşhis sonrası takip (P1): apply_diagnosis RPC ekler.'),
-  pending('exam.report', 'Deneme raporu (P2): grade_exam_session RPC ekler.'),
-  pending('document.generate', 'Belge üretimi (P3): request_document RPC ekler.'),
-  pending('curriculum.merge', 'Müfredat birleştirme (P1): decide_proposal(merge) RPC ekler.'),
+  pending('diagnosis.followup', 'Teşhis sonrası takip (P1): apply_diagnosis RPC ekler.', z.object({ analysis_id: uuid, enrollment_id: uuid })),
+  pending('exam.report', 'Deneme raporu (P2): grade_exam_session RPC ekler.', z.object({ session_id: uuid })),
+  pending('document.generate', 'Belge üretimi (P3): request_document RPC ekler.', z.object({ document_id: uuid, kind: z.string().min(1) })),
+  pending('curriculum.merge', 'Müfredat birleştirme (P1): decide_proposal(merge) RPC ekler.', z.object({ proposal_id: uuid })),
 ];
 
 const BY_NAME = new Map(JOBS.map((j) => [j.name, j]));

@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef } from 'react';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import renderMathInElement from 'katex/contrib/auto-render';
@@ -8,6 +10,8 @@ import { buttonClasses } from './Button';
 
 export interface DocumentViewerProps extends Omit<ComponentPropsWithRef<'article'>, 'title'> {
   title: string;
+  /** Başlık düzeyi; varsayılan 1 (belge sayfanın asıl içeriğiyse), gömülüyse 2. */
+  headingLevel?: 1 | 2 | 3;
   /**
    * Güvenilir kaynaktan (packages/doc-render) üretilmiş HTML. Kullanıcı girdisi olduğu gibi verilmez;
    * bileşen temizleme yapmaz. `children` ile birlikte verilmez.
@@ -28,6 +32,7 @@ export interface DocumentViewerProps extends Omit<ComponentPropsWithRef<'article
 /** Ders notu/belge kabı: en fazla 640px okuma sütunu, KaTeX matematiği, PDF ve eylem çubuğu. */
 export function DocumentViewer({
   title,
+  headingLevel = 1,
   html,
   children,
   autoRenderMath = true,
@@ -37,6 +42,7 @@ export function DocumentViewer({
   className,
   ...rest
 }: DocumentViewerProps) {
+  const Heading = `h${headingLevel}` as const;
   const bodyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -60,7 +66,7 @@ export function DocumentViewer({
     <article lang="tr" {...rest} className={cn('mx-auto flex w-full max-w-160 flex-col gap-4', className)}>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-title-2 m-0 text-ink">{title}</h1>
+          <Heading className="text-title-2 m-0 text-ink">{title}</Heading>
           {personalized ? (
             <span className="text-small inline-flex items-center gap-2 text-ink-muted">
               <Badge tone="ai">

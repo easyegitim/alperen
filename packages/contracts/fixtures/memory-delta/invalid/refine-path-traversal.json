@@ -2,7 +2,7 @@
   "ops": [
     {
       "op": "str_replace",
-      "path": "/memories/../secrets.md",
+      "path": "/memories/a..b.md",
       "old_str": "- 2026-10-28 paydaları eşitlemeden toplama (2×)",
       "new_str": "- 2026-11-02 paydaları eşitlemeden toplama (3×)"
     }

@@ -28,3 +28,9 @@ venv/
 *.log
 .DS_Store
 /tmp-*/
+
+# Playwright tarayıcıları (CI: PLAYWRIGHT_BROWSERS_PATH) ve test çıktıları
+.pw-browsers/
+test-results/
+playwright-report/
+blob-report/

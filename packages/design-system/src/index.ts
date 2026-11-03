@@ -15,6 +15,18 @@ export { AnswerGrid } from './components/AnswerGrid';
 export type { AnswerGridItem, AnswerGridProps, AnswerStatus } from './components/AnswerGrid';
 export { AppShell } from './components/AppShell';
 export type { AppNavItem, AppShellFab, AppShellProps, NavLinkProps } from './components/AppShell';
+export { BigStart } from './components/BigStart';
+export type { BigStartProps } from './components/BigStart';
+export { OneLineResult } from './components/OneLineResult';
+export type { OneLineResultProps } from './components/OneLineResult';
+export { PdfViewer } from './components/PdfViewer';
+export type { PdfViewerProps } from './components/PdfViewer';
+export { ProgressStrip } from './components/ProgressStrip';
+export type { ProgressStripProps, StripStatus } from './components/ProgressStrip';
+export { SUGGESTION_ACTION_LABELS, SUGGESTION_KIND_LABELS, SuggestionCard } from './components/SuggestionCard';
+export type { SuggestionCardProps, SuggestionKind } from './components/SuggestionCard';
+export { UPLOAD_OPTIONS, UploadSheet } from './components/UploadSheet';
+export type { UploadKind, UploadSheetProps, UploadSheetResult } from './components/UploadSheet';
 export { Avatar, initialsOf } from './components/Avatar';
 export type { AvatarProps, AvatarSize, AvatarVariant } from './components/Avatar';
 export { Badge } from './components/Badge';
@@ -41,8 +53,15 @@ export { FigureFrame } from './components/FigureFrame';
 export type { FigureFrameProps, FigureStatus } from './components/FigureFrame';
 export { LessonCard } from './components/LessonCard';
 export type { LessonCardProps, LessonStatus } from './components/LessonCard';
-export { DEFAULT_MIN_EVIDENCE, MasteryMeter, NO_EVIDENCE_TEXT, masteryDisplay } from './components/MasteryMeter';
-export type { MasteryDisplay, MasteryMeterProps } from './components/MasteryMeter';
+export {
+  DEFAULT_MIN_EVIDENCE,
+  MASTERY_BAND_THRESHOLDS,
+  MasteryMeter,
+  NO_EVIDENCE_TEXT,
+  masteryBand,
+  masteryDisplay,
+} from './components/MasteryMeter';
+export type { MasteryBand, MasteryDisplay, MasteryFormat, MasteryMeterProps } from './components/MasteryMeter';
 export { MemoryFileCard } from './components/MemoryFileCard';
 export type { MemoryFileCardProps } from './components/MemoryFileCard';
 export { MisconceptionItem } from './components/MisconceptionItem';

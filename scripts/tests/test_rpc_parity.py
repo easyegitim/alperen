@@ -55,14 +55,14 @@ def bar(db):
 
 
 def make_world(root: Path, *, py: str = PY_CALLER, jsonl: str = JSONL_RPC, sql: str = SQL, common_names=None,
-               blueprint: str | None = None) -> Path:
+               legacy_names=None) -> Path:
     write(root / "supabase/migrations/0001_all.sql", sql)
     write(root / "pipelines/common/src/ogrenmen_common/fakes/rpc-names.json",
           json.dumps(common_names if common_names is not None else ["bar", "foo", "tpl"]))
     write(root / "pipelines/common/src/ogrenmen_common/fakes/jsonl_rpc.py", jsonl)
     write(root / "pipelines/tablet/src/ogrenmen_tablet/fill.py", py)
-    if blueprint is not None:
-        write(root / "docs/BLUEPRINT.md", blueprint)
+    if legacy_names is not None:
+        write(root / "pipelines/common/src/ogrenmen_common/fakes/rpc-names-legacy-v1.json", json.dumps(legacy_names))
     return root
 
 
@@ -198,24 +198,43 @@ def test_jsonl_fake_with_varargs_fails_clearly(parity, tmp_path, sig, star):
     assert f"eşlenik {star} kullanıyor; imza denetlenemez" in fails[0].detail
 
 
-def test_section_3_0_objects_and_signatures(parity, tmp_path):
-    blueprint = (
-        "giriş\n\n**Görünümler ve yardımcılar (imza):**\n\n| Nesne | Dosya | Tanım |\n| --- | --- | --- |\n"
-        "| `app.helper(p_gun int) returns int` | 0015 | x |\n| `my_view` | 0013 | y |\n"
-        "| `app.missing_helper() returns trigger` | 0007 | z |\n\nsonraki paragraf\n"
-    )
-    _, fails, _ = run_check(parity, make_world(tmp_path, blueprint=blueprint), objects=["my_view"])
-    by = {f.rpc: f.detail for f in fails}
-    assert set(by) == {"app.helper", "app.missing_helper"}
-    assert "imza farklı" in by["app.helper"]
-    assert "migration'larda yok" in by["app.missing_helper"]
+def test_required_objects_come_from_migrations_only(parity, tmp_path):
+    """v2: BLUEPRINT/§2.10 listesi yok; ek nesneler yalnız migration'larda aranır."""
+    _, fails, _ = run_check(parity, make_world(tmp_path), objects=["my_view", "app.helper", "app.missing_helper"])
+    assert [(f.source, f.rpc) for f in fails] == [("nesne", "app.missing_helper")]
+    assert not hasattr(parity, "blueprint_objects") and not hasattr(parity, "SECTION_2_10_OBJECTS")
 
 
-def test_blueprint_table_parser_reads_signatures(parity, repo):
-    objs = parity.blueprint_objects(repo / "docs" / "BLUEPRINT.md")
-    assert objs["app.numeric_equal"] == ["p_given", "p_key", "p_tol"]
-    assert objs["mastery_view"] is None
-    assert objs["panel_overview"] == []
+LEGACY_CALL = '''
+
+def legacy(db):
+    return db.rpc("eski_rpc", {"p_x": 1})
+'''
+
+
+def test_legacy_v1_names_calls_and_fakes_are_warnings(parity, tmp_path):
+    jsonl = JSONL_RPC + "\n@rpc\ndef eski_rpc(db, p_x):\n    return 1\n"
+    world = make_world(tmp_path, py=PY_CALLER + LEGACY_CALL, jsonl=jsonl, legacy_names=["eski_rpc"])
+    rows, fails, warns = run_check(parity, world)
+    assert fails == [], fails
+    assert {(w.source, w.rpc) for w in warns} == {("ad:legacy-v1", "eski_rpc"), ("çağrı:pipelines", "eski_rpc"),
+                                                   ("jsonl", "eski_rpc")}
+    assert all("legacy-v1" in w.detail or w.source == "ad:legacy-v1" for w in warns)
+
+
+def test_legacy_marker_comment_makes_unlisted_call_a_warning(parity, tmp_path):
+    py = PY_CALLER + '''
+
+def legacy(db):
+    return db.rpc("eski_rpc", {"p_x": 1})  # rpc-parity: legacy-v1
+'''
+    _, fails, warns = run_check(parity, make_world(tmp_path, py=py))
+    assert fails == [] and [(w.source, w.rpc) for w in warns] == [("çağrı:pipelines", "eski_rpc")]
+
+
+def test_legacy_name_that_exists_in_v2_fails(parity, tmp_path):
+    _, fails, _ = run_check(parity, make_world(tmp_path, legacy_names=["foo"]))
+    assert ("ad:legacy-v1", "foo") in {(f.source, f.rpc) for f in fails}
 
 
 def test_mask_preserves_length_and_hides_strings(parity):

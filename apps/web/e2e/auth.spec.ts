@@ -19,8 +19,8 @@ test.describe('giriş', () => {
   });
 
   test('oturumsuz kullanıcı korumalı sayfada giriş sayfasına yönlenir ve dönüş yolu korunur', async ({ page }) => {
-    await page.goto('/ogrenci/notlarim');
-    await expect(page).toHaveURL(`${WEB_URL}/giris?next=${encodeURIComponent('/ogrenci/notlarim')}`);
+    await page.goto('/ogrenci/gelisim/belgeler');
+    await expect(page).toHaveURL(`${WEB_URL}/giris?next=${encodeURIComponent('/ogrenci/gelisim/belgeler')}`);
     await page.goto('/egitmen');
     await expect(page).toHaveURL(/\/giris\?next=%2Fegitmen$/);
   });

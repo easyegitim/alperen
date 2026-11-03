@@ -6,12 +6,26 @@ import { formatDelta, formatPercent } from '../lib/format';
 export const DEFAULT_MIN_EVIDENCE = 5;
 export const NO_EVIDENCE_TEXT = 'Henüz yeterli kanıt yok';
 
+/** Bant eşikleri (PLAN-v2 §13: yüzde yerine bant): p < 0,5 Zayıf, p < 0,8 Orta, aksi halde İyi. */
+export const MASTERY_BAND_THRESHOLDS = { weak: 0.5, good: 0.8 } as const;
+export type MasteryBand = 'Zayıf' | 'Orta' | 'İyi';
+export type MasteryFormat = 'band' | 'percent';
+
+/** Ustalık olasılığını kelimeyle bantlar. Kanıt eşiği kontrolü masteryDisplay'dedir. */
+export function masteryBand(p: number): MasteryBand {
+  if (p < MASTERY_BAND_THRESHOLDS.weak) return 'Zayıf';
+  if (p < MASTERY_BAND_THRESHOLDS.good) return 'Orta';
+  return 'İyi';
+}
+
 export interface MasteryDisplay {
   /** Kanıt eşiği aşıldı mı; false ise yüzde YAZILMAZ, dolgu çizilmez. */
   enough: boolean;
   /** enough ise 0–100 tam sayı. */
   percent?: number;
-  /** Değer alanında yazılacak metin: "%72" ya da "Henüz yeterli kanıt yok". */
+  /** enough ise bant. */
+  band?: MasteryBand;
+  /** Değer alanında yazılacak metin: "%72" / "Orta" ya da "Henüz yeterli kanıt yok". */
   text: string;
 }
 
@@ -19,12 +33,25 @@ export interface MasteryDisplay {
  * Kanıt kuralı: gözlem sayısı eşiğin altındaysa (ya da bilinmiyorsa) p ne olursa olsun yüzde gösterilmez.
  * Kesin teşhis kanıtla gelir.
  */
-export function masteryDisplay(input: { p?: number; evidence?: number; minEvidence?: number }): MasteryDisplay {
-  const { p, evidence, minEvidence = DEFAULT_MIN_EVIDENCE } = input;
+export function masteryDisplay(input: {
+  p?: number;
+  evidence?: number;
+  minEvidence?: number;
+  /** 'band' (varsayılan): Zayıf/Orta/İyi; 'percent': %72 (eğitmen konsolu). */
+  format?: MasteryFormat;
+}): MasteryDisplay {
+  const { p, evidence, minEvidence = DEFAULT_MIN_EVIDENCE, format = 'band' } = input;
   const enough =
     typeof p === 'number' && Number.isFinite(p) && typeof evidence === 'number' && evidence >= minEvidence;
   if (!enough) return { enough: false, text: NO_EVIDENCE_TEXT };
-  return { enough: true, percent: Math.round(Math.max(0, Math.min(1, p)) * 100), text: formatPercent(p) };
+  const band = masteryBand(p);
+  return { enough: true, percent: Math.round(Math.max(0, Math.min(1, p)) * 100), band, text: format === 'percent' ? formatPercent(p) : band };
+}
+
+/** Bant kipinde sayı yerine kelime: değişim yönü. */
+function deltaWord(delta: number): string {
+  if (Math.abs(delta) < 0.01) return 'Sabit';
+  return delta > 0 ? '↑ Yükseliyor' : '↓ Düşüyor';
 }
 
 export interface MasteryMeterProps extends Omit<ComponentPropsWithRef<'div'>, 'children'> {
@@ -39,6 +66,8 @@ export interface MasteryMeterProps extends Omit<ComponentPropsWithRef<'div'>, 'c
   deltaLabel?: string;
   /** Dönem etiketi ("LGS 2026"): ustalık döneme bağlıdır. */
   period?: string;
+  /** Gösterim: 'band' (varsayılan; öğrenci ve veli) ya da 'percent' (eğitmen konsolu). */
+  display?: MasteryFormat;
 }
 
 /** Kazanım başına ustalık göstergesi; kanıt eşiğin altındaysa "Henüz yeterli kanıt yok" yazar. */
@@ -50,10 +79,11 @@ export function MasteryMeter({
   delta,
   deltaLabel,
   period,
+  display = 'band',
   className,
   ...rest
 }: MasteryMeterProps) {
-  const d = masteryDisplay({ p, evidence, minEvidence });
+  const d = masteryDisplay({ p, evidence, minEvidence, format: display });
   return (
     <div {...rest} className={cn('flex min-w-60 flex-col gap-1', className)} data-enough={d.enough}>
       <div className="text-label flex items-baseline justify-between gap-3">
@@ -71,6 +101,7 @@ export function MasteryMeter({
               'aria-valuemax': 100,
               'aria-valuenow': d.percent,
               'aria-valuetext': d.text,
+              'data-band': d.band,
             }
           : { 'aria-hidden': true })}
         className={cn(
@@ -92,7 +123,9 @@ export function MasteryMeter({
         </span>
         {d.enough && typeof delta === 'number' ? (
           <span>
-            <span className={cn('font-medium', delta >= 0 ? 'text-success' : 'text-danger')}>{formatDelta(delta)}</span>
+            <span className={cn('font-medium', delta >= 0 ? 'text-success' : 'text-danger')}>
+              {display === 'percent' ? formatDelta(delta) : deltaWord(delta)}
+            </span>
             {deltaLabel ? ` ${deltaLabel}` : ''}
           </span>
         ) : null}

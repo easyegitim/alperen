@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
+import { FileText } from 'lucide-react';
+import { LinkButton } from '@/components/LinkButton';
 import { Avatar, Badge } from '@/ds';
 import { GRADE_LABELS, GRADES } from '@/lib/validation';
 import { requireRole } from '@/server/auth';
@@ -32,11 +34,27 @@ export default async function VeliOzet() {
                   Bağlı
                 </Badge>
               </div>
-              <p className="text-small m-0 text-ink-muted">Haftalık özet ve durum kartları ilk veriler geldiğinde burada görünür.</p>
+              <p className="text-small m-0 text-ink-muted">Tek cümlelik durum ve üç sayı ilk veriler geldiğinde burada görünür.</p>
             </li>
           ))}
         </ul>
       )}
+      <section aria-labelledby="son-rapor" className="flex flex-col gap-3">
+        <h2 id="son-rapor" className="text-title-2 m-0 text-ink">
+          Son rapor
+        </h2>
+        <EmptyState title="Henüz rapor yok" headingLevel={3}>
+          {'Haftalık özet ve deneme raporları hazırlandığında en sonuncusu burada PDF olarak durur.'}
+        </EmptyState>
+        <div className="flex flex-wrap gap-3">
+          <LinkButton href="/veli/sohbet?istek=rapor" variant="secondary" icon={<FileText size={18} />}>
+            Rapor iste
+          </LinkButton>
+          <LinkButton href="/veli/sohbet" variant="quiet">
+            Soru sor
+          </LinkButton>
+        </div>
+      </section>
     </div>
   );
 }

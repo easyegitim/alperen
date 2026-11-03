@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # pipelines/ders/check.sh — Ders analizi (kayıt -> transkript -> rapor): ruff + pytest + dry-run kabul komutu.
-# OGRENMEN_LIVE=1: ek olarak gerçek Postgres'e karşı canlı test (tests/test_live_db.py; ffmpeg ister).
+# Canlı Postgres testleri v2 tabanında devre dışıdır (bkz. dosya sonu).
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
@@ -22,10 +22,6 @@ ogr_no_file "$WORK/ders-out/observations.jsonl"
 test -f "$WORK/ders-out/api_payload.json"
 ogr_absent Elif "$WORK/ders-out/api_payload.json"
 
-if ogr_is_live; then
-  ogr_step "ders: canlı veritabanı testi"
-  ogr_live_env
-  ogr_live_pytest "$HERE" -q -k live
-else
-  ogr_skip "ders canlı testi (OGRENMEN_LIVE=1 değil)"
-fi
+# Canlı veritabanı testleri (tests/test_live_db.py) v1 şemasına (batch_worker rolü, v1 RPC'ler) yazıldı; v2 tabanında
+# (rol yok, RPC'ler değişti) çalışamaz. ders v2 servisine (P3 doğrulama / P5 ders) taşınınca yenisi yazılır.
+ogr_skip "ders canlı testi (v1 şemasına yazılmış; v2 tabanında devre dışı, P3/P5)"

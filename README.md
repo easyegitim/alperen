@@ -15,18 +15,20 @@ Kök bir **bun çalışma alanıdır** (`apps/*`, `packages/*`); Python boru hat
 
 | Dizin | Ne | Durum |
 | --- | --- | --- |
-| `apps/web/` | Next.js web + PWA: öğrenci, veli, eğitmen | P0'da kurulacak |
-| `apps/worker/` | pg-boss iş işçisi (müfredat taslağı, dossier, gece işleri, PDF) | P0'da kurulacak |
-| `packages/llm/` | Anthropic geçidi: rotalar, önbellek, parse, akış, defter, Batch, fake | P0'da kurulacak |
-| `packages/design-system/` | marka kitabı, `tokens.json`, 19 bileşenin spesifikasyonu | var (TSX P0'da) |
-| `packages/contracts/` | sözleşmeler (JSON Schema, TS + Python doğrulayıcı); zod'a taşınacak | var |
+| `apps/web/` | Next.js web + PWA: öğrenci, veli, eğitmen | var (P0 iskeleti) |
+| `apps/worker/` | pg-boss iş işçisi (müfredat taslağı, dossier, gece işleri, PDF) | var (P0 iskeleti) |
+| `packages/llm/` | Anthropic geçidi: rotalar, önbellek, parse, akış, defter, Batch, fake | var (P0) |
+| `packages/design-system/` | marka kitabı, `tokens.json`, TSX bileşenleri ve önizleme | var (P0) |
+| `packages/contracts/` | sözleşmeler (JSON Schema, TS + Python doğrulayıcı; v2 şemaları) | var |
 | `packages/mastery-math/` | BKT matematiği: TS, Python ve SQL aynı vektörleri geçer | var |
 | `packages/pii/` | sade ad hash'leme ve temizleme (TS + Python + SQL) | var |
 | `pipelines/common/` | `ogrenmen_common`: adaptörler, sahteler, `CostLedger`, `Runtime` | var |
 | `pipelines/tablet/` | şablon stoğu, soru üretimi, SymPy doğrulama, şekil render | var |
 | `pipelines/kalem/` | çıkmış sınav OCR, madde kümeleme, öncelik planı | var |
 | `pipelines/ders/` | ders kaydı ve video analizi (ffmpeg + STT) | var |
-| `supabase/` | migration'lar, seed'ler, RLS testleri (v2 temiz taban göçü P0'da) | var (v1; yeniden yazılıyor) |
+| `pipelines/verify/` | doğrulama HTTP servisi (SymPy; `tablet/verify.py`'den) | P3 (henüz yok) |
+| `packages/doc-render/` | belge AST'sinden PDF/HTML çıktısı | P3 (henüz yok) |
+| `supabase/` | migration'lar (0001–0019), seed'ler, RLS ve RPC testleri | v2 taban (RPC'ler dahil) |
 | `content/tyt-matematik/` | TYT Matematik müfredatı ve şablonları (1 numaralı tohum içerik) | var |
 | `fixtures/` | paylaşılan sahte veri (LLM cevapları, dev seed, ders/sınav örnekleri) | var |
 | `scripts/` | `check-all.sh`, `lib.sh`, RPC/kopya/fixture denetimleri, `secret-scan.sh` | var |
@@ -59,17 +61,47 @@ verir; mevcut `check.sh` dosyaları örnektir. Paket kurulumu her zaman kökten 
 
 ## Nerede kaldık
 
-Plan `docs/PLAN-v2.md` §14 fazlarıyla ilerler. Şu an **P0 Temel** sürüyor:
+Plan `docs/PLAN-v2.md` §14 fazlarıyla ilerler. **P0 Temel tamamlandı** (2026-11-03 entegrasyon doğrulaması):
+`make check-quick` ve yerel Postgres ile `make check-live` yeşil (19 adım: 6 kök + 13 modül, 0 FAIL). Gerçek API
+anahtarı gerektiren adımlar anahtar yokken SKIP yazar; canlı kipte bile atlananlar aşağıdaki tabloda.
 
-- Temizlik ve iskelet (P0-A): Telegram botu, eski panel, `pipelines/kitap` ve `pipelines/kulaklik_batch` kaldırıldı; kök bun
-  çalışma alanı, `check.sh` keşfi, Makefile ve CI yeni yapıya geçirildi.
-- Sırada: veritabanı v2 (temiz taban göç, RLS, RPC), zod-önce sözleşmeler, `packages/llm` geçidi, tasarım sistemi TSX,
-  `apps/web` (Supabase Auth, 3 rol), `apps/worker` (pg-boss), 14 ekran mockup.
-- Sonraki fazlar: P1 öğrenci çekirdeği (koç sohbeti, Sor, konu haritası), P2 deneme, P3 içerik stüdyosu, P4 tarz ve tahmin,
-  P5 dersler, P6 veli ve bildirim, P7 eğitmen konsolu ve eval.
-- Bilinen devir işleri: `supabase/` ve `fixtures/db/` hâlâ v1 şemasını (Telegram sütunları dahil) taşır; v2 göçü gelince
-  `pipelines/common` `JsonlDb` eşlenikleri ve `scripts/check-rpc-parity.py` onunla hizalanır. `pipelines/common`
-  içindeki Groq/Gemini adaptörleri `packages/llm` gelene kadar durur.
+| Modül | Durum | Not |
+|---|---|---|
+| kök (sır taraması, drift, fixtures, RPC paritesi, betik testleri, workflow lint) | yeşil | actionlint yerelde yoksa SKIP, CI'da koşar |
+| `supabase` (v2 göçleri 0001–0019, RLS, RPC, SQL testleri) | yeşil | canlı kipte gerçek pg-boss şemasıyla da denetlenir |
+| `apps/web` (Next.js, Supabase Auth 3 rol + davet, kabuklar, PWA) | yeşil | `next build` ve Playwright E2E (sahte Supabase) canlı/ağır kipte koşar |
+| `apps/worker` (pg-boss iş kayıt defteri, zamanlamalar, PDF, sağlık, Dockerfile/Fly) | yeşil | pg-boss entegrasyon testi canlı kipte |
+| `packages/llm` (Anthropic geçidi: rotalar, önbellek, parse, akış, refusal, Batch, defter, fake) | yeşil | canlı Anthropic testi `ANTHROPIC_API_KEY` ister (SKIP) |
+| `packages/contracts` (zod-önce şemalar, JSON Schema + Python) | yeşil | |
+| `packages/design-system` (token → CSS/Tailwind, TSX bileşenler, önizleme) | yeşil | önizleme derlemesi yalnız ağır kipte |
+| `packages/mastery-math`, `packages/pii` | yeşil | |
+| `pipelines/{common,tablet,kalem,ders}` | yeşil | canlı testleri v1 şemasına yazılıydı: v2'de SKIP |
+| `content/tyt-matematik` | yeşil | |
+| Mockup'lar (14 ekran, sadelik ilkesiyle yeniden çizildi) | tamam | bağlayıcı başvuru: https://claude.ai/artifact/NCt864XDLk6o6Rrm6dPDuo |
+
+**Bilinen boşluklar (P0 sonrası):**
+
+- Canlı Claude testi hiç koşmadı (anahtar yok): geçit testi `cache_read_input_tokens > 0` kabul ölçütü ilk gerçek
+  anahtarla `OGRENMEN_LIVE=1 bash packages/llm/check.sh` ile doğrulanmalı (P1 başında).
+- Öğrenci kabuğu plan §13'teki 3 sekmeye (Bugün · Koç · Gelişim, Sor düğmesi) indi; `PdfViewer`, `SuggestionCard`,
+  `OneLineResult` bileşenleri tasarım sisteminde var. Ancak `suggestions` tablosu ve `suggestions.refresh` işi yok:
+  Bugün ekranı şimdilik boş durum çizer (P1 hazırlık işi).
+- `upsert_memory_file` öğrencinin kendi hafıza dosyalarını doğrudan yazmasına izin verir (aktör `student:<uid>` olarak
+  kaydedilir). Plan §3.2 "öğrenci okur, düzeltme ister" der: düzeltme isteği iş kuyruğuna (ör. `memory.correction`)
+  taşınmalı ya da kurucu doğrudan düzenlemeyi plana yazmalı.
+- TYT içeriği için v2 cevap anahtarı tohumu yok (`db-test.sh`: "SKIP: no keys"); `fixtures/db/dev-seed.json` ve
+  `fixtures/{kitap,panel,kulaklik}` hâlâ v1 verisini taşır (v1 Telegram satırları şemasız kalır; `bot-response-log`
+  şeması kaldırıldı). v2 tohum verisi ayrı iştir.
+- `pipelines/{tablet,kalem,ders}` birkaç v1 tablo/RPC kullanır (`LEGACY_PIPELINE_TABLES`,
+  `fakes/rpc-names-legacy-v1.json`; parite tablosunda WARN); P3 (doğrulama servisi) ve P5 (ders HTTP servisi) ile
+  kalkar. `pipelines/common` içindeki Gemini/Groq-sohbet/OpenRouter/CF-AI adaptörleri yalnız bu eski sahte akışlar
+  içindir; Claude yalnız `packages/llm`'dedir. `make ders` hedefi kaldırıldı (P5'te HTTP servisi olur).
+- `packages/doc-render` (belge AST → PDF) P3 işidir; henüz yok.
+
+**Bir sonraki adım:** P1 öğrenci çekirdeği — önce P1 hazırlığı (`suggestions` tablosu + `suggestions.refresh` işi,
+Bugün/Koç/Gelişim ekranlarını mockup S02/S03/S08 ile görsel karşılaştırma), sonra ders seçimi + müfredat taslağı işi, dossier
+derleyici + hafıza işleyicileri, Koç sohbeti, Sor (yakalama → teşhis → observations) ve Konu haritası. Ekranlar
+mockup'lara (S01–S09b, S10/S10b, S12–S15) birebir uyar. P1 ilk gerçek Anthropic anahtarını ister.
 
 ## Arşiv notu
 

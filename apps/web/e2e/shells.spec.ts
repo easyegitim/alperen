@@ -7,8 +7,8 @@ const VIEWPORTS = [
 ] as const;
 
 const SHELLS: Array<{ role: RoleKey; path: string; nav: string[]; label: string }> = [
-  { role: 'student', path: '/ogrenci', nav: ['Koç', 'Denemeler', 'Notlarım', 'Konu haritası', 'Profil'], label: 'ogrenci' },
-  { role: 'parent', path: '/veli', nav: ['Özet', 'Sohbet', 'Raporlar', 'Bildirimler', 'Ayarlar'], label: 'veli' },
+  { role: 'student', path: '/ogrenci', nav: ['Bugün', 'Koç', 'Gelişim'], label: 'ogrenci' },
+  { role: 'parent', path: '/veli', nav: ['Özet', 'Sohbet'], label: 'veli' },
   { role: 'instructor', path: '/egitmen', nav: ['Öğrenciler', 'Dersler', 'Müfredatlar', 'Soru tarzları', 'İçerik', 'Sınavlar', 'Kuyruk', 'Maliyet', 'Ayarlar'], label: 'egitmen' },
 ];
 

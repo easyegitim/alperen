@@ -42,12 +42,28 @@ function textBlock(text: string, ttl: CacheTtl | null): BetaTextBlockParam {
 }
 
 /**
+ * Akışlı, araçlı serbest metin rotalarına (koç, veli) eklenen sabit satır. Opus 5.5 ve Sonnet 5.5'te araç çağrıları
+ * arasındaki bir-iki cümleden uzun notlar `thinking` bloğu olarak döner ve varsayılan `display: "omitted"` altında
+ * boştur (claude-api shared/model-migration.md "Text between tool calls comes back in thinking blocks"); kısa notlar
+ * `text` kalır. Opus'ta `thinking` gönderilmediği için (PLAN-v2 §5) `display: "updates"` yerine modelden her araç
+ * çağrısından önce kısa bir cümle istenir; böylece uzun araç döngüsünde arayüz sessiz kalmaz.
+ */
+export const PROGRESS_NOTE =
+  'Bir araç çağırmadan önce kullanıcıya ne yaptığını tek kısa cümleyle yaz; araç sonuçlarını aldıktan sonra yanıtına devam et.';
+
+/**
  * Üç system bloğunu sırayla kurar (verilmeyen blok atlanır). Boş metin reddedilir: boş blok önbellek
  * önekini değiştirmez ama API boş metin bloğunu kabul etmez.
  */
-export function buildSystemBlocks(parts: SystemParts, cache: CachePolicy): BetaTextBlockParam[] {
+export function buildSystemBlocks(
+  parts: SystemParts,
+  cache: CachePolicy,
+  opts: { progressNote?: boolean } = {},
+): BetaTextBlockParam[] {
   if (!parts.product || parts.product.trim() === '') throw new RouteConfigError('ürün system bloğu boş olamaz');
-  const blocks: BetaTextBlockParam[] = [textBlock(parts.product, cache.productTtl)];
+  // İlerleme notu rota başına sabittir: ürün bloğunun sonuna eklenir, 1 saatlik önbelleği bozmaz.
+  const product = opts.progressNote ? `${parts.product}\n\n${PROGRESS_NOTE}` : parts.product;
+  const blocks: BetaTextBlockParam[] = [textBlock(product, cache.productTtl)];
   if (parts.course) blocks.push(textBlock(parts.course, cache.courseTtl));
   if (parts.dossier) blocks.push(textBlock(parts.dossier, cache.dossierTtl));
   return blocks;
@@ -85,12 +101,17 @@ export function renderTurnContext(ctx: TurnContext): string {
 }
 
 /**
- * Ortadaki sistem mesajını destekleyen modeller (prompt-caching.md "Mid-conversation system messages"):
- * Opus 5.5 ve Sonnet 5.5. Haiku 5.5 belgede yok; orada tur bağlamı kullanıcı turunun sonuna metin olarak eklenir.
+ * Ortadaki `role:"system"` mesajı (başlıksız GA). Belgeler Haiku 5.5 için çelişkili: claude-api
+ * shared/prompt-caching.md "Mid-conversation system messages" listesi Opus 5.5 ve Sonnet 5.5'i sayıp Haiku 5.5'i
+ * saymıyor; shared/model-migration.md "Migrating to Claude Haiku 5.5" ise "New on Claude Haiku 5.5: mid-conversation
+ * system messages (no beta header)" diyor. Üç model için de `role:"system"` gönderilir: taklit edilemeyen operatör
+ * kanalı odur (`<system-reminder>` metni kullanıcı girdisiyle taklit edilebilir). API 400 `role 'system' is not
+ * supported` dönerse geçit isteği bir kez `turnReminderBlock` yedeğiyle yeniden gönderir ve o model için süreç boyunca
+ * yedeği kullanır (gateway.ts, `isSystemRoleUnsupported`).
  */
 export function supportsSystemMessages(model: string): boolean {
   const fam = familyOf(model);
-  return fam === 'opus' || fam === 'sonnet';
+  return fam === 'opus' || fam === 'sonnet' || fam === 'haiku';
 }
 
 /** Tur sistem mesajı (`role:"system"`); kullanıcı turundan sonra, son öğe olarak eklenir. */
@@ -98,7 +119,10 @@ export function buildTurnSystem(ctx: TurnContext): BetaMessageParam {
   return { role: 'system', content: renderTurnContext(ctx) };
 }
 
-/** Haiku için yedek: tur bağlamını kullanıcı turunun sonuna `<system-reminder>` metin bloğu olarak ekler. */
+/**
+ * Yedek (yalnız model `role:"system"`i 400 ile reddederse): tur bağlamını kullanıcı turunun sonuna `<system-reminder>`
+ * metin bloğu olarak ekler. Bu kalıp kullanıcı girdisiyle taklit edilebilir; birincil yol değildir.
+ */
 export function turnReminderBlock(ctx: TurnContext): BetaTextBlockParam {
   return { type: 'text', text: `<system-reminder>${renderTurnContext(ctx)}</system-reminder>` };
 }

@@ -46,7 +46,7 @@ export const lessonAnalysis = defineContract({
           tag: tagCode(c, 'Katalogdaki etiket; yoksa null ve metin serbest').nullable().optional(),
           skill_id: skillCode(c),
           text_instructor: c.str({ max: 200 }),
-          text_student: c.str({ max: 200 }),
+          text_student: c.uiText({ max: 200 }),
           resolved_in_lesson: z.boolean().optional(),
           evidence: c.arr(evidence, { min: 1 }),
         }),
@@ -74,7 +74,7 @@ export const lessonAnalysis = defineContract({
           evidence: c.arr(evidence).optional(),
         }),
       ),
-      next_step: z.strictObject({ for_student: c.str({ max: 400 }), for_instructor: c.str({ max: 400 }) }),
+      next_step: z.strictObject({ for_student: c.uiText({ max: 400 }), for_instructor: c.str({ max: 400 }) }),
       course_insights: c.added(
         c.arr(
           z.strictObject({
@@ -88,14 +88,22 @@ export const lessonAnalysis = defineContract({
         ),
         [],
       ),
-      model_notes: z.strictObject({
-        model: c.str(),
-        prompt_version: c.str(),
-        cost_usd: c.num({ min: 0 }),
-        tokens_in: c.int(),
-        tokens_out: c.int(),
-        frames: c.int().optional(),
-      }),
+      // model_notes model çıktısı değildir (model kendi maliyetini/token sayısını bilemez): strict kipte yoktur,
+      // boru hattı (pipelines/ders normalize) parse sonrası llm_calls'tan yazar; loose kipte isteğe bağlıdır.
+      ...(c.isLoose
+        ? {
+            model_notes: z
+              .strictObject({
+                model: c.str(),
+                prompt_version: c.str(),
+                cost_usd: c.num({ min: 0 }),
+                tokens_in: c.int(),
+                tokens_out: c.int(),
+                frames: c.int().optional(),
+              })
+              .optional(),
+          }
+        : {}),
     });
   },
 });

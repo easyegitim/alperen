@@ -121,34 +121,32 @@ def test_talk_claim_written(cli_out):
     assert talk[0]["quote"] == ANALYSIS_FIXTURE["talk"]["notes"]
 
 
-def test_lesson_cost_does_not_consume_chat_cap(tmp_path):
+def test_lesson_cost_is_cap_excluded(tmp_path):
+    """v2 ``check_spend``: ders amaçları (``cap_excluded_purposes``) tavana takılmaz; maliyet toplamlara girer."""
     rt = make_rt(tmp_path / "out")
     models = copy.deepcopy(rt.ledger.models)
     analysis_model = rt.ledger.chain("lesson_analysis")[0]
-    models["models"][analysis_model]["in_per_m"] = 1000.0     # analiz ≈ 4 $: günlük sohbet tavanının (0,80) üstü
+    models["models"][analysis_model]["in_per_m"] = 1000.0     # analiz ≈ 4 $: günlük tavanın (0,80) üstü
     rt.ledger.models = models
     chat_before = rt.db.rpc("check_spend", {"p_purpose": "chat"})[0]
-    lesson_before = rt.db.rpc("check_spend", {"p_purpose": "lesson_analysis"})[0]
     _, result = _analyze(tmp_path, rt=rt)
     assert result.status == "analyzed" and result.lesson_cost_usd > chat_before["daily_cap"]
     assert set(result.llm_purposes) <= LESSON_LLM_PURPOSES
     assert {r["purpose"] for r in rt.db.written("llm_calls")} <= LESSON_LLM_PURPOSES
-    chat_after = rt.db.rpc("check_spend", {"p_purpose": "chat"})[0]
     lesson_after = rt.db.rpc("check_spend", {"p_purpose": "lesson_analysis"})[0]
-    assert chat_after["state"] == "normal" and chat_after["paid_allowed"] is True
-    assert chat_after["day_usd"] == chat_before["day_usd"] and chat_after["month_usd"] == chat_before["month_usd"]
-    assert lesson_after["lesson_month_usd"] == pytest.approx(lesson_before["lesson_month_usd"]
-                                                             + result.lesson_cost_usd, abs=1e-6)
-    # Kontrol: aynı tutar sohbet amacıyla yazılsaydı sohbet free_only'ye inerdi (test ayırt edicidir).
+    assert lesson_after["downgrade"] is False and lesson_after["paid_allowed"] is True
+    assert lesson_after["day_usd"] == pytest.approx(chat_before["day_usd"] + result.lesson_cost_usd, abs=1e-6)
+    # Aynı tutar sohbet amacıyla yazılsaydı yumuşak tavana (soft_cap) girerdi: test ayırt edicidir.
     rt.ledger.record("chat", provider="gemini-paid", model=analysis_model, status="ok",
                      cost_usd=result.lesson_cost_usd)
-    assert rt.db.rpc("check_spend", {"p_purpose": "chat"})[0]["state"] == "free_only"
+    assert rt.db.rpc("check_spend", {"p_purpose": "chat"})[0]["state"] == "soft_cap"
 
 
-def test_lesson_cap_blocks_only_lesson_analysis(tmp_path):
+def test_paid_llm_disabled_blocks_lesson_analysis(tmp_path):
+    """v2'de ders bütçesi ayrı değildir; ücretli çağrıyı kapatan kill-switch (``paid_llm_enabled=false``) engeller."""
     rt = make_rt(tmp_path / "out")
     with as_admin(rt.db):
-        rt.db.update("runtime_flags", {"value": 0.10}, where={"key": "lesson_monthly_cap_usd"})
+        rt.db.update("runtime_flags", {"value": False}, where={"key": "paid_llm_enabled"})
     with pytest.raises(LedgerError, match="OGR-LLM-002"):
         _analyze(tmp_path, rt=rt)
     lesson = rt.db.get("lessons", id=LESSON)
@@ -159,7 +157,6 @@ def test_lesson_cap_blocks_only_lesson_analysis(tmp_path):
               and a["detail"].startswith("Ders analizi başarısız")]
     assert len(alerts) == 1 and alerts[0]["kind"] == "ops" and alerts[0]["student_id"] is None
     assert "bütçe" in alerts[0]["detail"]
-    assert rt.db.rpc("check_spend", {"p_purpose": "chat"})[0]["paid_allowed"] is True
     assert not rt.db.written("lesson_analyses")
 
 

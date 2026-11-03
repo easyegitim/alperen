@@ -26,7 +26,7 @@ Paket kurulumu her zaman kökten: `cd /home/user/alperen && flock /tmp/ogrenmen-
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | evet | Supabase proje adresi. Derleme sırasında gömülür. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | evet | Herkese açık (anon) anahtar. `service_role` anahtarı bu uygulamada **kullanılmaz** (RLS, kullanıcının JWT'siyle). |
-| `NEXT_PUBLIC_SITE_URL` | önerilir | Dışarıdan görünen adres; e-posta bağlantısı ve Google dönüşü bununla kurulur. Boşsa `x-forwarded-*` başlıklarından türetilir. |
+| `NEXT_PUBLIC_SITE_URL` | üretimde zorunlu | Dışarıdan görünen adres; e-posta bağlantısı ve Google dönüşü bununla kurulur. Üretimde (`NODE_ENV=production`) tanımsızsa e-posta/Google eylemleri hata verir ve `/api/health` `site_url: missing` bildirir; yalnız geliştirmede `x-forwarded-*` başlıklarından türetilir. |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | isteğe bağlı | Web-push VAPID **herkese açık** anahtarı (base64url). Boşsa "Anlık bildirimleri aç" düğmesi yerine açıklama görünür. Özel anahtar worker'dadır. |
 
 Ayrıca (yalnız E2E): `E2E_WEB_PORT` (3101), `E2E_SUPABASE_PORT` (54399), `E2E_OFFLINE_PORT` (3102).
@@ -38,22 +38,25 @@ Ayrıca (yalnız E2E): `E2E_WEB_PORT` (3101), `E2E_SUPABASE_PORT` (54399), `E2E_
 | `/` | herkes | Oturuma ve role göre yönlendirir |
 | `/giris` | herkese açık | E-posta kodu (OTP) + sihirli bağlantı + Google; `?next=` korumalı (yalnız uygulama içi yol) |
 | `/auth/callback`, `/auth/confirm` | herkese açık | PKCE `?code=` değişimi; `token_hash` doğrulaması |
-| `/hos-geldin` | oturumlu, onboarding bitmemiş | Rol seçimi; öğrenci formu (ad, sınıf, hedef); veli formu (davet kodu → `accept_guardian_invite`); eğitmen: davetle bilgisi |
-| `/ogrenci` | öğrenci (+admin) | **Koç**: günün planı boş durumu, `TutorMessage`, `ModeToggle` |
+| `/hos-geldin` | oturumlu, onboarding bitmemiş | Rol seçimi; öğrenci 2 adım (ders/sınav seçimi: arama + TYT/AYT/LGS çipleri, hedef tarih; ad/sınıf isteğe bağlı) ve `enrollments` satırı yazılır; veli formu (davet kodu → `accept_guardian_invite`); eğitmen: davetle bilgisi |
+| `/ogrenci` | öğrenci (+admin) | **Bugün**: tek kahraman kart (öneri gelene dek maskotlu boş durum) |
+| `/ogrenci/koc` | | **Koç**: sohbet karşılaması (`TutorMessage`); sohbet bağlanınca mod seçici mesaj altına eklenir |
+| `/ogrenci/gelisim` | | **Gelişim**: Konular, Belgelerim, Profil ve ayarlar bağlantıları |
 | `/ogrenci/sor` | | **Sor**: `CameraSheet` (kamera FAB'ının hedefi) |
-| `/ogrenci/denemeler`, `/notlarim`, `/konu-haritasi` | | Boş durum (maskot) |
+| `/ogrenci/gelisim/konular`, `/belgeler` | | Boş durum (maskot); eski `/denemeler`, `/notlarim`, `/konu-haritasi` yönlenir |
 | `/ogrenci/profil` | | Hesap, bildirim aboneliği, tema, çıkış |
 | `/ogrenci/profil/hafiza` | | `memory_files` listesi (RLS); boşsa açıklama |
-| `/veli` | veli (+admin) | **Özet**: bağlı çocuklar (`guardian_links`) |
-| `/veli/sohbet`, `/raporlar` | | Boş durum |
+| `/veli` | veli (+admin) | **Özet**: bağlı çocuklar (`guardian_links`), son rapor, Rapor iste / Soru sor |
+| `/veli/sohbet` | | Boş durum; `/veli/raporlar` Özet'e yönlenir (son rapor + Rapor iste/Soru sor Özet'te) |
 | `/veli/bildirimler` | | `notifications` listesi (RLS) |
 | `/veli/ayarlar` | | Ek davet kodu kabulü, bildirim aboneliği, tema, çıkış |
 | `/egitmen` | eğitmen/admin | **Öğrenciler** (`instructor_links`) |
 | `/egitmen/dersler` | | `courses` listesi (RLS) |
 | `/egitmen/mufredatlar`, `/soru-tarzlari`, `/icerik`, `/sinavlar`, `/kuyruk`, `/maliyet` | | Boş durum |
 | `/egitmen/ayarlar` | | Tema, çıkış |
+| `/davet?kod=` | oturum gerekir | Veli davet bağlantısı; rolüne göre kurulum ya da Ayarlar formuna yönlendirir |
 | `/cevrimdisi` | herkese açık | Servis çalışanının önceden önbelleğe aldığı yedek sayfa |
-| `/api/health` | herkese açık | `{status, service, time, supabase}`; önbelleğe alınmaz |
+| `/api/health` | herkese açık | `{status, service, time, supabase, site_url}`; önbelleğe alınmaz |
 | `/manifest.webmanifest` | herkese açık | PWA bildirimi (`app/manifest.ts`) |
 
 Kök adres, giriş ve alan geçişleri `src/proxy.ts` + `src/lib/routing.ts` (saf `decideRoute`) ile; yetkinin asıl noktası sunucuda `requireRole` (`src/server/auth.ts`).
@@ -63,7 +66,7 @@ Kök adres, giriş ve alan geçişleri `src/proxy.ts` + `src/lib/routing.ts` (sa
 - **Giriş**: `src/app/giris/actions.ts` (sunucu eylemleri): `signInWithOtp` (e-postaya 6 haneli kod **ve** sihirli bağlantı), `verifyOtp`, `signInWithOAuth('google')`. Şifre yok.
 - **Oturum**: `@supabase/ssr` çerezleri. `src/proxy.ts` her sayfa isteğinde oturumu yeniler (`getClaims()`: imza doğrulanır) ve `profiles.role` ile yönlendirir:
   oturumsuz → `/giris?next=`; profil/onboarding eksik → `/hos-geldin`; `/` ve `/giris` → rol ana sayfası (`student→/ogrenci`, `parent→/veli`, `instructor|admin→/egitmen`); başka rolün alanı → kendi ana sayfası. Yönetici üç alanı da görebilir.
-- **Onboarding** (`/hos-geldin`): öğrenci → `profiles` (rol `student`; `students` satırını tetikleyici açar) + `students.grade`; hedef sınav ve hedef metni, ders (müfredat) seçilene kadar kullanıcı üst verisinde (`auth.users.raw_user_meta_data`) bekler (kayıt için `enrollments.curriculum_id` gerekir). Veli → `accept_guardian_invite(p_token)` RPC'si (profil yoksa rol `parent` açar; hata kodları `OGR-INV-001/002/003` Türkçeye çevrilir). Eğitmen/yönetici hesabını easy ekibi açar; kendi kendine eğitmen olunamaz (RLS `profiles_insert_self` yalnız student/parent'a izin verir).
+- **Onboarding** (`/hos-geldin`): öğrenci → `profiles` (rol `student`; `students` satırını tetikleyici açar) + `students.grade`; hedef sınav ve hedef metni, ders (müfredat) seçilene kadar kullanıcı üst verisinde (`auth.users.raw_user_meta_data`) bekler (kayıt için `enrollments.curriculum_id` gerekir). Veli → `accept_guardian_invite(p_token)` RPC'si (davet kodunu öğrenci Profil'den ya da owner eğitmen öğrenci kartından `create_guardian_invite` ile üretir; `/davet?kod=gi_…` bağlantısı oturumsuzken girişe, sonra kurulum formuna kodu taşır; kurulum yarım kalırsa kod artık istenmez) (profil yoksa rol `parent` açar; hata kodları `OGR-INV-001/002/003` Türkçeye çevrilir). Eğitmen/yönetici hesabını easy ekibi açar; kendi kendine eğitmen olunamaz (RLS `profiles_insert_self` yalnız student/parent'a izin verir).
 - **Supabase tarafı** (`supabase/config.toml`, bu pakette değişmez; kurulumda gerekir):
   - `site_url` ve `additional_redirect_urls` = uygulama adresi + `/auth/callback`.
   - E-posta şablonu (magic link/OTP) hem `{{ .Token }}` (6 haneli kod) hem `{{ .ConfirmationURL }}` içermeli.
@@ -72,8 +75,8 @@ Kök adres, giriş ve alan geçişleri `src/proxy.ts` + `src/lib/routing.ts` (sa
 
 ## Kabuklar (PLAN §13)
 
-- Öğrenci: mobil alt gezinme **Koç · Denemeler · Notlarım · [Sor kamera FAB] · Konu haritası · Profil** (DS `AppShell`); masaüstünde kenar çubuğu.
-- Veli: **Özet · Sohbet · Raporlar · Bildirimler · Ayarlar**.
+- Öğrenci: mobil alt gezinme **Bugün · Koç · [Sor kamera FAB] · Gelişim** (PLAN-v2 §13; Profil Gelişim içinden) (DS `AppShell`); masaüstünde kenar çubuğu.
+- Veli: **Özet · Sohbet**; Bildirimler ve Ayarlar sayfa üstündeki hesap bağlantıları.
 - Eğitmen: kenar çubuğu **Öğrenciler · Dersler · Müfredatlar · Soru tarzları · İçerik · Sınavlar · Kuyruk · Maliyet · Ayarlar**. Dokuz madde alt çubuğa sığmadığı için dar ekranda üst çubukta "Menü" düğmesi (`InstructorShell`).
 - Her sayfa tek `h1` (`PageHeader`), boş durum `EmptyState` (maskot dekoratif, metin yanında). Metinler Türkçe, sen dili, ünlem/emoji yok.
 
@@ -109,6 +112,8 @@ Kök adres, giriş ve alan geçişleri `src/proxy.ts` + `src/lib/routing.ts` (sa
 - Koç sohbeti, teşhis, deneme, not, konu haritası, rapor, kuyruk, maliyet sayfaları **boş durum**dur; veri bağlantısı P1.
 - `Sor`: kamera ve çoklu çekim çalışır, gönderim yoktur (fotoğraflar yalnız cihazda hazırlanır; arayüz bunu söyler).
 - Öğrenci hedefi (`target_exam`, `goal`) `enrollments`'a değil kullanıcı üst verisine yazılır; ders seçimi (P1) taşır.
-- Hafıza "Düzeltme iste" düğmesi bağlanmadı (eylemi yok); yalnız okuma.
+- Hafıza "Düzeltme iste" düğmesi bağlanmadı (eylemi yok); yalnız okuma. Metinler öğrenciye "eğitmenine söyle" der.
+- Servis çalışanında yükleme için arka plan senkronu (Serwist BackgroundSyncPlugin) yok: Sor yükleme hattı bağlanınca eklenecek.
+- Sürüm kararı: Next.js 16 (middleware yerine `src/proxy.ts`, derleme `--webpack` ile Serwist için). Sürüm sapması: PLAN-v2 §12 "Next.js 15" der, kurulum Next 16 (`src/proxy.ts` Next 16 proxy'sidir); orkestratör planı güncellemeli.
 - Google girişi uygulama tarafında hazır; Supabase `config.toml`'da sağlayıcı ve yönlendirme adresleri ayarlanmalı.
 - `next build` webpack ile; Serwist Turbopack desteği gelince `--webpack` kalkar.

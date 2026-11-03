@@ -2,6 +2,8 @@ import {
   Bell,
   BookOpen,
   Camera,
+  ChartLine,
+  Sun,
   ClipboardCheck,
   ClipboardList,
   FileCheck,
@@ -23,6 +25,8 @@ import {
 import type { NavIconName } from '@/lib/nav';
 
 export const NAV_ICONS: Record<NavIconName, LucideIcon> = {
+  today: Sun,
+  growth: ChartLine,
   coach: MessagesSquare,
   ask: Camera,
   exams: ClipboardList,

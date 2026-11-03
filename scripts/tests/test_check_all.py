@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -16,8 +17,12 @@ LIB = SCRIPTS / "lib.sh"
 
 # Gerçek depoda check.sh'i olması gereken (korunan) modüller.
 EXPECTED_MODULES = [
+    "apps/web",
+    "apps/worker",
     "content/tyt-matematik",
     "packages/contracts",
+    "packages/design-system",
+    "packages/llm",
     "packages/mastery-math",
     "packages/pii",
     "pipelines/common",
@@ -143,7 +148,8 @@ def test_real_check_sh_follows_contract(module):
     assert "set -euo pipefail" in text
     assert "scripts/lib.sh" in text
     # `! komut` set -e altında çıkışı tetiklemez; olumsuz denetim ogr_absent / ogr_no_file ile yazılmalı.
-    bare_negations = [ln for ln in text.splitlines() if ln.startswith("! ")]
+    # Girintili (if/for/işlev içi) çıplak olumsuzlama da aynı şekilde etkisizdir; `if ! ...` / `while ! ...` serbesttir.
+    bare_negations = [ln for ln in text.splitlines() if re.match(r"^\s*!\s", ln)]
     assert not bare_negations, f"{module}/check.sh: çıplak '! komut' (set -e altında etkisiz): {bare_negations}"
 
 

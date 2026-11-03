@@ -4,28 +4,20 @@ from __future__ import annotations
 
 import base64
 import json
-from pathlib import Path
 
 import httpx
 import pytest
 
-from conftest import FIXTURES
-from ogrenmen_common.adapters.anthropic import AnthropicLLM
-from ogrenmen_common.adapters.arxiv import ArxivScholar, parse_atom
 from ogrenmen_common.adapters.base import LLMRequest, Media, gte, in_, is_null, not_null
 from ogrenmen_common.adapters.cfai import CloudflareAILLM
-from ogrenmen_common.adapters.crossref import CrossrefResolver
 from ogrenmen_common.adapters.gemini import GeminiEmbedding, GeminiLLM
 from ogrenmen_common.adapters.groq import GroqLLM, seconds_to_ts
 from ogrenmen_common.adapters.notify import LogNotifier, format_notice
-from ogrenmen_common.adapters.openalex import OpenAlexScholar, abstract_from_index, strip_doi
 from ogrenmen_common.adapters.openrouter import OpenRouterLLM
-from ogrenmen_common.adapters.postgrest import MESSAGES_COLUMNS, PostgrestDb, filter_params, order_param
+from ogrenmen_common.adapters.postgrest import PostgrestDb, filter_params, order_param
 from ogrenmen_common.adapters.router import ProviderRouter
-from ogrenmen_common.adapters.semanticscholar import SemanticScholar
 from ogrenmen_common.adapters.storage import SupabaseStorage
 from ogrenmen_common.adapters.structured import api_model, parse_json_text
-from ogrenmen_common.adapters.unpaywall import UnpaywallResolver
 from ogrenmen_common.errors import AdapterError, DbError, DbPermissionError, RpcError, StorageError
 from ogrenmen_common.fakes import FakeLLM
 
@@ -154,16 +146,6 @@ def test_cloudflare_ai_object_response():
     assert llm.complete(_req(media=(Media(b"x", "image/png"),))).error == "config"
 
 
-def test_anthropic_embeds_schema():
-    rec = Recorder(httpx.Response(200, json={"content": [{"type": "text", "text": json.dumps(QUERY)}],
-                                             "usage": {"input_tokens": 50, "output_tokens": 20}}))
-    res = AnthropicLLM("ak", transport=rec.transport()).complete(_req(model="claude-sonnet-4-5"))
-    body = json.loads(rec.requests[0].content)
-    assert rec.requests[0].headers["anthropic-version"] == "2023-06-01" and body["system"] == "Sorguları genişlet."
-    assert "JSON şemasına uygun" in body["messages"][0]["content"][0]["text"]
-    assert res.json == QUERY and (res.tokens_in, res.tokens_out) == (50, 20)
-
-
 def test_router_dispatch_and_availability():
     import ogrenmen_contracts as contracts
 
@@ -178,102 +160,20 @@ def test_router_dispatch_and_availability():
     assert parse_json_text("değil json") is None
 
 
-def test_openalex_s2_arxiv_normalization_over_transport():
-    oa_fix = json.loads((FIXTURES / "kitap" / "openalex-search.json").read_text(encoding="utf-8"))
-    rec = Recorder(httpx.Response(200, json=oa_fix))
-    recs = OpenAlexScholar(mailto="ops@example.org", transport=rec.transport()).search("aralıklı", limit=2)
-    assert rec.requests[0].url.params["mailto"] == "ops@example.org" and len(recs) == 2
-    assert recs[0].doi == "10.1037/0033-2909.132.3.354" and recs[0].venue == "Psychological Bulletin"
-    assert strip_doi("https://doi.org/10.1/x") == "10.1/x" and abstract_from_index({"b": [1], "a": [0]}) == "a b"
-    s2_fix = json.loads((FIXTURES / "kitap" / "s2-search.json").read_text(encoding="utf-8"))
-    rec2 = Recorder(httpx.Response(200, json=s2_fix))
-    s2 = SemanticScholar(api_key="s2", transport=rec2.transport()).search("q")
-    assert rec2.requests[0].headers["x-api-key"] == "s2" and s2[0].tldr.startswith("Aralıklı")
-    atom = """<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
-      <entry><id>http://arxiv.org/abs/2401.00001v1</id><published>2024-01-02T00:00:00Z</published>
-      <title> Spaced  practice
-      in algebra </title><summary>Özet.</summary><author><name>A. Yazar</name></author>
-      <link title="pdf" href="https://arxiv.org/pdf/2401.00001v1" type="application/pdf"/>
-      <arxiv:primary_category term="math.HO"/></entry></feed>"""
-    parsed = parse_atom(atom)
-    assert parsed == [{"arxiv_id": "2401.00001v1", "doi": None, "title": "Spaced practice in algebra",
-                       "authors": ["A. Yazar"], "published": "2024-01-02",
-                       "pdf_url": "https://arxiv.org/pdf/2401.00001v1", "summary": "Özet.",
-                       "primary_category": "math.HO"}]
-    ax = ArxivScholar(transport=Recorder(httpx.Response(200, text=atom)).transport()).search("q")
-    assert ax[0].year == 2024 and ax[0].oa_pdf_url.endswith("2401.00001v1") and ax[0].source == "arxiv"
-    with pytest.raises(AdapterError):
-        parse_atom("<bozuk")
-    assert ArxivScholar().base.startswith("https://export.arxiv.org/")
-
-
-@pytest.mark.parametrize("hostile", [
-    # billion laughs (iç varlık genişlemesi)
-    '<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;">]>'
-    '<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>&lol2;</title></entry></feed>',
-    # XXE (dış varlık)
-    '<?xml version="1.0"?><!DOCTYPE feed [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
-    '<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>&xxe;</title></entry></feed>',
-    # yalnız DTD
-    '<?xml version="1.0"?><!DOCTYPE feed><feed xmlns="http://www.w3.org/2005/Atom"></feed>',
-])
-def test_arxiv_rejects_dtd_and_entities(hostile):
-    with pytest.raises(AdapterError, match="DTD"):
-        parse_atom(hostile)
-
-
-def test_crossref_and_unpaywall():
-    ok = json.loads((FIXTURES / "kitap" / "crossref-ok.json").read_text(encoding="utf-8"))
-    doi = "10.1007/s11251-007-9015-8"
-    rec = Recorder(httpx.Response(200, json=ok[doi]))
-    assert CrossrefResolver(transport=rec.transport()).resolve(doi)["DOI"] == doi
-    assert rec.requests[0].url.path == f"/works/{doi}"
-    assert CrossrefResolver(transport=Recorder(httpx.Response(404)).transport()).resolve("10.9999/fake") is None
-    assert CrossrefResolver(transport=Recorder(httpx.ReadTimeout("t")).transport()).resolve("10.1/x") is None
-    with pytest.raises(AdapterError):
-        CrossrefResolver(transport=Recorder(httpx.Response(403)).transport()).resolve("10.1/x")
-    # Kesinti (5xx) "çözülemedi" değildir: yeniden denenir, düzelmezse hata — gerçek atıf düşürülmez.
-    outage = Recorder(httpx.Response(503), httpx.Response(502))
-    with pytest.raises(AdapterError, match="HTTP 502"):
-        CrossrefResolver(transport=outage.transport()).resolve(doi)
-    assert len(outage.requests) == 2
-    recovered = Recorder(httpx.Response(503), httpx.Response(200, json=ok[doi]))
-    assert CrossrefResolver(transport=recovered.transport()).resolve(doi)["DOI"] == doi
-    mixed = Recorder(httpx.ReadTimeout("t"), httpx.Response(500))
-    with pytest.raises(AdapterError):
-        CrossrefResolver(transport=mixed.transport()).resolve(doi)
-    up = json.loads((FIXTURES / "kitap" / "unpaywall.json").read_text(encoding="utf-8"))
-    rec2 = Recorder(httpx.Response(200, json=up[doi]))
-    got = UnpaywallResolver(email="ops@example.org", transport=rec2.transport()).lookup(doi)
-    assert got == {"doi": doi, "is_oa": True, "pdf_url": "https://example.org/oa/rohrer-2007.pdf"}
-    assert rec2.requests[0].url.params["email"] == "ops@example.org"
-    with pytest.raises(AdapterError):
-        UnpaywallResolver(email="")
-
-
-def test_postgrest_select_never_includes_text_raw():
-    assert "text_raw" not in MESSAGES_COLUMNS
-    source = (Path(__file__).parents[1] / "src" / "ogrenmen_common" / "adapters" / "postgrest.py").read_text(
-        encoding="utf-8")
-    block = source[source.index("MESSAGES_COLUMNS: tuple"):source.index('"""batch_worker')]
-    assert "text_raw" not in block  # statik test (§6 kural 5)
-    rec = Recorder(httpx.Response(200, json=[{"id": 1}]))
+def test_postgrest_select_defaults_to_star_and_blocks_private_schemas():
+    rec = Recorder(httpx.Response(200, json=[{"id": 1}]), httpx.Response(200, json=[{"id": 1}]))
     db = PostgrestDb("https://proj.example.org", "jwt-x", anon_key="anon", transport=rec.transport())
-    db.select("messages", where={"chat_id": 5, "answered_at": is_null()}, order="-sent_at", limit=10)
+    db.select("llm_calls", where={"student_ref": "s_x", "error_code": is_null()}, order="-created_at", limit=10)
+    db.select("llm_calls", columns=["id", "purpose"])
     params = dict(rec.requests[0].url.params.multi_items())
-    assert params["select"] == ",".join(MESSAGES_COLUMNS) and "text_raw" not in str(rec.requests[0].url)
-    assert params["chat_id"] == "eq.5" and params["answered_at"] == "is.null" and params["order"] == "sent_at.desc"
+    assert params["select"] == "*" and params["student_ref"] == "eq.s_x" and params["error_code"] == "is.null"
+    assert params["order"] == "created_at.desc" and params["limit"] == "10"
+    assert dict(rec.requests[1].url.params.multi_items())["select"] == "id,purpose"
     assert rec.requests[0].headers["authorization"] == "Bearer jwt-x" and rec.requests[0].headers["apikey"] == "anon"
-    with pytest.raises(DbPermissionError):
-        db.select("messages", columns=["id", "text_raw"])
-    with pytest.raises(DbPermissionError):
-        db.select("messages", columns=["*"])
-    for sneaky in ("raw:text_raw", "text_raw::text", "raw:text_raw::varchar", " text_raw ", '"text_raw"'):
-        with pytest.raises(DbPermissionError, match="text_raw"):
-            db.select("messages", columns=["id", sneaky])
-    with pytest.raises(DbPermissionError):
-        db.select("secure.answer_keys")
-    assert len(rec.requests) == 1  # reddedilenler ağa hiç gitmedi
+    for schema_table in ("secure.answer_keys", "audit.events"):
+        with pytest.raises(DbPermissionError):
+            db.select(schema_table)
+    assert len(rec.requests) == 2  # reddedilenler ağa hiç gitmedi
 
 
 def test_postgrest_filters_writes_and_rpc_errors():
@@ -330,8 +230,3 @@ def test_format_notice_rules():
         format_notice("x", level="kritik")
     with pytest.raises(ValueError):
         format_notice("   ")
-
-
-@pytest.mark.live
-def test_live_openalex_smoke():
-    assert OpenAlexScholar().search("spaced repetition", limit=1)

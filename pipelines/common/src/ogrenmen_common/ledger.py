@@ -14,7 +14,7 @@
 4. Şema (``request.schema_id`` ya da ``validator``) geçmezse aynı modelde **bir** onarım, sonra sıradaki.
 5. Her deneme bir ``llm_calls`` satırıdır (``purpose, provider, model, tokens, status, cost_usd,
    ref_table, ref_id, student_ref``); ``student_ref`` yalnız ``s_…`` olabilir (uuid/ad asla). Gövde yalnız
-   ``batch_worker``'ın INSERT yetkisindeki sütunları taşır (``LLM_CALLS_INSERT_COLUMNS``; ``id``/``created_at``
+   v2 ``llm_calls`` sütunlarını taşır (``LLM_CALLS_INSERT_COLUMNS``; ``id``/``created_at``
    DB varsayılanı) ve ``return=minimal`` ile gönderilir (``RETURNING`` yok).
 
 ``LedgeredEmbedding`` embedding çağrılarını da aynı kapıdan geçirir (``purpose='embedding'``, ``embedding``
@@ -63,13 +63,22 @@ LLM_CALLS_INSERT_COLUMNS: tuple[str, ...] = (
     "audio_sec", "batch", "cost_usd", "error_code", "images", "latency_ms", "model", "provider", "purpose", "ref_id",
     "ref_table", "status", "student_ref", "tokens_in", "tokens_out",
 )
-"""``batch_worker``'ın ``llm_calls`` INSERT sütun yetkisi (0014_rls.sql; ``supabase/tests/grants_matrix.json``).
-``id`` ve ``created_at`` gönderilmez — DB varsayılanları (identity, ``now()``) doldurur; test matrisle eşler."""
+"""``CostLedger``'ın ``llm_calls``'a yazdığı sütunlar (hepsi v2 ``0014_llm_ledger.sql``'de vardır; test
+``fakes/grants-v2.json`` ile karşılaştırır). ``id`` ve ``created_at`` gönderilmez — DB varsayılanları (identity,
+``now()``) doldurur. v2'nin ``route``, ``effort``, ``prompt_version`` ve önbellek sütunlarını Anthropic geçidi
+(``packages/llm``) yazar; bu defter yalnız Gemini/Groq zincirinindir."""
+
+DB_STATUS_FALLBACK = {"cooldown_skip": ("rate_limited", "cooldown_skip")}
+"""Oturum özetindeki durum → ``llm_calls.status`` check kısıtındaki karşılığı (+ ``error_code``)."""
 
 
 def llm_calls_payload(row: Mapping[str, Any]) -> dict:
-    """``CostLedger.record``'un ``llm_calls``'a gönderdiği gövde: yalnız yetkili sütunlar (sabit sıra)."""
-    return {c: row.get(c) for c in LLM_CALLS_INSERT_COLUMNS}
+    """``CostLedger.record``'un ``llm_calls``'a gönderdiği gövde: yalnız bilinen sütunlar (sabit sıra); ``status``
+    v2 check kısıtındaki değerlere eşlenir (``cooldown_skip`` → ``rate_limited`` + ``error_code='cooldown_skip'``)."""
+    body = {c: row.get(c) for c in LLM_CALLS_INSERT_COLUMNS}
+    if body["status"] in DB_STATUS_FALLBACK:
+        body["status"], body["error_code"] = DB_STATUS_FALLBACK[body["status"]]
+    return body
 
 
 @dataclass
@@ -166,6 +175,9 @@ class CostLedger:
             if not isinstance(result, Mapping) or "paid_allowed" not in result:
                 raise LedgerError(f"OGR-LLM-002 check_spend yanıtı beklenmedik: {raw!r}")
             result = dict(result)
+            if result.get("downgrade"):
+                # v2 yumuşak tavan engellemez, "downgrade" der; Gemini zinciri aşımda ücretsiz modellere düşer.
+                result["paid_allowed"] = False
         self._gate_cache[purpose] = (now, result)
         return result
 
@@ -210,7 +222,7 @@ class CostLedger:
         if info.get("neurons_per_1k_tokens") and status in ("ok", "bad_output"):
             self.neurons += (tokens_in + tokens_out) / 1000 * float(info["neurons_per_1k_tokens"])
         if self.db is not None:
-            # Yalnız batch_worker'ın INSERT yetkisindeki sütunlar (id ve created_at DB varsayılanı); return=minimal:
+            # Yalnız bilinen v2 sütunları (id ve created_at DB varsayılanı); return=minimal:
             # RETURNING yok, PostgREST'in dönen sütunlarda SELECT'e ihtiyacı olmaz.
             insert_minimal(self.db, "llm_calls", llm_calls_payload(row))
         entry = {**row, "created_at": iso(self.clock())}  # oturum özeti (yerel saat); created_at DB'ye gitmez

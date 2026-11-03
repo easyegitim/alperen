@@ -1,9 +1,6 @@
-"""Gemini ``responseSchema`` düzleştirmesi — ``src/gemini-schema.ts`` (toGeminiSchema) eşleniği.
+"""Gemini ``responseSchema`` düzleştirmesi — yalnız ``pipelines/common`` Gemini bağdaştırıcıları için anında yapılır.
 
-Bu modül bağımlılıksızdır: ``scripts/flatten.py`` paketi kurmadan dosya yolundan yükler
-(``bun run gen`` taze bir klonda ``pip install`` öncesi çalışır). Kurallar TS ile aynı
-sırayla uygulanır; ``test/gemini-parity.test.ts`` ve ``tests/test_gemini.py`` iki çıktının
-ve commit edilen ``schemas/gemini/*.json`` dosyalarının birebir aynı olduğunu denetler.
+TS karşılığı ve commit edilen ``schemas/gemini/*.json`` kopyaları yoktur; ``tests/test_gemini.py`` kuralları sınar.
 """
 
 from __future__ import annotations

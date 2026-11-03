@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createRef, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -7,6 +9,7 @@ import {
   AnswerGrid,
   AppShell,
   Avatar,
+  BigStart,
   Badge,
   BrandLockup,
   Button,
@@ -23,22 +26,33 @@ import {
   MisconceptionItem,
   ModeToggle,
   Notice,
+  OneLineResult,
   OutcomeHeatmap,
   ProgressBar,
+  ProgressStrip,
   QuizOption,
   ReportChart,
   StatTile,
   StepLadder,
+  SUGGESTION_KIND_LABELS,
+  SuggestionCard,
   TextField,
   Timer,
   Tree,
   TreeNode,
   TutorMessage,
+  UploadSheet,
+  buttonClasses,
+  cn,
   heatStep,
   initialsOf,
+  MASTERY_BAND_THRESHOLDS,
+  masteryBand,
   masteryDisplay,
   useCountdown,
+  type SuggestionKind,
   type TutorMode,
+  type UploadSheetResult,
 } from '../src';
 
 describe('Button', () => {
@@ -120,12 +134,15 @@ describe('Badge, ProgressBar, StatTile, Avatar, BrandLockup', () => {
 });
 
 describe('Notice', () => {
-  it('uyarı role=alert; handoff varsayılan başlık; info kapatılabilir', async () => {
+  it('uyarı varsayılan role=note, live ile alert; handoff varsayılan başlık; info kapatılabilir', async () => {
     const onDismiss = vi.fn();
     render(
       <>
-        <Notice tone="warning" title="Onay bekliyor">
+        <Notice tone="warning" live title="Onay bekliyor">
           Rapor onay sonrası işlenir.
+        </Notice>
+        <Notice tone="warning" title="Statik uyarı">
+          Sayfa açılırken vardı.
         </Notice>
         <Notice tone="handoff">Hocana ilettim.</Notice>
         <Notice tone="info" onDismiss={onDismiss}>
@@ -137,6 +154,8 @@ describe('Notice', () => {
       </>,
     );
     expect(screen.getByRole('alert')).toHaveTextContent('Onay bekliyor');
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.getAllByRole('note').some((n) => n.textContent?.includes('Statik uyarı'))).toBe(true);
     expect(screen.getByText('Hocana yönlendirildi')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Kapat' }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
@@ -151,7 +170,8 @@ describe('MasteryMeter kanıt eşiği', () => {
     expect(masteryDisplay({ evidence: 20 }).enough).toBe(false);
   });
   it('eşik dahil: 5 gözlemde yüzde yazılır; özel eşik', () => {
-    expect(masteryDisplay({ p: 0.724, evidence: 5 })).toEqual({ enough: true, percent: 72, text: '%72' });
+    expect(masteryDisplay({ p: 0.724, evidence: 5, format: 'percent' })).toEqual({ enough: true, percent: 72, band: 'Orta', text: '%72' });
+    expect(masteryDisplay({ p: 0.724, evidence: 5 })).toEqual({ enough: true, percent: 72, band: 'Orta', text: 'Orta' });
     expect(masteryDisplay({ p: 0.5, evidence: 5, minEvidence: 8 }).enough).toBe(false);
     expect(masteryDisplay({ p: 0.5, evidence: 8, minEvidence: 8 }).enough).toBe(true);
   });
@@ -162,8 +182,28 @@ describe('MasteryMeter kanıt eşiği', () => {
     expect(screen.queryByRole('meter')).toBeNull();
     expect(screen.getByText('2 gözlem')).toBeInTheDocument();
   });
-  it('yeterli kanıtta yüzde, meter rolü ve işaretli değişim', () => {
-    render(<MasteryMeter skill="Kesirler" p={0.72} evidence={8} delta={-0.03} deltaLabel="bu hafta" period="LGS 2026" />);
+  it('masteryBand eşikleri: <0,5 Zayıf, <0,8 Orta, >=0,8 İyi', () => {
+    expect(MASTERY_BAND_THRESHOLDS).toEqual({ weak: 0.5, good: 0.8 });
+    expect([0, 0.49, 0.5, 0.79, 0.8, 1].map(masteryBand)).toEqual(['Zayıf', 'Zayıf', 'Orta', 'Orta', 'İyi', 'İyi']);
+  });
+  it('bant kipinde (varsayılan) hiçbir yerde % karakteri geçmez; kanıt eşiği aynı kalır', () => {
+    const { container } = render(
+      <>
+        <MasteryMeter skill="Kesirler" p={0.72} evidence={8} delta={-0.03} deltaLabel="bu hafta" />
+        <MasteryMeter skill="Oran" p={0.9} evidence={2} />
+        <Tree>
+          <TreeNode label="Geometri" p={0.3} evidence={9} />
+        </Tree>
+      </>,
+    );
+    expect(container.textContent).not.toMatch(/%/);
+    expect(screen.getByText('Orta')).toBeInTheDocument();
+    expect(screen.getByText('Zayıf')).toBeInTheDocument();
+    expect(screen.getByText('↓ Düşüyor')).toBeInTheDocument();
+    expect(screen.getByText('Henüz yeterli kanıt yok')).toBeInTheDocument();
+  });
+  it('yeterli kanıtta yüzde kipi, meter rolü ve işaretli değişim', () => {
+    render(<MasteryMeter skill="Kesirler" p={0.72} evidence={8} delta={-0.03} deltaLabel="bu hafta" period="LGS 2026" display="percent" />);
     const meter = screen.getByRole('meter', { name: 'Kesirler ustalığı' });
     expect(meter).toHaveAttribute('aria-valuenow', '72');
     expect(screen.getByText('%72')).toBeInTheDocument();
@@ -230,7 +270,7 @@ describe('StepLadder vurgusu', () => {
     { no: 3, text: 'Sonuç' },
   ];
   it('bozulan adım vurgulanır; önceki doğru, sonrakiler soluk; ✕ ve kelime var', () => {
-    render(<StepLadder studentSteps={student} expectedSteps={expected} failingStepNo={2} cause="procedure" />);
+    render(<StepLadder studentSteps={student} expectedSteps={expected} failingStepNo={2} cause="procedure" collapsible={false} />);
     const items = screen.getAllByRole('listitem');
     const states = items.map((li) => li.getAttribute('data-state'));
     expect(states).toEqual(['ok', 'failing', 'after', 'expected', 'expected-here', 'expected']);
@@ -244,14 +284,54 @@ describe('StepLadder vurgusu', () => {
     expect(items[4]).toHaveTextContent('Beklenen');
   });
   it('failingStepNo yoksa vurgu yok, hepsi doğru', () => {
-    render(<StepLadder studentSteps={student} expectedSteps={expected} />);
+    render(<StepLadder studentSteps={student} expectedSteps={expected} collapsible={false} />);
     const states = screen.getAllByRole('listitem').slice(0, 3).map((li) => li.getAttribute('data-state'));
     expect(states).toEqual(['ok', 'ok', 'ok']);
     expect(document.querySelector('[aria-current="step"]')).toBeNull();
   });
   it('adım metnindeki formül KaTeX ile çizilir', () => {
-    const { container } = render(<StepLadder studentSteps={[{ no: 1, text: '$\\frac{3}{4}$' }]} expectedSteps={[]} />);
+    const { container } = render(<StepLadder studentSteps={[{ no: 1, text: '$\\frac{3}{4}$' }]} expectedSteps={[]} collapsible={false} />);
     expect(container.querySelector('.katex')).not.toBeNull();
+  });
+});
+
+describe('StepLadder katlanır', () => {
+  const student = [
+    { no: 1, text: 'Önce yazdım' },
+    { no: 2, text: 'Paylar toplandı' },
+  ];
+  const expected = [
+    { no: 1, text: 'Önce yaz' },
+    { no: 2, text: 'Paydaları eşitle' },
+  ];
+  it('varsayılan kapalı: yalnız özet cümlesi ve bozulan adım; kazanımlar ve merdiven gizli', async () => {
+    render(
+      <StepLadder
+        summary="Paydaları eşitlemeden payları topladın."
+        studentSteps={student}
+        expectedSteps={expected}
+        failingStepNo={2}
+        cause="procedure"
+        skills={['Kesirler']}
+      />,
+    );
+    expect(screen.getByText('Paydaları eşitlemeden payları topladın.')).toBeInTheDocument();
+    expect(screen.getByTestId('failing-step')).toHaveTextContent('✕ 2. adımda bozuldu');
+    expect(screen.queryByRole('list', { name: 'Kazanımlar' })).toBeNull();
+    expect(screen.queryByText('İşlem hatası')).not.toBeVisible();
+    const btn = screen.getByRole('button', { name: 'Detay' });
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
+    expect(btn.getAttribute('aria-controls')).toBeTruthy();
+    await userEvent.click(btn);
+    expect(btn).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('list', { name: 'Kazanımlar' })).toBeVisible();
+    expect(screen.getByText('İşlem hatası')).toBeVisible();
+    expect(screen.getAllByRole('listitem').some((li) => li.getAttribute('data-state') === 'failing')).toBe(true);
+  });
+  it('collapsible=false ise Detay düğmesi yok, her şey açık', () => {
+    render(<StepLadder studentSteps={student} expectedSteps={expected} collapsible={false} skills={['Kesirler']} />);
+    expect(screen.queryByRole('button', { name: 'Detay' })).toBeNull();
+    expect(screen.getByRole('list', { name: 'Kazanımlar' })).toBeVisible();
   });
 });
 
@@ -270,7 +350,7 @@ describe('QuizOption, FigureFrame, CitationCard, MisconceptionItem', () => {
         </QuizOption>
       </>,
     );
-    expect(screen.getByRole('button', { name: /7\/8/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /7\/8/ })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByText('✓ Doğru')).toBeInTheDocument();
     expect(screen.getByText('✕ Tekrar dene')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^C\s*1/ })).toHaveAttribute('aria-pressed', 'true');
@@ -317,7 +397,10 @@ describe('TutorMessage, LessonCard, ExamPriorityRow, AlertRow', () => {
       </>,
     );
     expect(screen.getAllByText('AI öğretmen')).toHaveLength(2);
-    expect(screen.getByRole('status')).toHaveTextContent('Öğretmen yazıyor');
+    const live = screen.getAllByRole('status');
+    expect(live).toHaveLength(2);
+    expect(live[0]).toBeEmptyDOMElement();
+    expect(live[1]).toHaveTextContent('Öğretmen yazıyor');
   });
   it('öğrenci balonu AI etiketi taşımaz; review satırı ve işaretle', async () => {
     const onFlag = vi.fn();
@@ -428,20 +511,21 @@ describe('Tree / TreeNode', () => {
   it('alt düğümler açılıp kapanır; kanıt eşiği altında yüzde yok', async () => {
     render(
       <Tree aria-label="Konu haritası">
-        <TreeNode label="Matematik" p={0.6} evidence={30}>
+        <TreeNode label="Matematik" p={0.6} evidence={30} display="percent">
           <TreeNode label="Kesirler" level={2} p={0.9} evidence={2} />
         </TreeNode>
       </Tree>,
     );
-    expect(screen.queryByText('Kesirler')).toBeNull();
-    const top = screen.getByRole('treeitem', { name: /Matematik/ });
-    expect(top).toHaveAttribute('aria-expanded', 'false');
-    await userEvent.click(screen.getByRole('button', { name: 'Matematik genişlet' }));
+    expect(screen.queryByText('Kesirler')).not.toBeVisible();
+    const toggle = screen.getByRole('button', { name: 'Matematik alt konuları' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('Kesirler')).toBeInTheDocument();
     expect(screen.getByText('Henüz yeterli kanıt yok')).toBeInTheDocument();
     expect(screen.getByText('%60')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Matematik daralt' }));
-    expect(screen.queryByText('Kesirler')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Matematik alt konuları' }));
+    expect(screen.getByText('Kesirler')).not.toBeVisible();
   });
 });
 
@@ -500,6 +584,7 @@ describe('Timer, AnswerGrid, ExamPlayer', () => {
     const onFinish = vi.fn();
     render(
       <ExamPlayer
+        mode="exam"
         title="Deneme 3"
         remainingSec={600}
         current={2}
@@ -527,7 +612,7 @@ describe('Timer, AnswerGrid, ExamPlayer', () => {
     expect(onFinish).toHaveBeenCalled();
   });
   it('ExamPlayer ilk soruda Önceki, sonda Sonraki kapalı', () => {
-    render(<ExamPlayer title="D" current={1} onNavigate={() => undefined} questions={[{ no: 1, status: 'blank' }]} />);
+    render(<ExamPlayer mode="exam" title="D" current={1} onNavigate={() => undefined} questions={[{ no: 1, status: 'blank' }]} />);
     expect(screen.getByRole('button', { name: 'Önceki' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Sonraki' })).toBeDisabled();
   });
@@ -551,7 +636,7 @@ describe('ReportChart', () => {
       />,
     );
     const toggle = screen.getByRole('button', { name: 'Tablo görünümü' });
-    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(toggle).not.toHaveAttribute('aria-pressed');
     const legend = screen.getByRole('list', { name: 'Seriler' });
     expect(within(legend).getByText('Net')).toBeInTheDocument();
     expect(within(legend).getByText('Hedef')).toBeInTheDocument();
@@ -560,7 +645,7 @@ describe('ReportChart', () => {
     expect(table.parentElement).toHaveClass('sr-only');
     await userEvent.click(toggle);
     expect(table.parentElement).not.toHaveClass('sr-only');
-    expect(screen.getByRole('button', { name: 'Grafik görünümü' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Grafik görünümü' })).not.toHaveAttribute('aria-pressed');
   });
   it('tek seride lejant yok ve 8 seriyi aşan yok sayılır', () => {
     const many = Array.from({ length: 10 }, (_, i) => ({ key: `s${i}`, name: `Seri ${i}` }));
@@ -581,7 +666,7 @@ describe('AppShell', () => {
   it('iki gezinme düzeni, etkin sayfa aria-current, FAB ve içerik', async () => {
     const onFab = vi.fn();
     render(
-      <AppShell items={items} fab={{ label: 'Sor', onClick: onFab }}>
+      <AppShell items={items} fab={{ label: 'Yükle', onClick: onFab }}>
         <p>İçerik</p>
       </AppShell>,
     );
@@ -590,7 +675,7 @@ describe('AppShell', () => {
     expect(current).toHaveLength(2);
     for (const a of current) expect(a).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('main')).toHaveTextContent('İçerik');
-    const fabs = screen.getAllByRole('button', { name: 'Sor', hidden: true });
+    const fabs = screen.getAllByRole('button', { name: 'Yükle', hidden: true });
     await userEvent.click(fabs[0]!);
     expect(onFab).toHaveBeenCalled();
   });
@@ -675,5 +760,245 @@ describe('metin kuralları ve erişilebilirlik', () => {
     b.focus();
     expect(b).toHaveFocus();
     expect(b.className).toContain('focus-visible:shadow-focus-ring');
+  });
+});
+
+describe('Denetim turu 1', () => {
+  it('EvidenceQuote kaynaksızsa çizilmez; MisconceptionItem kaynaksız kanıtı saymaz', () => {
+    const { container } = render(<EvidenceQuote>alıntı</EvidenceQuote>);
+    expect(container).toBeEmptyDOMElement();
+    const r = render(<MisconceptionItem text="Payları toplar" evidence={[{ quote: 'a' }]} />);
+    expect(r.container).toBeEmptyDOMElement();
+  });
+
+  it('QuizOption idle aria-pressed=false; kilitli şık aria-disabled ve tıklanmaz', async () => {
+    const onClick = vi.fn();
+    render(
+      <>
+        <QuizOption letter="A">bir</QuizOption>
+        <QuizOption letter="B" state="correct" onClick={onClick} feedback="Doğru çünkü">
+          iki
+        </QuizOption>
+      </>,
+    );
+    expect(screen.getByRole('button', { name: /^A/ })).toHaveAttribute('aria-pressed', 'false');
+    const locked = screen.getByRole('button', { name: /^B/ });
+    expect(locked).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(locked);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('ExamPlayer içinde main landmark yok; başlık düzeyi ayarlanır', () => {
+    render(<ExamPlayer title="Deneme" questions={[{ no: 1, status: 'blank' }]} current={1} onNavigate={() => {}} />);
+    expect(screen.queryByRole('main')).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Deneme' })).toBeInTheDocument();
+  });
+
+  it('AppShell: içeriğe geç bağlantısı ve FAB renderLink kullanır', () => {
+    const rl = vi.fn(({ children, ...p }: { children?: React.ReactNode; href: string }) => (
+      <a data-rl="1" {...p}>
+        {children}
+      </a>
+    ));
+    render(
+      <AppShell items={[{ id: 'a', label: 'Koç', href: '/koc' }]} fab={{ label: 'Yükle', href: '/sor' }} renderLink={rl}>
+        x
+      </AppShell>,
+    );
+    expect(screen.getByRole('link', { name: 'İçeriğe geç' })).toHaveAttribute('href', '#icerik');
+    expect(rl.mock.calls.some(([p]) => p.href === '/sor')).toBe(true);
+  });
+
+  it('StepLadder kazanım çiplerini ve eylemleri çizer', () => {
+    render(
+      <StepLadder studentSteps={[{ no: 1, text: 'a' }]} expectedSteps={[{ no: 1, text: 'a' }]} skills={['Kesirler']} collapsible={false} actions={<button>Benzer soru</button>} />,
+    );
+    expect(screen.getByText('Kesirler')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Benzer soru' })).toBeInTheDocument();
+  });
+
+  it('hook ya da olay işleyicisi kullanan bileşen dosyaları use client ile başlar', () => {
+    const dir = join(__dirname, '../src/components');
+    for (const f of readdirSync(dir).filter((n) => n.endsWith('.tsx'))) {
+      const src = readFileSync(join(dir, f), 'utf8');
+      if (/\buse(State|Effect|Ref|Id|Memo|Callback|Reducer)\(|from 'recharts'/.test(src)) {
+        expect(src.startsWith("'use client';"), f).toBe(true);
+      }
+    }
+  });
+});
+
+describe('Plan §13 bileşenleri', () => {
+  it('SuggestionCard her tür için etiket ve eylem taşır; onStart ve href', async () => {
+    const onStart = vi.fn();
+    const kinds = Object.keys(SUGGESTION_KIND_LABELS) as SuggestionKind[];
+    expect(kinds).toEqual(['practice', 'weekly_homework', 'lesson_review', 'gap_analysis', 'mini_exam', 'document_ready', 'upload_result']);
+    const { rerender } = render(<SuggestionCard kind="weekly_homework" title="Hocanın ödevi hazır" subtitle="Rasyonel sayılar" durationText="12 dk" onStart={onStart} />);
+    expect(screen.getByText('Haftalık ödev')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Hocanın ödevi hazır' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Başla: Hocanın ödevi hazır' }));
+    expect(onStart).toHaveBeenCalledTimes(1);
+    rerender(<SuggestionCard kind="document_ready" title="Rasyonel sayılar notun hazır" href="/belge/1" />);
+    const link = screen.getByRole('link', { name: 'Aç: Rasyonel sayılar notun hazır' });
+    expect(link).toHaveAttribute('href', '/belge/1');
+    expect(link).toHaveClass('bg-surface-raised', 'hover:bg-primary-soft');
+  });
+  it('BigStart tek birincil Başla düğmesi taşır', async () => {
+    const onStart = vi.fn();
+    render(<BigStart title="Rasyonel sayılar" meta="8 soru · 12 dk" onStart={onStart} />);
+    expect(screen.getByText('Bugün sana önerim')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Rasyonel sayılar' })).toBeInTheDocument();
+    const b = screen.getByRole('button', { name: 'Başla' });
+    expect(b).toHaveClass('bg-primary');
+    await userEvent.click(b);
+    expect(onStart).toHaveBeenCalled();
+  });
+  it('OneLineResult: önce tek cümle; Detay çağrılır ya da içeriği açar', async () => {
+    const onDetail = vi.fn();
+    const { rerender } = render(<OneLineResult sentence="8 soruda 6 doğru." learned="Eksi dağıtırken işaret değişir." onDetail={onDetail} />);
+    expect(screen.getByText('8 soruda 6 doğru.')).toBeInTheDocument();
+    expect(screen.getByText(/Eksi dağıtırken/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Detay' }));
+    expect(onDetail).toHaveBeenCalled();
+    rerender(
+      <OneLineResult sentence="8 soruda 6 doğru.">
+        <p>Merdiven</p>
+      </OneLineResult>,
+    );
+    expect(screen.getByText('Merdiven')).not.toBeVisible();
+    const btn = screen.getByRole('button', { name: 'Detay' });
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(btn);
+    expect(screen.getByText('Merdiven')).toBeVisible();
+    rerender(<OneLineResult sentence="Bitti." />);
+    expect(screen.queryByRole('button', { name: 'Detay' })).toBeNull();
+  });
+  it('ProgressStrip noktalar gizli, sayılar kelimeyle', () => {
+    const { container } = render(<ProgressStrip total={4} current={2} statuses={['answered', 'todo', 'flagged', 'todo']} />);
+    expect(screen.getByText('Soru 2 / 4 · 1 soru cevaplandı')).toBeInTheDocument();
+    const dots = container.querySelectorAll('[data-status]');
+    expect(Array.from(dots).map((d) => d.getAttribute('data-status'))).toEqual(['answered', 'current', 'flagged', 'todo']);
+    expect(dots[0]?.parentElement).toHaveAttribute('aria-hidden', 'true');
+  });
+  it('ExamPlayer sade akışta yalnız soru, noktalar ve Sonraki; deneme kipinde ızgara, Önceki, Bayrakla, Timer', async () => {
+    const onNavigate = vi.fn();
+    const qs = [
+      { no: 1, status: 'answered' as const },
+      { no: 2, status: 'blank' as const },
+    ];
+    const { rerender } = render(
+      <ExamPlayer title="Alıştırma" remainingSec={600} current={1} onNavigate={onNavigate} onToggleFlag={() => undefined} questions={qs}>
+        <p>Gövde</p>
+      </ExamPlayer>,
+    );
+    expect(screen.getByText('Soru 1 / 2 · 1 soru cevaplandı')).toBeInTheDocument();
+    expect(screen.queryByRole('timer')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Önceki' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Bayrakla' })).toBeNull();
+    expect(screen.queryByRole('complementary', { name: 'Sorular' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Sonraki' }));
+    expect(onNavigate).toHaveBeenCalledWith(2);
+    const onFinish = vi.fn();
+    rerender(
+      <ExamPlayer title="Alıştırma" current={2} onNavigate={onNavigate} onFinish={onFinish} questions={qs}>
+        <p>Gövde</p>
+      </ExamPlayer>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Bitir' }));
+    expect(onFinish).toHaveBeenCalled();
+    rerender(
+      <ExamPlayer mode="exam" title="Deneme" remainingSec={90} current={1} onNavigate={onNavigate} onToggleFlag={() => undefined} questions={qs} />,
+    );
+    expect(screen.getByRole('timer')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bayrakla' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Sorular' })).toBeInTheDocument();
+  });
+  it('UploadSheet iki seçenek sunar; seçmeden CameraSheet gövdesi yok; Gönder kind ile döner', async () => {
+    const onSubmit = vi.fn();
+    render(<UploadSheet onSubmit={onSubmit} />);
+    expect(screen.getAllByRole('radio').map((r) => (r as HTMLInputElement).value)).toEqual(['own_work', 'school_exam']);
+    expect(screen.queryByRole('button', { name: 'Gönder' })).toBeNull();
+    await userEvent.click(screen.getByRole('radio', { name: /Okul denemesi/ }));
+    expect(screen.queryByLabelText('Çözümüm de var')).toBeNull();
+    const send = screen.getByRole('button', { name: 'Gönder' });
+    expect(send).toBeDisabled();
+    const file = new File(['x'], 'sayfa.pdf', { type: 'application/pdf' });
+    await userEvent.upload(screen.getByLabelText('Dosya seçerek ekle'), file);
+    await userEvent.click(screen.getByRole('button', { name: 'Gönder' }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const arg = onSubmit.mock.calls[0]![0] as UploadSheetResult;
+    expect(arg.kind).toBe('school_exam');
+    expect(arg.items).toHaveLength(1);
+    expect(arg.items[0]!.file).toBe(file);
+  });
+  it('ModeToggle varsayılanı sade (alt satır yok, title ile açıklama); compact=false alt satırı açar', () => {
+    const { rerender } = render(<ModeToggle />);
+    const r = screen.getByRole('radio', { name: 'İpucu' });
+    expect(r).toHaveAttribute('title', 'Adım adım yönlendirir');
+    expect(screen.queryByText('Adım adım yönlendirir')).toBeNull();
+    rerender(<ModeToggle compact={false} />);
+    expect(screen.getByText('Adım adım yönlendirir')).toBeInTheDocument();
+  });
+  it('Button bağlantıya uygulanınca hover sınıfı :enabled ister etmez', () => {
+    render(
+      <a href="/x" className={buttonClasses({ variant: 'primary' })}>
+        Git
+      </a>,
+    );
+    const cls = screen.getByRole('link', { name: 'Git' }).className;
+    expect(cls).toContain('hover:bg-primary-strong');
+    expect(cls).not.toContain('enabled:hover');
+  });
+  it('cn çakışan Tailwind sınıflarında çağıranı kazandırır; özel sınıf grupları karışmaz', () => {
+    expect(cn('max-w-70', 'max-w-none')).toBe('max-w-none');
+    expect(cn('max-w-160', 'max-w-full')).toBe('max-w-full');
+    expect(cn('text-title-1 text-ink', 'text-primary')).toBe('text-title-1 text-primary');
+    expect(cn('text-title-1', 'text-small')).toBe('text-small');
+    expect(cn('shadow-ai', 'shadow-lg')).toBe('shadow-lg');
+    expect(cn('focus-visible:shadow-focus-ring', 'shadow-sm')).toBe('focus-visible:shadow-focus-ring shadow-sm');
+    expect(cn('a', false, null, undefined, 'b')).toBe('a b');
+  });
+  it('LessonCard çağıranın genişliği varsayılanı ezer', () => {
+    render(<LessonCard title="Ders" className="max-w-none" />);
+    expect(screen.getByText('Ders').closest('article, a, button')?.className).not.toMatch(/max-w-70/);
+  });
+});
+
+describe('PdfViewer', () => {
+  const fakePage = {
+    getViewport: ({ scale }: { scale: number }) => ({ width: 600 * scale, height: 800 * scale }),
+    render: () => ({ promise: Promise.resolve() }),
+  };
+  it('pdf.js ile sayfa sayfa tuval çizer; tek İndir / Paylaş bağlantısı', async () => {
+    vi.resetModules();
+    vi.doMock('pdfjs-dist', () => ({
+      GlobalWorkerOptions: {},
+      getDocument: () => ({ promise: Promise.resolve({ numPages: 3, getPage: async () => fakePage, destroy: () => undefined }) }),
+    }));
+    const { PdfViewer: Viewer } = await import('../src/components/PdfViewer');
+    HTMLCanvasElement.prototype.getContext = (() => ({})) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+    render(<Viewer src="/belge.pdf" title="Rasyonel sayılar notu" />);
+    expect(screen.getByRole('status')).toHaveTextContent('Belge açılıyor');
+    const pages = await screen.findAllByRole('img');
+    expect(pages).toHaveLength(3);
+    expect(pages[1]).toHaveAttribute('aria-label', 'Rasyonel sayılar notu, sayfa 2 / 3');
+    const share = screen.getByRole('link', { name: 'İndir / Paylaş' });
+    expect(share).toHaveAttribute('href', '/belge.pdf');
+    expect(screen.getAllByText('İndir / Paylaş')).toHaveLength(1);
+    vi.doUnmock('pdfjs-dist');
+  });
+  it('onShare verilirse tek düğme onu çağırır; yükleme hatasında alert ve indirme yine var', async () => {
+    vi.resetModules();
+    vi.doMock('pdfjs-dist', () => ({
+      GlobalWorkerOptions: {},
+      getDocument: () => ({ promise: Promise.reject(new Error('bozuk')) }),
+    }));
+    const { PdfViewer: Viewer } = await import('../src/components/PdfViewer');
+    const onShare = vi.fn();
+    render(<Viewer src="/x.pdf" title="Rapor" onShare={onShare} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Belge açılamadı');
+    await userEvent.click(screen.getByRole('button', { name: 'İndir / Paylaş' }));
+    expect(onShare).toHaveBeenCalledTimes(1);
+    vi.doUnmock('pdfjs-dist');
   });
 });

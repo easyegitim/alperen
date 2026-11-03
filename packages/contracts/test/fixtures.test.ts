@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { contractRegistry, SCHEMA_NAMES } from '../src/index.js';
-import { fixtureFiles } from './helpers.js';
+import { LOOSE_ONLY_KEYS, fixtureFiles } from './helpers.js';
 
 describe.each(SCHEMA_NAMES)('%s', (name) => {
   const contract = contractRegistry[name];
@@ -22,7 +22,9 @@ describe.each(SCHEMA_NAMES)('%s', (name) => {
     expect(loose.success, loose.success ? '' : JSON.stringify(loose.error.issues.slice(0, 3))).toBe(true);
     // Varsayılanlarla doldurulmuş çıktı strict şemadan da geçmeli (strict ⊆ loose biçimi).
     if (loose.success) {
-      const strict = contract.strict.safeParse(loose.data);
+      const stripped = { ...(loose.data as Record<string, unknown>) };
+      for (const k of LOOSE_ONLY_KEYS[name] ?? []) delete stripped[k];
+      const strict = contract.strict.safeParse(stripped);
       expect(strict.success, strict.success ? '' : JSON.stringify(strict.error.issues.slice(0, 3))).toBe(true);
     }
   });

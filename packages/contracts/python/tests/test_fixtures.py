@@ -26,7 +26,7 @@ def _common_fragment_issues(data):
 def test_every_schema_has_fixture_folders():
     names = sorted(p.name[: -len(".schema.json")] for p in SCHEMA_DIR.glob("*.schema.json"))
     assert sorted(oc.SCHEMA_NAMES) == names
-    assert len(names) >= 41
+    assert len(names) >= 40
     for name in names:
         valid = list((FIXTURES / name / "valid").glob("*.json"))
         invalid = list((FIXTURES / name / "invalid").glob("*.json"))

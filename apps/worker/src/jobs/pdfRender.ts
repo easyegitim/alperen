@@ -2,12 +2,14 @@ import { z } from 'zod';
 import { PdfRenderError } from '../pdf/render.js';
 import { assertStoragePath } from '../storage.js';
 import { PermanentJobError } from './errors.js';
-import { uuid } from './schemas.js';
+import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobDefinition } from './types.js';
 
 const storageRef = z.object({ bucket: z.string().min(1).max(64).optional(), path: z.string().min(1).max(512) });
 
-const payload = z
+const payload = acceptCamelAliases(
+  { documentId: 'document_id' },
+  z
   .object({
     /** HTML doğrudan (küçük belgeler; büyükler için `htmlRef`). */
     html: z.string().min(1).max(2_000_000).optional(),
@@ -15,8 +17,8 @@ const payload = z
     htmlRef: storageRef.optional(),
     /** PDF'in yazılacağı yer (kova varsayılanı STORAGE_BUCKET_DOCUMENTS). */
     output: storageRef,
-    /** Verilirse `generated_documents.pdf_path` güncellenir. */
-    documentId: uuid.optional(),
+    /** Verilirse `generated_documents.pdf_path` güncellenir ve durum `rendered`a ilerler. */
+    document_id: uuid.optional(),
     options: z
       .object({
         format: z.enum(['A4', 'A3', 'Letter']).optional(),
@@ -29,7 +31,9 @@ const payload = z
       })
       .optional(),
   })
-  .refine((p) => Boolean(p.html) !== Boolean(p.htmlRef), { message: 'html ile htmlRef\'ten tam biri verilmeli' });
+  .refine((p) => Boolean(p.html) !== Boolean(p.htmlRef), { message: 'html ile htmlRef\'ten tam biri verilmeli' })
+  .refine((p) => !p.document_id || !p.output.bucket, { message: 'document_id verilince output.bucket verilemez (belge PDF\'leri STORAGE_BUCKET_DOCUMENTS kovasındadır)' }),
+);
 
 export interface PdfRenderJobResult {
   bucket: string;
@@ -66,8 +70,10 @@ export const pdfRenderJob: JobDefinition<z.infer<typeof payload>, PdfRenderJobRe
       throw err;
     }
     await storage.upload(bucket, p.output.path, out.pdf, 'application/pdf');
-    if (p.documentId) {
-      await ctx.db.query('update public.generated_documents set pdf_path = $2 where id = $1::uuid', [p.documentId, p.output.path]);
+    if (p.document_id) {
+      await ctx.db.query(`update public.generated_documents
+         set pdf_path = $2, status = case when status in ('queued','generating') then 'rendered' else status end
+         where id = $1::uuid`, [p.document_id, p.output.path]);
     }
     ctx.log.info('pdf üretildi', { pages: out.pages, bytes: out.bytes });
     return { bucket, path: p.output.path, pages: out.pages, bytes: out.bytes };

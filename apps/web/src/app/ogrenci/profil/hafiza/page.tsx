@@ -24,7 +24,7 @@ export default async function HafizaSayfasi() {
           Profil
         </LinkButton>
       </div>
-      <PageHeader title="Hafıza" description="Öğretmenin seni tanımak için tuttuğu notlar. Bunları öğretmen yazar; sen okur, yanlış bulduğunu düzelttirirsin." />
+      <PageHeader title="Hafıza" description="Öğretmenin seni tanımak için tuttuğu notlar. Bunları öğretmen yazar; sen okursun. Yanlış bulduğunu eğitmenine söyle." />
       <Notice tone="legal" title="Bu notlar yapay zekâ tarafından yazılır">
         Her not, derslerde ve sorularda gördüklerinden çıkarılır. Emin olmadığı şeyi yazmaz; yanlış bir şey görürsen eğitmenine söyle.
       </Notice>

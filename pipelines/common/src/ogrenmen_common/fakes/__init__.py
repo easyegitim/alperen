@@ -10,27 +10,28 @@ from .jsonl_db import JsonlDb
 from .llm import FakeCall, FakeLLM, candidate_names, fixture_index, select_fixture
 from .media import FakeOCR, FakeTranscriber, FakeVision
 from .notifier import FakeNotifier
-from .scholar import FakeArxiv, FakeCrossref, FakeScholar, FakeUnpaywall
 from .storage import LocalDirStorage
 
 
 def rpc_names() -> list[str]:
-    """``fakes/rpc-names.json`` — JsonlDb.rpc() eşleniklerinin adları (M13 ``check-rpc-parity.sh`` okur)."""
+    """``fakes/rpc-names.json`` — v2 migration gövdesi olan JsonlDb.rpc() eşlenikleri (check-rpc-parity.py okur)."""
     text = resources.files(__name__).joinpath("rpc-names.json").read_text(encoding="utf-8")
     return list(json.loads(text))
 
 
+def legacy_rpc_names() -> list[str]:
+    """``fakes/rpc-names-legacy-v1.json`` — v2'de karşılığı olmayan, P3/P5'e kadar duran eşlenikler (parite: WARN)."""
+    text = resources.files(__name__).joinpath("rpc-names-legacy-v1.json").read_text(encoding="utf-8")
+    return list(json.loads(text))
+
+
 __all__ = [
-    "FakeArxiv",
     "FakeCall",
-    "FakeCrossref",
     "FakeEmbedding",
     "FakeLLM",
     "FakeNotifier",
     "FakeOCR",
-    "FakeScholar",
     "FakeTranscriber",
-    "FakeUnpaywall",
     "FakeVision",
     "JsonlDb",
     "LocalDirStorage",
@@ -38,6 +39,7 @@ __all__ = [
     "cosine",
     "fixture_index",
     "hash_vector",
+    "legacy_rpc_names",
     "rpc_names",
     "select_fixture",
     "to_halfvec",

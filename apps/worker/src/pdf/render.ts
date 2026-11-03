@@ -3,6 +3,7 @@
  * (docs/PLAN-v2.md §7: `page.pdf`, A4, `@page`, iki sütun ÖSYM düzeni).
  *
  * - Tarayıcı süreç başına bir kez açılır ve yeniden kullanılır; her çıktı kendi bağlamında (context) üretilir.
+ * - JavaScript kapalı ve service worker engelli: LLM'in ürettiği HTML betik çalıştıramaz, WebSocket açamaz.
  * - Ağ varsayılan olarak kapalı: yalnız `data:`, `about:` ve `blob:` istekleri geçer. Yazı tipleri HTML'e gömülür
  *   (data URI) ya da `allowedHosts` ile açıkça izin verilir. Böylece üretilen HTML dış kaynağa erişemez.
  * - Sayfa boyutu için CSS `@page { size: A4 }` önceliklidir (`preferCSSPageSize`); yoksa A4.
@@ -77,7 +78,7 @@ export function countPdfPages(pdf: Buffer): number {
 
 /** İlk sayfanın MediaBox'ı [x0 y0 x1 y1] (pt). Testler A4 (595×842) denetler. */
 export function pdfMediaBox(pdf: Buffer): [number, number, number, number] | null {
-  const m = pdf.toString('latin1').match(/\/MediaBox\s*\[\s*([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s*\]/);
+  const m = pdf.toString('latin1').match(/\/MediaBox\s*\[\s*([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s*\]/);
   if (!m) return null;
   return [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
 }
@@ -134,7 +135,7 @@ export class PdfRenderer implements PdfRendererLike {
     let context: BrowserContext | null = null;
     try {
       const browser = await this.launch();
-      context = await browser.newContext({ javaScriptEnabled: true, offline: false, locale: 'tr-TR' });
+      context = await browser.newContext({ javaScriptEnabled: false, serviceWorkers: 'block', offline: false, locale: 'tr-TR' });
       const page = await context.newPage();
       const timeout = opts.timeoutMs ?? 60_000;
       page.setDefaultTimeout(timeout);
@@ -151,10 +152,7 @@ export class PdfRenderer implements PdfRendererLike {
       });
       await page.setContent(html, { waitUntil: 'load', timeout });
       await page.emulateMedia({ media: 'print' });
-      // Yazı tipleri ve görseller yerleşsin (gömülü @font-face).
-      await page.evaluate(async () => {
-        await document.fonts.ready;
-      });
+      // JS kapalı: `load` olayı gömülü @font-face ve görseller yüklenince tetiklenir (setContent zaten bekledi).
       const pdf = Buffer.from(
         await page.pdf({
           format: opts.format ?? 'A4',

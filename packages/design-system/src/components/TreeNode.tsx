@@ -1,12 +1,14 @@
-import { useState } from 'react';
+'use client';
+
+import { useId, useState } from 'react';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn, FOCUS_RING } from '../lib/cn';
-import { masteryDisplay } from './MasteryMeter';
+import { masteryDisplay, type MasteryFormat } from './MasteryMeter';
 
-/** Ağaç kabı: <TreeNode> öğelerini sarar (role="tree"). */
+/** Ağaç kabı: <TreeNode> öğelerini iç içe düz ul/li olarak sarar (ARIA tree rolü kullanılmaz; her düğümde iki düğme Tab ile gezilir). */
 export function Tree({ className, ...rest }: ComponentPropsWithRef<'ul'>) {
-  return <ul role="tree" {...rest} className={cn('m-0 flex list-none flex-col gap-1 p-0', className)} />;
+  return <ul {...rest} className={cn('m-0 flex list-none flex-col gap-1 p-0', className)} />;
 }
 
 export interface TreeNodeProps extends Omit<ComponentPropsWithRef<'li'>, 'onSelect' | 'children'> {
@@ -19,10 +21,12 @@ export interface TreeNodeProps extends Omit<ComponentPropsWithRef<'li'>, 'onSele
   onExpandedChange?: (expanded: boolean) => void;
   selected?: boolean;
   onSelect?: () => void;
-  /** Ustalık p (0–1) ve gözlem sayısı; kanıt eşiğin altındaysa yüzde yazılmaz. */
+  /** Ustalık p (0–1) ve gözlem sayısı; kanıt eşiğin altındaysa bant/yüzde yazılmaz. */
   p?: number;
   evidence?: number;
   minEvidence?: number;
+  /** Ustalık gösterimi: 'band' (varsayılan) ya da 'percent' (eğitmen konsolu). */
+  display?: MasteryFormat;
   /** Soru tarzı nokta sayısı (tarz kütüphanesi). */
   styleCount?: number;
   /** Ön koşul ipucu: "Ön koşul: Kesirler". */
@@ -45,6 +49,7 @@ export function TreeNode({
   p,
   evidence,
   minEvidence,
+  display = 'band',
   styleCount,
   prerequisiteHint,
   children,
@@ -52,6 +57,7 @@ export function TreeNode({
   className,
   ...rest
 }: TreeNodeProps) {
+  const groupId = useId();
   const [inner, setInner] = useState(defaultExpanded);
   const hasChildren = children != null && children !== false;
   const open = expanded ?? inner;
@@ -60,16 +66,13 @@ export function TreeNode({
     if (expanded === undefined) setInner(next);
     onExpandedChange?.(next);
   };
-  const m = masteryDisplay({ p, evidence, minEvidence });
+  const m = masteryDisplay({ p, evidence, minEvidence, format: display });
   const hasMastery = p !== undefined || evidence !== undefined;
   const Chevron = open ? ChevronDown : ChevronRight;
 
   return (
     <li
-      role="treeitem"
-      aria-level={level}
-      aria-expanded={hasChildren ? open : undefined}
-      aria-selected={selected}
+      data-level={level}
       {...rest}
       className={cn('list-none', className)}
     >
@@ -84,7 +87,9 @@ export function TreeNode({
           <button
             type="button"
             onClick={toggle}
-            aria-label={`${label} ${open ? 'daralt' : 'genişlet'}`}
+            aria-expanded={open}
+            aria-controls={groupId}
+            aria-label={`${label} alt konuları`}
             className={cn('inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-sm text-ink-muted', FOCUS_RING)}
           >
             <Chevron aria-hidden="true" size={18} />
@@ -119,8 +124,8 @@ export function TreeNode({
         ) : null}
         {trailing}
       </div>
-      {hasChildren && open ? (
-        <ul role="group" className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
+      {hasChildren ? (
+        <ul id={groupId} hidden={!open} className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
           {children}
         </ul>
       ) : null}

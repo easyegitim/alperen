@@ -115,7 +115,7 @@
     {
       "question_no": 2,
       "correct_option": null,
-      "numeric_value": "5/6",
+      "numeric_value": 0.8333333333,
       "canonical_expr": "Rational(1,2)+Rational(1,3)"
     }
   ]

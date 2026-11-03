@@ -76,7 +76,7 @@ test('çevrimdışı: gezinti isteği önbellekteki yedek sayfaya düşer, kişi
   server = null;
   await new Promise((r) => setTimeout(r, 500));
 
-  await page.goto('/ogrenci/notlarim');
+  await page.goto('/ogrenci/gelisim/belgeler');
   await expect(page.getByRole('heading', { name: 'İnternet bağlantın yok' })).toBeVisible();
   await expect(page.getByText('kişisel verilerin cihazında saklanmaz')).toBeVisible();
 });

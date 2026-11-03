@@ -1,4 +1,4 @@
-"""FakeLLM: §2.3 seçim kuralı (Worker sahtesiyle birebir), hata/çıktı enjeksiyonu, token sayımı."""
+"""FakeLLM: deterministik seçim kuralı (TS ikamesiyle parite), hata/çıktı enjeksiyonu, token sayımı."""
 
 from __future__ import annotations
 
@@ -12,13 +12,12 @@ from pathlib import Path
 
 import pytest
 
-from conftest import FIXTURES, REPO
+from conftest import FIXTURES
 from ogrenmen_common.adapters.base import LLMRequest, Media
 from ogrenmen_common.errors import FixtureNotFoundError
 from ogrenmen_common.fakes import FakeLLM, candidate_names, fixture_index, select_fixture
 
 STUB = Path(__file__).parent / "stubs" / "providers-select.ts"
-WORKER_FAKE = REPO / "apps" / "worker" / "test" / "fakes" / "providers.ts"
 CHAT = FIXTURES / "llm" / "chat"
 PROMPTS = [
     "",
@@ -82,50 +81,6 @@ def test_same_index_as_worker_fake_stub_on_fixtures_llm_chat():
         assert row["index"] == fixture_index(row["prompt"], len(names))
         assert row["file"] == select_fixture(CHAT, row["prompt"]).name
 
-
-WORKER_PROBE = """
-import { readdirSync, readFileSync } from "node:fs";
-const mod = await import(process.argv[2]);
-const dir = process.argv[3];
-const prompts = JSON.parse(readFileSync(0, "utf8"));
-if (typeof mod.selectFixture !== "function" || typeof mod.promptTextOf !== "function") {
-  process.stdout.write("null");
-  process.exit(0);
-}
-const fixtures = { chat: readdirSync(dir).filter((n) => n.endsWith(".json")).map((name) => ({ name, data: null })) };
-const direct = [];
-const composed = [];
-for (const p of prompts) {
-  direct.push((await mod.selectFixture(fixtures, "chat", p)).name);
-  // Worker'ın kendi kurucusu: sistem boş, tek kullanıcı mesajı → `${system}\\n\\n${messages}`
-  const text = mod.promptTextOf({ system: "", messages: [{ role: "user", content: p }] });
-  composed.push({ text, file: (await mod.selectFixture(fixtures, "chat", text)).name });
-}
-process.stdout.write(JSON.stringify({ direct, composed }));
-"""
-
-
-def test_same_file_as_real_worker_fake_when_present(tmp_path):
-    """M04 ``providers.ts`` varsa onunla birebir: (1) aynı ``prompt_text`` → aynı dosya; (2) aynı (sistem='',
-    istem) çifti iki tarafın kendi kurucusuyla (``LLMRequest.prompt_text`` / ``promptTextOf``) aynı dosyayı seçer.
-    Yalnız dosya ya da bun yoksa atlanır; ikisi varken yükleme hatası parite hatası sayılır."""
-    if not WORKER_FAKE.is_file():
-        pytest.skip("apps/worker/test/fakes/providers.ts henüz yok (M04); TS ikamesiyle sınandı")
-    if not shutil.which("bun"):
-        pytest.skip("bun yok")
-    probe = tmp_path / "probe.ts"
-    probe.write_text(WORKER_PROBE, encoding="utf-8")
-    proc = subprocess.run(["bun", str(probe), str(WORKER_FAKE), str(CHAT)], input=json.dumps(PROMPTS),
-                          capture_output=True, text=True, timeout=60)
-    assert proc.returncode == 0, proc.stderr[-2000:]
-    out = proc.stdout.strip()
-    assert out not in ("", "null"), "providers.ts selectFixture/promptTextOf dışa aktarmıyor"
-    data = json.loads(out)
-    assert data["direct"] == [select_fixture(CHAT, p).name for p in PROMPTS]
-    for prompt, row in zip(PROMPTS, data["composed"], strict=True):
-        req = _req(prompt, system="")
-        assert row["text"] == req.prompt_text
-        assert row["file"] == FakeLLM().select(req).name
 
 
 def test_empty_system_prompt_text_matches_worker_composition():

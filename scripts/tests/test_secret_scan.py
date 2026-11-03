@@ -31,7 +31,23 @@ SAMPLES = {
     "supabase-secret-key": "sb_secret_" + "Zx9" * 6,
     "telegram-bot-token": "1234567890" + ":AA" + "h" * 33,
     "private-key": "-----BEGIN " + "RSA PRIVATE KEY-----",
+    "resend-key": "re_" + "Ab12Cd34" + "_" + "Xy9Z" * 6,
+    "voyage-key": "pa-" + "Qw3rTy9" * 6,
+    "fly-token": "FlyV1 fm2_" + "lJPECAAAAAAAB" * 3,
+    "vapid-private-key": "VAPID_PRIVATE_KEY=" + "dGhpc2lzYXZhcGlkcHJpdmF0ZWtleTEyMzQ1Njc4OTA",
 }
+
+# Yanlış pozitif olmaması gereken v2 benzeri metinler (kısa değer, önek başka sözcüğün içinde, yer tutucu).
+NEGATIVES = [
+    "RESEND_API_KEY=re_...",
+    "const retry_after_seconds_total = 3",                # 're_' başka sözcüğün içinde
+    "pre_ab12cd34_" + "x" * 20,                           # önek sözcük ortasında
+    "key: pa-kisa",                                       # 40 karakterden kısa
+    "slug: spa-" + "k" * 45,                              # 'pa-' sözcüğün içinde
+    "FLY_API_TOKEN=FlyV1 fm2_...",                        # yer tutucu
+    "VAPID_PRIVATE_KEY=",                                 # boş
+    "VAPID_PRIVATE_KEY=<fly secrets set>",                # yer tutucu
+]
 
 
 def test_clean_repository_passes(tmp_path):
@@ -42,6 +58,14 @@ def test_clean_repository_passes(tmp_path):
     res = scan(root)
     assert res.returncode == 0, res.stdout + res.stderr
     assert "bulgu yok" in res.stdout
+
+
+@pytest.mark.parametrize("text", NEGATIVES)
+def test_v2_lookalikes_are_not_findings(tmp_path, text):
+    root = git_repo(tmp_path)
+    write(root / "docs/notlar.md", text + "\n")
+    res = scan(root)
+    assert res.returncode == 0, res.stdout + res.stderr
 
 
 @pytest.mark.parametrize("name", sorted(SAMPLES))

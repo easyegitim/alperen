@@ -29,7 +29,10 @@ begin
     ('40000000-0000-4000-8000-0000000000a3', 'user', '[{"type":"text","text":"Elif için ödev öner."}]'),
     ('40000000-0000-4000-8000-0000000000b1', 'user', '[{"type":"text","text":"Merhaba"}]');
   insert into public.uploads (owner_id, student_id, kind, storage_path) values
-    (t.u('elif'), t.u('A'), 'photo', 'uploads/elif/1.jpg'), (t.u('can'), t.u('B'), 'photo', 'uploads/can/1.jpg');
+    (t.u('elif'), t.u('A'), 'photo', t.u('elif') || '/1.jpg'), (t.u('can'), t.u('B'), 'photo', t.u('can') || '/1.jpg');
+  insert into t.cfg select 'UP_' || u.owner_id::text, u.id::text from public.uploads u;
+  insert into public.question_styles (course_id, curriculum_id, code, name, skill_ids, status, exemplar_item_ids)
+  values (t.u('course'), t.u('cur'), 'ST-RLS', 'Gizli örnekli tarz', array['t.mat.a'], 'active', array[gen_random_uuid()]);
   v_sa := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EA'), 'verdict', 'wrong', 'error_cause', 'procedure',
             'failing_step_no', 1, 'skill_ids', jsonb_build_array('t.mat.a'), 'analysis', jsonb_build_object('steps', jsonb_build_array('x'))));
   v_sa := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EB'), 'verdict', 'correct',
@@ -51,6 +54,10 @@ begin
   insert into public.generated_documents (student_id, course_id, kind, title, status) values
     (t.u('A'), t.u('course'), 'report', 'Elif haftalık', 'published'), (t.u('A'), t.u('course'), 'notes', 'Elif notları', 'published'),
     (t.u('B'), t.u('course'), 'report', 'Can haftalık', 'published');
+  -- ders geneli yayımlanmış belgeler (soru metni içerir): kayıtlı öğrenciler ve personel görür, veli görmez
+  insert into public.generated_documents (student_id, course_id, kind, title, status, pdf_path) values
+    (null, t.u('course'), 'mock_exam', 'Ders denemesi', 'published', 'course/deneme.pdf'),
+    (null, t.u('course'), 'notes', 'Ders notları', 'published', 'course/notlar.pdf');
   insert into public.notifications (recipient_id, kind, title) values (t.u('parent'), 'weekly', 'Haftalık özet'), (t.u('elif'), 'exam', 'Deneme notlandı');
   perform public.upsert_memory_file(t.u('A'), '/memories/profile.md', 'Sınıf 11; kısa adımlar.', 'create', 'test');
   perform public.upsert_memory_file(t.u('A'), '/memories/parent_summary.md', 'Bu hafta düzenli çalıştı.', 'create', 'nightly');
@@ -85,7 +92,9 @@ insert into matrix values
   ('sınav soruları (öğrenci görünümü)', format($q$select 1 from public.v_exam_questions_student q where q.exam_id = %L$q$, t.u('X')),
      2, 2, 0, 2, 2, 0, 2, 0),
   ('sınav başlığı', format($q$select 1 from public.exams x where x.id = %L$q$, t.u('X')), 1, 1, 1, 1, 1, 1, 1, 0),
-  ('belgeler', $q$select 1 from public.generated_documents$q$, 2, 1, 1, 3, 3, 0, 0, 0),
+  ('belgeler', $q$select 1 from public.generated_documents$q$, 4, 3, 1, 5, 5, 2, 2, 0),
+  ('ders geneli belgeler (deneme, not)', $q$select 1 from public.generated_documents d where d.student_id is null$q$, 2, 2, 0, 2, 2, 2, 2, 0),
+  ('soru tarzları', $q$select 1 from public.question_styles q where q.code = 'ST-RLS'$q$, 1, 1, 0, 1, 1, 1, 1, 0),
   ('bildirimler', $q$select 1 from public.notifications$q$, 1, 0, 1, 0, 2, 0, 0, 0),
   ('hafıza dosyaları A', format($q$select 1 from public.memory_files f where f.student_id = %L$q$, t.u('A')), 2, 0, 1, 2, 2, 0, 0, 0),
   ('hafıza sürümleri A', format($q$select 1 from public.memory_file_versions f where f.student_id = %L$q$, t.u('A')), 2, 0, 0, 2, 2, 0, 0, 0),
@@ -136,6 +145,20 @@ begin
   perform t.ok(v_bad = '', format('RLS matrisi: %s hücre beklenen satır sayısında%s', v_n, v_bad));
 end $$;
 
+-- Storage documents kovası generated_documents RLS'ine bağlı: veli ders geneli denemenin PDF'ini indiremez
+do $$
+begin
+  if to_regclass('storage.objects') is null then
+    raise notice 'SKIP: storage.objects yok (documents politikası sınanmadı)';
+    return;
+  end if;
+  insert into storage.objects (bucket_id, name) values ('documents', 'course/deneme.pdf');
+  perform t.ok(t.sees(t.u('elif'), $q$select 1 from storage.objects o where o.name = 'course/deneme.pdf'$q$) = 1
+               and t.sees(t.u('parent'), $q$select 1 from storage.objects o where o.name = 'course/deneme.pdf'$q$) = 0
+               and t.sees(t.u('parent2'), $q$select 1 from storage.objects o where o.name = 'course/deneme.pdf'$q$) = 0,
+               'Storage documents: ders geneli deneme PDF''i kayıtlı öğrenciye açık, veliye kapalı');
+end $$;
+
 -- Kritik kurallar ayrıca adıyla
 do $$
 begin
@@ -173,6 +196,24 @@ begin
   perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content)
                      values ('40000000-0000-4000-8000-0000000000a1', 'system', '[]')$q$, '42501', 'öğrenci system mesajı yazamaz');
   perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content)
+                     values ('40000000-0000-4000-8000-0000000000a1', 'assistant', '[{"type":"text","text":"Sahte koç turu"}]')$q$,
+                   '42501', 'öğrenci assistant (koç) turu yazamaz');
+  insert into public.conversation_messages (conversation_id, role, content, upload_ids)
+  values ('40000000-0000-4000-8000-0000000000a1', 'user', '[]', array[t.u('UP_' || t.v('elif'))]);
+  perform t.ok(true, 'öğrenci kendi yüklemesini mesaja ekler');
+  perform t.raises(format($q$insert into public.conversation_messages (conversation_id, role, content, upload_ids)
+                            values ('40000000-0000-4000-8000-0000000000a1', 'user', '[]', array[%L]::uuid[])$q$, t.u('UP_' || t.v('can'))),
+                   '42501', 'başkasının yüklemesi mesaja eklenemez');
+  perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content, upload_ids)
+                     values ('40000000-0000-4000-8000-0000000000a1', 'user', '[]', array[gen_random_uuid()])$q$,
+                   '42501', 'olmayan yükleme kimliği mesaja eklenemez');
+  -- soru tarzları: örnek maddeler (exemplar_item_ids) ve gömme öğrenciye gizli
+  perform t.ok(t.n($q$select id, code, status, skill_ids from public.question_styles where code = 'ST-RLS'$q$) = 1,
+               'öğrenci tarzın açık sütunlarını okur');
+  perform t.raises($q$select exemplar_item_ids from public.question_styles$q$, '42501', 'öğrenci exemplar_item_ids okuyamaz');
+  perform t.raises($q$select * from public.question_styles$q$, '42501', 'öğrenci tarz satırının tamamını (select *) okuyamaz');
+  perform t.ok(t.n('select 1 from public.v_question_styles_staff') = 0, 'öğrenci personel tarz görünümünde satır görmez');
+  perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content)
                      values ('40000000-0000-4000-8000-0000000000b1', 'user', '[]')$q$, '42501', 'öğrenci başkasının sohbetine yazamaz');
   perform t.raises($q$update public.profiles set role = 'admin' where id = auth.uid()$q$, '42501', 'kullanıcı kendi rolünü değiştiremez');
   perform t.raises(format($q$insert into public.observations (enrollment_id, skill_id, kind, value, source_type, source_id, source_locator)
@@ -187,8 +228,11 @@ begin
   perform t.ok(true, 'veli çocuğu için veli sohbeti açar');
   perform t.raises(format($q$insert into public.conversations (student_id, kind, participant_id) values (%L, 'parent', auth.uid())$q$, t.u('B')),
                    '42501', 'veli bağlı olmadığı öğrenci için sohbet açamaz');
-  perform t.raises(format($q$insert into public.uploads (owner_id, student_id, kind, storage_path) values (auth.uid(), %L, 'photo', 'x')$q$, t.u('A')),
+  perform t.raises(format($q$insert into public.uploads (owner_id, student_id, kind, storage_path) values (auth.uid(), %L, 'photo', auth.uid() || '/x.jpg')$q$, t.u('A')),
                    '42501', 'veli öğrenci adına yükleme yapamaz');
+  perform t.as_user(t.u('inst'));
+  perform t.ok((select cardinality(v.exemplar_item_ids) = 1 from public.v_question_styles_staff v where v.code = 'ST-RLS'),
+               'eğitmen tarzın tam satırını personel görünümüyle okur');
   perform t.as_admin();
   perform t.ok((select n.read_at is not null from public.notifications n where n.recipient_id = t.u('elif')), 'öğrenci kendi bildirimini okundu yapar');
 end $$;

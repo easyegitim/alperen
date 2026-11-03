@@ -1,0 +1,1278 @@
+{
+  "description": "v2 yetki matrisi (migration'lardan üretilir: scripts/gen_grants_v2.py). v2'de uygulama rolü yoktur; pipeline'lar service_role ile çalışır (RLS'i aşar). 'columns' tablonun sütunlarıdır.",
+  "roles": [
+    "service_role"
+  ],
+  "tables": {
+    "audit.events": {
+      "columns": [
+        "action",
+        "actor_id",
+        "actor_role",
+        "created_at",
+        "diff",
+        "id",
+        "row_id",
+        "table_name"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*"
+      }
+    },
+    "public.attempts": {
+      "columns": [
+        "attempt_no",
+        "chosen",
+        "context",
+        "created_at",
+        "enrollment_id",
+        "graded_at",
+        "id",
+        "is_correct",
+        "misconception_tag",
+        "question_id",
+        "response_ms",
+        "session_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.content_pool": {
+      "columns": [
+        "approved_at",
+        "approved_by",
+        "body",
+        "cost_usd",
+        "created_at",
+        "curriculum_id",
+        "hit_count",
+        "id",
+        "kind",
+        "misconception_tag",
+        "mode",
+        "model",
+        "skill_id",
+        "status"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.conversation_messages": {
+      "columns": [
+        "content",
+        "conversation_id",
+        "created_at",
+        "id",
+        "llm_call_id",
+        "role",
+        "tool_calls",
+        "upload_ids"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.conversations": {
+      "columns": [
+        "course_id",
+        "created_at",
+        "id",
+        "kind",
+        "last_message_at",
+        "mode",
+        "participant_id",
+        "student_id",
+        "summary",
+        "summary_upto_message_id",
+        "title"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.courses": {
+      "columns": [
+        "code",
+        "created_at",
+        "created_by",
+        "curriculum_id",
+        "description",
+        "id",
+        "kind",
+        "title",
+        "visibility"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.curricula": {
+      "columns": [
+        "authority",
+        "code",
+        "created_at",
+        "created_by",
+        "id",
+        "label",
+        "origin",
+        "source_refs",
+        "status",
+        "version",
+        "year"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.curriculum_proposals": {
+      "columns": [
+        "created_at",
+        "curriculum_id",
+        "decided_at",
+        "decided_by",
+        "evidence_ids",
+        "id",
+        "kind",
+        "payload",
+        "status"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.enrollments": {
+      "columns": [
+        "course_id",
+        "created_at",
+        "curriculum_id",
+        "ended_at",
+        "exam_date",
+        "goal",
+        "id",
+        "period_label",
+        "started_at",
+        "status",
+        "student_id",
+        "target_exam"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.eval_cases": {
+      "columns": [
+        "created_at",
+        "expected",
+        "id",
+        "input",
+        "notes",
+        "route",
+        "upload_ids"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.eval_runs": {
+      "columns": [
+        "created_at",
+        "finished_at",
+        "id",
+        "prompt_version",
+        "route",
+        "scores",
+        "started_at",
+        "summary"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.exam_items": {
+      "columns": [
+        "created_at",
+        "curriculum_id",
+        "difficulty",
+        "embedding",
+        "format",
+        "id",
+        "item_no",
+        "kind",
+        "ocr_text",
+        "points",
+        "skill_id",
+        "source_id",
+        "style_id",
+        "topic",
+        "trick"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.exam_priority_plans": {
+      "columns": [
+        "approved_at",
+        "approved_by",
+        "course_id",
+        "created_at",
+        "evidence_count",
+        "id",
+        "period",
+        "plan",
+        "status"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.exam_questions": {
+      "columns": [
+        "created_at",
+        "difficulty",
+        "exam_id",
+        "figure_upload_id",
+        "id",
+        "kind",
+        "no",
+        "options",
+        "question_id",
+        "section",
+        "skill_ids",
+        "stem_text",
+        "style_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.exam_responses": {
+      "columns": [
+        "answer",
+        "created_at",
+        "exam_question_id",
+        "flagged",
+        "how_far_text",
+        "id",
+        "outcome",
+        "session_id",
+        "solution_analysis_id",
+        "time_spent_sec",
+        "work_upload_ids"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.exam_sessions": {
+      "columns": [
+        "created_at",
+        "duration_sec",
+        "enrollment_id",
+        "exam_id",
+        "finished_at",
+        "id",
+        "mode",
+        "report_document_id",
+        "score",
+        "started_at",
+        "status"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.exam_sources": {
+      "columns": [
+        "course_id",
+        "created_at",
+        "error",
+        "id",
+        "instructor_alias",
+        "status",
+        "storage_path",
+        "term",
+        "upload_id",
+        "uploaded_by",
+        "year"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.exams": {
+      "columns": [
+        "course_id",
+        "created_at",
+        "created_by",
+        "curriculum_id",
+        "generated_document_id",
+        "held_on",
+        "id",
+        "is_copyrighted",
+        "kind",
+        "publisher",
+        "question_count",
+        "sections",
+        "source",
+        "status",
+        "title"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.figures": {
+      "columns": [
+        "alt_text",
+        "attempts",
+        "bytes",
+        "code",
+        "code_hash",
+        "created_at",
+        "height_px",
+        "id",
+        "png_path",
+        "render_log",
+        "render_status",
+        "review_status",
+        "reviewed_at",
+        "reviewed_by",
+        "svg_path",
+        "tool",
+        "vision_report",
+        "vision_status",
+        "width_px"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.generated_documents": {
+      "columns": [
+        "content",
+        "cost_usd",
+        "course_id",
+        "created_at",
+        "created_by",
+        "html_path",
+        "id",
+        "kind",
+        "model",
+        "pdf_path",
+        "personalization",
+        "spec",
+        "status",
+        "student_id",
+        "title",
+        "updated_at",
+        "verification",
+        "version"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.guardian_links": {
+      "columns": [
+        "accepted_at",
+        "created_at",
+        "created_by",
+        "id",
+        "invite_expires_at",
+        "invite_token_hash",
+        "parent_id",
+        "relation",
+        "status",
+        "student_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.instructor_links": {
+      "columns": [
+        "course_id",
+        "created_at",
+        "id",
+        "instructor_id",
+        "role",
+        "student_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.instructor_notes": {
+      "columns": [
+        "approved_fact",
+        "author_id",
+        "body",
+        "created_at",
+        "curriculum_id",
+        "enrollment_id",
+        "id",
+        "mastery_estimate",
+        "skill_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.lesson_analyses": {
+      "columns": [
+        "analysis",
+        "approved_at",
+        "approved_by",
+        "cost_usd",
+        "created_at",
+        "id",
+        "lesson_id",
+        "model",
+        "seed_profile",
+        "status",
+        "version"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.lesson_claims": {
+      "columns": [
+        "analysis_id",
+        "confidence",
+        "created_at",
+        "curriculum_id",
+        "decided_at",
+        "decided_by",
+        "edited_value",
+        "id",
+        "kind",
+        "misconception_id",
+        "misconception_tag",
+        "quote",
+        "skill_id",
+        "speaker",
+        "status",
+        "t_end_sec",
+        "t_start_sec",
+        "value"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.lessons": {
+      "columns": [
+        "auto_apply_threshold",
+        "course_id",
+        "created_at",
+        "duration_min",
+        "enrollment_id",
+        "frames_count",
+        "held_at",
+        "id",
+        "instructor_id",
+        "status",
+        "student_visible",
+        "transcript_path",
+        "upload_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.library_chunks": {
+      "columns": [
+        "created_at",
+        "document_id",
+        "embedding",
+        "id",
+        "page",
+        "text",
+        "tsv"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.library_documents": {
+      "columns": [
+        "course_id",
+        "created_at",
+        "curriculum_id",
+        "id",
+        "pages",
+        "storage_path",
+        "title",
+        "upload_id",
+        "uploaded_by"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.llm_calls": {
+      "columns": [
+        "audio_sec",
+        "batch",
+        "cache_read_tokens",
+        "cache_write_tokens",
+        "cost_usd",
+        "created_at",
+        "effort",
+        "error_code",
+        "id",
+        "images",
+        "latency_ms",
+        "model",
+        "prompt_version",
+        "provider",
+        "purpose",
+        "ref_id",
+        "ref_table",
+        "route",
+        "status",
+        "student_ref",
+        "tokens_in",
+        "tokens_out"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.mastery": {
+      "columns": [
+        "created_at",
+        "curriculum_id",
+        "enrollment_id",
+        "evidence_count",
+        "last_evidence_at",
+        "last_observation_id",
+        "p",
+        "skill_id",
+        "updated_at"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.mastery_history": {
+      "columns": [
+        "created_at",
+        "enrollment_id",
+        "id",
+        "method",
+        "observation_id",
+        "p_after",
+        "p_before",
+        "params",
+        "skill_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.memory_facts": {
+      "columns": [
+        "approved",
+        "approved_by",
+        "confidence",
+        "cost_usd",
+        "created_at",
+        "embedding",
+        "id",
+        "kind",
+        "model",
+        "morale_signal",
+        "requires_approval",
+        "source_lesson_claim_id",
+        "source_message_ids",
+        "status",
+        "student_id",
+        "text",
+        "tsv",
+        "valid_from",
+        "valid_until"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.memory_file_versions": {
+      "columns": [
+        "actor",
+        "content",
+        "created_at",
+        "id",
+        "op",
+        "path",
+        "student_id",
+        "version"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.memory_files": {
+      "columns": [
+        "bytes",
+        "content",
+        "created_at",
+        "path",
+        "student_id",
+        "updated_at"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.misconception_evidence": {
+      "columns": [
+        "created_at",
+        "misconception_id",
+        "observation_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.misconception_tags": {
+      "columns": [
+        "created_at",
+        "curriculum_id",
+        "prereq_skill_id",
+        "skill_id",
+        "tag",
+        "text_instructor",
+        "text_student"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.misconceptions": {
+      "columns": [
+        "created_at",
+        "curriculum_id",
+        "enrollment_id",
+        "evidence_count",
+        "first_seen",
+        "id",
+        "last_seen",
+        "reject_note",
+        "rejected_by",
+        "resolution_observation_id",
+        "resolved_at",
+        "resolved_by",
+        "skill_id",
+        "status",
+        "tag",
+        "text_instructor",
+        "text_student"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.notification_rules": {
+      "columns": [
+        "created_at",
+        "enabled",
+        "kind",
+        "params",
+        "recipient_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.notifications": {
+      "columns": [
+        "body",
+        "channels",
+        "created_at",
+        "id",
+        "kind",
+        "payload",
+        "read_at",
+        "recipient_id",
+        "sent_at",
+        "title"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.observations": {
+      "columns": [
+        "applied_at",
+        "confidence",
+        "counts_for_mastery",
+        "created_at",
+        "created_by_role",
+        "curriculum_id",
+        "enrollment_id",
+        "error_cause",
+        "guess_override",
+        "id",
+        "kind",
+        "misconception_tag",
+        "quote",
+        "skill_id",
+        "source_id",
+        "source_locator",
+        "source_type",
+        "value",
+        "weight"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.preferences": {
+      "columns": [
+        "active_hours",
+        "created_at",
+        "default_mode",
+        "explanation_notes",
+        "modality",
+        "proactive_enabled",
+        "student_id",
+        "updated_at"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.profiles": {
+      "columns": [
+        "avatar_path",
+        "created_at",
+        "display_name",
+        "id",
+        "locale",
+        "onboarded_at",
+        "role",
+        "tz",
+        "updated_at"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.prompt_versions": {
+      "columns": [
+        "active",
+        "created_at",
+        "effort",
+        "id",
+        "model",
+        "route",
+        "schema_name",
+        "system_text",
+        "version"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.push_subscriptions": {
+      "columns": [
+        "auth",
+        "created_at",
+        "endpoint",
+        "id",
+        "p256dh",
+        "ua",
+        "user_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.question_styles": {
+      "columns": [
+        "code",
+        "course_id",
+        "created_at",
+        "created_by",
+        "curriculum_id",
+        "description",
+        "difficulty_band",
+        "embedding",
+        "exemplar_item_ids",
+        "format",
+        "frequency_score",
+        "id",
+        "name",
+        "recency_score",
+        "skill_ids",
+        "source",
+        "status",
+        "trick",
+        "years_hit",
+        "years_total"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.question_templates": {
+      "columns": [
+        "created_at",
+        "curriculum_id",
+        "enabled",
+        "engine",
+        "has_figure",
+        "id",
+        "module_path",
+        "params_schema",
+        "skill_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.questions": {
+      "columns": [
+        "content_hash",
+        "cost_usd",
+        "created_at",
+        "curriculum_id",
+        "difficulty",
+        "figure_id",
+        "id",
+        "kind",
+        "model",
+        "options",
+        "prompt_version",
+        "review_note",
+        "reviewed_at",
+        "reviewed_by",
+        "skill_ids",
+        "source",
+        "status",
+        "stem",
+        "stem_values",
+        "template_id",
+        "template_params",
+        "verification"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.runtime_flags": {
+      "columns": [
+        "created_at",
+        "key",
+        "updated_at",
+        "updated_by",
+        "value"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.settings": {
+      "columns": [
+        "created_at",
+        "description",
+        "key",
+        "updated_at",
+        "value"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.skill_prerequisites": {
+      "columns": [
+        "created_at",
+        "curriculum_id",
+        "prereq_id",
+        "skill_id",
+        "source",
+        "strength"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.skills": {
+      "columns": [
+        "created_at",
+        "curriculum_id",
+        "description",
+        "exam_weight_hint",
+        "id",
+        "is_leaf",
+        "kind",
+        "name",
+        "order_no",
+        "p_guess",
+        "p_init",
+        "p_learn",
+        "p_slip",
+        "parent_id",
+        "source_refs"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.solution_analyses": {
+      "columns": [
+        "analysis",
+        "conversation_message_id",
+        "cost_usd",
+        "created_at",
+        "embedding",
+        "enrollment_id",
+        "error_cause",
+        "exam_response_id",
+        "failing_step_no",
+        "id",
+        "misconception_tags",
+        "model",
+        "proposal_id",
+        "question_text",
+        "skill_ids",
+        "student_work_text",
+        "style_id",
+        "upload_ids",
+        "verdict"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.spend_ledger": {
+      "columns": [
+        "cache_read_tokens",
+        "cache_write_tokens",
+        "calls",
+        "cost_usd",
+        "created_at",
+        "day",
+        "provider",
+        "purpose",
+        "tokens_in",
+        "tokens_out",
+        "updated_at"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.student_dossier_cache": {
+      "columns": [
+        "course_id",
+        "created_at",
+        "hash",
+        "rendered",
+        "student_id",
+        "updated_at"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.students": {
+      "columns": [
+        "created_at",
+        "grade",
+        "id",
+        "profile_id",
+        "public_ref",
+        "school",
+        "status"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.style_coverage": {
+      "columns": [
+        "correct_count",
+        "created_at",
+        "enrollment_id",
+        "last_seen_at",
+        "seen_count",
+        "solved_count",
+        "style_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.syllabus_topics": {
+      "columns": [
+        "course_id",
+        "created_at",
+        "curriculum_id",
+        "id",
+        "skill_ids",
+        "title",
+        "week"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.uploads": {
+      "columns": [
+        "anthropic_file_id",
+        "bytes",
+        "created_at",
+        "embedding",
+        "extracted_text",
+        "height",
+        "id",
+        "kind",
+        "mime",
+        "owner_id",
+        "pages",
+        "sha256",
+        "status",
+        "storage_path",
+        "student_id",
+        "width"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.weekly_summaries": {
+      "columns": [
+        "body",
+        "cost_usd",
+        "created_at",
+        "facts_used",
+        "id",
+        "metrics",
+        "model",
+        "student_id",
+        "week_start"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "secure.answer_keys": {
+      "columns": [
+        "canonical_expr",
+        "correct_option",
+        "created_at",
+        "numeric_tolerance",
+        "numeric_value",
+        "question_id",
+        "solution",
+        "sympy_report",
+        "sympy_status",
+        "verified_at",
+        "written_by"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "secure.exam_answer_keys": {
+      "columns": [
+        "confidence",
+        "correct_option",
+        "created_at",
+        "exam_question_id",
+        "numeric_value",
+        "source"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    }
+  }
+}

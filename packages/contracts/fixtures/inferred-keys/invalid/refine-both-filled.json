@@ -3,7 +3,7 @@
     {
       "question_no": 1,
       "correct_option": "B",
-      "numeric_value": "6",
+      "numeric_value": 6,
       "canonical_expr": null,
       "solution_summary": "Denklem çözülünce x = 6 bulunur, B şıkkı.",
       "confidence": 0.95,

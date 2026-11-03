@@ -2,7 +2,7 @@
  * Sözleşme araç takımı: her şema `build(ctx)` fabrikasıdır ve iki kez kurulur.
  *
  * - `strict`: yapılandırılmış çıktı (output_config.format) kısıtlarına uyar. Özyineleme yok, min/max/
- *   minLength/maxLength/multipleOf yok, her nesne `additionalProperties: false`. Model çağrısına bu gider.
+ *   minLength/maxLength/multipleOf yok (yalnız minItems 1 ile uuid/date/date-time biçimleri korunur), her nesne `additionalProperties: false`. Model çağrısına bu gider.
  * - `loose`: aynı biçim + istemci tarafı kısıtlar (uzunluk, aralık, desen) + çapraz alan kuralları
  *   (`refine`). Model çıktısı `parse` sonrası bu şemadan geçer; JSON Schema dışa aktarımı da bunun
  *   yapısal kısmıdır (Python tüketicileri için).
@@ -18,7 +18,7 @@ export type JsonObject = { [key: string]: unknown };
 /** Her 8-4-4-4-12 onaltılık dize (sürüm/varyant denetimi yok; Ajv/jsonschema `uuid` biçimiyle aynı). */
 const UUID_ANY = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
-const NO_EXCLAIM_EMOJI = /^[^!☀-➿⭐-⭕️\u{1F000}-\u{1FAFF}]*$/u;
+const NO_EXCLAIM_EMOJI = /^[^\uFE0F!\uFF01\u203C\u2049\u2600-\u27BF\u2B50-\u2B55\u{1F000}-\u{1FAFF}]*$/u;
 
 export interface StrOpts {
   min?: number;
@@ -99,19 +99,22 @@ function build(mode: Mode): Ctx {
     prob: (desc) => mkNum(loose, false, { min: 0, max: 1, desc }),
     uuid: (desc) => {
       // z.uuid() RFC sürüm/varyant ister; biçim `uuid` olarak dışa aktarılır (desen json-schema.ts'te düşer).
-      const s = loose ? z.string().regex(UUID_ANY).meta({ format: 'uuid' }) : z.string();
+      // Strict kipte de `format` korunur: API uuid/date/date-time biçimlerini destekler.
+      const s = loose ? z.string().regex(UUID_ANY).meta({ format: 'uuid' }) : z.string().meta({ format: 'uuid' });
       return desc ? s.describe(desc) : s;
     },
     date: (desc) => {
-      const s = loose ? z.iso.date() : z.string();
+      const s = loose ? z.iso.date() : z.string().meta({ format: 'date' });
       return desc ? s.describe(desc) : s;
     },
     dateTime: (desc) => {
-      const s = loose ? z.iso.datetime({ offset: true }) : z.string();
+      const s = loose ? z.iso.datetime({ offset: true }) : z.string().meta({ format: 'date-time' });
       return desc ? s.describe(desc) : s;
     },
     arr: (item, o = {}) => {
       let a = z.array(item);
+      // minItems 0/1 yapılandırılmış çıktıda desteklenir: loose'ta en az 1 isteyen dizi model dilbilgisinde de boş kalmasın.
+      if (!loose && o.min !== undefined && o.min >= 1) a = a.min(1);
       if (loose) {
         if (o.min !== undefined) a = a.min(o.min);
         if (o.max !== undefined) a = a.max(o.max);

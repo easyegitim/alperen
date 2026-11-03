@@ -1,3 +1,5 @@
+'use client';
+
 import { useId, useState } from 'react';
 import type { ComponentPropsWithRef } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -73,7 +75,6 @@ export function ReportChart({
         <figcaption className="text-title-3 text-ink">{title}</figcaption>
         <button
           type="button"
-          aria-pressed={showTable}
           aria-controls={tableId}
           onClick={() => setView(showTable ? 'chart' : 'table')}
           className={cn(

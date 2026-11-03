@@ -1,20 +1,23 @@
 import { z } from 'zod';
 import { PermanentJobError } from './errors.js';
-import { uuid } from './schemas.js';
+import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobDefinition } from './types.js';
 
-const payload = z
+const payload = acceptCamelAliases(
+  { notificationId: 'notification_id', userId: 'user_id' },
+  z
   .object({
     /** Var olan bildirim (alıcı, başlık, gövde, bağlantı ondan okunur). */
-    notificationId: uuid.optional(),
+    notification_id: uuid.optional(),
     /** Doğrudan gönderim. */
-    userId: uuid.optional(),
+    user_id: uuid.optional(),
     title: z.string().min(1).max(200).optional(),
     body: z.string().max(1000).optional(),
     url: z.string().max(500).optional(),
     tag: z.string().max(64).optional(),
   })
-  .refine((p) => p.notificationId || (p.userId && p.title), { message: 'notificationId ya da userId+title gerekli' });
+  .refine((p) => p.notification_id || (p.user_id && p.title), { message: 'notification_id ya da user_id+title gerekli' }),
+);
 
 export interface PushSendResult {
   subscriptions: number;
@@ -38,18 +41,18 @@ export const pushSendJob: JobDefinition<z.infer<typeof payload>, PushSendResult>
   retry: { retryLimit: 5, retryDelay: 10, retryBackoff: true, retryDelayMax: 900, expireInSeconds: 120, deleteAfterSeconds: 86_400 },
   skeleton: true,
   handler: async (p, ctx) => {
-    let userId = p.userId ?? null;
+    let userId = p.user_id ?? null;
     let title = p.title ?? '';
     let body = p.body ?? '';
     let url = p.url;
     let tag = p.tag;
-    if (p.notificationId) {
+    if (p.notification_id) {
       const r = await ctx.db.query(
         `select recipient_id, kind, title, body, channels, payload ->> 'url' as url from public.notifications where id = $1::uuid`,
-        [p.notificationId],
+        [p.notification_id],
       );
       const n = r.rows[0];
-      if (!n) throw new PermanentJobError(`bildirim yok: ${p.notificationId}`, 'OGR-PUSH-002');
+      if (!n) throw new PermanentJobError(`bildirim yok: ${p.notification_id}`, 'OGR-PUSH-002');
       if (!Array.isArray(n.channels) || !n.channels.includes('push')) {
         return { subscriptions: 0, sent: 0, removed: 0, failed: 0, skipped: 'kanal push değil' };
       }
@@ -85,8 +88,8 @@ export const pushSendJob: JobDefinition<z.infer<typeof payload>, PushSendResult>
         lastMessage = `${out.status ?? 'ağ'}: ${out.message}`;
       }
     }
-    if (sent > 0 && p.notificationId) {
-      await ctx.db.query('update public.notifications set sent_at = now() where id = $1::uuid and sent_at is null', [p.notificationId]);
+    if (sent > 0 && p.notification_id) {
+      await ctx.db.query('update public.notifications set sent_at = now() where id = $1::uuid and sent_at is null', [p.notification_id]);
     }
     // Hiçbiri gitmediyse ve hata geçiciyse yeniden dene (kalan geçerli abonelikler için).
     if (sent === 0 && retryable > 0) throw new Error(`push gönderilemedi (${lastMessage})`);

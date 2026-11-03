@@ -60,12 +60,17 @@ export function TutorMessage({
             tutor ? 'rounded-tl-sm bg-ai-soft text-ink shadow-ai' : 'rounded-tr-sm bg-primary text-on-primary',
           )}
         >
+          {tutor ? (
+            // Canlı bölge baştan DOM'da durur; yalnız içindeki metin değişir (ekran okuyucular böyle duyurur).
+            <span role="status" className="sr-only">
+              {typing ? 'Öğretmen yazıyor' : ''}
+            </span>
+          ) : null}
           {typing ? (
-            <span role="status" className="inline-flex h-6 items-center gap-1">
-              <span className="sr-only">Öğretmen yazıyor</span>
-              <span aria-hidden="true" className="og-typing-dot size-2 rounded-full bg-primary opacity-35" />
-              <span aria-hidden="true" className="og-typing-dot size-2 rounded-full bg-primary opacity-35" />
-              <span aria-hidden="true" className="og-typing-dot size-2 rounded-full bg-primary opacity-35" />
+            <span aria-hidden="true" className="inline-flex h-6 items-center gap-1">
+              <span className="og-typing-dot size-2 rounded-full bg-primary opacity-35" />
+              <span className="og-typing-dot size-2 rounded-full bg-primary opacity-35" />
+              <span className="og-typing-dot size-2 rounded-full bg-primary opacity-35" />
             </span>
           ) : (
             children

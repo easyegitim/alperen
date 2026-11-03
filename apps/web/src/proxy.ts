@@ -25,6 +25,7 @@ export async function proxy(request: NextRequest) {
     authed: session.userId !== null,
     role: session.role,
     onboarded: session.onboarded,
+    search: request.nextUrl.search,
   });
   if (decision.type === 'next') return session.response;
 

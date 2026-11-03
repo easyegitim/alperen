@@ -149,9 +149,9 @@ def test_disabled_template(db):
         db.rpc("register_template_question", {"p_item": _template_item(), "p_key": KEY, "p_figure": FIG})
 
 
-@pytest.mark.parametrize("role", ["postgres", "service_role", "bot_runtime", "authenticated"])
-def test_key_rpcs_require_exactly_batch_worker(db, role):
-    """SQL: ``if app.jwt_role() <> 'batch_worker' then raise 'OGR-KEY-001'`` — imtiyazlı roller de reddedilir."""
+@pytest.mark.parametrize("role", ["postgres", "authenticated", "admin"])
+def test_key_rpcs_require_worker_role(db, role):
+    """Legacy-v1 anahtar RPC leri yalnız worker rolüyle (service_role) yazar; diğer roller reddedilir."""
     qid = _new_llm_question(db, h=f"h-role-{role}")
     db.role = role
     try:
@@ -161,5 +161,5 @@ def test_key_rpcs_require_exactly_batch_worker(db, role):
         with pytest.raises(RpcError, match="OGR-KEY-001"):
             db.rpc("register_template_question", {"p_item": {"source": "template"}, "p_key": {}})
     finally:
-        db.role = "batch_worker"
+        db.role = "service_role"
     assert _key(db, qid) is None

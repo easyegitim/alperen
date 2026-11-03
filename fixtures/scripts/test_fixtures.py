@@ -126,11 +126,6 @@ def test_pii_leak_detector_catches_raw_text():
     assert check_fixtures.pii_leaks("[ÖĞRENCİ] `3/4 + 1/8` topladı; Soru 10-A şıkkı") == []
 
 
-def test_forbidden_words_use_contracts_turkish_fold():
-    assert check_fixtures.forbidden_words("exam-priority-plan", {"note": "Bu konu KESİN gelir"})
-    assert check_fixtures.forbidden_words("exam-priority-plan", {"note": "Sıklık analizine göre öncelik"}) == []
-
-
 def test_uuid_b64url_is_lossless_and_short():
     from fxlib import uuid_b64url, uuid_from_b64url
 

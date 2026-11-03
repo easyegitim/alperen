@@ -30,7 +30,7 @@ export function RoleShell({ variant, brand, footer, children }: RoleShellProps) 
     label: d.label,
     href: d.href,
     icon: <NavIcon name={d.icon} />,
-    active: isNavActive(d.href, pathname, root),
+    active: isNavActive(d.href, pathname, root, d.alsoActive),
   }));
   return (
     <AppShell

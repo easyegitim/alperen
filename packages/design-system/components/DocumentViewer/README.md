@@ -1,6 +1,6 @@
 # DocumentViewer
 
-Ders notu, deneme ve rapor için uygulama içi okuma kabı (`generated_documents`).
+Ders notu, deneme ve rapor için uygulama içi HTML okuma kabı (`generated_documents`). Üretilen belgeler PDF olarak sayfa sayfa gösterilecekse `PdfViewer` kullanılır (tek "İndir / Paylaş" düğmesi); `DocumentViewer` PDF'e dönüşmeyen HTML içerik ve doc-render önizlemesi içindir.
 
 **Sen sağlarsın:** `title`, `html` (güvenilir kaynaktan, `packages/doc-render` çıktısı) **ya da** `children`; `personalized` ("ai" rozeti + "Öğrenmen sana göre hazırladı"), `pdfHref` ("PDF indir"), `actions` ("Çöz", "Soru sor"), `autoRenderMath` (varsayılan açık).
 

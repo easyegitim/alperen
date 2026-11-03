@@ -13,7 +13,7 @@ const ORDER: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 
 
 export function errorFields(err: unknown): Record<string, unknown> {
   if (err instanceof Error) {
-    return { error: err.message, errorName: err.name, ...(typeof (err as { code?: unknown }).code === 'string' ? { code: (err as { code: string }).code } : {}) };
+    return { error: err.message, errorName: err.name, ...(typeof (err as unknown as { code?: unknown }).code === 'string' ? { code: (err as unknown as { code: string }).code } : {}) };
   }
   return { error: String(err) };
 }

@@ -43,6 +43,8 @@ export * from './zod/memory-delta.js';
 export * from './zod/memory-fact.js';
 export * from './zod/notification-copy.js';
 export * from './zod/page-class.js';
+export * from './zod/proposal-review.js';
+export * from './zod/question-generation.js';
 export * from './zod/question-item.js';
 export * from './zod/solution-diagnosis.js';
 export * from './zod/style-definition.js';

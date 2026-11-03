@@ -15,6 +15,21 @@ export const getMyStudent = cache(async (profileId: string): Promise<MyStudent |
   return data ?? null;
 });
 
+export interface EnrollableCourse {
+  id: string;
+  code: string;
+  title: string;
+  kind: Row<'courses'>['kind'];
+  curriculum_id: string;
+}
+
+/** Onboarding'de seçilebilen dersler: kullanıcının RLS ile görebildiği ve müfredatı eşlenmiş olanlar. */
+export async function listEnrollableCourses(): Promise<EnrollableCourse[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.from('courses').select('id, code, title, kind, curriculum_id').not('curriculum_id', 'is', null).order('title');
+  return (data ?? []).flatMap((c) => (c.curriculum_id ? [{ ...c, curriculum_id: c.curriculum_id }] : []));
+}
+
 export type MemoryFile = Pick<Row<'memory_files'>, 'path' | 'content' | 'bytes' | 'updated_at'>;
 
 /** Hafıza dosyaları (RLS: öğrenci kendininkini görür). */
@@ -50,6 +65,13 @@ export async function listChildren(parentId: string): Promise<StudentCard[]> {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.from('guardian_links').select('student_id').eq('parent_id', parentId).eq('status', 'active');
   return studentCards((data ?? []).map((l) => l.student_id));
+}
+
+/** Velinin en az bir etkin bağı var mı (davet kabul edilmiş ama kurulum yarım kalmış olabilir). */
+export async function hasActiveGuardianLink(parentId: string): Promise<boolean> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.from('guardian_links').select('id').eq('parent_id', parentId).eq('status', 'active').limit(1);
+  return (data ?? []).length > 0;
 }
 
 /** Eğitmenin bağlı öğrencileri (instructor_links). */

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { BookOpen, Brain, Camera, ClipboardList, House, MessageCircle, Network, User } from 'lucide-react';
+import { Brain, Camera, House, MessageCircle, Network } from 'lucide-react';
 import {
   AlertRow,
   AnswerGrid,
   AppShell,
+  BigStart,
   Avatar,
   Badge,
   BrandLockup,
@@ -21,6 +22,11 @@ import {
   LessonCard,
   MasteryMeter,
   MathText,
+  OneLineResult,
+  PdfViewer,
+  ProgressStrip,
+  SuggestionCard,
+  UploadSheet,
   MemoryFileCard,
   MisconceptionItem,
   ModeToggle,
@@ -50,6 +56,28 @@ const FIGURE = `data:image/svg+xml;utf8,${encodeURIComponent(
 
 const HTML_DOC = `<h2>Kesirlerde toplama</h2><p>Paydaları eşitle: $\\frac{3}{4}+\\frac{1}{8}=\\frac{6}{8}+\\frac{1}{8}=\\frac{7}{8}$.</p><p>Ayrı satırda:</p><p>$$\\frac{a}{b}+\\frac{c}{d}=\\frac{ad+bc}{bd}$$</p>`;
 
+/** Önizleme için tek sayfalık küçük PDF (xref ofsetleri çalışma anında hesaplanır). */
+function demoPdfUrl(): string {
+  const stream = 'BT /F1 28 Tf 72 700 Td (Rasyonel sayilar) Tj ET';
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let out = '%PDF-1.4\n';
+  const offsets: number[] = [];
+  objs.forEach((o, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${o}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`;
+  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return URL.createObjectURL(new Blob([out], { type: 'application/pdf' }));
+}
+
 const trend = [
   { hafta: '1. hf', net: 18.5, hedef: 22 },
   { hafta: '2. hf', net: 21, hedef: 22 },
@@ -70,6 +98,7 @@ export function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(
     typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   );
+  const [demoUrl] = useState(demoPdfUrl);
   const [mode, setMode] = useState<TutorMode>('hint');
   const [opt, setOpt] = useState<QuizOptionState[]>(['idle', 'selected', 'correct', 'incorrect']);
   const [current, setCurrent] = useState(3);
@@ -169,6 +198,8 @@ export function App() {
           <StepLadder
             className="w-full"
             cause="procedure"
+            summary="Paydaları eşitlemeden payları topladın."
+            skills={['Kesirlerde toplama']}
             failingStepNo={2}
             studentSteps={[
               { no: 1, text: '$\\frac{3}{4}+\\frac{1}{8}$ ifadesini yazdım' },
@@ -189,6 +220,7 @@ export function App() {
             <MasteryMeter skill="Kesirlerde toplama" p={0.72} evidence={8} delta={0.08} deltaLabel="bu hafta" period="LGS 2026" />
             <MasteryMeter skill="Üslü ifadeler" p={0.9} evidence={2} />
             <MasteryMeter skill="Oran ve orantı" />
+            <MasteryMeter skill="Eğitmen görünümü (yüzde)" p={0.72} evidence={8} display="percent" />
           </div>
           <MisconceptionItem
             text="Paylar ve paydalar ayrı ayrı toplanıyor."
@@ -243,6 +275,7 @@ export function App() {
           </div>
           <div className="w-full">
             <ExamPlayer
+              mode="exam"
               title="Deneme 3"
               remainingSec={4 * 60 + 12}
               questions={questions}
@@ -282,6 +315,45 @@ export function App() {
           />
         </Section>
 
+        <Section id="sade" title="Sade akış (Bugün, test, sonuç, yükle, belge)">
+          <div className="flex w-full max-w-xl flex-col gap-3">
+            <BigStart title="Rasyonel sayılar" meta="8 soru · 12 dk" onStart={() => undefined} />
+            <SuggestionCard kind="weekly_homework" title="Hocanın haftalık ödevi hazır" subtitle="Üslü ifadeler" durationText="15 dk" onStart={() => undefined} />
+            <SuggestionCard kind="lesson_review" title="Dünkü dersin tekrarı" durationText="8 dk" onStart={() => undefined} />
+            <SuggestionCard kind="gap_analysis" title="Eksik analizi: kesirlerde toplama" durationText="10 dk" onStart={() => undefined} />
+            <SuggestionCard kind="document_ready" title="Rasyonel sayılar notun hazır" href="#belge" />
+          </div>
+          <ProgressStrip total={8} current={3} statuses={['answered', 'answered', 'todo', 'todo', 'flagged', 'todo', 'todo', 'todo']} />
+          <ExamPlayer
+            title="Rasyonel sayılar"
+            questions={questions}
+            current={current}
+            onNavigate={setCurrent}
+            onFinish={() => undefined}
+            className="w-full"
+          >
+            <p className="m-0">
+              <MathText>{'$\\frac{3}{4}+\\frac{1}{8}$ işleminin sonucu kaçtır?'}</MathText>
+            </p>
+          </ExamPlayer>
+          <div className="w-full max-w-xl">
+            <OneLineResult sentence="8 soruda 6 doğru. Takıldığın yer: eksi dağıtırken işaret." learned="Eksi işareti parantezin her terimine dağılır.">
+              <StepLadder
+                summary="Paydaları eşitlemeden payları topladın."
+                defaultOpen
+                failingStepNo={2}
+                cause="procedure"
+                studentSteps={[{ no: 1, text: '$\\frac{3}{4}+\\frac{1}{8}$' }, { no: 2, text: '$\\frac{4}{12}$' }]}
+                expectedSteps={[{ no: 1, text: '$\\frac{3}{4}+\\frac{1}{8}$' }, { no: 2, text: '$\\frac{7}{8}$' }]}
+              />
+            </OneLineResult>
+          </div>
+          <UploadSheet onSubmit={() => undefined} onCancel={() => undefined} />
+          <div id="belge" className="w-full">
+            <PdfViewer src={demoUrl} title="Rasyonel sayılar notu" />
+          </div>
+        </Section>
+
         <Section id="egitmen" title="Eğitmen">
           <StatTile label="Cevapsız soru" value="3" status="danger" statusText="Acil" hint="en eskisi 14 saat" />
           <StatTile label="Ortalama yanıt süresi" value="1,4" unit="saat" status="success" statusText="Hedefte" hint="hedef 2 saat" />
@@ -299,14 +371,11 @@ export function App() {
               className="min-h-0"
               brand={<BrandLockup size="sm" endorsement={false} markSrc={theme === 'dark' ? markWhite : markPurple} />}
               items={[
-                { id: 'kos', label: 'Koç', href: '#kabul', icon: <MessageCircle size={20} />, active: true },
-                { id: 'den', label: 'Denemeler', href: '#kabul', icon: <ClipboardList size={20} /> },
-                { id: 'not', label: 'Notlarım', href: '#kabul', icon: <BookOpen size={20} /> },
-                { id: 'har', label: 'Konu haritası', href: '#kabul', icon: <Network size={20} /> },
-                { id: 'ana', label: 'Ana sayfa', href: '#kabul', icon: <House size={20} /> },
-                { id: 'pro', label: 'Profil', href: '#kabul', icon: <User size={20} /> },
+                { id: 'bug', label: 'Bugün', href: '#kabul', icon: <House size={20} />, active: true },
+                { id: 'kos', label: 'Koç', href: '#kabul', icon: <MessageCircle size={20} /> },
+                { id: 'gel', label: 'Gelişim', href: '#kabul', icon: <Network size={20} /> },
               ]}
-              fab={{ label: 'Sor', icon: <Camera size={22} />, onClick: () => undefined }}
+              fab={{ label: 'Yükle', icon: <Camera size={22} />, onClick: () => undefined }}
               footer={<span className="text-small text-ink-muted"><Brain aria-hidden="true" size={16} className="mr-1 inline" />AI öğretmen</span>}
             >
               <p className="m-0">Sayfa içeriği burada durur.</p>

@@ -3,21 +3,14 @@
 Kurallar:
 
 * ``OGRENMEN_FAKES=1``, ``dry_run=True`` ya da ``adapters="fake"`` → **tüm** adaptörler sahte
-  (ağ yok): ``JsonlDb`` (fixtures), ``FakeLLM``, ``FakeEmbedding``, ``FakeScholar``/``FakeArxiv``,
-  ``FakeCrossref``, ``FakeUnpaywall``, ``LocalDirStorage``, ``FakeNotifier``; saat sabit
+  (ağ yok): ``JsonlDb`` (fixtures), ``FakeLLM``, ``FakeEmbedding``,
+  ``LocalDirStorage``, ``FakeNotifier``; saat sabit
   (``OGRENMEN_NOW`` ya da fixture "şimdi"si).
-* Aksi hâlde her adaptör anahtarına bakar; anahtar yoksa o adaptör sahteye düşer ve ``warnings``'e
-  (stderr'e de) Türkçe bir uyarı yazılır — sessiz düşüş yoktur. **Veritabanı ile model adaptörleri
-  birlikte gerçek ya da birlikte sahtedir** (``OGR-ADP-001``):
-
-  - gerçek veritabanı (``SUPABASE_URL`` + ``SUPABASE_BATCH_JWT``) varken hiçbir model anahtarı yoksa
-    Runtime kurulmaz — fixture çıktıları üretim tablolarına "gerçekmiş gibi" yazılmaz, sahte çağrılar
-    gerçek fiyatlarla ``llm_calls``/``spend_ledger``'a girmez;
-  - bir model anahtarı varken gerçek veritabanı yoksa Runtime kurulmaz — ücretli çağrı gerçek defter ve
-    ``check_spend`` tavanı olmadan yapılmaz (ilke 2 ve 3);
-  - embedding yalnız ``models.json`` ``chains.embedding`` modelinin sağlayıcısının anahtarıyla
-    (``gemini-paid`` → ``GEMINI_PAID_KEY``; ücretsiz katman veriyle eğitir, §9.1) gerçektir; anahtar yoksa
-    gerçek veritabanıyla sahte vektör yazılmaz — ``embed`` çağrısı ``OGR-ADP-001`` ile reddedilir.
+* Gerçek kip (v2): pipeline'lar DB'ye doğrudan bağlanmaz (PLAN §12: ``service_role`` yalnız ``apps/worker``'da;
+  P3/P5 HTTP servisleri gelene dek). ``SUPABASE_BATCH_JWT`` / ``SUPABASE_SERVICE_ROLE_KEY`` verilirse Runtime
+  kurulmaz (``OGR-ADP-001``). Veritabanı, depolama ve embedding sahte kalır (uyarı yazılır); tek gerçek model yolu
+  ``GROQ_API_KEY`` ile Groq Whisper STT'dir (Gemini/Groq-sohbet/OpenRouter/Cloudflare/Anthropic yolları yoktur;
+  Claude yalnız ``packages/llm``'dedir).
 * Embedding her iki kipte de ``LedgeredEmbedding`` ile ``CostLedger`` kapısından geçer
   (``purpose='embedding'`` ``llm_calls`` satırı, ``check_spend``).
 * Depolama: ``out`` verilmezse her Runtime kendi geçici dizinini (``ogrenmen-storage-*``) kullanır ve
@@ -26,10 +19,7 @@ Kurallar:
   şema, ``llm_calls``); sahte kipte arkalarında ``FakeLLM`` vardır, böylece dry-run maliyet tahmini
   (``cost_estimate.json``) bu çağrıları da içerir.
 
-Ortam değişkenleri (§8.2): ``SUPABASE_URL``, ``SUPABASE_ANON_KEY``, ``SUPABASE_BATCH_JWT``,
-``GEMINI_PAID_KEY``, ``GEMINI_FREE_KEY``, ``GROQ_KEY``, ``OPENROUTER_KEY``, ``CF_AI_TOKEN`` +
-``CF_ACCOUNT_ID``, ``ANTHROPIC_KEY``, ``UNPAYWALL_EMAIL``, ``S2_API_KEY``;
-``OGRENMEN_FIXTURES``, ``OGRENMEN_OUT``, ``OGRENMEN_ADAPTERS`` (fake|real).
+Ortam değişkenleri: ``GROQ_API_KEY``; ``OGRENMEN_FIXTURES``, ``OGRENMEN_OUT``, ``OGRENMEN_ADAPTERS`` (fake|real).
 """
 
 from __future__ import annotations
@@ -46,20 +36,15 @@ from typing import Any
 
 import ogrenmen_contracts as contracts
 
-from .adapters.base import DB, LLM, OCR, Embedding, Notifier, OAResolver, Scholar, Storage, Transcriber, Vision
-from .adapters.base import DOIResolver as DOIResolverProto
+from .adapters.base import DB, LLM, OCR, Embedding, Notifier, Storage, Transcriber, Vision
 from .adapters.media import LLMOCR, LLMTranscriber, LLMVision
 from .batch import BatchRunner
-from .clock import Clock, fake_clock_from_env, system_clock
+from .clock import Clock, fake_clock_from_env
 from .errors import AdapterError
 from .fakes import (
-    FakeArxiv,
-    FakeCrossref,
     FakeEmbedding,
     FakeLLM,
     FakeNotifier,
-    FakeScholar,
-    FakeUnpaywall,
     JsonlDb,
     LocalDirStorage,
 )
@@ -67,23 +52,6 @@ from .ledger import CostLedger, LedgeredEmbedding
 from .paths import fixtures_root
 
 TRUTHY = ("1", "true", "yes", "on")
-PROVIDER_KEY_ENV = {"gemini-paid": "GEMINI_PAID_KEY", "gemini-free": "GEMINI_FREE_KEY"}
-"""Embedding sağlayıcısı → anahtar değişkeni (``models.json`` sağlayıcısı belirler)."""
-
-
-class RefusingEmbedding:
-    """Gerçek veritabanı varken embedding anahtarı yoksa: sahte (hash) vektör üretim tablolarına yazılmasın diye
-    her ``embed`` çağrısını ``OGR-ADP-001`` ile reddeder (``Embedding`` Protocol'ünü karşılar)."""
-
-    available = False
-
-    def __init__(self, model: str, dims: int, reason: str):
-        self.model = model
-        self.dims = dims
-        self.reason = reason
-
-    def embed(self, texts):  # noqa: ANN001 - Protocol imzası
-        raise AdapterError(f"OGR-ADP-001 {self.reason}")
 
 
 def fakes_forced(env: Mapping[str, str]) -> bool:
@@ -100,9 +68,6 @@ class Runtime:
     vision: Vision
     transcriber: Transcriber
     ocr: OCR
-    scholars: list[Scholar]
-    doi: DOIResolverProto
-    oa: OAResolver
     storage: Storage
     notifier: Notifier
     ledger: CostLedger
@@ -122,12 +87,6 @@ class Runtime:
     @property
     def is_fake(self) -> bool:
         return self.mode == "fake"
-
-    def scholar(self, source: str) -> Scholar:
-        for s in self.scholars:
-            if s.source == source:
-                return s
-        raise KeyError(f"tanımsız akademik kaynak: {source}")
 
     def close(self) -> list[Path]:
         """JsonlDb'yi ``out``'a boşaltır ve (out varsa) ``cost_estimate.json`` yazar; yazılan yolları döner."""
@@ -171,28 +130,24 @@ class Runtime:
         return cls(mode="fake", dry_run=dry_run, db=db, llm=llm,
                    embedding=LedgeredEmbedding(FakeEmbedding(models=models), ledger), vision=LLMVision(ledger),
                    transcriber=LLMTranscriber(ledger), ocr=LLMOCR(ledger),
-                   scholars=[FakeScholar(source="openalex"), FakeScholar(source="semantic_scholar"), FakeArxiv()],
-                   doi=FakeCrossref(), oa=FakeUnpaywall(), storage=storage, notifier=notifier, ledger=ledger,
+                   storage=storage, notifier=notifier, ledger=ledger,
                    batch=BatchRunner(ledger), clock=clock, models=models, fixtures=fixtures, out=out,
                    storage_tmp=tmp)
 
     @classmethod
     def _real(cls, env: dict[str, str], *, fixtures: Path | None, out: Path | None, models: dict,
               llm_options: Mapping[str, Any] | None, quiet: bool) -> Runtime:
-        from .adapters.anthropic import AnthropicLLM
-        from .adapters.arxiv import ArxivScholar
-        from .adapters.cfai import CloudflareAILLM
-        from .adapters.crossref import CrossrefResolver
-        from .adapters.gemini import GeminiBatchClient, GeminiEmbedding, GeminiLLM
+        """v2: pipeline'lar DB'ye doğrudan bağlanmaz (PLAN §12; ``service_role`` yalnız ``apps/worker``'dadır).
+        Veritabanı, depolama ve gömme sahtedir; tek gerçek model yolu Groq Whisper STT'dir
+        (``GROQ_API_KEY``; satırlar yerel ``JsonlDb`` çıktısına yazılır). P3/P5 HTTP servisleri gelene dek böyle."""
         from .adapters.groq import GroqLLM
         from .adapters.notify import LogNotifier
-        from .adapters.openalex import OpenAlexScholar
-        from .adapters.openrouter import OpenRouterLLM
-        from .adapters.postgrest import PostgrestDb
         from .adapters.router import ProviderRouter
-        from .adapters.semanticscholar import SemanticScholar
-        from .adapters.storage import SupabaseStorage
-        from .adapters.unpaywall import UnpaywallResolver
+
+        if env.get("SUPABASE_BATCH_JWT") or env.get("SUPABASE_SERVICE_ROLE_KEY"):
+            raise AdapterError("OGR-ADP-001 v2: pipelines DB'ye doğrudan yazmaz; worker HTTP servisi üzerinden "
+                               "(SUPABASE_BATCH_JWT / service_role anahtarı pipeline ortamına verilmez; "
+                               "--dry-run ya da OGRENMEN_FAKES=1 ile çalıştır)")
 
         warnings: list[str] = []
 
@@ -201,81 +156,25 @@ class Runtime:
             if not quiet:
                 print(f"UYARI: {text}", file=sys.stderr)
 
-        clock: Clock = system_clock
-        url, jwt, anon = env.get("SUPABASE_URL"), env.get("SUPABASE_BATCH_JWT"), env.get("SUPABASE_ANON_KEY")
-        real_db = bool(url and jwt)
-        storage_tmp: Path | None = None
+        clock: Clock = fake_clock_from_env(env)
         notifier: Notifier = LogNotifier()
-
-        adapters_by_provider: dict[str, LLM] = {}
-        if env.get("GEMINI_PAID_KEY"):
-            adapters_by_provider["gemini-paid"] = GeminiLLM(env["GEMINI_PAID_KEY"], provider_id="gemini-paid")
-        if env.get("GEMINI_FREE_KEY"):
-            adapters_by_provider["gemini-free"] = GeminiLLM(env["GEMINI_FREE_KEY"], provider_id="gemini-free")
-        if env.get("GROQ_KEY"):
-            adapters_by_provider["groq"] = GroqLLM(env["GROQ_KEY"])
-        if env.get("OPENROUTER_KEY"):
-            adapters_by_provider["openrouter"] = OpenRouterLLM(env["OPENROUTER_KEY"])
-        if env.get("CF_AI_TOKEN") and env.get("CF_ACCOUNT_ID"):
-            rest = (models["providers"].get("cf-ai") or {}).get("rest_base")
-            kwargs = {"rest_base": rest} if rest else {}
-            adapters_by_provider["cf-ai"] = CloudflareAILLM(env["CF_AI_TOKEN"], env["CF_ACCOUNT_ID"], **kwargs)
-        if env.get("ANTHROPIC_KEY"):
-            adapters_by_provider["anthropic"] = AnthropicLLM(env["ANTHROPIC_KEY"])
-        if real_db and not adapters_by_provider:
-            raise AdapterError("OGR-ADP-001 gerçek veritabanıyla sahte model kullanılmaz: SUPABASE_URL/"
-                               "SUPABASE_BATCH_JWT var ama hiçbir model anahtarı yok (anahtarları ekle ya da "
-                               "--dry-run ile çalıştır)")
-        if adapters_by_provider and not real_db:
-            raise AdapterError("OGR-ADP-001 gerçek model çağrısı gerçek maliyet defteri ve tavan olmadan yapılmaz: "
-                               f"{', '.join(sorted(adapters_by_provider))} anahtarı var ama SUPABASE_URL/"
-                               "SUPABASE_BATCH_JWT yok (ikisini ekle ya da --dry-run ile çalıştır)")
-        if real_db:
-            db: DB = PostgrestDb(url, jwt, anon_key=anon)
-            storage: Storage = SupabaseStorage(url, jwt, anon_key=anon)
-        else:
-            warn("SUPABASE_URL/SUPABASE_BATCH_JWT yok; veritabanı ve depolama sahte (JsonlDb, yerel dizin).")
-            clock = fake_clock_from_env(env)
-            db = JsonlDb.from_fixtures(fixtures, out_dir=out, clock=clock)
-            storage, storage_tmp = _local_storage(fixtures, out)
+        warn("v2: veritabanı, depolama ve embedding sahte (JsonlDb, yerel dizin); worker HTTP servisi henüz yok.")
+        db: DB = JsonlDb.from_fixtures(fixtures, out_dir=out, clock=clock)
+        storage, storage_tmp = _local_storage(fixtures, out)
         llm: LLM
-        if adapters_by_provider:
-            llm = ProviderRouter(models, adapters_by_provider)
+        groq_key = env.get("GROQ_API_KEY")
+        if groq_key:
+            llm = ProviderRouter(models, {"groq": GroqLLM(groq_key)})
         else:
-            warn("Hiçbir model anahtarı yok; sahte LLM (FakeLLM) kullanılıyor.")
+            warn("GROQ_API_KEY yok; sahte LLM (FakeLLM) kullanılıyor.")
             llm = FakeLLM(**dict(llm_options or {}))
-        embed_model = models["chains"]["embedding"][0]
-        embed_info = models["models"][embed_model]
-        embed_dims = int(embed_info.get("dims") or 0)
-        key_env = PROVIDER_KEY_ENV.get(embed_info["provider"])
-        embed_key = env.get(key_env) if key_env else None
-        inner: Embedding
-        if not real_db:
-            warn("Embedding sahte (veritabanı sahte).")
-            inner = FakeEmbedding(models=models)
-        elif embed_key:
-            inner = GeminiEmbedding(embed_key, model=embed_model, dims=embed_dims)
-        else:
-            reason = (f"embedding anahtarı ({key_env or embed_info['provider']}) yok; gerçek veritabanına sahte "
-                      "vektör yazılmaz")
-            warn(reason[0].upper() + reason[1:] + "; embed çağrıları reddedilecek.")
-            inner = RefusingEmbedding(embed_model, embed_dims, reason)
-        mail = env.get("UNPAYWALL_EMAIL")
-        scholars: list[Scholar] = [OpenAlexScholar(mailto=mail), SemanticScholar(api_key=env.get("S2_API_KEY")),
-                                   ArxivScholar()]
-        doi: DOIResolverProto = CrossrefResolver(mailto=mail)
-        if mail:
-            oa: OAResolver = UnpaywallResolver(email=mail)
-        else:
-            warn("UNPAYWALL_EMAIL yok; açık erişim sorgusu sahte.")
-            oa = FakeUnpaywall()
         ledger = CostLedger(db, llm, models=models, clock=clock, dry_run=False, notifier=notifier)
-        batch_client = GeminiBatchClient(env["GEMINI_PAID_KEY"]) if env.get("GEMINI_PAID_KEY") else None
-        mode = "real" if real_db else "mixed"
-        return cls(mode=mode, dry_run=False, db=db, llm=llm, embedding=LedgeredEmbedding(inner, ledger),
-                   vision=LLMVision(ledger), transcriber=LLMTranscriber(ledger), ocr=LLMOCR(ledger),
-                   scholars=scholars, doi=doi, oa=oa, storage=storage, notifier=notifier, ledger=ledger,
-                   batch=BatchRunner(ledger, client=batch_client), clock=clock, models=models, fixtures=fixtures,
+        mode = "mixed"
+        return cls(mode=mode, dry_run=False, db=db, llm=llm,
+                   embedding=LedgeredEmbedding(FakeEmbedding(models=models), ledger), vision=LLMVision(ledger),
+                   transcriber=LLMTranscriber(ledger), ocr=LLMOCR(ledger),
+                   storage=storage, notifier=notifier, ledger=ledger,
+                   batch=BatchRunner(ledger), clock=clock, models=models, fixtures=fixtures,
                    out=out, warnings=warnings, storage_tmp=storage_tmp)
 
 

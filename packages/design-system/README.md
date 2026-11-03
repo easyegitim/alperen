@@ -69,6 +69,8 @@ Paket kaynak olarak paylaşılır (derleme yok). Next.js uygulamasında `transpi
 @source "../node_modules/@ogrenmen/design-system/src"; /* bileşen sınıflarının taranması için; yolu uygulamaya göre ayarla */
 ```
 
+React Server Components: durum, olay işleyicisi ya da grafik kullanan bileşen dosyaları (`ModeToggle`, `CameraSheet`, `Timer`, `TreeNode`, `ReportChart`, `DocumentViewer`, `TextField`, `AppShell`, `ExamPlayer`, `AnswerGrid`) `'use client'` ile başlar; `import { Button, Badge, cn, renderMath } from '@ogrenmen/design-system'` bir sunucu bileşeninden olduğu gibi çalışır. Yalnız görüntü olan bileşenler ve yardımcılar yönergesizdir; bir işleyici (`onClick` vb.) geçirmek için çağıran dosyanın kendisi istemci bileşeni olmalıdır.
+
 ```tsx
 import { Button, TutorMessage, ModeToggle, MathText } from '@ogrenmen/design-system';
 // <html lang="tr" data-theme="light"> — koyu tema için data-theme="dark"; verilmezse işletim sistemi tercihi geçerli.
@@ -83,15 +85,15 @@ import { Button, TutorMessage, ModeToggle, MathText } from '@ogrenmen/design-sys
 
 ## Bileşenler
 
-Kaynak `src/components/*.tsx`; her bileşenin kılavuzu `components/<Ad>/README.md` dosyasındadır (spesifikasyon; `preview.html` dosyaları eski tasarım kartı önizlemeleridir). `components/bundle.css` yalnızca o eski önizlemeler içindir.
+Kaynak `src/components/*.tsx`; her bileşenin kılavuzu `components/<Ad>/README.md` dosyasındadır (spesifikasyon). Canlı önizleme yalnızca `preview/` Vite sayfasıdır.
 
 - Marka ve temel: `BrandLockup`, `Button` (`buttonClasses` bağlantıyı düğme gibi gösterir), `Badge`, `TextField`, `ProgressBar`, `Notice`, `Avatar`, `Cover`.
-- Öğrenci (Kulaklık, Tablet, Kalem): `TutorMessage`, `ModeToggle`, `LessonCard`, `QuizOption`, `FigureFrame`, `ExamPriorityRow` (`ExamPriorityList`), `CameraSheet`, `StepLadder`, `DocumentViewer`, `ExamPlayer` (`Timer`, `AnswerGrid`, `useCountdown`).
-- Profil (Gözlük): `MasteryMeter`, `MisconceptionItem`, `EvidenceQuote`, `OutcomeHeatmap`, `Tree` / `TreeNode`, `MemoryFileCard`.
-- Araştırma (Kitap): `CitationCard`.
+- Öğrenci (Bugün, Koç, Gelişim; PLAN-v2 §13 sadelik ilkesi): `BigStart` (kahraman kart, tek birincil Başla), `SuggestionCard` (`suggestions.kind` ile aynı yedi tür), `ProgressStrip`, `OneLineResult` (tek cümle sonuç + Detay), `UploadSheet` (Kendi çalışmam / Okul denemesi, `CameraSheet` gövdesi), `PdfViewer` (pdf.js, sayfa sayfa, tek İndir / Paylaş), `TutorMessage`, `ModeToggle`, `LessonCard`, `QuizOption`, `FigureFrame`, `ExamPriorityRow` (`ExamPriorityList`), `CameraSheet`, `StepLadder` (katlanır, Detay arkasında), `DocumentViewer`, `ExamPlayer` (`mode`: sade `practice` akışı ya da `exam` kipi; `Timer`, `AnswerGrid`, `useCountdown`).
+- Profil ve Konu haritası: `MasteryMeter`, `MisconceptionItem`, `EvidenceQuote`, `OutcomeHeatmap`, `Tree` / `TreeNode`, `MemoryFileCard`.
+- Atıf (ertelenen araştırma özelliği için): `CitationCard`.
 - Eğitmen konsolu: `StatTile`, `AlertRow`, `ReportChart`; `TutorMessage` `review` satırı (bkz. `egitmen-konsolu.md`).
-- Kabuk: `AppShell` (mobilde alt gezinme + "Sor" düğmesi, masaüstünde kenar çubuğu).
-- Yardımcılar: `MathText`, `Tex`, `renderMath`, `renderMathML`; `formatPercent`, `formatDelta`, `formatNumber`, `formatClock`; `masteryDisplay` (kanıt eşiği mantığı); `ERROR_CAUSE_LABELS`, `TUTOR_MODES`.
+- Kabuk: `AppShell` (mobilde alt gezinme + "+ Yükle" düğmesi, masaüstünde kenar çubuğu).
+- Yardımcılar: `MathText`, `Tex`, `renderMath`, `renderMathML`; `formatPercent`, `formatDelta`, `formatNumber`, `formatClock`; `masteryDisplay` / `masteryBand` (kanıt eşiği ve Zayıf/Orta/İyi bantları; öğrenci ve veli yüzü varsayılan bant, eğitmen konsolu `display="percent"`); `cn` (tailwind-merge ile çakışan sınıflarda çağıranın className'i kazanır); `ERROR_CAUSE_LABELS`, `TUTOR_MODES`.
 
 ## Grafik
 

@@ -33,6 +33,16 @@ describe('decideRoute', () => {
     });
     expect(decideRoute({ pathname: '/', authed: false, role: null, onboarded: false })).toEqual({ type: 'redirect', to: '/giris' });
   });
+  it('oturumsuz davet bağlantısında sorgu (kod) next içinde korunur', () => {
+    expect(decideRoute({ pathname: '/davet', search: '?kod=gi_abc', authed: false, role: null, onboarded: false })).toEqual({
+      type: 'redirect',
+      to: `/giris?next=${encodeURIComponent('/davet?kod=gi_abc')}`,
+    });
+  });
+  it('/davet oturumluyken kurulum bitmemiş kullanıcıyı /hos-geldin\'e atmaz (sayfa kendisi yönlendirir)', () => {
+    expect(decideRoute({ pathname: '/davet', authed: true, role: null, onboarded: false })).toEqual({ type: 'next' });
+    expect(decideRoute({ pathname: '/davet', authed: true, role: 'parent', onboarded: false })).toEqual({ type: 'next' });
+  });
   it('oturumsuz kullanıcı herkese açık yollarda geçer', () => {
     for (const pathname of ['/giris', '/cevrimdisi', '/api/health', '/auth/callback', '/manifest.webmanifest', '/icons/icon-192.png']) {
       expect(decideRoute({ pathname, authed: false, role: null, onboarded: false })).toEqual({ type: 'next' });

@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""RPC adı + parametre adı paritesi (BLUEPRINT §2.10, §11 M13).
+"""RPC adı + parametre adı paritesi (v2: tek kaynak supabase/migrations).
 
 Denetimler (her biri tabloda bir satır; herhangi bir FAIL → çıkış 1):
 
 (a) Ad paritesi
     * ``pipelines/common/src/ogrenmen_common/fakes/rpc-names.json`` içindeki her ad, migration'larda
       (``supabase/migrations/*.sql``, pglast ile) gövdesi olan bir ``create function public.<ad>`` olmalı.
-    * §3.0 "Görünümler ve yardımcılar" nesneleri (görünümler ve ``app.*`` yardımcıları) migration'da gövdeli
-      olarak var olmalı; tablo imza verdiyse parametre adları SQL imzasıyla aynı olmalı.
+    * ``fakes/rpc-names-legacy-v1.json``: v2 migration'larında karşılığı olmayan, P3 (tablet doğrulama servisi) ve
+      P5 (ders HTTP servisi) gelene dek duran v1 RPC'leri. Bu adlar, çağrı yerleri ve JsonlDb eşlenikleri **WARN**
+      satırı olarak raporlanır (imza denetlenmez); bir ad v2'de doğarsa FAIL (v2 listesine taşınmalı). Çağrı
+      satırında ya da hemen üstünde ``# rpc-parity: legacy-v1`` işareti, listede olmayan bir v1 çağrısını da WARN yapar.
     * Çağrı yerlerinde görülen her ad ``rpc-names.json`` listesinde olmalı (liste dondurulmuş sözleşmedir:
       JsonlDb'de eşleniği olmayan bir RPC ``--dry-run``'da patlardı). Listede olup hiç çağrılmayan ad uyarı değildir
       (liste ertelenmiş modüllerin eşleniklerini de taşır).
@@ -16,7 +18,7 @@ Denetimler (her biri tabloda bir satır; herhangi bir FAIL → çıkış 1):
     * Pipelines: ``pipelines/*/src/**/*.py`` içindeki ``<db>.rpc("<ad>", {…})`` çağrıları (``PostgrestDb.rpc`` ve
       ``JsonlDb.rpc`` aynı imzayı paylaşır); ad sabiti ve ``dict`` döndüren yardımcı (ör. ``rpc_params()``) çözülür.
       ``# rpc-parity: staff`` işaretli çağrı eğitmen oturumuyla yapılır: yalnız SQL imzasına karşı denetlenir,
-      ``rpc-names.json`` (batch_worker eşlenikleri) listesinde aranmaz.
+      ``rpc-names.json`` (worker eşlenikleri) listesinde aranmaz.
     * JsonlDb eşlenikleri: ``fakes/jsonl_rpc.py``'deki ``@rpc`` fonksiyonlarının parametre adları ve
       zorunluluk durumu SQL imzasıyla birebir; ``fakes/rpc-names.json`` kayıtlı eşleniklerle aynı küme.
     Bilinmeyen anahtar ya da eksik zorunlu parametre (SQL'de ``default`` yok) → FAIL. Çözümlenemeyen ad ya da
@@ -44,21 +46,9 @@ from pglast import ast as pg
 ROOT_DEFAULT = Path(__file__).resolve().parent.parent
 
 COMMON_NAMES = "pipelines/common/src/ogrenmen_common/fakes/rpc-names.json"
+LEGACY_NAMES = "pipelines/common/src/ogrenmen_common/fakes/rpc-names-legacy-v1.json"
 JSONL_RPC = "pipelines/common/src/ogrenmen_common/fakes/jsonl_rpc.py"
 MIGRATIONS = "supabase/migrations"
-BLUEPRINT = "docs/BLUEPRINT.md"
-
-# §2.10'da adıyla sayılan nesneler; §3.0 tablosu (BLUEPRINT varsa) bunlara eklenir.
-SECTION_2_10_OBJECTS: tuple[str, ...] = (
-    "mastery_view", "questions_public", "v_messages_staff", "v_exam_items_full", "v_review_queue",
-    "v_instructor_response_times", "panel_metrics_weekly",
-    "app.base32_random", "app.numeric_equal", "app.spend_rollup", "app.refresh_name_hashes",
-    "app.observations_check_source", "app.questions_approve_guard", "app.questions_protect_review",
-    "app.lesson_protect_status", "app.messages_expires_at", "app.fill_curriculum_id", "app.questions_check_skills",
-    "app.research_released", "app.infer_prereq_gap", "app.staff_name_hashes", "app.current_student_sd",
-    "app.retention_students_anonymize", "app.retention_lessons_video", "app.retention_lessons_transcript",
-    "app.retention_enrollments_learning_data", "app.retention_enrollments_closed",
-)
 
 IN_MODES = {"i", "b", "v", "d"}  # in, inout, variadic, varsayılan (in)
 PASS, WARN, FAIL = "PASS", "WARN", "FAIL"
@@ -173,17 +163,27 @@ class Row:
 
 
 STAFF_MARK = "rpc-parity: staff"
+LEGACY_MARK = "rpc-parity: legacy-v1"
 
 
 def _staff_marked(call: CallSite) -> bool:
     """Çağrı satırında ya da hemen üstünde ``# rpc-parity: staff`` işareti var mı."""
+    return _marked(call, STAFF_MARK)
+
+
+def _legacy_marked(call: CallSite) -> bool:
+    """Çağrı satırında ya da hemen üstünde ``# rpc-parity: legacy-v1`` işareti var mı."""
+    return _marked(call, LEGACY_MARK)
+
+
+def _marked(call: CallSite, mark: str) -> bool:
     try:
         lines = Path(call.file).read_text(encoding="utf-8").splitlines()
     except OSError:
         return False
     idx = call.line - 1
     window = lines[max(0, idx - 1): idx + 1]
-    return any(STAFF_MARK in ln for ln in window)
+    return any(mark in ln for ln in window)
 
 
 def compare_keys(fns: list[SqlFunction], keys: frozenset[str]) -> tuple[str, str]:
@@ -647,43 +647,6 @@ def jsonl_fake_signatures(path: Path) -> list[FakeSignature]:
     return out
 
 
-# --------------------------------------------------------------------------------------------- §3.0 nesneleri
-
-
-_SIG = re.compile(r"^([a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)?)\s*(\(([^)]*)\))?")
-
-
-def blueprint_objects(blueprint: Path) -> dict[str, list[str] | None]:
-    """§3.0 "Görünümler ve yardımcılar" tablosu: nesne → parametre adları (imza verilmediyse None)."""
-    if not blueprint.exists():
-        return {}
-    lines = blueprint.read_text(encoding="utf-8").splitlines()
-    try:
-        start = next(i for i, ln in enumerate(lines) if ln.startswith("**Görünümler ve yardımcılar"))
-    except StopIteration:
-        return {}
-    out: dict[str, list[str] | None] = {}
-    seen_table = False
-    for ln in lines[start + 1 :]:
-        if not ln.startswith("|"):
-            if seen_table:
-                break
-            continue
-        seen_table = True
-        m = re.match(r"^\|\s*`([^`]+)`", ln)
-        if not m:
-            continue
-        sig = _SIG.match(m.group(1).strip())
-        if not sig:
-            continue
-        params = None
-        if sig.group(2) is not None:
-            inner = sig.group(3).strip()
-            params = [p.strip().split()[0] for p in inner.split(",") if p.strip()] if inner else []
-        out[sig.group(1)] = params
-    return out
-
-
 # --------------------------------------------------------------------------------------------- ana akış
 
 
@@ -704,8 +667,9 @@ def _load_names(path: Path) -> list[str]:
     return names
 
 
-def check(root: Path, required_objects: tuple[str, ...] = SECTION_2_10_OBJECTS) -> list[Row]:
-    """Tüm denetimler; ``required_objects`` §2.10 listesidir (testler küçük dünyada boş verir)."""
+def check(root: Path, required_objects: tuple[str, ...] = ()) -> list[Row]:
+    """Tüm denetimler. Gerekli çağrılabilir nesneler yalnız migration'lardan okunur; ``required_objects`` ek olarak
+    var olması beklenen görünüm/fonksiyon adlarıdır (v2'de varsayılan boş: tek kaynak migration'lardır)."""
     cat = load_catalog(root / MIGRATIONS)
     rows: list[Row] = []
 
@@ -726,25 +690,31 @@ def check(root: Path, required_objects: tuple[str, ...] = SECTION_2_10_OBJECTS) 
             else:
                 rows.append(Row(PASS, f"ad:{source}", name, rel, f"{fns[0].file}"))
 
-    # (a) §3.0 görünümler ve yardımcılar
-    documented = blueprint_objects(root / BLUEPRINT)
-    objects: dict[str, list[str] | None] = dict.fromkeys(required_objects)
-    objects.update(documented)
-    for obj, params in objects.items():
+    # (a) legacy-v1 adlar: v2'de karşılığı yok → WARN; v2'de doğmuşsa FAIL (v2 listesine taşınmalı)
+    legacy_path = root / LEGACY_NAMES
+    legacy = _load_names(legacy_path) if legacy_path.exists() else []
+    for name in sorted(set(legacy)):
+        if name in names_by_source["pipelines"]:
+            rows.append(Row(FAIL, "ad:legacy-v1", name, LEGACY_NAMES, "hem v2 hem legacy-v1 listesinde"))
+        elif cat.function(name):
+            rows.append(Row(FAIL, "ad:legacy-v1", name, LEGACY_NAMES,
+                            f"artık v2'de var ({cat.function(name)[0].file}): rpc-names.json'a taşıyın"))
+        else:
+            rows.append(Row(WARN, "ad:legacy-v1", name, LEGACY_NAMES,
+                            "v2 migration'larında yok (P3/P5 servisleri gelene dek duran v1 RPC'si)"))
+
+    # (a) ek gerekli nesneler (görünüm ya da fonksiyon)
+    for obj in required_objects:
         view = cat.view(obj)
         fns = cat.function(obj)
         if view:
-            rows.append(Row(PASS, "§3.0", obj, view, "görünüm"))
+            rows.append(Row(PASS, "nesne", obj, view, "görünüm"))
         elif fns and all(f.has_body for f in fns):
-            if params is not None and not any([p.name for p in f.params] == params for f in fns):
-                rows.append(Row(FAIL, "§3.0", obj, fns[0].file,
-                                f"imza farklı: BLUEPRINT ({', '.join(params)}) ↔ SQL {signature_text(fns[0])}"))
-            else:
-                rows.append(Row(PASS, "§3.0", obj, fns[0].file, "fonksiyon"))
+            rows.append(Row(PASS, "nesne", obj, fns[0].file, "fonksiyon"))
         elif fns:
-            rows.append(Row(FAIL, "§3.0", obj, fns[0].file, "gövdesi yok"))
+            rows.append(Row(FAIL, "nesne", obj, fns[0].file, "gövdesi yok"))
         else:
-            rows.append(Row(FAIL, "§3.0", obj, MIGRATIONS, "migration'larda yok (adı geçen ama tanımı olmayan nesne)"))
+            rows.append(Row(FAIL, "nesne", obj, MIGRATIONS, "migration'larda yok"))
 
     # (b) çağrı yerleri
     py_files = sorted(p for p in (root / "pipelines").glob("*/src/**/*.py"))
@@ -757,6 +727,10 @@ def check(root: Path, required_objects: tuple[str, ...] = SECTION_2_10_OBJECTS) 
                 rows.append(Row(FAIL, f"çağrı:{source}", "?", where, c.note))
                 continue
             fns = cat.function(c.rpc)
+            if not fns and (c.rpc in legacy or _legacy_marked(c)):
+                rows.append(Row(WARN, f"çağrı:{source}", c.rpc, where,
+                                "legacy-v1: v2'de karşılığı yok (P3/P5 servisleri gelene dek)"))
+                continue
             if not fns:
                 rows.append(Row(FAIL, f"çağrı:{source}", c.rpc, where, "migration'larda create function yok"))
                 continue
@@ -778,13 +752,17 @@ def check(root: Path, required_objects: tuple[str, ...] = SECTION_2_10_OBJECTS) 
         raise ParityError(f"JsonlDb eşlenik dosyası yok: {fake_path}")
     fakes = jsonl_fake_signatures(fake_path)
     fake_names = {f.name for f in fakes}
-    for name in sorted(set(names_by_source["pipelines"]) ^ fake_names):
-        side = "rpc-names.json'da var, @rpc eşleniği yok" if name in names_by_source["pipelines"] \
-            else "@rpc eşleniği var, rpc-names.json'da yok"
+    for name in sorted((set(names_by_source["pipelines"]) | set(legacy)) ^ fake_names):
+        side = "rpc-names*.json'da var, @rpc eşleniği yok" if name in names_by_source["pipelines"] or name in legacy \
+            else "@rpc eşleniği var, rpc-names*.json'da yok"
         rows.append(Row(FAIL, "jsonl", name, _rel(root, fake_path), side))
     for fake in fakes:
         where = f"{_rel(root, fake_path)}:{fake.line}"
         fns = cat.function(fake.name)
+        if not fns and fake.name in legacy:
+            rows.append(Row(WARN, "jsonl", fake.name, where,
+                            "legacy-v1 eşlenik; imza denetlenmez (v2'de karşılığı yok)"))
+            continue
         if not fns:
             rows.append(Row(FAIL, "jsonl", fake.name, where, "migration'larda create function yok"))
             continue

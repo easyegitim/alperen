@@ -1,7 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
-import { areaOfPath, canUseArea, isAppRole, roleHome, type AppRole } from '@/lib/roles';
+import { isAppRole, roleHome, type AppRole } from '@/lib/roles';
 import { needsOnboarding } from '@/lib/routing';
 import { createSupabaseServerClient } from './supabase';
 import type { ProfileRow } from '@/lib/supabase/types';
@@ -35,13 +35,6 @@ export const getCurrentProfile = cache(async (): Promise<CurrentProfile | null> 
   return { user, profile: data ?? null };
 });
 
-/** Oturum yoksa /giris'e yollar. */
-export async function requireUser(): Promise<CurrentUser> {
-  const user = await getCurrentUser();
-  if (!user) redirect('/giris');
-  return user;
-}
-
 export interface RequiredRole {
   user: CurrentUser;
   role: AppRole;
@@ -61,12 +54,4 @@ export async function requireRole(...allowed: AppRole[]): Promise<RequiredRole> 
   const permitted = allowed.length === 0 || allowed.includes(role);
   if (!permitted) redirect(roleHome(role));
   return { user, role, displayName: profile.display_name };
-}
-
-/** Rol alanı düzenleri için: yoldan alanı bulup yalnız o alana girebilen rolleri kabul eder. */
-export async function requireArea(pathname: '/ogrenci' | '/veli' | '/egitmen'): Promise<RequiredRole> {
-  const area = areaOfPath(pathname);
-  const required = await requireRole();
-  if (!area || !canUseArea(required.role, area)) redirect(roleHome(required.role));
-  return required;
 }

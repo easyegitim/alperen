@@ -11,9 +11,9 @@ export interface ButtonStyleOptions {
 }
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-on-primary enabled:hover:bg-primary-strong',
-  secondary: 'bg-surface-raised text-primary border-line-strong enabled:hover:bg-primary-soft',
-  quiet: 'bg-transparent text-primary enabled:hover:bg-primary-soft',
+  primary: 'bg-primary text-on-primary hover:bg-primary-strong',
+  secondary: 'bg-surface-raised text-primary border-line-strong hover:bg-primary-soft',
+  quiet: 'bg-transparent text-primary hover:bg-primary-soft',
   reward: 'bg-gold text-on-gold border-gold-deep',
 };
 
@@ -29,7 +29,7 @@ export function buttonClasses({ variant = 'secondary', size = 'md', block }: But
   return cn(
     'og-motion inline-flex items-center justify-center gap-2 rounded-md border border-transparent no-underline',
     'cursor-pointer transition-colors duration-150',
-    'disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-ink-muted',
+    'disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-ink-muted disabled:hover:bg-surface-sunken',
     FOCUS_RING,
     VARIANTS[variant],
     SIZES[size],

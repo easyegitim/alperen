@@ -550,8 +550,7 @@
     "commitments",
     "talk",
     "previous_profile_check",
-    "next_step",
-    "model_notes"
+    "next_step"
   ],
   "additionalProperties": false
 }

@@ -1,9 +1,11 @@
 # pipelines/common — `ogrenmen_common` (M05)
 
-Öğrenmen'in Python toplu işlerinin (Tablet, Kulaklık, Ders, Kalem, Kitap) ortak tabanı: adaptör
-sözleşmeleri, gerçek adaptörler, deterministik sahteler, `JsonlDb`, `CostLedger`, Gemini Batch
-sarmalayıcısı, PII sarmalayıcısı, `Runtime` ve ortak CLI bayrakları (BLUEPRINT §2.8, §6). Hiçbir
-hesap ya da anahtar olmadan çalışır ve sınanır; testler ağa çıkmaz.
+Öğrenmen v2 Python pipeline'larının (`tablet`, `kalem`, `ders`; P3/P5'te `verify`) ortak tabanı: adaptör
+sözleşmeleri, deterministik sahteler, `JsonlDb`, `CostLedger`, PII sarmalayıcısı, `Runtime` ve ortak CLI
+bayrakları (PLAN-v2 §12). Hiçbir hesap ya da anahtar olmadan çalışır ve sınanır; testler ağa çıkmaz.
+Pipeline'lar DB kimliği taşımaz; Claude yalnız `packages/llm`'dedir (worker). Bu paketteki Gemini/Groq-sohbet/
+OpenRouter/Cloudflare adaptörleri yalnız eski `tablet`/`kalem` sahte akışları ve testler için durur, `Runtime`
+gerçek kipte kurmaz; P3/P5'te kaldırılır.
 
 ## Kurulum ve kabul
 
@@ -13,29 +15,27 @@ OGRENMEN_FAKES=1 python -m ogrenmen_common.selftest
 python -c "from ogrenmen_common.runtime import Runtime;r=Runtime.from_env(dry_run=True);assert r.llm.__class__.__name__=='FakeLLM'"
 ```
 
-Bağımlılıklar sabit sürümlüdür (§6 ağacındaki `httpx`, `jsonschema`, `numpy`, `typer`, `rich`; arXiv Atom
-yanıtını güvenli ayrıştırmak için `defusedxml`; geliştirme için `pytest`, `ruff`) ve
+Bağımlılıklar sabit sürümlüdür (§6 ağacındaki `httpx`, `jsonschema`, `numpy`, `typer`, `rich`; geliştirme için `pytest`, `ruff`) ve
 yerel paketler (`ogrenmen-contracts`, `ogrenmen-mastery`, `ogrenmen-pii`) aynı `pip` komutunda `-e` ile
-kurulur. `psycopg` yoktur: veritabanına PostgREST üzerinden `batch_worker` JWT'siyle bağlanılır.
+kurulur. `psycopg` yoktur: pipeline'lar v2'de veritabanına doğrudan bağlanmaz (`service_role` yalnız `apps/worker`'dadır, PLAN §12); `Runtime` gerçek kipte DB/depolamayı sahte tutar ve `SUPABASE_BATCH_JWT` verilirse `OGR-ADP-001` ile reddeder.
 
 ## Ağaç
 
 ```
 src/ogrenmen_common/
-├── adapters/base.py        Protocol'ler: LLM, Embedding, Vision, Transcriber, OCR, Scholar, DOIResolver, OAResolver, DB, Storage, Notifier
+├── adapters/base.py        Protocol'ler: LLM, Embedding, Vision, Transcriber, OCR, DB, Storage, Notifier
 ├── adapters/gemini.py      GeminiLLM (metin/görüntü/ses), GeminiEmbedding (768), GeminiBatchClient
-├── adapters/groq.py        GroqLLM (sohbet + Whisper /audio/transcriptions)   openrouter.py  cfai.py  anthropic.py
+├── adapters/groq.py        GroqLLM (Whisper /audio/transcriptions; sohbet eski)   openrouter.py  cfai.py (eski)
 ├── adapters/openai_compat.py  json_schema → json_object düşüşlü OpenAI uyumlu istemci
 ├── adapters/router.py      ProviderRouter: models.json sağlayıcısına göre yönlendirme, available(model)
 ├── adapters/media.py       LLMVision, LLMOCR, LLMTranscriber (CostLedger üzerinden; Whisper → diarize pencereleri)
-├── adapters/openalex.py  semanticscholar.py  arxiv.py  crossref.py  unpaywall.py
-├── adapters/postgrest.py   PostgrestDb (messages sütun listesinde text_raw YOK; insert/update returning=minimal|representation)
+├── adapters/postgrest.py   PostgrestDb (insert/update returning=minimal|representation)
 ├── adapters/storage.py     SupabaseStorage      notify.py  LogNotifier, format_notice
-├── fakes/                  FakeLLM, FakeEmbedding, FakeVision, FakeTranscriber, FakeOCR, FakeScholar, FakeArxiv,
-│                           FakeCrossref, FakeUnpaywall, JsonlDb (+ jsonl_rpc.py), LocalDirStorage, FakeNotifier,
-│                           rpc-names.json
+├── fakes/                  FakeLLM, FakeEmbedding, FakeVision, FakeTranscriber, FakeOCR,
+│                           JsonlDb (+ jsonl_rpc.py), LocalDirStorage, FakeNotifier,
+│                           grants-v2.json, rpc-names.json, rpc-names-legacy-v1.json
 ├── ledger.py               CostLedger, LedgeredEmbedding        batch.py   BatchRunner
-├── grants.py               supabase/tests/grants_matrix.json okuyucusu (çalışma anında; JsonlDb sütun yetkileri)
+├── grants.py               fakes/grants-v2.json okuyucusu (tablo + sütun listesi; scripts/gen_grants_v2.py migration'lardan üretir)
 ├── ids.py                  STUDENT_REF (s_… biçimi; tek kaynak)   clock.py  saat, ISO, hms_seconds
 ├── pii.py                  scrub_for_llm, label_transcript, name_leaks
 ├── runtime.py              Runtime.from_env(dry_run)
@@ -58,18 +58,19 @@ facts = cli_base.add_command(sub, "facts", "Gece olgu çıkarımı")
 facts.add_argument("--day", required=True)
 args = parser.parse_args()
 with cli_base.open_runtime(args) as rt:              # çıkışta out/*.jsonl + cost_estimate.json yazılır
-    rows = rt.db.select("messages", where={"chat_id": 700000001})      # text_raw hiçbir zaman gelmez
+    rows = rt.db.select("memory_facts", where={"student_id": "..."})
     req = LLMRequest(purpose="nightly_facts", model="", prompt=..., schema_id="nightly-facts-output")
-    result = rt.ledger.call("nightly_facts", req, student_ref="s_qk7m2rx4tn5a", ref_table="messages")
+    result = rt.ledger.call("nightly_facts", req, student_ref="s_qk7m2rx4tn5a", ref_table="memory_facts")
     out = rt.batch.run("nightly_facts", items)       # sahte yol anında 'done'; gerçek yol gecikirse 'deferred'
 ```
 
 * **Her model çağrısı `CostLedger.call`'dan geçer** (§6 kural 2): `check_spend` kapısı (ücretli sağlayıcı
   yalnız `paid_allowed` iken; değilse `cap_blocked`), `models.json` zinciri, 429/5xx/zaman aşımı/yapılandırma
   düşüşü (sağlayıcı bekleme süresi `cooldown_skip`; 401/403'te kurucuya bildirim), şema doğrulaması ve tek
-  onarım, her deneme bir `llm_calls` satırı — gövde yalnız `batch_worker`'ın INSERT yetkisindeki sütunlar
-  (`LLM_CALLS_INSERT_COLUMNS`; `id`/`created_at` DB varsayılanı), `Prefer: return=minimal` ile. Ders amaçları (`lesson_analysis`, `transcribe`, `diarize`)
-  `check_spend`'in ayrı ders bütçesine bağlıdır; sohbet/toplu tavanını doldurmaz ve ondan etkilenmez.
+  onarım, her deneme bir `llm_calls` satırı — gövde yalnız v2 `llm_calls` sütunları
+  (`LLM_CALLS_INSERT_COLUMNS`; `id`/`created_at` DB varsayılanı; `cooldown_skip` → `rate_limited` + `error_code`),
+  `Prefer: return=minimal` ile. v2 `check_spend` yumuşak tavandır (engellemez, `downgrade` der); Gemini zinciri
+  `downgrade` iken ücretli modelleri atlar. Ders amaçları `cap_excluded_purposes` listesindedir ve tavana takılmaz.
 * `student_ref` yalnız `s_…` olabilir; uuid ya da ad verilirse `CostLedger` reddeder (§6 kural 1).
 * **Degraded kip** (`check_spend` `degraded=true` / `state='degraded'`, yani `degraded_mode=true`; §5.6 "LLM yok",
   kurucunun kill-switch'i): tavanın altında olunsa da **hiçbir** model (ücretli, ücretsiz, ders amaçları dahil —
@@ -87,12 +88,9 @@ with cli_base.open_runtime(args) as rt:              # çıkışta out/*.jsonl +
 | Koşul | Sonuç |
 | --- | --- |
 | `OGRENMEN_FAKES=1`, `dry_run=True` ya da `adapters="fake"` | tamamen sahte, ağ yok; saat `OGRENMEN_NOW` ya da fixture "şimdi"si `2026-10-20T09:00:00Z` |
-| gerçek kip, veritabanı + model anahtarları var | `PostgrestDb`, `SupabaseStorage`, `ProviderRouter` (anahtarı olan sağlayıcılar), `LedgeredEmbedding(GeminiEmbedding)` (`GEMINI_PAID_KEY`), OpenAlex/S2/arXiv, Crossref, Unpaywall, `LogNotifier` (stderr), `GeminiBatchClient` |
-| gerçek kip, ne veritabanı ne model anahtarı | her şey sahte (`mode='mixed'`), `warnings` + stderr'de Türkçe uyarı |
-| gerçek veritabanı var, hiçbir model anahtarı yok | **kurulmaz** — `AdapterError` `OGR-ADP-001 gerçek veritabanıyla sahte model kullanılmaz` (fixture çıktıları ve sahte maliyet satırları üretim tablolarına yazılmaz) |
-| model anahtarı var, `SUPABASE_URL`/`SUPABASE_BATCH_JWT` yok | **kurulmaz** — `AdapterError` (ücretli çağrı gerçek defter ve `check_spend` tavanı olmadan yapılmaz; ilke 2 ve 3) |
-| gerçek veritabanı var, `GEMINI_PAID_KEY` yok | embedding `embed` çağrısında `OGR-ADP-001` ile reddedilir (sahte vektör yazılmaz); `GEMINI_FREE_KEY` embedding için **hiç** kullanılmaz (ücretsiz katman veriyle eğitir, §9.1) |
-| diğer eksik anahtarlar (Unpaywall) | o adaptör sahteye düşer, `warnings` + stderr'de Türkçe uyarı (sessiz düşüş yok) |
+| gerçek kip, `SUPABASE_BATCH_JWT` / `SUPABASE_SERVICE_ROLE_KEY` var | **kurulmaz** — `AdapterError` `OGR-ADP-001 v2: pipelines DB'ye doğrudan yazmaz; worker HTTP servisi üzerinden` |
+| gerçek kip, `GROQ_API_KEY` yok | her şey sahte (`mode='mixed'`), `warnings` + stderr'de Türkçe uyarı |
+| gerçek kip, `GROQ_API_KEY` var | `ProviderRouter` yalnız Groq (Whisper STT) ile; DB, depolama, embedding sahte (satırlar yerel `out/*.jsonl`) |
 
 `cli_base.runtime_from_args`: gerçek çalışma istenip `SUPABASE_URL` ya da `SUPABASE_BATCH_JWT` yoksa iş
 `--dry-run` olarak koşar ve başarılı sayılır; GitHub Actions'ta `::warning::` satırı yazar (§2.9).
@@ -102,81 +100,61 @@ Depolama: `out` verilmezse her `Runtime` kendi geçici dizinini (`ogrenmen-stora
 
 ## Sahteler
 
-**FakeLLM seçim kuralı (§2.3; Worker `apps/worker/test/fakes/providers.ts` ile birebir):** klasördeki
+**FakeLLM seçim kuralı (`packages/llm` sahtesinin ilkesiyle aynı, deterministik):** klasördeki
 `*.json` dosyaları ada göre sıralanır, `bad-schema*.json` dışarıda bırakılır,
-`i = int(sha256(prompt_text)[:8], 16) mod n` (`prompt_text` = `system + "\n\n" + prompt`, sistem boş olsa da —
-Worker `promptTextOf` (`${system}\n\n${messages}`) ile aynı kurgu; UTF-8).
+`i = int(sha256(prompt_text)[:8], 16) mod n` (`prompt_text` = `system + "\n\n" + prompt`, sistem boş olsa da; UTF-8).
 `fail_with={429: [0], 500: [2], "timeout": [3]}` çağrı sırasına göre hata, `fail_models` modele göre hata,
 `bad_output_every` / `bad_output_at` `bad-schema.json` döndürür. `fixture_hint` (ses/PDF adı, ör.
-`lesson-01`, `exam-2022`) adı bu parçayı içeren dosyayı seçer; eşleşme yoksa kural uygulanır — bu yalnız
-pipelines'a özgü bir kolaylıktır, Worker kuralını değiştirmez. Parite testleri: M01'in başvuru
-uygulaması (`fixtures/scripts/select_llm.py`) tüm klasörlerde, TS ikamesi (`tests/stubs/providers-select.ts`,
-Web Crypto ile, `bun` altında) `fixtures/llm/chat` üzerinde; M04'ün `apps/worker/test/fakes/providers.ts`'i
-varsa onun `selectFixture(fixtures, purpose, promptText)` ve `promptTextOf` fonksiyonları `bun` ile çağrılır:
-aynı 47 metin için aynı dosya, ve aynı (sistem='', istem) çiftini iki taraf kendi kurucusuyla birleştirdiğinde
-aynı metin ve aynı dosya (salt okunur). Test yalnız `providers.ts` ya da `bun` yoksa atlanır; ikisi varken
-yükleme hatası parite hatası sayılır.
+`lesson-01`, `exam-2022`) adı bu parçayı içeren dosyayı seçer; eşleşme yoksa kural uygulanır. Parite testleri:
+`fixtures/scripts/select_llm.py` başvuru uygulaması tüm klasörlerde, TS ikamesi (`tests/stubs/providers-select.ts`,
+Web Crypto ile, `bun` altında) `fixtures/llm/chat` üzerinde aynı dosyayı seçer.
 
-**JsonlDb** (`batch_worker` görünümünün sahtesi):
+**JsonlDb** (pipeline'ların `service_role` görünümünün sahtesi; v2):
 
 * Taban dünya `fixtures/db/dev-seed.json`. `JsonlDb.from_fixtures(<dizin>)` o dizindeki tablo dosyalarını
-  okur ve **dizindeki tablo tabandakinin yerine geçer**. Eşleme: `messages-day.json → messages`,
-  `bot-responses-week.json → bot_responses`, `llm-calls-month.json → llm_calls`,
-  `spend-ledger-month.json → spend_ledger`, `memory-facts.json → memory_facts`,
-  `questions-review.json → questions`, `chats.json → tg_chats`, `requests.json → research_requests`,
-  `labels.json → lesson_labels`; diğerlerinde ad (`-` → `_`) tablo adıysa o tablo (`exam_sources.json`,
-  `generation_requests.json`, `students.json` …); çok tablolu dosyalar (`lesson-morale.json`) anahtar başına;
-  sözleşme örnekleri (`facts-day.json`, `ocr-2022.json`) atlanır. Aynı tabloya düşen dosyalar birincil anahtara
-  göre birleşir; birincil anahtarı olmayan satırların (ör. kimliği DB'nin vereceği `llm_calls`) hepsi korunur.
-  `base=False` tabanı kapatır.
+  okur ve **dizindeki tablo tabandakinin yerine geçer**. Eşleme: `llm-calls-month.json → llm_calls`,
+  `spend-ledger-month.json → spend_ledger`, `memory-facts.json → memory_facts`, `labels.json → lesson_labels`;
+  diğerlerinde ad (`-` → `_`) tablo adıysa o tablo (`exam_sources.json`, `generation_requests.json` …);
+  çok tablolu dosyalar anahtar başına; sözleşme örnekleri (`ocr-2022.json`) atlanır. Aynı tabloya düşen dosyalar
+  birincil anahtara göre birleşir; birincil anahtarı olmayan satırların hepsi korunur. `base=False` tabanı kapatır.
+* **Şema = migration'lar.** `fakes/grants-v2.json` `supabase/migrations`'taki tüm tablo ve sütunları listeler
+  (`python pipelines/common/scripts/gen_grants_v2.py` üretir; test dosyanın güncel olduğunu denetler). Doğrudan
+  yazımda olmayan tablo/sütun `OGR-DB-002` ile reddedilir; v2'de olmayan v1 tabloları (`LEGACY_V1_TABLES`: Telegram,
+  kota, oturum, saklama, bilimsel kaynak, pilot metrikleri) dev-seed'den yüklenirken **atlanır**. v2'de
+  uygulama rolü yoktur: `service_role` (ve `postgres`) tam yetkilidir; matriste tanımlı başka rol için
+  `grants.require` `OGR-DB-001` verir (eski `batch_worker` adı `service_role`'a eşlenir). Matris çalışma anında
+  okunur; yoksa/bozuksa `OGR-DB-004`.
+* **Pipeline mirası.** `tablet`, `kalem` ve `ders` hâlâ birkaç v1 tablosu (`LEGACY_PIPELINE_TABLES`: ör.
+  `generation_requests`, `exam_clusters`, `staff`) ve v2 tablolarında olmayan sütunlar (`LEGACY_PIPELINE_COLUMNS`) kullanır;
+  bunlar sütun denetimi olmadan açıkça izinlidir. P3/P5 servisleri geldikçe listeler küçülür.
 * `insert(..., on_conflict="merge")` PostgREST `merge-duplicates` gibidir: çakışan satırda yalnız gönderilen
-  sütunlar güncellenir, varsayılanlar yalnız gerçek eklemede uygulanır.
-* Yetki taklidi: `secure.*` ve `audit.events` okunamaz; `messages.text_raw` hiçbir zaman dönmez ve `out/`'a
-  yazılmaz; yazımlar §3.8 W sütununa uyar (ör. `observations`, `messages` eklemesi, `questions.status`,
-  `figures.review_status`, `exam_priority_plans.status` → `DbPermissionError` ya da `OGR-Q-001/004`;
-  `exam_items`/`exam_clusters` silinemez; `generation_requests` yalnız `kind='exam_variant'` eklenir ve yalnız
-  `served_question_id, served_at` güncellenir). Anahtar RPC'leri (`register_answer_key`,
-  `register_template_question`) SQL'deki gibi **yalnız** `batch_worker` rolüyle çalışır (`postgres` da `OGR-KEY-001`).
-  Test kurulumunda `db.role = "postgres"` ya da `db.seed(...)` kısıtları atlar.
-* **Sütun yetkileri** (§12 #57): doğrudan yazımlar ayrıca `supabase/tests/grants_matrix.json`'daki rol yetkisine
-  uyar — dosya **çalışma anında** okunur (`ogrenmen_common.grants`; yoksa/bozuksa `OGR-DB-004`). Yazılan sütunlar
-  INSERT/UPDATE yetkisinde olmalı (ör. `llm_calls.created_at`, `instructor_alerts.id`, `questions.review_note`
-  eklenemez); `on_conflict="merge"` ayrıca UPDATE yetkisi ve çakışma sütunlarında SELECT, `where` sütunları SELECT,
-  `returning="representation"` (`RETURNING *`) tablo düzeyi SELECT ister (ör. `messages`, `proactive_messages`'ta
-  yoktur). İhlal → `DbPermissionError` `OGR-DB-001 permission denied for column … of relation …`. Geçmiş
-  `created_at`'li kurulum satırları `as_admin`/`db.role = "postgres"` ya da `db.seed(...)` ile yazılır.
+  sütunlar güncellenir, varsayılanlar yalnız gerçek eklemede uygulanır. `questions.status` doğrudan
+  `approved` yazılamaz (`OGR-Q-001/004`).
 * **`returning`** (`PostgrestDb` ve `JsonlDb` aynı): `"minimal"` → `Prefer: return=minimal`, `[]` döner;
   `"representation"` → satırlar. Varsayılan: tek satır (`Mapping`) eklemesi `representation`, satır dizisi eklemesi
   ve her `update` `minimal` (toplu yazım). `adapters.base.insert_minimal` / `update_minimal` yardımcıları
-  `returning` almayan DB'lerde de (testlerin yetki taklitleri) minimal yazar.
-* Tetikleyiciler: `llm_calls` → `spend_ledger` (Europe/Istanbul günü), `messages.expires_at`,
+  `returning` almayan DB'lerde de minimal yazar.
+* Tetikleyiciler: `llm_calls` → `spend_ledger` (Europe/Istanbul günü; önbellek token'ları dahil),
   `questions_check_skills` (`OGR-CURR-001`).
 * Çıktı (`flush()` / `Runtime.close()`): yalnız bu çalışmada yazılan satırlar son hâliyle `out/<tablo>.jsonl`;
   RPC çağrıları `out/rpc_calls.jsonl` (`register_answer_key` / `register_template_question` `p_key` değeri
-  gizlenir — anahtar dosyaya yazılmaz); silmeler `out/deletions.jsonl`; `secure.*` hiçbir dosyaya yazılmaz.
+  gizlenir); silmeler `out/deletions.jsonl`; `secure.*` hiçbir dosyaya yazılmaz.
   `db.write_log` her yazımın kaynağını (`direct`, `rpc:<ad>`, `trigger:spend_rollup`) tutar.
 * Kimlikler deterministiktir: identity tablolarında `max(id)+1`, uuid'li tablolarda
   `uuid5(NAMESPACE_OGRENMEN, "jsonldb:<tablo>:<sıra>")`.
 
-**RPC eşlenikleri** (`fakes/rpc-names.json`; M13 `scripts/check-rpc-parity.sh` bu listeyi migration'lardaki
-`create function` adlarıyla eşler): `anonymize_students`, `cap_memory_facts`, `check_spend`,
-`compute_table_sizes`, `confirm_video_deleted`, `cron_idle_sessions`, `cron_open_alerts`, `profile_for_prompt`,
-`recompute_is_minor`, `register_answer_key`, `register_lesson`, `register_template_question`,
-`resolve_lesson_labels`, `rollup_spend`, `run_retention`, `set_runtime_flag`, `write_lesson_analysis`.
-Hepsi §3.9'da `batch_worker`'a açılan fonksiyonlardır; gövdeler SQL'deki hata kodlarını ve yan etkileri
-izler (ör. `register_answer_key` kilitleri `OGR-KEY-001…004`, `not_applicable` → sayısal soruda `failed`;
-`register_template_question` `OGR-TPL-001…005` + `OGR-Q-001/002` ve yarım yazım bırakmaz;
-`write_lesson_analysis` `observations` yazmaz, tek `talk` iddiası ve tekilleşen "Ders raporu onay bekliyor"
-alarmı; `run_retention` dört kip + beş `app.retention_*` işleyicisi; `compute_table_sizes`
-`db.size_overrides` ile 450 MB'ı aşınca `storage_pressure` ve `tg_chats.retention_days = 60`).
-Dönüş biçimi PostgREST'inkiyle aynıdır (`check_spend` tek satırlık liste). `cron_open_alerts` yalnız
-parite için kayıtlıdır ve `OGR-RPC-002` fırlatır: dry-run'da `ogrenmen_kulaklik.alerts.open_alerts`
-Python eşleniği (`via_rpc=False`) çalışır.
+**RPC eşlenikleri.** v2 kümesi (`fakes/rpc-names.json`; `scripts/check-rpc-parity.py` migration'larla ad ve parametre
+adı eşler): `check_spend(p_purpose, p_student_ref)`, `log_llm_call`, `set_runtime_flag`. `fakes/rpc-names-legacy-v1.json`
+v2 migration'larında karşılığı olmayan, P3 (doğrulama servisi) ve P5 (ders servisi) gelene dek duran eşlenikleri
+listeler: `register_answer_key`, `register_template_question`, `register_lesson`, `resolve_lesson_labels`,
+`write_lesson_analysis`, `confirm_video_deleted`, `profile_for_prompt` (parite tablosunda WARN; canlı DB'de çalışmazlar).
+Dönüş biçimi PostgREST'inkiyle aynıdır (`check_spend` tek satırlık liste: `paid_allowed, degraded, downgrade, state,
+day_usd, month_usd, daily_cap, monthly_cap, student_month_usd, student_cap, alert_level`).
 
 Diğer sahteler: `FakeEmbedding` (sha256 → 768 birim vektör), `FakeVision` (`verdicts` ile zorlanabilir),
-`FakeOCR`, `FakeTranscriber`, `FakeScholar` (OpenAlex/S2) ve `FakeArxiv` (`fixtures/kitap`, gerçek
-adaptörlerin normalize fonksiyonlarıyla), `FakeCrossref` (`10.9999/fake` → `None`), `FakeUnpaywall`,
-`LocalDirStorage` (`aliases` ile `exams/<uuid>.pdf` → `fixtures/kalem/exam-2022.pdf`), `FakeNotifier`.
+`FakeOCR`, `FakeTranscriber`, `LocalDirStorage` (`aliases` ile `exams/<uuid>.pdf` → `fixtures/kalem/exam-2022.pdf`),
+`FakeNotifier`. Bilimsel kaynak adaptörleri (OpenAlex, Semantic Scholar, arXiv, Crossref, Unpaywall) `pipelines/kitap`
+ile birlikte kaldırıldı.
 
 ## Hata kodları
 
@@ -187,7 +165,7 @@ RPC hataları veritabanı mesajını aynen taşır (`OGR-KEY-003 …`); `error.c
 `OGR-ADP-002` (fixture yok), `OGR-STO-001` (depolama), `OGR-DB-004` (yetki matrisi okunamadı).
 
 Canlı yetki testi: `OGRENMEN_DATABASE_URL` tanımlıysa `tests/test_grants.py` geçici bir veritabanına
-(`ogrenmen_m05_grants_*`, sonunda silinir) `00_local_stub.sql` + tüm migration'ları uygular ve `SET ROLE batch_worker`
+(`ogrenmen_m05_grants_*`, sonunda silinir) `00_local_stub.sql` + tüm migration'ları uygular ve `SET ROLE service_role`
 ile `CostLedger`'ın gövdesini PostgREST'in kurduğu INSERT/UPDATE deyimiyle yazar; yoksa atlanır.
 
 ## Sapma notları

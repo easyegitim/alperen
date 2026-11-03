@@ -23,7 +23,7 @@ const SECURITY_HEADERS = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'X-Frame-Options', value: 'DENY' },
   // Kamera yalnızca kendi kökeninde (CameraSheet); mikrofon ve konum kapalı.
-  { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
+  { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=()' },
 ];
 
 const nextConfig: NextConfig = {

@@ -3,8 +3,9 @@
  *
  * Yanıt seçimi (sırayla):
  *   1. `enqueue(route | '*', ...replies)` ile sıraya konmuş betik yanıtları (testler: araç çağrısı, ret, kesilme…)
- *   2. yapılandırılmış rotalarda kayıtlı fikstür: `fixtures/llm/<route>.json` ya da `fixtures/llm/<route>/*.json`
- *      (sıralı ilk geçerli; `bad-*` ve `injection*` atlanır)
+ *   2. yapılandırılmış rotalarda kayıtlı v2 fikstür: `packages/llm/fixtures/<route>.json` ya da
+ *      `packages/llm/fixtures/<route>/*.json` (v2 rota adlarıyla; sıralı ilk geçerli; `bad-*` ve `injection*` atlanır).
+ *      Dizin `OGRENMEN_LLM_FIXTURES` ile değiştirilebilir; sahte taşıma yalnız bu dizini okur.
  *   3. `@ogrenmen/contracts` `fixtures/<şema>/valid/*.json` içinden sıralı ilk geçerli örnek
  *   4. strict JSON Schema'dan üretilmiş en küçük örnek
  *   Serbest metin rotalarında girdiden türeyen sabit bir Türkçe metin döner.
@@ -68,13 +69,13 @@ export interface FakeRequestRecord {
 }
 
 export interface FakeTransportOptions {
-  /** Rota fikstürleri dizini; varsayılan depo kökü `fixtures/llm`. */
+  /** Rota fikstürleri dizini; varsayılan `packages/llm/fixtures` (v2 rota adları). */
   fixturesDir?: string | undefined;
   /** Önbellek benzetimi (varsayılan açık). */
   cacheSim?: boolean;
 }
 
-const DEFAULT_FIXTURES = fileURLToPath(new URL('../../../fixtures/llm/', import.meta.url));
+const DEFAULT_FIXTURES = fileURLToPath(new URL('../fixtures/', import.meta.url));
 
 function contractsDir(): string | null {
   try {

@@ -23,9 +23,11 @@ import { memoryDelta } from './zod/memory-delta.js';
 import { memoryFact } from './zod/memory-fact.js';
 import { notificationCopy } from './zod/notification-copy.js';
 import { pageClass } from './zod/page-class.js';
+import { proposalReview } from './zod/proposal-review.js';
 import { questionItem } from './zod/question-item.js';
 import { solutionDiagnosis } from './zod/solution-diagnosis.js';
 import { styleDefinition } from './zod/style-definition.js';
+import { styleQuestionGeneration } from './zod/question-generation.js';
 import { transcript } from './zod/transcript.js';
 import { weeklySummary } from './zod/weekly-summary.js';
 
@@ -51,10 +53,12 @@ export const contractRegistry = {
   'memory-fact': memoryFact,
   'notification-copy': notificationCopy,
   'page-class': pageClass,
+  'proposal-review': proposalReview,
   'question-item': questionItem,
   'report-ast': reportAst,
   'solution-diagnosis': solutionDiagnosis,
   'style-definition': styleDefinition,
+  'style-question-generation': styleQuestionGeneration,
   'transcript': transcript,
   'weekly-summary': weeklySummary,
 } as const;

@@ -1,19 +1,22 @@
-"""JsonlDb RPC eşlenikleri — ``batch_worker``'ın çağırabildiği ``public`` fonksiyonların Python karşılığı.
+"""JsonlDb RPC eşlenikleri — pipeline'ların (``service_role``) çağırdığı ``public`` fonksiyonların Python karşılığı.
 
-Gövdeler BLUEPRINT §3.9/§3.10'daki SQL'i izler (aynı hata kodları, aynı yan etkiler); SQL'de tek
-işlem olan gövdelerde tüm denetimler yazımdan **önce** yapılır, böylece hata yarım yazım bırakmaz.
+İki küme vardır (adların listesi ``fakes/rpc-names.json``'dadır; test bunu ``RPCS`` ile eşler):
+
+* ``v2``: ``supabase/migrations/0017_rpc.sql``'de bulunan fonksiyonlar (``check_spend``, ``set_runtime_flag``,
+  ``log_llm_call``); gövdeler aynı hata kodlarını ve yan etkileri izler.
+* ``legacy-v1``: v2 migration'larında karşılığı OLMAYAN ve kod yolları P3 (tablet doğrulama servisi) ile P5 (ders HTTP
+  servisi) gelene dek ayakta tutulan eşlenikler (cevap anahtarı/şablon soruları, ders kaydı ve analizi,
+  ``profile_for_prompt``). RPC paritesi bunları atlar (WARN); canlı DB'de bu çağrılar çalışmaz.
+
+SQL'de tek işlem olan gövdelerde tüm denetimler yazımdan **önce** yapılır, böylece hata yarım yazım bırakmaz.
 Dönüş biçimi PostgREST'in JSON'uyla aynıdır: ``returns table`` → satır listesi, ``jsonb`` → sözlük,
 ``uuid``/``int`` → değer, ``void`` → ``None``.
-
-Adların tam listesi ``fakes/rpc-names.json``'dadır (test bunu ``RPCS`` ile eşler).
 """
 
 from __future__ import annotations
 
-import json
 import re
 from collections.abc import Callable, Mapping
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from ogrenmen_pii import name_token_hashes
@@ -27,8 +30,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 RPCS: dict[str, Callable[..., Any]] = {}
 
-FLAG_KEYS_BATCH = ("alerts_sent", "degraded_mode", "facts_lag_days", "storage_pressure")
-MB = 1024 * 1024
 
 
 def rpc(fn: Callable[..., Any]) -> Callable[..., Any]:
@@ -57,16 +58,16 @@ def _audit(db: JsonlDb, action: str, table_name: str, row_id: Any, diff: Any = N
 
 
 def _require_role(db: JsonlDb, code: str) -> None:
-    """SQL gövdesi ``batch_worker``'ı ve imtiyazlı rolleri kabul eden RPC'ler (grant'a dayanan kapı)."""
+    """Worker (``service_role``) ve imtiyazlı roller (legacy ``batch_worker`` adı da kabul)."""
     if db.role not in ("batch_worker", "service_role", "postgres"):
         raise RpcError(code)
 
 
 def _require_batch_worker(db: JsonlDb, code: str) -> None:
-    """Anahtar RPC'leri: SQL ``if app.jwt_role() <> 'batch_worker' then raise 'OGR-KEY-001'`` — tam olarak
-    ``batch_worker``; ``postgres``/``service_role`` da reddedilir (üretimdeki gövdeyle aynı)."""
-    if db.role != "batch_worker":
-        raise RpcError(f"{code} anahtar yalnız batch_worker rolüyle yazılır")
+    """Anahtar RPC'leri (legacy-v1): yalnız worker rolü (``service_role``; eski ``batch_worker`` adı da);
+    ``postgres`` ve uygulama rolleri reddedilir (v1 gövdesindeki ``jwt_role`` kapısıyla aynı davranış)."""
+    if db.role not in ("batch_worker", "service_role"):
+        raise RpcError(f"{code} anahtar yalnız worker (service_role) rolüyle yazılır")
 
 
 def _band(p: float) -> str:
@@ -79,18 +80,10 @@ def _active_enrollment(db: JsonlDb, student_id: str) -> dict | None:
     return rows[0] if rows else None
 
 
-def _private_chat(db: JsonlDb, student_id: str) -> int | None:
-    kinds = {c["chat_id"]: c.get("kind") for c in db._all("tg_chats")}
-    for role in db._find("chat_roles", student_id=student_id):
-        if kinds.get(role["chat_id"]) == "private":
-            return role["chat_id"]
-    return None
-
-
 def _open_alert(db: JsonlDb, row: Mapping[str, Any]) -> dict | None:
     """``alerts_dedup`` benzersiz indeksi: (kind, student, ref anahtarı, detail[:24]) açıkken tek satır."""
     def ref_key(ref: Mapping[str, Any]) -> str:
-        for k in ("message_id", "fact_id", "escalation_id", "chat_id", "lesson_id", "source_id"):
+        for k in ("message_id", "fact_id", "escalation_id", "lesson_id", "source_id"):
             if ref.get(k) is not None:
                 return str(ref[k])
         return ""
@@ -112,85 +105,86 @@ def _queue_proactive(db: JsonlDb, row: Mapping[str, Any]) -> dict | None:
     return db._insert_internal("proactive_messages", row)
 
 
-# --- harcama ve bayraklar ----------------------------------------------------------------------
+# --- harcama ve bayraklar (v2) ------------------------------------------------------------------
 
 
 @rpc
-def check_spend(db: JsonlDb, p_purpose: str) -> list[dict]:
-    """İki bütçe (§3.9): sohbet/toplu (cap_excluded_purposes hariç) ve ders (yalnız hariç amaçlar)."""
-    excluded = list(_flag(db, "cap_excluded_purposes", []) or [])
-    is_lesson = p_purpose in excluded
+def check_spend(db: JsonlDb, p_purpose: str, p_student_ref: str | None = None) -> list[dict]:
+    """Yumuşak harcama tavanı (0017_rpc.sql): günlük/aylık kuruluş toplamı (``spend_ledger``, Istanbul günü) ve öğrenci
+    başına aylık toplam (``llm_calls.student_ref``); aşım engellemez, ``downgrade = true`` verir.
+    ``cap_excluded_purposes`` listesindeki amaçlar tavana takılmaz."""
     today = db.today()
     first = month_start(today)
-    d = m = ml = 0.0
+    d = m = 0.0
     for row in db._all("spend_ledger"):
         day = parse_ts(row["day"]).date()
-        cost = float(row.get("cost_usd") or 0)
-        lesson = row.get("purpose") in excluded
-        if day >= first and lesson:
-            ml += cost
-        if not lesson:
+        if day >= first:
+            cost = float(row.get("cost_usd") or 0)
+            m += cost
             if day == today:
                 d += cost
-            if day >= first:
-                m += cost
-    dc = float(_flag(db, "daily_cap_usd", 0) or 0)
-    mc = float(_flag(db, "monthly_cap_usd", 0) or 0)
-    lc_raw = _flag(db, "lesson_monthly_cap_usd", None)
-    lc = 30.0 if lc_raw is None else float(lc_raw)
+    stu = 0.0
+    if p_student_ref:
+        for c in db._all("llm_calls"):
+            created = parse_ts(c.get("created_at") or db.now())
+            if c.get("student_ref") == p_student_ref and istanbul_date(created) >= first:
+                stu += float(c.get("cost_usd") or 0)
+    excluded = list(_flag(db, "cap_excluded_purposes", []) or [])
+    skip = p_purpose in excluded
     paid = bool(_flag(db, "paid_llm_enabled", False))
     deg = bool(_flag(db, "degraded_mode", False))
-    chat_ok = paid and d < dc and m < mc
+    dc = float(_flag(db, "daily_cap_usd", 0) or 0)
+    mc = float(_flag(db, "monthly_cap_usd", 0) or 0)
+    sc = float(_flag(db, "student_monthly_cap_usd", 0) or 0)
+    thresholds = _flag(db, "alert_thresholds", []) or []
+    alert = max([float(t) for t in thresholds
+                 if (dc > 0 and d >= float(t) * dc) or (mc > 0 and m >= float(t) * mc)] or [0.0])
+    over = not skip and ((dc > 0 and d >= dc) or (mc > 0 and m >= mc))
+    stu_over = not skip and bool(p_student_ref) and sc > 0 and stu >= sc
+    if not paid:
+        state = "disabled"
+    elif deg:
+        state = "degraded"
+    elif stu_over:
+        state = "student_cap"
+    elif over:
+        state = "soft_cap"
+    else:
+        state = "normal"
     return [{
-        "paid_allowed": (paid and ml < lc) if is_lesson else chat_ok,
-        "degraded": deg,
-        "day_usd": round(d, 6),
-        "month_usd": round(m, 6),
-        "daily_cap": dc,
-        "monthly_cap": mc,
-        "state": "degraded" if deg else ("normal" if chat_ok else "free_only"),
-        "lesson_month_usd": round(ml, 6),
-        "lesson_cap": lc,
+        "paid_allowed": paid and not deg, "degraded": deg, "downgrade": over or stu_over, "state": state,
+        "day_usd": round(d, 6), "month_usd": round(m, 6), "daily_cap": dc, "monthly_cap": mc,
+        "student_month_usd": round(stu, 6), "student_cap": sc, "alert_level": alert,
     }]
 
 
 @rpc
 def set_runtime_flag(db: JsonlDb, p_key: str, p_value: Any) -> None:
-    """batch_worker yalnız dört anahtarı ve ``paid_llm_enabled``'ı yalnız ``false`` yapabilir (tek yönlü)."""
-    if db.role == "batch_worker" and p_key not in FLAG_KEYS_BATCH and not (
-            p_key == "paid_llm_enabled" and p_value is False):
-        raise RpcError("OGR-AUTH-003 bu bayrak batch_worker ile değiştirilemez")
+    """``runtime_flags`` upsert (yalnız admin ve worker; 0017_rpc.sql); denetim izine yazılır."""
+    if db.role not in ("service_role", "postgres", "admin"):
+        raise RpcError("OGR-AUTH-002 çalışma bayrağını yalnız admin değiştirir")
+    if not str(p_key or "").strip() or p_value is None:
+        raise RpcError("OGR-FLAG-001 anahtar ve değer gerekli")
     row = db._one("runtime_flags", key=p_key)
-    values = {"value": p_value, "updated_at": iso(db.now()), "updated_by": f"{db.role}:"}
+    values = {"value": p_value, "updated_at": iso(db.now()), "updated_by": "worker"}
     if row is None:
         db._insert_internal("runtime_flags", {"key": p_key, **values})
     else:
         db._update_internal("runtime_flags", row, values)
-    _audit(db, "RPC:set_runtime_flag", "runtime_flags", p_key, p_value, actor_id=None)
+    _audit(db, "runtime_flag.set", "public.runtime_flags", p_key, {"value": p_value}, actor_id="worker")
 
 
 @rpc
-def rollup_spend(db: JsonlDb) -> int:
-    """``spend_ledger``'ı ``llm_calls``'tan yeniden hesaplar (llm_calls'ı olan anahtarlar); değişen satır sayısı."""
-    totals: dict[tuple, dict] = {}
-    for c in db._all("llm_calls"):
-        key = (istanbul_date(c.get("created_at") or db.now()).isoformat(), c["purpose"], c["provider"])
-        t = totals.setdefault(key, {"calls": 0, "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0})
-        t["calls"] += 1
-        t["tokens_in"] += int(c.get("tokens_in") or 0)
-        t["tokens_out"] += int(c.get("tokens_out") or 0)
-        t["cost_usd"] += float(c.get("cost_usd") or 0)
-    changed = 0
-    for (day, purpose, provider), t in sorted(totals.items()):
-        t["cost_usd"] = round(t["cost_usd"], 6)
-        row = db._one("spend_ledger", day=day, purpose=purpose, provider=provider)
-        if row is None:
-            db._insert_internal("spend_ledger", {"day": day, "purpose": purpose, "provider": provider, **t})
-            changed += 1
-        elif any(row.get(k) != v for k, v in t.items()):
-            db._update_internal("spend_ledger", row, t)
-            changed += 1
-    return changed
+def log_llm_call(db: JsonlDb, p_call: Mapping[str, Any]) -> int:
+    """``llm_calls`` satırı yazar (tetikleyici ``spend_ledger``'ı günceller); id döner (0017_rpc.sql)."""
+    if db.role not in ("service_role", "postgres", "admin", "instructor"):
+        raise RpcError("OGR-AUTH-002 LLM defterine yalnız worker ve personel yazar")
+    if not isinstance(p_call, Mapping) or not all(p_call.get(k) for k in ("purpose", "model", "status")):
+        raise RpcError("OGR-LLM-001 purpose, model, status gerekli")
+    row = dict(p_call)
+    got = db._insert_internal("llm_calls", row)
+    return got["id"]
+
 
 
 # --- cevap anahtarı ve şablon soruları ---------------------------------------------------------
@@ -547,275 +541,13 @@ def confirm_video_deleted(db: JsonlDb, p_lesson: str) -> None:
     enr = db._one("enrollments", id=lesson["enrollment_id"])
     sid = enr["student_id"]
     params = {"lesson_id": p_lesson}
-    _queue_proactive(db, {"student_id": sid, "chat_id": _private_chat(db, sid), "recipient": "student",
+    _queue_proactive(db, {"student_id": sid, "recipient": "student",
                           "template_id": "video_deleted", "params": params, "scheduled_for": now})
-    _queue_proactive(db, {"student_id": sid, "chat_id": None, "recipient": "guardian", "template_id": "video_deleted",
-                          "params": params, "scheduled_for": now})
+    _queue_proactive(db, {"student_id": sid, "recipient": "guardian", "template_id": "video_deleted", "params": params,
+                          "scheduled_for": now})
     _audit(db, "RPC:confirm_video_deleted", "lessons", p_lesson, actor_id="batch_worker:ders")
 
 
 # --- saklama ve bakım ---------------------------------------------------------------------------
 
 _COND = re.compile(r"^\s*([a-z_][a-z0-9_]*)\s*(=|is not|is)\s*(.+?)\s*$", re.I)
-
-
-def _literal(text: str) -> Any:
-    t = text.strip()
-    low = t.lower()
-    if low == "true":
-        return True
-    if low == "false":
-        return False
-    if low == "null":
-        return None
-    if t.startswith("'") and t.endswith("'"):
-        return t[1:-1].replace("''", "'")
-    try:
-        return float(t) if "." in t else int(t)
-    except ValueError as exc:
-        raise DbError(f"OGR-DB-002 desteklenmeyen condition_sql değeri: {text}") from exc
-
-
-def compile_condition(sql: str | None) -> Callable[[Mapping[str, Any]], bool]:
-    """``retention_policies.condition_sql`` alt kümesi: ``a = lit``, ``a is [not] null``, ``and`` ile."""
-    if not sql:
-        return lambda row: True
-    preds = []
-    for part in re.split(r"\s+and\s+", sql.strip(), flags=re.I):
-        m = _COND.match(part)
-        if not m:
-            raise DbError(f"OGR-DB-002 desteklenmeyen condition_sql: {sql}")
-        col, op, lit = m.group(1), m.group(2).lower(), _literal(m.group(3))
-        if op == "=":
-            preds.append(lambda r, c=col, v=lit: r.get(c) is not None and r.get(c) == v)
-        elif op == "is":
-            preds.append(lambda r, c=col, v=lit: r.get(c) is v)
-        else:
-            preds.append(lambda r, c=col, v=lit: r.get(c) is not v)
-    return lambda row: all(p(row) for p in preds)
-
-
-def _older(row: Mapping[str, Any], col: str, cutoff) -> bool:
-    v = row.get(col)
-    return v is not None and parse_ts(v) < cutoff
-
-
-def _closed_enrollments(db: JsonlDb, cutoff) -> list[dict]:
-    return [e for e in db._find("enrollments", status="closed") if _older(e, "ended_at", cutoff)]
-
-
-def _h_students_anonymize(db: JsonlDb, days: int) -> int:
-    cutoff = db.now() - timedelta(days=days)
-    victims = [s["id"] for s in db._all("students") if _older(s, "deleted_at", cutoff)]
-    for sid in victims:
-        for table in ("secure.student_pii", "secure.telegram_identities", "secure.auth_links", "secure.guardian_codes"):
-            db._delete_rows(table, lambda r, s=sid: r.get("student_id") == s)
-        for m in db._find("messages", student_id=sid):
-            db._update_internal("messages", m, {"text_raw": None, "text_llm": None})
-        db._delete_rows("memory_facts", lambda r, s=sid: r.get("student_id") == s)
-        db._delete_rows("weekly_summaries", lambda r, s=sid: r.get("student_id") == s)
-        for b in db._find("bot_responses", student_id=sid):
-            db._update_internal("bot_responses", b, {"prompt_text": None})
-    return len(victims)
-
-
-def _h_lessons_video(db: JsonlDb, days: int) -> int:
-    cutoff = db.now() - timedelta(days=days)
-    pending = [x for x in db._all("lessons")
-               if _older(x, "held_at", cutoff) and x.get("video_deleted_at") is None and x.get("video_ref")]
-    for lesson in pending:
-        _open_alert(db, {"kind": "ops", "severity": "warning", "student_id": None, "staff_id": None,
-                         "detail": f"Ders videosu silinmeyi bekliyor: {len(pending)}", "since": iso(db.now()),
-                         "ref": {"lesson_id": lesson["id"]}})
-    return len(pending)
-
-
-def _h_lessons_transcript(db: JsonlDb, days: int) -> int:
-    closed = {e["id"] for e in _closed_enrollments(db, db.now() - timedelta(days=days))}
-    n = 0
-    for lesson in db._all("lessons"):
-        if lesson.get("transcript_path") and lesson.get("enrollment_id") in closed:
-            db._insert_internal("storage_deletions", {"bucket": "transcripts", "path": lesson["transcript_path"]})
-            db._update_internal("lessons", lesson, {"transcript_path": None})
-            n += 1
-    return n
-
-
-def _h_enrollments_learning_data(db: JsonlDb, days: int) -> int:
-    closed = _closed_enrollments(db, db.now() - timedelta(days=days))
-    ids = {e["id"] for e in closed}
-    for o in db._all("observations"):
-        if o.get("enrollment_id") in ids and o.get("quote") is not None:
-            db._update_internal("observations", o, {"quote": None})
-    for a in db._all("attempts"):
-        if a.get("enrollment_id") in ids and a.get("chosen") != {}:
-            db._update_internal("attempts", a, {"chosen": {}})
-    return len(ids)
-
-
-def _h_enrollments_closed(db: JsonlDb, days: int) -> int:
-    closed = _closed_enrollments(db, db.now() - timedelta(days=days))
-    students = {e["student_id"] for e in closed}
-    for sid in students:
-        db._delete_rows("memory_facts", lambda r, s=sid: r.get("student_id") == s)
-    return len(closed)
-
-
-RETENTION_HANDLERS: dict[str, Callable[[JsonlDb, int], int]] = {
-    "app.retention_students_anonymize": _h_students_anonymize,
-    "app.retention_lessons_video": _h_lessons_video,
-    "app.retention_lessons_transcript": _h_lessons_transcript,
-    "app.retention_enrollments_learning_data": _h_enrollments_learning_data,
-    "app.retention_enrollments_closed": _h_enrollments_closed,
-}
-"""``mode='custom'`` işleyicileri (§3.0 tablosu, ``0015_audit_retention.sql``)."""
-
-
-@rpc
-def run_retention(db: JsonlDb) -> list[dict]:
-    """``retention_policies where enabled``: delete / null_columns / expire / custom; her satır ``retention_runs``."""
-    out = []
-    for pol in db._all("retention_policies"):
-        if not pol.get("enabled", True):
-            continue
-        days = int(pol["days"])
-        mode = pol["mode"]
-        if mode == "custom":
-            handler = RETENTION_HANDLERS.get(pol.get("handler") or "")
-            if handler is None:
-                raise DbError(f"OGR-DB-002 saklama işleyicisi yok: {pol.get('handler')}")
-            affected = handler(db, days)
-        else:
-            table = pol["table_name"] if pol.get("schema_name", "public") == "public" else (
-                f"{pol['schema_name']}.{pol['table_name']}")
-            cutoff = db.now() - timedelta(days=days)
-            cond = compile_condition(pol.get("condition_sql"))
-
-            def hit(r, col=pol["ts_column"], cutoff=cutoff, cond=cond):
-                return _older(r, col, cutoff) and cond(r)
-
-            if mode == "delete":
-                affected = db._delete_rows(table, hit)
-            elif mode == "null_columns":
-                affected = 0
-                for r in db._all(table):
-                    if hit(r) and any(r.get(c) is not None for c in pol.get("columns") or []):
-                        db._update_internal(table, r, {c: None for c in pol.get("columns") or []})
-                        affected += 1
-            elif mode == "expire":
-                affected = 0
-                for r in db._all(table):
-                    if hit(r) and r.get("status") != "expired":
-                        db._update_internal(table, r, {"status": "expired"})
-                        affected += 1
-            else:
-                raise DbError(f"OGR-DB-002 bilinmeyen saklama modu: {mode}")
-        db._insert_internal("retention_runs", {"policy_id": pol["id"], "affected_rows": affected,
-                                               "detail": {"mode": mode, "days": days}})
-        out.append({"policy_id": pol["id"], "affected_rows": affected})
-    return out
-
-
-@rpc
-def anonymize_students(db: JsonlDb) -> int:
-    """Silme talebinden ``students.anonymize`` politikasının günü (30) sonra anonimleştirme."""
-    pol = db._one("retention_policies", id="students.anonymize")
-    return _h_students_anonymize(db, int(pol["days"]) if pol else 30)
-
-
-@rpc
-def recompute_is_minor(db: JsonlDb) -> int:
-    """``students.is_minor`` = doğum yılı yok ya da (bu yıl − doğum yılı) < 18; değişen satır sayısı."""
-    year = db.today().year
-    changed = 0
-    for pii in db._all("secure.student_pii"):
-        student = db._one("students", id=pii["student_id"])
-        if student is None:
-            continue
-        by = pii.get("birth_year")
-        minor = by is None or (year - int(by) < 18)
-        if bool(student.get("is_minor")) != minor:
-            db._update_internal("students", student, {"is_minor": minor})
-            changed += 1
-    return changed
-
-
-@rpc
-def cap_memory_facts(db: JsonlDb) -> int:
-    """Öğrenci başına en çok 300 (``storage_pressure`` iken 200) aktif olgu; en eskiler ``merged``."""
-    cap = 200 if _flag(db, "storage_pressure", False) else 300
-    by_student: dict[str, list[dict]] = {}
-    for f in db._find("memory_facts", status="active"):
-        by_student.setdefault(f["student_id"], []).append(f)
-    n = 0
-    for facts in by_student.values():
-        if len(facts) > cap:
-            facts.sort(key=lambda f: (str(f.get("created_at") or ""), f["id"]))
-            for f in facts[: len(facts) - cap]:
-                db._update_internal("memory_facts", f, {"status": "merged"})
-                n += 1
-    return n
-
-
-@rpc
-def cron_idle_sessions(db: JsonlDb) -> int:
-    """``last_activity_at < now − session_idle_hours`` → ``idle``, ``direct_once=false``, ``hint_level=0``."""
-    cutoff = db.now() - timedelta(hours=int(_setting(db, "session_idle_hours", 6)))
-    n = 0
-    for s in db._all("sessions"):
-        if _older(s, "last_activity_at", cutoff) and (s.get("state") != "idle" or s.get("direct_once")
-                                                      or s.get("hint_level")):
-            db._update_internal("sessions", s, {"state": "idle", "direct_once": False, "hint_level": 0})
-            n += 1
-    return n
-
-
-@rpc
-def cron_open_alerts(db: JsonlDb) -> int:
-    """Kasıtlı olarak eşlenik yok: ``OGR-RPC-002`` fırlatır, hiçbir şey yazmaz.
-
-    SQL gövdesi (0012) ``staff.active``, ``messages.expires_at`` gibi ``batch_worker``'ın okuyamadığı
-    sütunları kullanır; JsonlDb'de ikinci bir kopya Python eşleniğiyle ayrışırdı. Dry-run
-    (``Runtime.is_fake``) ``ogrenmen_kulaklik.alerts.open_alerts(db, now)``'u (``via_rpc=False``) çağırır;
-    bu ad yalnız canlı yolun (``db.rpc('cron_open_alerts', {})``) parite listesinde yer alsın diye kayıtlıdır.
-    """
-    raise RpcError("OGR-RPC-002 cron_open_alerts JsonlDb'de çalıştırılmaz: dry-run'da Python eşleniğini "
-                   "kullanın (ogrenmen_kulaklik.alerts.open_alerts(db, now), via_rpc=False)",
-                   rpc="cron_open_alerts")
-
-
-@rpc
-def compute_table_sizes(db: JsonlDb) -> int:
-    """Tablo boyutları → ``table_sizes_daily``; > 350 MB ops uyarısı; > 450 MB ``storage_pressure`` ve saklama 60 gün.
-
-    Sahte boyut JSON uzunluğudur; ``db.size_overrides`` (tablo → bayt) testte gerçek boyutu taklit eder.
-    """
-    overrides = getattr(db, "size_overrides", {}) or {}
-    day = db.today().isoformat()
-    total = 0
-    for table in sorted(db.tables):
-        if table.startswith("secure.") or table == "lesson_labels":
-            continue
-        rows = db._all(table)
-        size = int(overrides.get(table, len(json.dumps(rows, ensure_ascii=False).encode("utf-8"))))
-        total += size
-        existing = db._one("table_sizes_daily", day=day, table_name=table)
-        values = {"total_bytes": size, "row_estimate": len(rows)}
-        if existing is None:
-            db._insert_internal("table_sizes_daily", {"day": day, "table_name": table, **values})
-        else:
-            db._update_internal("table_sizes_daily", existing, values)
-    if total > 350 * MB:
-        _open_alert(db, {"kind": "ops", "severity": "warning", "student_id": None, "staff_id": None,
-                         "detail": f"Veritabanı boyutu {total // MB} MB; 500 MB sınırına yaklaşıyor",
-                         "since": iso(db.now()), "ref": {}})
-    if total > 450 * MB:
-        flag = db._one("runtime_flags", key="storage_pressure")
-        if flag is None:
-            db._insert_internal("runtime_flags", {"key": "storage_pressure", "value": True})
-        elif flag.get("value") is not True:
-            db._update_internal("runtime_flags", flag, {"value": True, "updated_at": iso(db.now())})
-        for chat in db._all("tg_chats"):
-            if chat.get("retention_days") != 60:
-                db._update_internal("tg_chats", chat, {"retention_days": 60})
-    return total

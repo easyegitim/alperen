@@ -25,10 +25,14 @@ export function parseInviteToken(value: unknown): string | null {
 }
 
 export interface StudentProfileInput {
-  displayName: string;
-  grade: string;
-  targetExam: string;
-  goal: string;
+  /** İsteğe bağlı; boşsa mevcut ad ya da e-posta başı kullanılır. */
+  displayName: string | null;
+  /** İsteğe bağlı sınıf. */
+  grade: string | null;
+  /** Seçilen ders (courses.id); ders listesi boşsa null. */
+  courseId: string | null;
+  /** Hedef tarih (YYYY-MM-DD); bilinmiyorsa null. */
+  examDate: string | null;
 }
 
 export const GRADES = ['5', '6', '7', '8', '9', '10', '11', '12', 'mezun', 'lisans-1', 'lisans-2', 'lisans-3', 'lisans-4'] as const;
@@ -47,39 +51,64 @@ export const GRADE_LABELS: Record<(typeof GRADES)[number], string> = {
   'lisans-3': 'Üniversite 3. sınıf',
   'lisans-4': 'Üniversite 4. sınıf',
 };
-export const TARGET_EXAMS = ['TYT', 'AYT', 'LGS', 'final', 'diger'] as const;
-export const TARGET_EXAM_LABELS: Record<(typeof TARGET_EXAMS)[number], string> = {
-  TYT: 'TYT',
-  AYT: 'AYT',
-  LGS: 'LGS',
-  final: 'Okul ya da üniversite sınavı',
-  diger: 'Başka bir hedef',
-};
+/** Dersin hedef sınav etiketi (enrollments.target_exam): TYT/AYT/LGS kodlu parkurlar, okul/üniversite için 'final'. */
+export function targetExamOf(course: { code: string; kind: string }): string | null {
+  const m = /^(TYT|AYT|LGS)(?:-|$)/i.exec(course.code);
+  if (m) return m[1]!.toUpperCase();
+  return course.kind === 'school' || course.kind === 'university' ? 'final' : null;
+}
 
 export type FieldErrors<K extends string> = Partial<Record<K, string>>;
 
-/** Öğrenci onboarding formu: ad (2-60), sınıf (listeden), hedef sınav (listeden), hedef metni (en çok 280). */
-export function parseStudentProfile(form: FormData): { ok: true; value: StudentProfileInput } | { ok: false; errors: FieldErrors<keyof StudentProfileInput> } {
-  const displayName = String(form.get('displayName') ?? '').trim().replace(/\s+/g, ' ');
-  const grade = String(form.get('grade') ?? '');
-  const targetExam = String(form.get('targetExam') ?? '');
-  const goal = String(form.get('goal') ?? '').trim();
-  const errors: FieldErrors<keyof StudentProfileInput> = {};
-  if (displayName.length < 2 || displayName.length > 60) errors.displayName = 'Adın 2 ile 60 karakter arasında olmalı.';
-  if (!(GRADES as readonly string[]).includes(grade)) errors.grade = 'Sınıfını listeden seç.';
-  if (!(TARGET_EXAMS as readonly string[]).includes(targetExam)) errors.targetExam = 'Hedefini listeden seç.';
-  if (goal.length > 280) errors.goal = 'Hedef metni en çok 280 karakter olabilir.';
-  if (Object.keys(errors).length > 0) return { ok: false, errors };
-  return { ok: true, value: { displayName, grade, targetExam, goal } };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** YYYY-MM-DD geçerli bir takvim günü mü? Geçerliyse aynı metin, değilse null. */
+export function parseDateOnly(value: unknown): string | null {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const d = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== value ? null : value;
 }
 
-/** Veli onboarding formu: davet kodu + görünen ad. */
-export function parseParentProfile(form: FormData): { ok: true; value: { displayName: string; token: string } } | { ok: false; errors: FieldErrors<'displayName' | 'token'> } {
+/**
+ * Öğrenci onboarding formu (PLAN-v2 §13, 2 adım): ders/sınav seçimi + hedef tarih. Ad ve sınıf isteğe bağlıdır.
+ * Hedef tarih bugünden önce olamaz ve en çok 5 yıl ilerideki bir gün olabilir.
+ */
+export function parseStudentProfile(form: FormData, now: Date = new Date()): { ok: true; value: StudentProfileInput } | { ok: false; errors: FieldErrors<keyof StudentProfileInput> } {
   const displayName = String(form.get('displayName') ?? '').trim().replace(/\s+/g, ' ');
-  const token = parseInviteToken(form.get('token'));
+  const grade = String(form.get('grade') ?? '');
+  const courseId = String(form.get('courseId') ?? '');
+  const examDateRaw = String(form.get('examDate') ?? '').trim();
+  const errors: FieldErrors<keyof StudentProfileInput> = {};
+  if (displayName !== '' && (displayName.length < 2 || displayName.length > 60)) errors.displayName = 'Adın 2 ile 60 karakter arasında olmalı.';
+  if (grade !== '' && !(GRADES as readonly string[]).includes(grade)) errors.grade = 'Sınıfını listeden seç.';
+  if (courseId !== '' && !UUID_RE.test(courseId)) errors.courseId = 'Listeden bir ders seç.';
+  let examDate: string | null = null;
+  if (examDateRaw !== '') {
+    examDate = parseDateOnly(examDateRaw);
+    const today = now.toISOString().slice(0, 10);
+    const limit = new Date(now.getTime() + 5 * 366 * 86_400_000).toISOString().slice(0, 10);
+    if (!examDate) errors.examDate = 'Geçerli bir tarih seç.';
+    else if (examDate < today) errors.examDate = 'Hedef tarih bugünden önce olamaz.';
+    else if (examDate > limit) errors.examDate = 'Hedef tarih çok uzakta; 5 yıl içinde bir gün seç.';
+  }
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  return { ok: true, value: { displayName: displayName || null, grade: grade || null, courseId: courseId || null, examDate } };
+}
+
+/**
+ * Veli onboarding formu: görünen ad + davet kodu. Davet daha önce kabul edilmişse (etkin bağ var) kod aranmaz:
+ * `tokenOptional` ile kod boş bırakılabilir ve `token` null döner; dolu ama geçersizse yine hata verilir.
+ */
+export function parseParentProfile(
+  form: FormData,
+  options: { tokenOptional?: boolean } = {},
+): { ok: true; value: { displayName: string; token: string | null } } | { ok: false; errors: FieldErrors<'displayName' | 'token'> } {
+  const displayName = String(form.get('displayName') ?? '').trim().replace(/\s+/g, ' ');
+  const rawToken = String(form.get('token') ?? '').trim();
+  const token = parseInviteToken(rawToken);
   const errors: FieldErrors<'displayName' | 'token'> = {};
   if (displayName.length < 2 || displayName.length > 60) errors.displayName = 'Adın 2 ile 60 karakter arasında olmalı.';
-  if (!token) errors.token = 'Davet kodu "gi_" ile başlar; öğrencinin gönderdiği kodu aynen yapıştır.';
-  if (Object.keys(errors).length > 0 || !token) return { ok: false, errors };
+  if (!token && !(options.tokenOptional && rawToken === '')) errors.token = 'Davet kodu "gi_" ile başlar; öğrencinin gönderdiği kodu aynen yapıştır.';
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
   return { ok: true, value: { displayName, token } };
 }

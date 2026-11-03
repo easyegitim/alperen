@@ -3,6 +3,8 @@
 -- Web uygulaması bunları kullanıcının JWT'siyle (authenticated), worker service_role ile çağırır. Yazım yetkisi
 -- app.assert_student_access() ile: öğrencinin kendisi, owner bağlı eğitmen, admin ya da güvenilir çağıran
 -- (service_role JWT'si ya da JWT'siz doğrudan veritabanı oturumu: worker, migration, testler). Veli yalnız okur.
+-- Kanıt (apply_diagnosis) ve LLM defteri (log_llm_call) öğrenci oturumuna kapalıdır: teşhis hattı ve defter worker'dadır
+-- (app.assert_evidence_writer; log_llm_call yalnız güvenilir çağıran ve personel).
 --
 -- RPC'ler (imzalar README'de):
 --   apply_diagnosis, start_exam_session, record_exam_response, grade_exam_session, set_exam_key, peek_answer_key,
@@ -91,6 +93,85 @@ begin
 end
 $$;
 comment on function app.assert_student_access(uuid, boolean) is 'Öğrenciye erişim yoksa OGR-AUTH-001 (42501); yazma: öğrenci, owner eğitmen, admin, güvenilir çağıran.';
+
+-- Kanıt yazımı (teşhis): öğrencinin kendisi YAZAMAZ (ustalığını kendisi yükseltemez). Güvenilir çağıran (worker'ın
+-- teşhis hattı), admin ya da öğrencinin owner eğitmeni.
+create or replace function app.assert_evidence_writer(p_student uuid) returns void
+language plpgsql
+stable
+security definer
+set search_path = public, app, extensions, pg_temp
+as $$
+begin
+  if app.is_trusted() or app.is_admin() then
+    return;
+  end if;
+  if p_student is not null and auth.uid() is not null and app.role() = 'instructor'
+     and exists (select 1 from public.instructor_links il
+                  where il.instructor_id = auth.uid() and il.student_id = p_student and il.role = 'owner') then
+    return;
+  end if;
+  raise exception using errcode = '42501', message = 'OGR-AUTH-001 kanıtı yalnız worker, öğrencinin owner eğitmeni ya da admin yazar';
+end
+$$;
+comment on function app.assert_evidence_writer(uuid) is 'Kanıt (teşhis) yazımı: güvenilir çağıran, admin ya da owner eğitmen; öğrencinin kendisi değil (OGR-AUTH-001).';
+
+-- Sınav öğrenciye görünür mü (exams_select'in oturum dalı HARİÇ kuralı): güvenilir çağıran, personel, sınavı oluşturan;
+-- kişiye üretilmiş sınav (generated_documents.student_id) yalnız o öğrenciye; diğerleri yalnız ready/published ve
+-- published/practice/diagnostic türünde, öğrencinin kayıtlı olduğu dersin ya da müfredatın sınavıysa.
+create or replace function app.exam_visible(p_exam uuid, p_student uuid) returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public, app, extensions, pg_temp
+as $$
+declare
+  v_x public.exams%rowtype;
+  v_doc_student uuid;
+begin
+  select x.* into v_x from public.exams x where x.id = p_exam;
+  if not found then
+    return false;
+  end if;
+  if app.is_trusted() or app.is_staff() or coalesce(v_x.created_by = auth.uid(), false) then
+    return true;
+  end if;
+  if p_student is null then
+    return false;
+  end if;
+  if v_x.generated_document_id is not null then
+    select gd.student_id into v_doc_student from public.generated_documents gd where gd.id = v_x.generated_document_id;
+    if v_doc_student is not null then
+      return v_doc_student = p_student;
+    end if;
+  end if;
+  return v_x.status in ('ready', 'published') and v_x.kind in ('published', 'practice', 'diagnostic')
+     and exists (select 1 from public.enrollments e
+                  where e.student_id = p_student and (e.course_id = v_x.course_id or e.curriculum_id = v_x.curriculum_id));
+end
+$$;
+comment on function app.exam_visible(uuid, uuid) is 'Sınav öğrenciye görünür mü (oturumsuz kural): personel/worker, oluşturan, kişiye üretilmiş sınavın öğrencisi, kayıtlı dersin yayımlanmış sınavı.';
+
+-- Yükleme kimlikleri çağırana ait mi: her kimlik uploads'ta var ve yükleyeni oturumdaki kullanıcı ya da ilgili öğrencisi
+-- p_student. Güvenilir çağıran denetlenmez; boş/null dizi geçer.
+create or replace function app.uploads_ok(p_ids uuid[], p_student uuid) returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public, app, extensions, pg_temp
+as $$
+begin
+  if p_ids is null or cardinality(p_ids) = 0 or app.is_trusted() then
+    return true;
+  end if;
+  return not exists (
+    select 1 from unnest(p_ids) as x (uid)
+     where not exists (select 1 from public.uploads u
+                        where u.id = x.uid
+                          and (u.owner_id = auth.uid() or (p_student is not null and u.student_id = p_student))));
+end
+$$;
+comment on function app.uploads_ok(uuid[], uuid) is 'Yükleme kimlikleri çağıranın ya da öğrencinin mi (owner_id = auth.uid() veya student_id = öğrenci); güvenilir çağıran geçer.';
 
 create or replace function app.setting_num(p_key text, p_default numeric) returns numeric
 language plpgsql
@@ -266,6 +347,7 @@ comment on function public.decide_proposal(uuid, boolean, text) is 'Müfredat ö
 -- otopilot açık ve müfredat ai_draft ise öneri hemen kabul edilir). careless/time için ağırlık settings.careless_weight
 -- (0.5). Deneme bağlamında (exam_response_id) p'yi notlama zaten güncelledi: gözlemler ağırlık 0 ve kanıt sayısına
 -- katılmadan yazılır (hata nedeni ve yanılgı sayacı işlenir). Girdi: SolutionDiagnosis + bağlam alanları (README).
+-- Yalnız worker (teşhis hattı), owner eğitmen ya da admin çağırır: öğrenci kendi ustalığını yazamaz (OGR-AUTH-001).
 create or replace function public.apply_diagnosis(p_analysis jsonb) returns uuid
 language plpgsql
 volatile
@@ -300,7 +382,7 @@ begin
   if not found then
     raise exception using errcode = 'P0001', message = 'OGR-DIAG-001 enrollment_id bulunamadı';
   end if;
-  perform app.assert_student_access(v_enr.student_id, true);
+  perform app.assert_evidence_writer(v_enr.student_id);
 
   v_verdict := p_analysis ->> 'verdict';
   v_cause := nullif(p_analysis ->> 'error_cause', '');
@@ -344,6 +426,10 @@ begin
   if v_style is not null and not exists (select 1 from public.question_styles qs
                                           where qs.id = v_style and (v_enr.course_id is null or qs.course_id = v_enr.course_id)) then
     raise exception using errcode = 'P0001', message = 'OGR-DIAG-005 style_id bu kaydın dersinde değil';
+  end if;
+  if not app.uploads_ok(array(select x.u::uuid from jsonb_array_elements_text(coalesce(p_analysis -> 'upload_ids', '[]')) as x (u)),
+                        v_enr.student_id) then
+    raise exception using errcode = 'P0001', message = 'OGR-DIAG-005 upload_ids bu öğrenciye ait değil';
   end if;
 
   insert into public.solution_analyses (enrollment_id, conversation_message_id, exam_response_id, upload_ids, question_text,
@@ -448,6 +534,11 @@ begin
   if v_x.status in ('failed', 'archived') or (p_mode = 'in_app' and v_x.status not in ('ready', 'published')) then
     raise exception using errcode = 'P0001', message = format('OGR-EXAM-003 sınav bu kipte başlatılamaz (durum %s)', v_x.status);
   end if;
+  -- sınav kaydın öğrencisine görünür olmalı (app.exam_visible; exams_select'in oturum dalı HARİÇ kuralı): oturum açmak
+  -- exams_select ve v_exam_questions_student'ı açtığından başkasının özel sınavı burada durur
+  if not app.exam_visible(p_exam, v_enr.student_id) then
+    raise exception using errcode = '42501', message = 'OGR-AUTH-001 bu sınav için yetki yok';
+  end if;
   select es.id into v_id from public.exam_sessions es
    where es.exam_id = p_exam and es.enrollment_id = p_enrollment and es.status = 'in_progress' and es.mode = p_mode
    order by es.started_at desc limit 1;
@@ -457,7 +548,7 @@ begin
   return v_id;
 end
 $$;
-comment on function public.start_exam_session(uuid, uuid, text) is 'Sınav oturumu açar (aynı sınav + kayıt için süren oturum varsa onu döner); in_app için sınav ready/published olmalı.';
+comment on function public.start_exam_session(uuid, uuid, text) is 'Sınav oturumu açar (aynı sınav + kayıt için süren oturum varsa onu döner); in_app için sınav ready/published olmalı; sınav çağırana görünür olmalı.';
 
 -- Cevap yazar (upsert). Oturum bittiyse yalnız "nereye kadar geldim" alanları (how_far_text, work_upload_ids, flagged)
 -- güncellenir; cevap değişikliği OGR-EXAM-003.
@@ -483,6 +574,9 @@ begin
   perform app.assert_student_access(app.student_of_enrollment(v_s.enrollment_id), true);
   if not exists (select 1 from public.exam_questions q where q.id = p_exam_question and q.exam_id = v_s.exam_id) then
     raise exception using errcode = 'P0001', message = 'OGR-EXAM-004 soru bu oturumun sınavında değil';
+  end if;
+  if not app.uploads_ok(p_work_upload_ids, app.student_of_enrollment(v_s.enrollment_id)) then
+    raise exception using errcode = 'P0001', message = 'OGR-EXAM-006 work_upload_ids bu öğrenciye ait değil';
   end if;
   select r.id, r.answer into v_id, v_old from public.exam_responses r where r.session_id = p_session and r.exam_question_id = p_exam_question;
   if v_s.status <> 'in_progress' and v_answer is distinct from v_old and v_answer is not null then
@@ -513,7 +607,8 @@ comment on function public.record_exam_response(uuid, uuid, text, int, boolean, 
 -- uçlu soru null = notlanmadı), son cevaplanan sorudan sonraki boşlar 'unfinished'. Her notlanan soru × yaprak kazanım
 -- için observations(kind='test', guess_override = settings.exam_guess_override (0.2); boş → ağırlık
 -- settings.exam_blank_weight (0.5); unfinished gözlem üretmez) → apply_observation; style_coverage; score jsonb;
--- durum 'analysing' + 'exam.report' işi. Tekrar çağrı (analysing/done) mevcut skoru döner.
+-- durum 'analysing' + 'exam.report' işi. Tekrar çağrı (analysing/done) mevcut skoru döner. Aynı sınavın aynı kayıtla
+-- ikinci ve sonraki notlanan oturumları (tekrar deneme) gözlemleri ağırlık 0 ve kanıt sayısına katmadan yazar.
 create or replace function public.grade_exam_session(p_session uuid) returns jsonb
 language plpgsql
 volatile
@@ -535,6 +630,7 @@ declare
   v_obs bigint;
   v_score jsonb;
   v_sections jsonb;
+  v_repeat boolean;
 begin
   select es.* into v_s from public.exam_sessions es where es.id = p_session for update;
   if not found then
@@ -553,6 +649,10 @@ begin
     raise exception using errcode = 'P0001', message = 'OGR-EXAM-002 sınavın müfredatı kaydın müfredatıyla aynı değil';
   end if;
   update public.exam_sessions es set status = 'grading' where es.id = p_session;
+  -- aynı sınavın aynı kayıtla daha önce notlanmış oturumu varsa tekrar denemedir: gözlemler ağırlık 0, kanıt sayılmaz
+  select exists (select 1 from public.exam_sessions es
+                  where es.exam_id = v_s.exam_id and es.enrollment_id = v_s.enrollment_id and es.id <> p_session
+                    and es.status in ('analysing', 'done')) into v_repeat;
 
   insert into public.exam_responses (session_id, exam_question_id)
   select p_session, q.id from public.exam_questions q where q.exam_id = v_s.exam_id
@@ -585,10 +685,11 @@ begin
       for v_skill in
         select s.id from public.skills s where s.curriculum_id = v_cur and s.is_leaf and s.id = any(v_r.skill_ids) order by s.id
       loop
-        insert into public.observations (enrollment_id, skill_id, kind, value, weight, guess_override, source_type, source_id, source_locator)
+        insert into public.observations (enrollment_id, skill_id, kind, value, weight, guess_override, source_type, source_id, source_locator,
+                                         counts_for_mastery)
         values (v_s.enrollment_id, v_skill, 'test', case when v_outcome = 'correct' then 1 else 0 end,
-                case when v_outcome = 'blank' then v_blank_w else 1 end, v_g, 'exam_response', v_r.rid::text,
-                left(v_x.title, 120) || ' · soru ' || v_r.no)
+                case when v_repeat then 0 when v_outcome = 'blank' then v_blank_w else 1 end, v_g, 'exam_response', v_r.rid::text,
+                left(v_x.title, 120) || ' · soru ' || v_r.no || case when v_repeat then ' · tekrar' else '' end, not v_repeat)
         returning id into v_obs;
         perform public.apply_observation(v_obs);
       end loop;
@@ -1005,7 +1106,8 @@ comment on function app.memory_path_ok(text) is 'Hafıza dosyası yolu izin list
 
 -- Hafıza dosyasını yazar ve sürüm satırı ekler. p_content tam yeni içeriktir (str_replace/insert hesabı istemcide);
 -- rename'de yeni yol p_new_path. Sınırlar: ≤ settings.memory_max_files (12) dosya, ≤ settings.memory_max_bytes (8 KB);
--- parent_summary.md'yi yalnız worker (gece işi) yazar.
+-- parent_summary.md'yi yalnız worker (gece işi) yazar. Aktör (sürüm geçmişi) yalnız güvenilir çağırandan alınır
+-- (worker'ın hafıza aracı: 'coach', 'nightly' …); kullanıcı oturumunda '<rol>:<auth.uid()>' olarak sabitlenir.
 create or replace function public.upsert_memory_file(
   p_student uuid, p_path text, p_content text, p_op text, p_actor text, p_new_path text default null
 ) returns jsonb
@@ -1021,12 +1123,16 @@ declare
   v_target text := p_path;
   v_content text;
   v_version int;
+  v_actor text := p_actor;
 begin
   perform app.assert_student_access(p_student, true);
+  if not app.is_trusted() then
+    v_actor := coalesce(app.role(), 'user') || ':' || auth.uid()::text;
+  end if;
   if p_op is null or p_op not in ('create', 'str_replace', 'insert', 'delete', 'rename', 'compact') then
     raise exception using errcode = 'P0001', message = format('OGR-MEM-004 geçersiz işlem %s', coalesce(p_op, '(boş)'));
   end if;
-  if nullif(btrim(p_actor), '') is null or char_length(p_actor) > 64 then
+  if nullif(btrim(v_actor), '') is null or char_length(v_actor) > 64 then
     raise exception using errcode = 'P0001', message = 'OGR-MEM-004 actor gerekli (≤ 64 karakter)';
   end if;
   if not app.memory_path_ok(p_path) or (p_op = 'rename' and not app.memory_path_ok(p_new_path)) then
@@ -1074,7 +1180,7 @@ begin
   select coalesce(max(v.version), 0) + 1 into v_version from public.memory_file_versions v
    where v.student_id = p_student and v.path = v_target;
   insert into public.memory_file_versions (student_id, path, version, op, actor, content)
-  values (p_student, v_target, v_version, p_op, p_actor, v_content);
+  values (p_student, v_target, v_version, p_op, v_actor, v_content);
   return jsonb_build_object('path', v_target, 'version', v_version, 'op', p_op,
                             'bytes', coalesce(octet_length(v_content), 0), 'from_path', case when p_op = 'rename' then p_path end);
 end
@@ -1110,8 +1216,10 @@ revoke all on function app.llm_calls_spend() from public;
 create trigger llm_calls_spend after insert on public.llm_calls
 for each row execute function app.llm_calls_spend();
 
--- Geçit (packages/llm ledger.ts) her çağrıyı buraya yazar. Öğrenci/veli oturumunda student_ref çağıranın öğrencisine
--- sabitlenir; created_at yalnız worker verebilir (Batch sonuçları).
+-- Geçit (packages/llm ledger.ts) her çağrıyı buraya ya da doğrudan llm_calls'a yazar. Yalnız güvenilir çağıran (worker)
+-- ve personel çağırır: öğrenci/veli oturumu OGR-AUTH-002 (defter harcama tavanlarını besler). Personel oturumunda
+-- cost_usd çağrı başına settings.llm_call_max_cost_usd (5) ile sınırlıdır; created_at yalnız worker verebilir (Batch).
+-- Negatif sayaç/maliyet tablo kısıtıyla reddedilir (OGR-LLM-001).
 create or replace function public.log_llm_call(p_call jsonb) returns bigint
 language plpgsql
 volatile
@@ -1122,13 +1230,21 @@ declare
   v_id bigint;
   v_ref text := nullif(p_call ->> 'student_ref', '');
 begin
+  if not (app.is_trusted() or app.is_staff()) then
+    raise exception using errcode = '42501', message = 'OGR-AUTH-002 LLM defterine yalnız worker ve personel yazar';
+  end if;
   if coalesce(jsonb_typeof(p_call), '') <> 'object' or nullif(p_call ->> 'purpose', '') is null
      or nullif(p_call ->> 'model', '') is null or nullif(p_call ->> 'status', '') is null then
     raise exception using errcode = 'P0001', message = 'OGR-LLM-001 purpose, model, status gerekli';
   end if;
-  if not (app.is_trusted() or app.is_staff()) then
-    select s.public_ref into v_ref from public.students s where s.id = app.my_student_id();
-  end if;
+  begin
+    if not app.is_trusted() and coalesce((p_call ->> 'cost_usd')::numeric, 0) > app.setting_num('llm_call_max_cost_usd', 5) then
+      raise exception using errcode = 'P0001', message = format('OGR-LLM-001 cost_usd çağrı başına üst sınırı (%s) aşıyor',
+                                                               app.setting_num('llm_call_max_cost_usd', 5));
+    end if;
+  exception when invalid_text_representation then
+    raise exception using errcode = 'P0001', message = format('OGR-LLM-001 geçersiz çağrı kaydı: %s', sqlerrm);
+  end;
   begin
     insert into public.llm_calls (route, purpose, provider, model, effort, prompt_version, tokens_in, tokens_out, cache_read_tokens,
                                   cache_write_tokens, audio_sec, images, batch, status, error_code, latency_ms, cost_usd, ref_table,
@@ -1282,7 +1398,9 @@ comment on function public.request_document(text, uuid, uuid, text, jsonb) is 'B
 
 revoke all on function app.is_trusted(), app.is_staff(), app.student_of_enrollment(uuid), app.assert_student_access(uuid, boolean),
   app.setting_num(text, numeric), app.try_enqueue(text, jsonb), app.apply_proposal(uuid, boolean, text),
-  app.memory_path_ok(text), app.dossier_leaves(uuid) from public;
+  app.memory_path_ok(text), app.dossier_leaves(uuid), app.assert_evidence_writer(uuid), app.uploads_ok(uuid[], uuid),
+  app.exam_visible(uuid, uuid) from public;
+grant execute on function app.uploads_ok(uuid[], uuid), app.exam_visible(uuid, uuid) to authenticated, service_role;
 grant execute on function app.is_trusted(), app.is_staff(), app.student_of_enrollment(uuid) to authenticated, service_role;
 
 revoke all on function public.apply_diagnosis(jsonb), public.start_exam_session(uuid, uuid, text),

@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from conftest import as_admin, read_jsonl
+from conftest import read_jsonl
 from ogrenmen_common.adapters.base import LLMRequest
 from ogrenmen_common.errors import LedgerError
 from ogrenmen_common.fakes import FakeEmbedding, FakeLLM, FakeNotifier
@@ -75,20 +75,19 @@ def test_cap_blocks_paid_and_never_calls_model(db, clock):
     assert free.model == "gemini-2.5-flash@free"  # ücretsiz katman çalışmaya devam eder
 
 
-def test_lesson_budget_is_separate(db, clock):
+def test_soft_cap_downgrades_paid_models_to_free_chain(db, clock):
+    """v2 ``check_spend`` engellemez, ``downgrade`` der; ``CostLedger`` ücretli modeli atlar (``cap_blocked``)."""
     db.insert("llm_calls", {"purpose": "chat", "provider": "gemini-paid", "model": "gemini-2.5-flash-lite",
                             "status": "ok", "cost_usd": 0.9})
+    gate = db.rpc("check_spend", {"p_purpose": "nightly_facts"})[0]
+    assert gate["downgrade"] is True and gate["state"] == "soft_cap" and gate["paid_allowed"] is True
     ledger = CostLedger(db, FakeLLM(), clock=clock)
     with pytest.raises(LedgerError, match="OGR-LLM-002"):
         ledger.call("nightly_facts", _req("nightly_facts", "nightly-facts-output"))
+    # cap_excluded_purposes (ders vb.) tavana takılmaz
     lesson = ledger.call("lesson_analysis", _req("lesson_analysis", "lesson-analysis"), ref_table="lessons")
     assert lesson.model == "gemini-2.5-pro" and lesson.cost_usd > 0
-    assert db.rpc("check_spend", {"p_purpose": "chat"})[0]["day_usd"] == pytest.approx(0.9)
-    with as_admin(db):
-        db.update("runtime_flags", {"value": 0.0001}, where={"key": "lesson_monthly_cap_usd"})
-    ledger.invalidate_gate()
-    with pytest.raises(LedgerError, match="OGR-LLM-002"):
-        ledger.call("lesson_analysis", _req("lesson_analysis", "lesson-analysis"))
+    assert db.rpc("check_spend", {"p_purpose": "chat"})[0]["day_usd"] == pytest.approx(0.9 + lesson.cost_usd, abs=1e-5)
 
 
 def test_schema_repair_once_then_next_model(db, clock):
@@ -187,7 +186,7 @@ def test_degraded_mode_calls_no_model(db, clock, purpose, schema):
     """§5.6 ``degraded`` = "LLM yok": tavanın altında olsa da hiçbir model çağrılmaz; tek cap_blocked satırı."""
     _degrade(db)
     gate = db.rpc("check_spend", {"p_purpose": purpose})[0]
-    assert gate["state"] == "degraded" and gate["degraded"] is True and gate["paid_allowed"] is True
+    assert gate["state"] == "degraded" and gate["degraded"] is True and gate["paid_allowed"] is False
     llm = FakeLLM()
     ledger = CostLedger(db, llm, clock=clock)
     before = len(db.written("llm_calls"))
@@ -243,8 +242,7 @@ def test_ledgered_embedding_respects_cap_and_degraded(db, clock):
     with pytest.raises(LedgerError, match="OGR-LLM-002 tavan"):
         emb.embed(["x"])
     assert inner.calls == [] and db.written("llm_calls")[-1]["status"] == "cap_blocked"
-    with as_admin(db):  # paid_llm_enabled batch_worker için tek yönlüdür; geri açmak koordinatör işi
-        db.rpc("set_runtime_flag", {"p_key": "paid_llm_enabled", "p_value": True})
+    db.rpc("set_runtime_flag", {"p_key": "paid_llm_enabled", "p_value": True})
     _degrade(db)
     emb2 = LedgeredEmbedding(inner, CostLedger(db, FakeLLM(), clock=clock))
     with pytest.raises(LedgerError, match="degraded"):

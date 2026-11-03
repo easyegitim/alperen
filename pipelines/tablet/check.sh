@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # pipelines/tablet/check.sh — Tablet (soru üretimi, şablonlar, ders notu): ruff + pytest + dry-run kabul komutları.
-# OGRENMEN_LIVE=1: ek olarak gerçek Postgres'e karşı canlı testler (geçici veritabanı açar, sonunda siler).
+# Canlı Postgres testleri v2 tabanında devre dışıdır (bkz. dosya sonu).
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
@@ -33,10 +33,6 @@ test -f "$WORK/tablet-fill/questions.jsonl"
 ogr_absent '"source": "llm"' "$WORK/tablet-fill/questions.jsonl"
 test -f "$WORK/tablet-fill/template_fill.json"
 
-if ogr_is_live; then
-  ogr_step "tablet: canlı veritabanı testleri"
-  ogr_live_env
-  ogr_live_pytest "$HERE" -q -k live
-else
-  ogr_skip "tablet canlı testleri (OGRENMEN_LIVE=1 değil)"
-fi
+# Canlı veritabanı testleri (tests/test_live_db.py) v1 şemasına (batch_worker rolü, v1 RPC'ler) yazıldı; v2 tabanında
+# (rol yok, RPC'ler değişti) çalışamaz. tablet v2 servisine (P3 doğrulama / P5 ders) taşınınca yenisi yazılır.
+ogr_skip "tablet canlı testleri (v1 şemasına yazılmış; v2 tabanında devre dışı, P3/P5)"

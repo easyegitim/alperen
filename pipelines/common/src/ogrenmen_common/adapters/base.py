@@ -2,8 +2,7 @@
 
 Her dış servis bu arayüzlerden birinin arkasındadır; gerçek uygulama ``adapters/<servis>.py``,
 deterministik sahtesi ``ogrenmen_common.fakes``'tedir. Pipelines yalnız bu arayüzleri görür
-(BLUEPRINT §6): ``LLM``, ``Embedding``, ``Vision``, ``Transcriber``, ``OCR``, ``Scholar``,
-``DOIResolver``, ``OAResolver``, ``DB``, ``Storage``, ``Notifier``.
+(BLUEPRINT §6): ``LLM``, ``Embedding``, ``Vision``, ``Transcriber``, ``OCR``, ``DB``, ``Storage``, ``Notifier``.
 
 ``LLMRequest``/``LLMResult`` Worker'daki ``Provider.complete`` imzasının (§5.6) Python eşleniğidir:
 hata türleri ``rate_limited | server | timeout | bad_output | config``.
@@ -129,38 +128,6 @@ class LLMResult:
                          latency_ms=latency_ms)
 
 
-@dataclass(frozen=True)
-class ScholarRecord:
-    """Akademik arama sonucu (OpenAlex / Semantic Scholar / arXiv ortak biçimi)."""
-
-    title: str
-    authors: tuple[str, ...]
-    year: int | None
-    doi: str | None
-    venue: str | None
-    cited_by: int
-    source: str
-    abstract: str | None = None
-    oa_pdf_url: str | None = None
-    tldr: str | None = None
-    external_id: str | None = None
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "title": self.title,
-            "authors": list(self.authors),
-            "year": self.year,
-            "doi": self.doi,
-            "venue": self.venue,
-            "cited_by": self.cited_by,
-            "source": self.source,
-            "abstract": self.abstract,
-            "oa_pdf_url": self.oa_pdf_url,
-            "tldr": self.tldr,
-            "external_id": self.external_id,
-        }
-
-
 @dataclass
 class Filter:
     """Tek sütun koşulu (PostgREST işleçleriyle aynı adlar)."""
@@ -257,29 +224,6 @@ class OCR(Protocol):
     def extract_items(self, pages: Sequence[bytes], *, meta: Mapping[str, Any]) -> list[dict]: ...
 
 
-@runtime_checkable
-class Scholar(Protocol):
-    """Akademik arama (OpenAlex, Semantic Scholar, arXiv)."""
-
-    source: str
-
-    def search(self, query: str, *, limit: int = 30) -> list[ScholarRecord]: ...
-
-
-@runtime_checkable
-class DOIResolver(Protocol):
-    """DOI → Crossref ``message`` nesnesi; çözülmezse (404) ``None``."""
-
-    def resolve(self, doi: str) -> dict | None: ...
-
-
-@runtime_checkable
-class OAResolver(Protocol):
-    """DOI → açık erişim bilgisi ``{"doi", "is_oa", "pdf_url"}``; kayıt yoksa ``None``."""
-
-    def lookup(self, doi: str) -> dict | None: ...
-
-
 RETURNING_MODES = ("minimal", "representation")
 """PostgREST ``Prefer: return=…`` değerleri. ``representation`` (``RETURNING *``) tablo düzeyi SELECT ister;
 ``minimal`` yalnız INSERT/UPDATE yetkisi (+ ``where``/çakışma sütunlarında SELECT) ister ve boş liste döner."""
@@ -297,7 +241,7 @@ def resolve_returning(returning: str | None, *, single_row: bool) -> str:
 
 @runtime_checkable
 class DB(Protocol):
-    """batch_worker rolüyle veritabanı (PostgREST ya da JsonlDb).
+    """Pipeline veritabanı görünümü (PostgREST ya da JsonlDb).
 
     ``insert``/``update`` ``returning`` alır (``resolve_returning``): ``"minimal"`` iken boş liste döner; varsayılan
     tek satır eklemede ``representation``, toplu eklemede ve ``update``'te ``minimal``'dir."""
@@ -344,9 +288,6 @@ PROTOCOLS: dict[str, type] = {
     "Vision": Vision,
     "Transcriber": Transcriber,
     "OCR": OCR,
-    "Scholar": Scholar,
-    "DOIResolver": DOIResolver,
-    "OAResolver": OAResolver,
     "DB": DB,
     "Storage": Storage,
     "Notifier": Notifier,

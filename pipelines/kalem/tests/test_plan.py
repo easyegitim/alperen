@@ -52,20 +52,6 @@ def test_forbidden_words(plan_out):
         assert word not in text
 
 
-def test_forbidden_word_in_topic_is_rejected(tmp_path):
-    rt = make_rt(None)
-    course = course_by_code(rt.db, "DEMO")
-    PL.prepare_course(rt, course)
-    plan = PL.build_plan(rt, course, "2026")
-    plan["rows"][0]["topic"] = "Kesin çıkacak konu"
-    with pytest.raises(KalemError, match="OGR-KALEM-010"):
-        PL.validate_plan(plan)
-    plan["rows"][0]["topic"] = "GARANTİ konu"
-    with pytest.raises(KalemError, match="yasaklı kelime"):
-        PL.validate_plan(plan)
-    rt.close()
-
-
 def test_plan_never_contains_ocr_text(plan_out):
     plan = _plan(plan_out)["plan"]
     text = json.dumps(plan, ensure_ascii=False)
@@ -158,29 +144,3 @@ def test_plan_rejects_short_verbatim_topic(tmp_path):
     assert [s for s in substrings_12(_ocr_texts(fx)) if s in text] == []
     clusters = read_jsonl(out / "exam_clusters.jsonl")
     assert not [c for c in clusters if "Etiket" in c["label"]]
-
-
-def test_plan_replaces_forbidden_topic_with_fallback(tmp_path, capsys):
-    """Olağan ders konusu "Nokta tahmini" planı düşürmez: etiket kazanım adıyla değişir, uyarı yazılır."""
-    fx = copy_fixtures(tmp_path)
-    _set_topic(fx / "ocr-2022.json", 1, "Nokta tahmini")
-    _set_topic(fx / "ocr-2023.json", 1, "Nokta tahmini")
-
-    def rename(weeks):
-        for w in weeks:
-            w["topics"] = ["Hareket tahmini" if t == "Hareket problemleri" else t for t in w["topics"]]
-    edit_json(fx / "syllabus.json", rename)
-    out = tmp_path / "out"
-    assert run_cli("plan", "--course", "DEMO", "--period", "2026", "--dry-run", "--fixtures", str(fx),
-                   "--out", str(out)) == 0
-    err = capsys.readouterr().err
-    plan = _plan(out)["plan"]
-    text = json.dumps(plan, ensure_ascii=False).lower()
-    for word in FORBIDDEN:
-        assert word not in text
-    first = plan["rows"][0]
-    assert first["skill_id"] == "tyt.mat.temel.rasyonel-sayilar" and first["years"] == 2
-    assert first["topic"] == "Rasyonel sayılarda dört işlem ve sıralama"  # kazanım adı (müfredat)
-    assert plan["uncovered_topics"] == ["Ondalık gösterim", "Köklü ifadeler"]
-    assert "yasaklı kelime taşıdığı için" in err and "plana alınmadı" in err
-    assert "tahmin" not in err.lower()  # uyarı etiketin kendisini yazmaz

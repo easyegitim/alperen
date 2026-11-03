@@ -54,16 +54,20 @@ export function LessonCard({
   return createElement(
     tag,
     { ...rest, ref, href, onClick, type: tag === 'button' ? 'button' : undefined, className: classes },
-    <div className="flex items-center justify-between gap-2">
+    <span className="flex items-center justify-between gap-2">
       <span className="text-caption text-ink-muted">{subject}</span>
       <Badge tone={status === 'done' ? 'success' : status === 'in-progress' ? 'primary' : 'neutral'}>{STATUS_LABEL[status]}</Badge>
-    </div>,
+    </span>,
     <span className="text-title-3">{title}</span>,
     meta ? (
       <span className="text-small text-ink-muted">{meta}</span>
     ) : null,
-    typeof progress === 'number' ? (
+    typeof progress === 'number' && tag !== 'button' ? (
       <ProgressBar value={progress} label="İlerleme" tone={status === 'done' ? 'gold' : 'primary'} />
+    ) : null,
+    typeof progress === 'number' && tag === 'button' ? (
+      // <button> yalnızca phrasing içerik alır; ProgressBar (div) yerine metin gösterilir.
+      <span className="text-small text-ink-muted tabular-nums">İlerleme: %{Math.round(progress)}</span>
     ) : null,
     ai ? (
       <span className="text-small inline-flex items-center gap-2 text-ink-muted">

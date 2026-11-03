@@ -1,7 +1,6 @@
 /** exam-item — çıkmış sınavdan çıkarılmış tek soru (v1 + v2 format/trick/difficulty/skill_ids). ocr_text hiçbir öğrenci çıktısına kopyalanmaz. */
 import { z } from 'zod';
-import { skillCode } from './common.js';
-import { STYLE_FORMATS } from './style-definition.js';
+import { PRESENTATION_FORMATS, skillCode } from './common.js';
 import { defineContract } from './kit.js';
 
 export const examItem = defineContract({
@@ -23,7 +22,7 @@ export const examItem = defineContract({
       skill_id: skillCode(c).nullable().optional(),
       ocr_text: c.str({ desc: 'Yalnız eğitmen arşivi ve kümeleme; hiçbir öğrenci çıktısına kopyalanmaz' }),
       ocr_confidence: c.prob().optional(),
-      format: c.added(z.enum(STYLE_FORMATS), 'other'),
+      format: c.added(z.enum(PRESENTATION_FORMATS), 'other'),
       trick: c.added(c.str({ max: 200 }).nullable(), null),
       difficulty: c.added(c.prob('0..1 zorluk').nullable(), null),
       skill_ids: c.added(c.arr(skillCode(c), { max: 5 }), []),

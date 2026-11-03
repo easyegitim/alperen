@@ -104,7 +104,7 @@
           "type": "string",
           "minLength": 15,
           "maxLength": 400,
-          "description": "Şekli kelimelerle anlatır (Telegram altyazısı)"
+          "description": "Şekli kelimelerle anlatır"
         }
       }
     }

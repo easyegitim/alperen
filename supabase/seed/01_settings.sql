@@ -16,5 +16,6 @@ insert into public.settings (key, value, description) values
   ('dossier_strong_leaves', '10'::jsonb, 'Dossier bloğundaki en güçlü yaprak sayısı'),
   ('dossier_open_misconceptions', '8'::jsonb, 'Dossier bloğundaki en çok açık yanılgı sayısı'),
   ('lesson_auto_apply_threshold', '0.8'::jsonb, 'Ders iddiasının eğitmen onayı beklemeden uygulandığı güven (lessons varsayılanı)'),
-  ('guardian_invite_hours', '72'::jsonb, 'Veli davetinin geçerlilik süresi (saat)')
+  ('guardian_invite_hours', '72'::jsonb, 'Veli davetinin geçerlilik süresi (saat)'),
+  ('llm_call_max_cost_usd', '5'::jsonb, 'Personel oturumunda log_llm_call çağrı başına en çok maliyet (USD; worker sınırsız)')
 on conflict (key) do nothing;

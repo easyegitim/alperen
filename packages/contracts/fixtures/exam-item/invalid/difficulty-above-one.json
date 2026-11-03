@@ -11,7 +11,7 @@
   "skill_id": null,
   "ocr_text": "3) f(x) = x^3 - 3x fonksiyonunun yerel ekstremum noktalarını bulunuz. (15 puan)",
   "ocr_confidence": 0.92,
-  "format": "numeric",
+  "format": "word_problem",
   "trick": null,
   "difficulty": 1.5,
   "skill_ids": []

@@ -1,3 +1,5 @@
+'use client';
+
 import type { AnchorHTMLAttributes, ComponentPropsWithRef, ReactNode } from 'react';
 import { cn, FOCUS_RING } from '../lib/cn';
 
@@ -27,7 +29,7 @@ export interface AppShellProps extends Omit<ComponentPropsWithRef<'div'>, 'child
   /** Üst/kenar çubuğu marka alanı (BrandLockup). */
   brand?: ReactNode;
   items: AppNavItem[];
-  /** Mobil alt gezinmede ortadaki "Sor" kamera düğmesi (FAB). */
+  /** Mobil alt gezinmede ortadaki "Yükle" düğmesi (FAB). */
   fab?: AppShellFab;
   /** Kenar çubuğu altı: kullanıcı menüsü vb. */
   footer?: ReactNode;
@@ -69,6 +71,15 @@ export function AppShell({ brand, items, fab, footer, renderLink = defaultRender
 
   return (
     <div {...rest} className={cn('flex min-h-dvh flex-col bg-surface text-ink md:flex-row', className)}>
+      <a
+        href="#icerik"
+        className={cn(
+          'sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-on-primary',
+          FOCUS_RING,
+        )}
+      >
+        İçeriğe geç
+      </a>
       <nav aria-label={navLabel} className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-4 border-r border-line bg-surface-raised p-4 md:flex">
         {brand ? <div className="px-2 py-1">{brand}</div> : null}
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
@@ -86,10 +97,16 @@ export function AppShell({ brand, items, fab, footer, renderLink = defaultRender
         {fab ? (
           <div className="mt-2">
             {fab.href ? (
-              <a href={fab.href} className={cn(fabClasses, 'mt-0 w-full flex-row gap-2 rounded-md')}>
-                {fab.icon ? <span aria-hidden="true">{fab.icon}</span> : null}
-                <span className="text-label">{fab.label}</span>
-              </a>
+              renderLink({
+                href: fab.href,
+                className: cn(fabClasses, 'mt-0 w-full flex-row gap-2 rounded-md'),
+                children: (
+                  <>
+                    {fab.icon ? <span aria-hidden="true">{fab.icon}</span> : null}
+                    <span className="text-label">{fab.label}</span>
+                  </>
+                ),
+              })
             ) : (
               <button type="button" onClick={fab.onClick} className={cn(fabClasses, 'mt-0 w-full flex-row gap-2 rounded-md')}>
                 {fab.icon ? <span aria-hidden="true">{fab.icon}</span> : null}
@@ -114,10 +131,16 @@ export function AppShell({ brand, items, fab, footer, renderLink = defaultRender
           {fab ? (
             <li className="flex justify-center">
               {fab.href ? (
-                <a href={fab.href} className={fabClasses}>
-                  {fab.icon ? <span aria-hidden="true">{fab.icon}</span> : null}
-                  <span className="text-caption">{fab.label}</span>
-                </a>
+                renderLink({
+                  href: fab.href,
+                  className: fabClasses,
+                  children: (
+                    <>
+                      {fab.icon ? <span aria-hidden="true">{fab.icon}</span> : null}
+                      <span className="text-caption">{fab.label}</span>
+                    </>
+                  ),
+                })
               ) : (
                 <button type="button" onClick={fab.onClick} className={fabClasses}>
                   {fab.icon ? <span aria-hidden="true">{fab.icon}</span> : null}

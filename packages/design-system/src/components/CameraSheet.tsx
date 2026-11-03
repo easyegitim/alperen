@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ChangeEvent, ComponentPropsWithRef } from 'react';
 import { Camera, FileText, ImagePlus, RotateCw, X } from 'lucide-react';
@@ -11,6 +13,8 @@ export interface CapturedItem {
   file: File;
   /** Önizlemede ve gönderimde uygulanacak saat yönünde döndürme (derece). */
   rotation: Rotation;
+  /** Dikdörtgen kırpma, görselin 0–1 oranlarıyla (x, y sol-üst köşe; w, h boyut). Yoksa kırpma yok. */
+  crop?: { x: number; y: number; w: number; h: number };
 }
 
 export interface CameraSheetResult {
@@ -31,6 +35,10 @@ export interface CameraSheetProps extends Omit<ComponentPropsWithRef<'section'>,
   accept?: string;
   /** Gönderim sürerken düğmeleri kilitler. */
   busy?: boolean;
+  /** Gönder düğmesi metni (varsayılan "Soruyu gönder"). */
+  submitLabel?: string;
+  /** "Çözümüm de var" onay kutusunu gösterir (varsayılan açık); kapalıyken includesSolution hep false olur. */
+  showSolutionToggle?: boolean;
 }
 
 const DEFAULT_MAX_BYTES = 15 * 1024 * 1024;
@@ -46,7 +54,7 @@ function previewUrl(file: File): string | undefined {
 /**
  * Soru yakalama: kamera ya da dosya girişi, çoklu sayfa, önizleme, döndürme ve "çözümüm de var" işareti.
  * Bir alt sayfa (sheet) gövdesi olarak tasarlanmıştır; konumlandırmayı (modal/çekmece) uygulama yapar.
- * Kırpma bu sürümde yok (bilinen boşluk).
+ * Kırpma: her sayfa için üst/alt/sol/sağ kenar payı (en fazla %40) ayarlanır; sonuç CapturedItem.crop olarak döner.
  */
 export function CameraSheet({
   onSubmit,
@@ -56,6 +64,8 @@ export function CameraSheet({
   maxBytes = DEFAULT_MAX_BYTES,
   accept = 'image/*,application/pdf',
   busy,
+  submitLabel = 'Soruyu gönder',
+  showSolutionToggle = true,
   className,
   ...rest
 }: CameraSheetProps) {
@@ -112,6 +122,21 @@ export function CameraSheet({
   const rotate = (id: string) =>
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, rotation: ((i.rotation + 90) % 360) as Rotation } : i)));
 
+  const setInset = (id: string, side: 'top' | 'bottom' | 'left' | 'right', pct: number) =>
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id !== id) return i;
+        const cur = i.crop ?? { x: 0, y: 0, w: 1, h: 1 };
+        const left = side === 'left' ? pct / 100 : cur.x;
+        const top = side === 'top' ? pct / 100 : cur.y;
+        const right = side === 'right' ? pct / 100 : 1 - cur.x - cur.w;
+        const bottom = side === 'bottom' ? pct / 100 : 1 - cur.y - cur.h;
+        const crop = { x: left, y: top, w: 1 - left - right, h: 1 - top - bottom };
+        const none = left === 0 && top === 0 && right === 0 && bottom === 0;
+        return { ...i, crop: none ? undefined : crop };
+      }),
+    );
+
   const full = items.length >= maxFiles;
 
   return (
@@ -140,9 +165,9 @@ export function CameraSheet({
           accept="image/*"
           capture="environment"
           multiple
+          hidden
           tabIndex={-1}
           aria-label="Kamerayla fotoğraf ekle"
-          className="sr-only"
           onChange={addFiles}
         />
         <input
@@ -150,9 +175,9 @@ export function CameraSheet({
           type="file"
           accept={accept}
           multiple
+          hidden
           tabIndex={-1}
           aria-label="Dosya seçerek ekle"
-          className="sr-only"
           onChange={addFiles}
         />
       </div>
@@ -164,21 +189,48 @@ export function CameraSheet({
       ) : null}
 
       {items.length === 0 ? (
-        <p className="text-small m-0 text-ink-muted">Soruyu çerçeveye sığdır, düz tut ve yazıların net göründüğünden emin ol. Birden çok sayfa ekleyebilirsin.</p>
+        <div className="flex flex-col gap-2">
+          <div
+            data-testid="guide-frame"
+            aria-hidden="true"
+            className="relative mx-auto aspect-[4/3] w-full max-w-80 rounded-md border-2 border-dashed border-line-strong bg-surface-sunken"
+          >
+            <span className="absolute -top-0.5 -left-0.5 size-4 rounded-tl-md border-t-4 border-l-4 border-primary" />
+            <span className="absolute -top-0.5 -right-0.5 size-4 rounded-tr-md border-t-4 border-r-4 border-primary" />
+            <span className="absolute -bottom-0.5 -left-0.5 size-4 rounded-bl-md border-b-4 border-l-4 border-primary" />
+            <span className="absolute -right-0.5 -bottom-0.5 size-4 rounded-br-md border-r-4 border-b-4 border-primary" />
+          </div>
+          <p className="text-small m-0 text-ink-muted">Soruyu çerçeveye sığdır, düz tut ve yazıların net göründüğünden emin ol. Birden çok sayfa ekleyebilirsin.</p>
+        </div>
       ) : (
         <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3">
           {items.map((item, index) => {
             const url = urls.current.get(item.id);
             return (
               <li key={item.id} className="flex flex-col gap-2 rounded-md border border-line bg-surface-sunken p-2">
-                <div className="flex aspect-[3/4] items-center justify-center overflow-hidden rounded-sm bg-paper">
+                <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-sm bg-paper">
                   {url ? (
-                    <img
-                      src={url}
-                      alt={`Sayfa ${index + 1} önizlemesi`}
-                      className="max-h-full max-w-full object-contain"
-                      style={{ transform: `rotate(${item.rotation}deg)` }}
-                    />
+                    <>
+                      <img
+                        src={url}
+                        alt={`Sayfa ${index + 1} önizlemesi`}
+                        className="max-h-full max-w-full object-contain"
+                        style={{ transform: `rotate(${item.rotation}deg)` }}
+                      />
+                      {item.crop ? (
+                        <span
+                          aria-hidden="true"
+                          data-testid="crop-frame"
+                          className="pointer-events-none absolute border-2 border-dashed border-primary"
+                          style={{
+                            left: `${item.crop.x * 100}%`,
+                            top: `${item.crop.y * 100}%`,
+                            width: `${item.crop.w * 100}%`,
+                            height: `${item.crop.h * 100}%`,
+                          }}
+                        />
+                      ) : null}
+                    </>
                   ) : (
                     <span className="text-small flex flex-col items-center gap-1 p-2 text-center text-navy">
                       <FileText aria-hidden="true" size={28} />
@@ -209,12 +261,41 @@ export function CameraSheet({
                     Kaldır
                   </Button>
                 </div>
+                {url ? (
+                  <fieldset className="m-0 grid grid-cols-2 gap-x-2 gap-y-1 border-0 p-0">
+                    <legend className="text-caption mb-1 p-0 text-ink-muted">Kırp (kenar payı %)</legend>
+                    {(
+                      [
+                        ['top', 'Üst', item.crop?.y ?? 0],
+                        ['bottom', 'Alt', item.crop ? 1 - item.crop.y - item.crop.h : 0],
+                        ['left', 'Sol', item.crop?.x ?? 0],
+                        ['right', 'Sağ', item.crop ? 1 - item.crop.x - item.crop.w : 0],
+                      ] as const
+                    ).map(([side, lab, v]) => (
+                      <label key={side} className="text-caption flex flex-col text-ink-muted">
+                        {lab}
+                        <input
+                          type="range"
+                          min={0}
+                          max={40}
+                          step={1}
+                          value={Math.round(v * 100)}
+                          disabled={busy}
+                          aria-label={`Sayfa ${index + 1} ${lab.toLowerCase()} kırpma`}
+                          onChange={(e) => setInset(item.id, side, Number(e.target.value))}
+                          className="accent-primary"
+                        />
+                      </label>
+                    ))}
+                  </fieldset>
+                ) : null}
               </li>
             );
           })}
         </ul>
       )}
 
+      {showSolutionToggle ? (
       <label htmlFor={`${uid}-sol`} className="text-label flex min-h-11 cursor-pointer items-center gap-3 text-ink">
         <input
           id={`${uid}-sol`}
@@ -225,6 +306,7 @@ export function CameraSheet({
         />
         Çözümüm de var
       </label>
+      ) : null}
 
       <div className="flex flex-wrap justify-end gap-2">
         {onCancel ? (
@@ -232,8 +314,8 @@ export function CameraSheet({
             Vazgeç
           </Button>
         ) : null}
-        <Button variant="primary" disabled={items.length === 0 || busy} onClick={() => onSubmit({ items, includesSolution })}>
-          Soruyu gönder
+        <Button variant="primary" disabled={items.length === 0 || busy} onClick={() => onSubmit({ items, includesSolution: showSolutionToggle && includesSolution })}>
+          {submitLabel}
         </Button>
       </div>
     </section>

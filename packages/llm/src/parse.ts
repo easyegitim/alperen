@@ -21,7 +21,7 @@ import type {
 } from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import type { RequestBody } from './client.js';
 import { MaxTokensError, ParseError, RefusalError } from './errors.js';
-import { refusalOf } from './refusal.js';
+import { refusalOf, type RefusalAudience } from './refusal.js';
 import { MODEL_MAX_OUTPUT } from './routes.js';
 
 /** `output_config.format` değeri; `parse` işlevi gövde JSON'a çevrilirken düşer (API'ye gitmez). */
@@ -155,15 +155,16 @@ export async function parseWithRepair<T>(
   contract: Contract,
   body: RequestBody,
   send: (body: RequestBody, attempt: 'initial' | 'repair') => Promise<{ message: BetaMessage; body: RequestBody }>,
+  audience: RefusalAudience = 'student',
 ): Promise<ParseOutcome<T>> {
   const first = await send(body, 'initial');
-  const ref1 = refusalOf(first.message);
+  const ref1 = refusalOf(first.message, audience);
   if (ref1) throw new RefusalError(ref1);
   const r1 = extractStructured<T>(first.message, contract);
   if (r1.ok) return { data: r1.data, message: first.message, body: first.body, repaired: false };
 
   const second = await send(repairRequest(first.body, first.message, r1.issues), 'repair');
-  const ref2 = refusalOf(second.message);
+  const ref2 = refusalOf(second.message, audience);
   if (ref2) throw new RefusalError(ref2);
   const r2 = extractStructured<T>(second.message, contract);
   if (r2.ok) return { data: r2.data, message: second.message, body: second.body, repaired: true };

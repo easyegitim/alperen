@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# packages/contracts/check.sh — sözleşmeler: typecheck + vitest + JSON Schema dışa aktarım sapması + Python testleri.
+# packages/contracts/check.sh — sözleşmeler: eslint + typecheck + vitest + JSON Schema dışa aktarım sapması + Python testleri.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
@@ -8,6 +8,9 @@ source "$ROOT/scripts/lib.sh"
 
 ogr_step "contracts (TS): bağımlılıklar"
 ogr_bun_install
+
+ogr_step "contracts (TS): eslint"
+bun run --cwd "$HERE" lint
 
 ogr_step "contracts (TS): typecheck"
 bun run --cwd "$HERE" typecheck

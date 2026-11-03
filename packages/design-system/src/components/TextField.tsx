@@ -1,3 +1,5 @@
+'use client';
+
 import { useId } from 'react';
 import type { ComponentPropsWithRef } from 'react';
 import { cn, FOCUS_RING } from '../lib/cn';

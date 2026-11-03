@@ -155,16 +155,11 @@
             "description": "MCQ ise doğru şık, değilse null"
           },
           "numeric_value": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 80
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Sayısal soru ise SymPy dizesi ('7/8', '2*sqrt(3)'), değilse null"
+            "description": "Sayısal soru ise ondalık değer (secure.exam_answer_keys.numeric_value numeric); grade_exam_session 1e-6 toleransla karşılaştırır. Değilse null",
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "canonical_expr": {
             "anyOf": [
@@ -176,7 +171,7 @@
                 "type": "null"
               }
             ],
-            "description": "sympy.sympify edilebilir ifade ya da null"
+            "description": "Kesin SymPy biçimi: sympy.sympify edilebilir ifade ('7/8', '2*sqrt(3)') ya da null"
           },
           "solution": {
             "type": "string",

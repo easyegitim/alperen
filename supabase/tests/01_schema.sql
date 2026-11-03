@@ -185,11 +185,17 @@ begin
   select string_agg(n.nspname || '.' || c.relname, ', ') into v_bad
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where c.relkind = 'r' and n.nspname = 'public'
-     and (not has_table_privilege('authenticated', c.oid, 'select')
+     and ((not has_table_privilege('authenticated', c.oid, 'select') and c.relname <> 'question_styles')
           or has_table_privilege('authenticated', c.oid, 'insert') or has_table_privilege('authenticated', c.oid, 'update')
           or (has_table_privilege('authenticated', c.oid, 'delete') and c.relname not in ('notification_rules', 'push_subscriptions'))
           or has_table_privilege('authenticated', c.oid, 'truncate'));
   perform t.ok(v_bad is null, 'authenticated: public tablolarında SELECT; tablo düzeyinde yazım yok (fazla/eksik: ' || coalesce(v_bad, '-') || ')');
+  perform t.ok(not has_column_privilege('authenticated', 'public.question_styles', 'exemplar_item_ids', 'select')
+               and not has_column_privilege('authenticated', 'public.question_styles', 'embedding', 'select')
+               and has_column_privilege('authenticated', 'public.question_styles', 'code', 'select')
+               and (select count(*) from information_schema.columns c where c.table_schema = 'public' and c.table_name = 'question_styles'
+                       and not has_column_privilege('authenticated', 'public.question_styles', c.column_name, 'select')) = 2,
+               'question_styles: authenticated exemplar_item_ids ve embedding dışındaki sütunları okur');
   select string_agg(c.relname, ', ' order by c.relname) into v_bad
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where c.relkind = 'r' and n.nspname = 'public'
@@ -212,7 +218,7 @@ begin
                    and format_type(a.atttypid, a.atttypmod) like '%halfvec(1024)') = 6,
                'embedding sütunları: uploads, solution_analyses, question_styles, memory_facts, exam_items, library_chunks');
   perform t.raises($q$insert into public.uploads (owner_id, kind, storage_path, embedding)
-                     values ('00000000-0000-4000-8000-0000000000e1', 'photo', 'x', ('[' || array_to_string(array_fill(0.1, array[768]), ',') || ']')::halfvec)$q$,
+                     values ('00000000-0000-4000-8000-0000000000e1', 'photo', '00000000-0000-4000-8000-0000000000e1/x.jpg', ('[' || array_to_string(array_fill(0.1, array[768]), ',') || ']')::halfvec)$q$,
                    '%1024%', 'halfvec(1024) sütununa 768 boyut yazılamaz');
   select string_agg(e.tbl, ', ') into v_bad from expected_columns e where ' ' || e.cols || ' ' not like '% created_at %';
   perform t.ok(v_bad is null, 'her tabloda created_at (' || coalesce(v_bad, '-') || ')');
@@ -319,7 +325,8 @@ begin
                         and not (e.diff ? 'invite_token_hash')), 'guardian_links INSERT denetim izi (token hash hariç)');
 end $$;
 
--- enqueue_job: pgboss tablosu yoksa audit + null; varsa satır; geçersiz ad → OGR-JOB-002
+-- enqueue_job: pgboss tablosu yoksa audit + null; varsa satır (ayarlar pgboss.queue'dan); kuyruk yoksa OGR-JOB-001;
+-- geçersiz ad → OGR-JOB-002
 do $$
 declare
   v_id uuid;
@@ -330,23 +337,94 @@ begin
   perform t.raises($q$select public.enqueue_job('kötü ad; drop', '{}')$q$, 'OGR-JOB-002%', 'geçersiz iş adı reddedilir');
   -- pg-boss şemasını Supabase'de migration sahibi (postgres) bağlantısıyla worker kurar; yerelde eşleniği ogrenmen_owner
   set local role ogrenmen_owner;
+  -- pg-boss 12.x eşleniği: pgboss.queue (createQueue seçenekleri) + pgboss.job (tablo varsayılanları pg-boss'unkiler)
   create schema pgboss;
-  create table pgboss.job (id uuid not null default gen_random_uuid(), name text not null, data jsonb);
+  create table pgboss.queue (name text primary key, policy text not null, retry_limit int not null, retry_delay int not null,
+                             retry_backoff bool not null, retry_delay_max int, expire_seconds int not null, retention_seconds int not null,
+                             deletion_seconds int not null, dead_letter text, heartbeat_seconds int, partition bool not null default false,
+                             table_name text not null default 'job');
+  create table pgboss.job (id uuid not null default gen_random_uuid(), name text not null, priority int not null default 0, data jsonb,
+                           retry_limit int not null default 2, retry_count int not null default 0, retry_delay int not null default 0,
+                           retry_backoff bool not null default false, retry_delay_max int, expire_seconds int not null default 900,
+                           deletion_seconds int not null default 604800, start_after timestamptz not null default now(),
+                           created_on timestamptz not null default now(),
+                           keep_until timestamptz not null default now() + interval '14 days', policy text, dead_letter text,
+                           heartbeat_seconds int);
+  create unique index job_singleton on pgboss.job (name) where policy = 'singleton';
+  insert into pgboss.queue (name, policy, retry_limit, retry_delay, retry_backoff, retry_delay_max, expire_seconds, retention_seconds,
+                            deletion_seconds, heartbeat_seconds)
+  values ('memory-compact', 'standard', 5, 30, true, 600, 3600, 86400, 172800, 60),
+         ('tekil-is', 'singleton', 1, 0, false, null, 60, 3600, 3600, null);
   reset role;
   v_id := public.enqueue_job('memory-compact', '{"student":"s_test"}');
   perform t.ok(v_id is not null and (select j.data ->> 'student' from pgboss.job j where j.id = v_id) = 's_test',
                'pgboss.job varsa aynı işlemde satır eklenir');
+  perform t.ok((select j.retry_limit = 5 and j.retry_delay = 30 and j.retry_backoff and j.retry_delay_max = 600 and j.expire_seconds = 3600
+                       and j.deletion_seconds = 172800 and j.heartbeat_seconds = 60 and j.policy = 'standard' and j.priority = 0
+                       and abs(extract(epoch from (j.keep_until - j.start_after)) - 86400) < 1
+                  from pgboss.job j where j.id = v_id),
+               'iş ayarları kuyruktan kopyalanır (yeniden deneme, süre aşımı, saklama, kalp atışı; tablo varsayılanları değil)');
+  perform t.raises($q$select public.enqueue_job('yok-kuyruk', '{}')$q$, 'OGR-JOB-001 kuyruk yok%', 'kuyruk yoksa açık hata (OGR-JOB-001)');
+  v_id := app.try_enqueue('yok-kuyruk', '{}');
+  perform t.ok(v_id is null
+               and exists (select 1 from audit.events e where e.action = 'job.enqueue_failed' and e.diff ->> 'name' = 'yok-kuyruk'),
+               'RPC yolu (try_enqueue): kuyruk yoksa düşmez, job.enqueue_failed yazar');
+  perform t.ok(public.enqueue_job('tekil-is', '{}') is not null and public.enqueue_job('tekil-is', '{}') is null,
+               'kuyruk politikası çakışmasında (singleton) pg-boss gibi null döner');
   perform t.ok(not has_function_privilege('authenticated', 'public.enqueue_job(text, jsonb)', 'execute')
                and has_function_privilege('service_role', 'public.enqueue_job(text, jsonb)', 'execute'),
                'enqueue_job yalnız service_role (ve SECURITY DEFINER RPC''ler)');
 end $$;
 
--- pg_cron (ya da eşleniği) ve Storage kovaları
+-- pg_cron (ya da eşleniği) ve Storage kovaları. Zamanlamalar apps/worker/src/schedules.ts SCHEDULES ile birebir aynı
+-- (db-test.sh 'iş|cron;…' olarak geçirir; worker saati Europe/Istanbul = UTC+3, pg_cron UTC).
+insert into t.cfg values ('worker_schedules', :'worker_schedules');
 do $$
+declare
+  v_jobs text[];
+  v_worker text[];
+  v_def text;
+  v_job text;
+  v_f text[];
+  v_utc text[];
+  v_bad text := '';
 begin
   if to_regclass('cron.job') is not null then
-    perform t.ok((select count(*) from cron.job j where j.jobname like 'ogrenmen-%' and j.command like '%enqueue_job%') >= 3,
-                 'pg_cron yalnız enqueue_job zamanlar');
+    select array_agg(j.jobname order by j.jobname) into v_jobs from cron.job j where j.jobname like 'ogrenmen-%';
+    perform t.ok(v_jobs = array['ogrenmen-memory-compact', 'ogrenmen-weekly-summary'],
+                 format('pg_cron tam iki zamanlama kurar: memory.compact, weekly.summary (%s)', v_jobs));
+    perform t.ok(not exists (select 1 from cron.job j
+                              where j.jobname like 'ogrenmen-%'
+                                and (j.command !~ '^select public\.enqueue_job\(''[a-z0-9.]+'', ''\{\}''::jsonb\)$'
+                                     or j.jobname <> 'ogrenmen-' || replace(substring(j.command from 'enqueue_job\(''([a-z0-9.]+)'''), '.', '-'))),
+                 'pg_cron yalnız enqueue_job zamanlar (her komut tek bir public.enqueue_job çağrısı, iş adı zamanlama adıyla aynı)');
+    if coalesce(t.v('worker_schedules'), '') = '' then
+      raise notice 'SKIP: apps/worker/src/schedules.ts yok (pg_cron ↔ worker SCHEDULES eşliği denetlenmedi)';
+    else
+      foreach v_def in array string_to_array(t.v('worker_schedules'), ';') loop
+        v_job := split_part(v_def, '|', 1);
+        v_f := regexp_split_to_array(split_part(v_def, '|', 2), ' ');
+        v_worker := array_append(v_worker, v_job);
+        -- Istanbul → UTC: saat −3; gece yarısını geçerse haftanın günü bir geri (ayın günü/ay sabitse denetlenemez)
+        if v_f[2] ~ '^\d+$' then
+          v_utc := array[v_f[1], ((v_f[2]::int + 21) % 24)::text, v_f[3], v_f[4],
+                         case when v_f[2]::int < 3 and v_f[5] ~ '^\d$' then ((v_f[5]::int + 6) % 7)::text else v_f[5] end];
+          if v_f[2]::int < 3 and v_f[3] <> '*' then
+            v_utc := null;
+          end if;
+        end if;
+        if not exists (select 1 from cron.job j
+                        where j.command = format('select public.enqueue_job(%L, ''{}''::jsonb)', v_job)
+                          and (v_utc is null or j.schedule = array_to_string(v_utc, ' '))) then
+          v_bad := v_bad || format(' [%s @ %s → UTC %s]', v_job, split_part(v_def, '|', 2), array_to_string(v_utc, ' '));
+        end if;
+      end loop;
+      perform t.ok(v_bad = '' and (select array_agg(x order by x) from unnest(v_worker) as x)
+                                  = (select array_agg(q.job order by q.job)
+                                       from (select substring(j.command from 'enqueue_job\(''([a-z0-9.]+)''') as job
+                                               from cron.job j where j.jobname like 'ogrenmen-%') as q),
+                   format('pg_cron zamanlamaları worker SCHEDULES ile aynı (iş adları ve saatler, Istanbul→UTC)%s', v_bad));
+    end if;
     perform t.ok((select rf.value #>> '{}' from public.runtime_flags rf where rf.key = 'cron_owner') = 'pg_cron', 'cron_owner = pg_cron');
   else
     perform t.ok((select rf.value #>> '{}' from public.runtime_flags rf where rf.key = 'cron_owner') = 'worker', 'cron_owner = worker');

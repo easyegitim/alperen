@@ -38,6 +38,8 @@ export type ToolName =
   | 'get_child_summary'
   | 'get_reports'
   | 'get_mastery_overview'
+  | 'get_recent_activity'
+  | 'get_exam_sessions'
   | 'request_report'
   | 'web_search'
   | 'web_fetch'
@@ -76,6 +78,11 @@ export interface RouteConfig {
   readonly maxToolUses?: number;
   /** Araç döngüsü tur sınırı. */
   readonly maxIterations: number;
+  /**
+   * Ürün bloğuna `PROGRESS_NOTE` eklenir mi (prompt.ts): akışlı, araçlı serbest metin rotalarında araç çağrılarından
+   * önce kısa kullanıcı cümlesi istenir. Yapılandırılmış rotalarda kullanılmaz (ara metin biçimle çatışmasın).
+   */
+  readonly progressNote: boolean;
   /** Kısa açıklama (Türkçe). */
   readonly purpose: string;
 }
@@ -89,6 +96,7 @@ export const ROUTE_NAMES = [
   'answer_sheet',
   'inferred_keys',
   'exam_report',
+  'curriculum_research',
   'curriculum_draft',
   'proposal_review',
   'notes_generation',
@@ -117,10 +125,23 @@ const COURSE_ONLY: CachePolicy = { productTtl: '1h', courseTtl: '1h', dossierTtl
 const PRODUCT_ONLY: CachePolicy = { productTtl: '1h', courseTtl: null, dossierTtl: null, tail: false };
 
 const COACH_TOOLS = ['memory', 'search_evidence', 'get_mastery', 'get_recent_exams', 'record_turn_meta'] as const;
-const PARENT_TOOLS = ['get_child_summary', 'get_reports', 'get_mastery_overview', 'request_report'] as const;
+/** Veli ajanı (PLAN-v2 §10): strict, salt okunur; dışlamalar RLS ile (tools.ts). */
+const PARENT_TOOLS = [
+  'get_child_summary',
+  'get_mastery_overview',
+  'get_recent_activity',
+  'get_exam_sessions',
+  'get_reports',
+  'request_report',
+] as const;
 const READ_TOOLS = ['get_mastery', 'get_recent_exams'] as const;
+/** Anthropic sunucu araçları (sonuçları sunucuda koşar; ilerleme notu istenmez). */
+const SERVER_TOOLS: ReadonlySet<ToolName> = new Set(['web_search', 'web_fetch', 'code_execution']);
 
-type Spec<S extends SchemaName | null> = Omit<RouteConfig, 'name' | 'maxIterations' | 'batchable' | 'stream' | 'fallbacks' | 'schema'> &
+type Spec<S extends SchemaName | null> = Omit<
+  RouteConfig,
+  'name' | 'maxIterations' | 'batchable' | 'stream' | 'fallbacks' | 'schema' | 'progressNote'
+> &
   Partial<Pick<RouteConfig, 'maxIterations' | 'batchable' | 'stream'>> & { schema: S };
 
 /** Şema adını literal tipte tutar (gateway çıktı tipi `RouteOutput<R>` buradan türer). */
@@ -135,6 +156,9 @@ function route<const S extends SchemaName | null>(name: RouteName, spec: Spec<S>
     stream,
     // Sunucu taraflı yedek yalnız Opus/Sonnet senkron çağrılarda (Haiku'da sunucu yedeği yok; Batch reddeder).
     fallbacks: spec.mode === 'sync' && family !== 'haiku',
+    // Akışlı, araçlı, serbest metin, sunucu aracı olmayan rotalar (koç, veli).
+    progressNote:
+      stream && spec.schema === null && spec.tools.length > 0 && !spec.tools.some((t) => SERVER_TOOLS.has(t)),
   };
 }
 
@@ -180,17 +204,24 @@ export const ROUTES = {
     model: MODELS.sonnet, effort: 'medium', thinking: 'adaptive', schema: 'exam-report',
     tools: READ_TOOLS, cache: SHARED, mode: 'sync', stream: true, maxTokens: 24000,
   }),
-  curriculum_draft: route('curriculum_draft', {
-    purpose: 'Dinamik müfredat taslağı (web araştırması + yüklenen kaynaklar)',
-    model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'curriculum-draft',
+  // Müfredat iki adımdır: yapılandırılmış çıktı (output_config.format) Citations ile uyumsuzdur (400; claude-api
+  // shared/tool-use-concepts.md) ve web_search/web_fetch sonuçları atıflı döner. Önce araştırma (araçlı, serbest
+  // metin, akış), sonra araştırma notu + yüklenen kaynaklar girdi olarak araçsız biçimli taslak.
+  curriculum_research: route('curriculum_research', {
+    purpose: 'Dinamik müfredat araştırması (web_search/web_fetch, serbest metin, atıflı)',
+    model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: null,
     tools: ['web_search', 'web_fetch'], maxToolUses: 8, cache: PRODUCT_ONLY, mode: 'sync', stream: true,
-    maxTokens: 64000, maxIterations: 6,
+    maxTokens: 32000, maxIterations: 6,
+  }),
+  curriculum_draft: route('curriculum_draft', {
+    purpose: 'Dinamik müfredat taslağı (araştırma notu + yüklenen kaynaklar → curriculum-draft; araçsız)',
+    model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'curriculum-draft',
+    tools: [], cache: PRODUCT_ONLY, mode: 'sync', stream: true, maxTokens: 64000,
   }),
   proposal_review: route('proposal_review', {
-    purpose: 'Müfredat önerisi incelemesi (gece)',
-    // contracts'ta henüz `proposal-review` sözleşmesi yok; serbest metin döner (bkz. README "Açık işler").
-    model: MODELS.sonnet, effort: 'medium', thinking: 'adaptive', schema: null,
-    tools: [], cache: COURSE_ONLY, mode: 'batch', maxTokens: 4000,
+    purpose: 'Müfredat önerisi incelemesi (gece; öneri başına accept | reject | needs_instructor)',
+    model: MODELS.sonnet, effort: 'medium', thinking: 'adaptive', schema: 'proposal-review',
+    tools: [], cache: COURSE_ONLY, mode: 'batch', maxTokens: 8000,
   }),
   notes_generation: route('notes_generation', {
     purpose: 'Kişiye özel not üretimi (document-ast)',
@@ -223,9 +254,10 @@ export const ROUTES = {
     tools: [], cache: SHARED, mode: 'sync', stream: true, maxTokens: 24000,
   }),
   style_question_gen: route('style_question_gen', {
-    purpose: 'Tarza özel soru üretimi',
-    // Planın `question-generation` şeması contracts'ta `exam-generation` (sorular + ayrı anahtar) olarak var.
-    model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'exam-generation',
+    purpose: 'Tarza özel soru üretimi (1-10 soru, zorunlu style_id, ayrı anahtar)',
+    // Planın `question-generation` v2 sözleşmesi contracts'ta `style-question-generation` adıyla kayıtlı
+    // (`question-generation` adı v1 tablet zarfı olarak legacy'de duruyor).
+    model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'style-question-generation',
     tools: ['code_execution'], cache: SHARED, mode: 'sync', batchable: true, maxTokens: 16000,
   }),
   speaker_label: route('speaker_label', {
@@ -306,7 +338,7 @@ export function validateRoute(r: RouteConfig): string[] {
   }
   if (r.schema !== null) {
     if (!isSchemaName(r.schema)) errs.push(`${r.name}: bilinmeyen şema ${r.schema}`);
-    if (r.maxTokens < 4000) errs.push(`${r.name}: yapılandırılmış çağrıda maxTokens ≥ 4000 olmalı`);
+    if (r.maxTokens < MIN_STRUCTURED_MAX_TOKENS) errs.push(`${r.name}: yapılandırılmış çağrıda maxTokens ≥ ${MIN_STRUCTURED_MAX_TOKENS} olmalı`);
   }
   if (r.fallbacks && (fam === 'haiku' || r.mode !== 'sync')) errs.push(`${r.name}: fallbacks yalnız Opus/Sonnet senkron`);
   if (r.mode === 'batch' && r.stream) errs.push(`${r.name}: Batch rotası akış kullanamaz`);
@@ -319,6 +351,10 @@ export function validateRoute(r: RouteConfig): string[] {
   if (firstShort !== -1 && order.slice(firstShort).includes('1h')) errs.push(`${r.name}: 1 saatlik önbellek 5 dakikalıktan sonra gelemez`);
   if (order.length > 4) errs.push(`${r.name}: en çok 4 önbellek kesme noktası`);
   if (new Set(r.tools).size !== r.tools.length) errs.push(`${r.name}: yinelenen araç`);
+  if (r.schema !== null && (r.tools.includes('web_search') || r.tools.includes('web_fetch'))) {
+    // Yapılandırılmış çıktı Citations ile uyumsuz (400); web sonuçları atıflı döner → araştırma ayrı rota.
+    errs.push(`${r.name}: output_config.format ile web_search/web_fetch birlikte verilmez (Citations uyumsuz)`);
+  }
   if (r.tools.includes('web_search') && r.tools.includes('code_execution')) {
     errs.push(`${r.name}: web_search_20260209 ile ayrı code_execution birlikte verilmez`);
   }
@@ -330,6 +366,9 @@ export function validateRoute(r: RouteConfig): string[] {
  * Bu sınırın üstündeki istekler akışla gönderilir.
  */
 export const NON_STREAMING_MAX_TOKENS = 21_000;
+
+/** Yapılandırılmış çağrının en küçük `max_tokens`'ı (PLAN-v2 §5). */
+export const MIN_STRUCTURED_MAX_TOKENS = 4000;
 
 /** Modelin tavan çıkışı (128K); max_tokens iki kat yeniden denemesi bunu aşmaz. */
 export const MODEL_MAX_OUTPUT = 128_000;

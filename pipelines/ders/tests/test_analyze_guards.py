@@ -120,7 +120,7 @@ def test_bookkeeping_db_error_does_not_hide_original(tmp_path, monkeypatch):
     monkeypatch.setattr(P, "open_failure_alert", broken_alert)
     with pytest.raises(LedgerError, match="OGR-LLM-002"):
         with as_admin(rt.db):
-            rt.db.update("runtime_flags", {"value": 0.0}, where={"key": "lesson_monthly_cap_usd"})
+            rt.db.update("runtime_flags", {"value": False}, where={"key": "paid_llm_enabled"})
         _run(tmp_path, rt)
     assert rt.db.get("lessons", id=LESSON)["status"] == "failed"
 

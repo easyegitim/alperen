@@ -13,6 +13,7 @@ export const USERS = {
   student: { id: '00000000-0000-4000-8000-000000000001', email: 'ayse@example.test' },
   parent: { id: '00000000-0000-4000-8000-000000000002', email: 'mehmet@example.test' },
   instructor: { id: '00000000-0000-4000-8000-000000000003', email: 'zeynep@example.test' },
+  invitee: { id: '00000000-0000-4000-8000-000000000005', email: 'davetli@example.test' },
   newcomer: { id: '00000000-0000-4000-8000-000000000004', email: 'yeni@example.test' },
 };
 
@@ -40,7 +41,7 @@ export function seedTables() {
       { id: '40000000-0000-4000-8000-000000000001', recipient_id: USERS.parent.id, kind: 'weekly_report', title: 'Haftalık özet hazır', body: 'Bu hafta 3 gün çalıştı.', payload: {}, channels: ['in_app'], read_at: null, sent_at: null, created_at: NOW },
     ],
     courses: [
-      { id: '50000000-0000-4000-8000-000000000001', code: 'TYT-MAT', title: 'TYT Matematik', kind: 'exam_track', curriculum_id: null, description: null, visibility: 'public', created_by: null, created_at: NOW },
+      { id: '50000000-0000-4000-8000-000000000001', code: 'TYT-MAT', title: 'TYT Matematik', kind: 'exam_track', curriculum_id: '60000000-0000-4000-8000-000000000001', description: null, visibility: 'public', created_by: null, created_at: NOW },
     ],
   };
 }

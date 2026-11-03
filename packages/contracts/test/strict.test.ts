@@ -3,6 +3,7 @@
  * şeması özyinelemesiz, kısıtsız (min/max/length/pattern), her nesnede additionalProperties:false olmalı;
  * zorunlu olmayan alan <= 24, birleşik (anyOf / tür dizisi) alan <= 16.
  */
+import { LOOSE_ONLY_KEYS } from './helpers.js';
 import { describe, expect, it } from 'vitest';
 import { LLM_OUTPUT_SCHEMA_NAMES, SCHEMA_NAMES, contractJsonSchema, contractRegistry, outputFormat } from '../src/index.js';
 
@@ -94,7 +95,32 @@ describe('loose şemalar', () => {
     for (const name of SCHEMA_NAMES) {
       const c = contractRegistry[name];
       const keys = (s: Node) => JSON.stringify(Object.keys((s.properties as Node | undefined) ?? {}).sort());
-      expect(keys(contractJsonSchema(c, 'strict') as Node), name).toBe(keys(contractJsonSchema(c) as Node));
+      const looseKeys = (JSON.parse(keys(contractJsonSchema(c) as Node)) as string[]).filter((k) => !(LOOSE_ONLY_KEYS[name] ?? []).includes(k));
+      expect(keys(contractJsonSchema(c, 'strict') as Node), name).toBe(JSON.stringify(looseKeys));
     }
+  });
+});
+
+describe('strict kipte korunan kısıtlar (minItems 1, biçimler)', () => {
+  const strictProps = (name: (typeof SCHEMA_NAMES)[number]) => (contractJsonSchema(contractRegistry[name], 'strict') as Node).properties as Node;
+
+  it.each([
+    ['document-ast', 'blocks'],
+    ['curriculum-draft', 'nodes'],
+    ['exam-generation', 'items'],
+    ['exam-generation', 'keys'],
+    ['memory-compaction', 'files'],
+    ['style-question-generation', 'items'],
+    ['proposal-review', 'decisions'],
+  ] as const)('%s.%s: loose en az 1 isteyen dizi strict\'te minItems=1', (name, field) => {
+    const loose = (contractJsonSchema(contractRegistry[name]) as Node).properties as Node;
+    expect((loose[field] as Node).minItems).toBeGreaterThanOrEqual(1);
+    expect((strictProps(name)[field] as Node).minItems).toBe(1);
+  });
+
+  it('uuid alanı strict kipte de format: uuid taşır', () => {
+    const decisions = strictProps('proposal-review').decisions as Node;
+    const props = (decisions.items as Node).properties as Node;
+    expect((props.proposal_id as Node).format).toBe('uuid');
   });
 });

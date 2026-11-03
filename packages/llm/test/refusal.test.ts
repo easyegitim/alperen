@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapRefusal, refusalOf } from '../src/refusal.js';
+import { audienceForRoute, mapRefusal, refusalOf } from '../src/refusal.js';
 import { PRODUCT, setup } from './helpers.js';
 
 const CATS = ['cyber', 'bio', 'frontier_llm', 'reasoning_extraction', 'general_harms'] as const;
@@ -57,5 +57,32 @@ describe('ret eşlemesi', () => {
     });
     expect(ran).toBe(0);
     expect(res.refusal).not.toBeNull();
+  });
+
+  it.each(CATS)('%s: iletiler not bırakıldığını iddia etmez (bildirimi çağıran yazar)', (category) => {
+    for (const audience of ['student', 'parent'] as const) {
+      const r = mapRefusal({ type: 'refusal', category, explanation: null, fallback_credit_token: null, fallback_has_prefill_claim: null, recommended_model: null }, audience);
+      expect(r.audience).toBe(audience);
+      expect(r.user_message_tr).not.toMatch(/not bıraktım|not bırakıldı/);
+      expect(r.user_message_tr).not.toMatch(/[!\u{1F000}-\u{1FAFF}]/u);
+    }
+  });
+
+  it('veli kitlesi: siz dili, "hocana" yok; rota parent_chat → veli', () => {
+    expect(audienceForRoute('parent_chat')).toBe('parent');
+    expect(audienceForRoute('coach_chat')).toBe('student');
+    const r = mapRefusal({ type: 'refusal', category: 'bio', explanation: null, fallback_credit_token: null, fallback_has_prefill_claim: null, recommended_model: null }, 'parent');
+    expect(r.user_message_tr).not.toContain('hocana');
+    expect(r.user_message_tr).toMatch(/iletebilirsiniz/);
+    expect(r.notify_instructor).toBe(true);
+  });
+
+  it('parent_chat reddi veli iletisini döndürür', async () => {
+    const { gateway, fake } = setup();
+    fake.enqueue('parent_chat', { stopReason: 'refusal', stopDetails: { category: 'general_harms' } });
+    const res = await gateway.call('parent_chat', { system: { product: PRODUCT }, user: 'soru' });
+    expect(res.refusal?.audience).toBe('parent');
+    expect(res.text).toBe(mapRefusal({ type: 'refusal', category: 'general_harms', explanation: null, fallback_credit_token: null, fallback_has_prefill_claim: null, recommended_model: null }, 'parent').user_message_tr);
+    expect(res.text).not.toContain('hocana');
   });
 });

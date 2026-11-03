@@ -9,7 +9,7 @@ test.describe('rol yönlendirmesi (sahte oturum)', () => {
     await expect(page).toHaveURL(`${WEB_URL}/ogrenci`);
     await page.goto('/giris');
     await expect(page).toHaveURL(`${WEB_URL}/ogrenci`);
-    await page.goto('/veli/raporlar');
+    await page.goto('/veli/bildirimler');
     await expect(page).toHaveURL(`${WEB_URL}/ogrenci`);
     await page.goto('/egitmen/maliyet');
     await expect(page).toHaveURL(`${WEB_URL}/ogrenci`);
@@ -44,10 +44,18 @@ test.describe('rol yönlendirmesi (sahte oturum)', () => {
     await expect(page).toHaveURL(`${WEB_URL}/hos-geldin`);
 
     await page.getByRole('link', { name: 'Öğrenciyim' }).click();
+    // Adım 1: ders seçimi (arama + çipler); seçmeden devam edilemez.
+    await expect(page.getByRole('heading', { name: 'Hangi sınava ya da derse hazırlanıyorsun?' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'TYT', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Devam' })).toBeDisabled();
+    await page.getByLabel('TYT Matematik').check();
+    await page.getByRole('button', { name: 'Devam' }).click();
+    // Adım 2: hedef tarih; ad ve sınıf isteğe bağlı bölümde.
+    await expect(page.getByRole('heading', { name: 'Hedef tarihin?' })).toBeVisible();
+    await expect(page.getByLabel('Sınav ya da hedef tarihi')).toBeVisible();
+    await page.getByText('Adın ve sınıfın (isteğe bağlı)').click();
     await expect(page.getByLabel('Adın')).toBeVisible();
     await expect(page.getByLabel('Sınıfın')).toBeVisible();
-    await page.getByRole('button', { name: 'Başla' }).click();
-    await expect(page.getByText('Adın 2 ile 60 karakter arasında olmalı.')).toBeVisible();
 
     await page.goto('/hos-geldin?rol=veli');
     await page.getByLabel('Adın').fill('Ali Veli');
@@ -56,7 +64,7 @@ test.describe('rol yönlendirmesi (sahte oturum)', () => {
     await expect(page.getByText('Davet kodu bulunamadı ya da daha önce kullanılmış.')).toBeVisible();
 
     await page.goto('/hos-geldin?rol=egitmen');
-    await expect(page.getByText('Eğitmen hesapları davetle açılır')).toBeVisible();
+    await expect(page.getByText('Eğitmen hesabını easy ekibi açar', { exact: true })).toBeVisible();
   });
 });
 
@@ -73,13 +81,34 @@ test.describe('sayfa içerikleri', () => {
   test('öğrenci: boş durum sayfaları maskotlu ve Türkçe', async ({ page, context }) => {
     await signInAs(context, 'student');
     for (const [path, heading] of [
-      ['/ogrenci/denemeler', 'Henüz deneme yok'],
-      ['/ogrenci/notlarim', 'Henüz notun yok'],
-      ['/ogrenci/konu-haritasi', 'Konu haritan henüz boş'],
+      ['/ogrenci', 'Koçun ilk önerini hazırlıyor'],
+      ['/ogrenci/gelisim/belgeler', 'Henüz belgen yok'],
+      ['/ogrenci/gelisim/konular', 'Konu listen henüz boş'],
     ] as const) {
       await page.goto(path);
       await expect(page.getByRole('heading', { name: heading })).toBeVisible();
     }
+  });
+
+  test('öğrenci: eski yollar yeni yerlerine yönlenir', async ({ page, context }) => {
+    await signInAs(context, 'student');
+    for (const [from, to] of [
+      ['/ogrenci/denemeler', '/ogrenci/gelisim/belgeler'],
+      ['/ogrenci/notlarim', '/ogrenci/gelisim/belgeler'],
+      ['/ogrenci/konu-haritasi', '/ogrenci/gelisim/konular'],
+    ] as const) {
+      await page.goto(from);
+      await expect(page).toHaveURL(`${WEB_URL}${to}`);
+    }
+  });
+
+  test('öğrenci: Gelişim Profil ve ayarlara, Koç sohbet karşılamasına açılır', async ({ page, context }) => {
+    await signInAs(context, 'student');
+    await page.goto('/ogrenci/gelisim');
+    await page.getByRole('link', { name: 'Profil ve ayarlar' }).click();
+    await expect(page).toHaveURL(`${WEB_URL}/ogrenci/profil`);
+    await page.goto('/ogrenci/koc');
+    await expect(page.getByRole('heading', { level: 1, name: 'Koç' })).toBeVisible();
   });
 
   test('öğrenci: Sor sayfasında kamera yakalama bileşeni var', async ({ page, context }) => {
@@ -95,7 +124,12 @@ test.describe('sayfa içerikleri', () => {
     await expect(page.getByText('Ayşe Yılmaz')).toBeVisible();
     await page.goto('/veli/bildirimler');
     await expect(page.getByText('Haftalık özet hazır')).toBeVisible();
-    await page.goto('/veli/ayarlar');
+    await page.goto('/veli');
+    await expect(page.getByRole('link', { name: 'Rapor iste' })).toBeVisible();
+    await page.goto('/veli/raporlar');
+    await expect(page).toHaveURL(`${WEB_URL}/veli`);
+    await page.getByRole('link', { name: 'Ayarlar' }).click();
+    await expect(page).toHaveURL(`${WEB_URL}/veli/ayarlar`);
     await expect(page.getByRole('heading', { name: 'Çocuk ekle' })).toBeVisible();
   });
 

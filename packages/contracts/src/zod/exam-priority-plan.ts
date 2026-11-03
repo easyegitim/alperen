@@ -10,6 +10,7 @@ export const examPriorityPlan = defineContract({
   name: 'exam-priority-plan',
   title: 'ExamPriorityPlan',
   description: 'Geçmiş sınavların sıklık analizine göre öncelikler. Tahmin değildir; soru metni taşımaz.',
+  llmOutput: true,
   build: (c) =>
     z.strictObject({
       schema_version: z.literal('1.0'),

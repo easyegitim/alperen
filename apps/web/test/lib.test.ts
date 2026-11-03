@@ -41,8 +41,8 @@ describe('hafıza başlıkları', () => {
 
 describe('gezinme', () => {
   it('PLAN §13 sekmeleri ve sırası', () => {
-    expect(STUDENT_NAV.map((n) => n.label)).toEqual(['Koç', 'Denemeler', 'Notlarım', 'Konu haritası', 'Profil']);
-    expect(PARENT_NAV.map((n) => n.label)).toEqual(['Özet', 'Sohbet', 'Raporlar', 'Bildirimler', 'Ayarlar']);
+    expect(STUDENT_NAV.map((n) => n.label)).toEqual(['Bugün', 'Koç', 'Gelişim']);
+    expect(PARENT_NAV.map((n) => n.label)).toEqual(['Özet', 'Sohbet']);
     expect(INSTRUCTOR_NAV.map((n) => n.label)).toEqual(['Öğrenciler', 'Dersler', 'Müfredatlar', 'Soru tarzları', 'İçerik', 'Sınavlar', 'Kuyruk', 'Maliyet', 'Ayarlar']);
   });
   it('kök öğe yalnız tam eşleşmede, diğerleri alt yollarda etkin', () => {
@@ -50,6 +50,8 @@ describe('gezinme', () => {
     expect(isNavActive('/ogrenci', '/ogrenci/profil', '/ogrenci')).toBe(false);
     expect(isNavActive('/ogrenci/profil', '/ogrenci/profil/hafiza', '/ogrenci')).toBe(true);
     expect(isNavActive('/ogrenci/profil', '/ogrenci/profilx', '/ogrenci')).toBe(false);
+    expect(isNavActive('/ogrenci/gelisim', '/ogrenci/profil/hafiza', '/ogrenci', ['/ogrenci/profil'])).toBe(true);
+    expect(isNavActive('/ogrenci/gelisim', '/ogrenci/gelisim/konular', '/ogrenci')).toBe(true);
   });
 });
 

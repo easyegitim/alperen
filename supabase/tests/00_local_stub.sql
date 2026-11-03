@@ -156,8 +156,10 @@ begin
 end
 $cron$;
 
--- Supabase Storage eşleniği (yalnız storage şeması yoksa): 0015_storage.sql'in yazdığı storage.buckets sütunları
-do $$
+-- Supabase Storage eşleniği (yalnız storage şeması yoksa): 0015_storage.sql'in yazdığı storage.buckets sütunları,
+-- 0018_rls.sql'in politika yazdığı storage.objects (RLS açık; sahibi migration rolü, Supabase'de postgres'in politika
+-- yazabilmesi gibi) ve storage.foldername() (Supabase tanımı: son parça hariç klasörler)
+do $storage$
 begin
   if to_regnamespace('storage') is not null then
     return;
@@ -172,7 +174,28 @@ begin
              allowed_mime_types text[],
              created_at timestamptz not null default now(),
              updated_at timestamptz not null default now())$f$;
-  execute 'grant usage on schema storage to ogrenmen_owner';
+  execute $f$create table storage.objects (
+             id uuid primary key default gen_random_uuid(),
+             bucket_id text references storage.buckets (id),
+             name text,
+             owner uuid,
+             metadata jsonb,
+             created_at timestamptz default now(),
+             updated_at timestamptz default now(),
+             unique (bucket_id, name))$f$;
+  execute 'alter table storage.objects enable row level security';
+  execute $f$create function storage.foldername(name text) returns text[] language plpgsql immutable as $b$
+           declare
+             v_parts text[];
+           begin
+             select string_to_array(name, '/') into v_parts;
+             return v_parts[1:array_length(v_parts, 1) - 1];
+           end
+           $b$$f$;
+  execute 'alter table storage.objects owner to ogrenmen_owner';
+  execute 'grant usage on schema storage to ogrenmen_owner, authenticated, service_role';
   execute 'grant select, insert, update on storage.buckets to ogrenmen_owner';
+  execute 'grant select, insert, update, delete on storage.objects to authenticated, service_role';
+  execute 'grant execute on function storage.foldername(text) to public';
 end
-$$;
+$storage$;

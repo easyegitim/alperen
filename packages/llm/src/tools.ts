@@ -5,6 +5,11 @@
  *
  * Araç kümesi rota başına sabittir ve ada göre sıralanır (önbellek öneki). Çalıştırıcısı verilmeyen araç yine de
  * bildirilir (önek sabit kalsın); çağrılırsa `is_error` sonucu döner.
+ *
+ * Veli ajanı araçları (PLAN-v2 §10) `strict: true` ile tanımlanır: girdi şeması API'nin strict alt kümesine
+ * indirgenir (`additionalProperties: false`, sayısal sınırlar açıklamaya taşınır; zod yine istemci tarafında
+ * doğrular). Strict araçlara `eager_input_streaming` eklenmez: eager akış parametre doğrulamasını kapatır ve strict
+ * garantisini bozar (claude-api shared/tool-use-concepts.md); veli araçlarının girdisi zaten küçüktür.
  */
 import { betaZodTool } from '@anthropic-ai/sdk/helpers/beta/zod';
 import type { BetaRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
@@ -59,6 +64,14 @@ export const getMasteryOverviewInput = z.object({
   course_id: z.string().optional().describe('Ders kimliği; boşsa tüm dersler'),
 });
 
+export const getRecentActivityInput = z.object({
+  days: z.number().int().min(1).max(30).optional().describe('Son kaç gün (1..30; varsayılan 7)'),
+});
+
+export const getExamSessionsInput = z.object({
+  limit: z.number().int().min(1).max(10).optional().describe('En çok kaç deneme oturumu (1..10; varsayılan 5)'),
+});
+
 export const requestReportInput = z.object({
   topic: z.string().describe('Velinin istediği raporun konusu'),
   period: z.enum(['week', 'month', 'term']).describe('Rapor dönemi'),
@@ -72,6 +85,8 @@ export interface ToolInputs {
   get_child_summary: z.infer<typeof getChildSummaryInput>;
   get_reports: z.infer<typeof getReportsInput>;
   get_mastery_overview: z.infer<typeof getMasteryOverviewInput>;
+  get_recent_activity: z.infer<typeof getRecentActivityInput>;
+  get_exam_sessions: z.infer<typeof getExamSessionsInput>;
   request_report: z.infer<typeof requestReportInput>;
 }
 
@@ -94,6 +109,8 @@ export type ToolRunners = {
 interface ClientToolSpec<K extends ClientToolName> {
   description: string;
   schema: z.ZodType<ToolInputs[K]>;
+  /** `strict: true` (veli ajanı araçları; salt okunur). */
+  strict?: boolean;
 }
 
 const CLIENT_TOOLS: { [K in ClientToolName]: ClientToolSpec<K> } = {
@@ -123,20 +140,78 @@ const CLIENT_TOOLS: { [K in ClientToolName]: ClientToolSpec<K> } = {
   get_child_summary: {
     description: 'Velinin çocuğu için haftalık ya da aylık özeti (çalışma süresi, gelişen ve zorlanılan konular) getirir.',
     schema: getChildSummaryInput,
+    strict: true,
   },
   get_reports: {
     description: 'Veliye açık hazır raporların listesini (başlık, tarih, kısa özet) getirir. Rapor sorulduğunda önce bunu çağır.',
     schema: getReportsInput,
+    strict: true,
   },
   get_mastery_overview: {
-    description: 'Derslere göre ustalık özetini (güçlü ve zayıf alanlar, kanıt sayılarıyla) getirir.',
+    description: 'Derslere göre ustalık özetini (bantlar: düşük/orta/yüksek, kanıt sayılarıyla) getirir.',
     schema: getMasteryOverviewInput,
+    strict: true,
+  },
+  get_recent_activity: {
+    description:
+      'Çocuğun son günlerdeki etkinliğini (çalışma oturumları, yüklenen çözümler, tamamlanan notlar; gün gün) getirir. ' +
+      'Velinin "bu hafta ne yaptı" sorusunda çağır.',
+    schema: getRecentActivityInput,
+    strict: true,
+  },
+  get_exam_sessions: {
+    description: 'Çocuğun son deneme oturumlarını (tarih, net, bölüm sonuçları) getirir. Deneme sonucu sorulduğunda çağır.',
+    schema: getExamSessionsInput,
+    strict: true,
   },
   request_report: {
     description: 'Hazır raporlarda olmayan bir konu istendiğinde yeni rapor üretimini kuyruğa alır; rapor hazır olunca veliye bildirim gider.',
     schema: requestReportInput,
+    strict: true,
   },
 };
+
+/** Strict araç şemasında desteklenmeyen kısıtlar (claude-api shared/tool-use-concepts.md "Not supported"). */
+const STRICT_UNSUPPORTED = [
+  'minimum',
+  'maximum',
+  'exclusiveMinimum',
+  'exclusiveMaximum',
+  'multipleOf',
+  'minLength',
+  'maxLength',
+  'maxItems',
+] as const;
+
+function strictNode(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(strictNode);
+  if (!node || typeof node !== 'object') return node;
+  const out: Record<string, unknown> = {};
+  const moved: string[] = [];
+  for (const [k, v] of Object.entries(node)) {
+    if (k === '$schema') continue;
+    if ((STRICT_UNSUPPORTED as readonly string[]).includes(k) || (k === 'minItems' && v !== 0 && v !== 1)) {
+      moved.push(`${k}: ${JSON.stringify(v)}`);
+      continue;
+    }
+    out[k] = k === 'properties' && v && typeof v === 'object'
+      ? Object.fromEntries(Object.entries(v).map(([pk, pv]) => [pk, strictNode(pv)]))
+      : strictNode(v);
+  }
+  if (out.type === 'object') out.additionalProperties = false;
+  if (moved.length > 0) out.description = `${typeof out.description === 'string' ? `${out.description} ` : ''}(${moved.join(', ')})`;
+  return out;
+}
+
+/**
+ * Zod şemasını strict araç girdi şemasına indirger: `$schema` atılır, nesnelerde `additionalProperties: false`,
+ * desteklenmeyen sayısal/uzunluk kısıtları açıklamaya taşınır; `enum`/`const`/`required` korunur. (SDK
+ * `transformJSONSchema` `enum`'u da açıklamaya taşıdığı için kullanılmaz; bkz. contracts `outputFormat`.)
+ * Kısıtların kendisi istemci tarafında zod `parse` ile yine uygulanır.
+ */
+export function strictInputSchema(schema: z.ZodType): Record<string, unknown> {
+  return strictNode(z.toJSONSchema(schema, { target: 'draft-2020-12', io: 'input' })) as Record<string, unknown>;
+}
 
 const SERVER_TOOLS = new Set<ToolName>(['web_search', 'web_fetch', 'code_execution']);
 
@@ -218,17 +293,20 @@ export function buildTools(route: RouteConfig, opts: BuildToolsOptions): BuiltTo
     if (!isClientToolName(name)) throw new RouteConfigError(`tanımsız araç: ${name}`);
     const spec = CLIENT_TOOLS[name] as ClientToolSpec<ClientToolName>;
     const runner = opts.runners?.[name] as ((i: unknown, c: ToolCallContext) => Promise<ToolOutput> | ToolOutput) | undefined;
-    const tool = betaZodTool({
+    const zodTool = betaZodTool({
       name,
       description: spec.description,
       inputSchema: spec.schema as z.ZodType,
-      ...(opts.stream ? { eager_input_streaming: true } : {}),
+      ...(spec.strict ? { strict: true } : opts.stream ? { eager_input_streaming: true } : {}),
       run: async (input, runCtx) => {
         if (!runner) unavailable(name);
         const toolUseId = runCtx?.toolUse.id ?? '';
         return runner(input, { ...opts.context, toolUseId });
       },
-    }) as unknown as RunnableTool;
+    });
+    const tool = (spec.strict
+      ? { ...zodTool, input_schema: strictInputSchema(spec.schema as z.ZodType) }
+      : zodTool) as unknown as RunnableTool;
     runnables.set(name, tool);
     defs.push(toDefinition(tool));
   }

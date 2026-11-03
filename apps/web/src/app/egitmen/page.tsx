@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { EmptyState } from '@/components/EmptyState';
+import { GuardianInvite } from '@/components/GuardianInvite';
 import { PageHeader } from '@/components/PageHeader';
 import { Avatar } from '@/ds';
 import { GRADE_LABELS, GRADES } from '@/lib/validation';
@@ -21,12 +22,20 @@ export default async function EgitmenOgrenciler() {
       ) : (
         <ul aria-label="Öğrenciler" className="m-0 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-2 xl:grid-cols-3">
           {students.map((s) => (
-            <li key={s.id} className="flex items-center gap-3 rounded-lg border border-line bg-surface-raised p-4">
-              <Avatar name={s.name} variant="photo" size="md" />
-              <div className="flex min-w-0 flex-col">
-                <span className="text-label truncate text-ink">{s.name}</span>
-                <span className="text-small text-ink-muted">{s.grade && (GRADES as readonly string[]).includes(s.grade) ? GRADE_LABELS[s.grade as (typeof GRADES)[number]] : 'Sınıf belirtilmedi'}</span>
+            <li key={s.id} className="flex flex-col gap-3 rounded-lg border border-line bg-surface-raised p-4">
+              <div className="flex items-center gap-3">
+                <Avatar name={s.name} variant="photo" size="md" />
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-label truncate text-ink">{s.name}</span>
+                  <span className="text-small text-ink-muted">{s.grade && (GRADES as readonly string[]).includes(s.grade) ? GRADE_LABELS[s.grade as (typeof GRADES)[number]] : 'Sınıf belirtilmedi'}</span>
+                </div>
               </div>
+              <details className="text-small">
+                <summary className="text-label cursor-pointer text-primary">Veli davet et</summary>
+                <div className="mt-3">
+                  <GuardianInvite studentId={s.id} compact />
+                </div>
+              </details>
             </li>
           ))}
         </ul>

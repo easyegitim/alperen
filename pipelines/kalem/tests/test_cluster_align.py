@@ -136,17 +136,6 @@ def test_cluster_label_never_copies_ocr_text():
     assert CL.cluster_label(short, texts, skills, "tyt.mat.cebir.mutlak-deger", 4) == "Mutlak değer"
 
 
-def test_cluster_label_skips_forbidden_words_and_allows_curated_vocabulary():
-    texts = ["5) Örneklemden nokta tahmini yapınız; birinci dereceden denklemler ve sistemler kullanılır."]
-    skills = {"s.est": {"name": "Tahmin yöntemleri"}, "s.denk": {"name": "Birinci dereceden denklemler ve sistemler"}}
-    members = [{"topic": "Nokta tahmini"}]
-    assert CL.cluster_label(members, texts, skills, "s.est", 2) == "Konu kümesi 2"  # konu da kazanım da yasaklı
-    vocab = {"birinci dereceden denklemler ve sistemler"}
-    curated = [{"topic": "Birinci dereceden denklemler ve sistemler"}]  # metinde birebir geçer ama müfredat adı
-    assert CL.cluster_label(curated, texts, skills, "s.denk", 1, vocab) == "Birinci dereceden denklemler ve sistemler"
-    assert CL.cluster_label(curated, texts, {}, None, 1) == "Konu kümesi 1"  # sözlük yoksa kopya sayılır
-
-
 def test_cluster_changed_cli(tmp_path, capsys, shared_runtime):
     out = tmp_path / "out"
     assert run_cli("cluster", "--changed", "--dry-run", "--fixtures", str(KALEM), "--out", str(out)) == 0

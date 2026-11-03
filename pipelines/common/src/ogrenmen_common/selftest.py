@@ -3,8 +3,8 @@
 Denetimler: (1) her ``Fake*`` ve gerçek adaptör sınıfı kendi ``Protocol``'ünü karşılar (üye ve
 parametre adları), (2) ``fixtures/llm/**`` dosyaları klasör → sözleşme eşlemesiyle doğrulanır,
 ``bad-schema*.json`` doğrulanmaz, (3) FakeLLM seçimi §2.3 formülüyle aynıdır ve deterministiktir,
-(4) JsonlDb yetki taklidi (``secure``, ``text_raw``) ve ``rpc-names.json`` ↔ RPC eşlenikleri,
-(5) ``check_spend`` iki bütçe, (6) CostLedger dry-run çağrısı + ``cost_estimate``, (7) Batch sahte yolu,
+(4) JsonlDb v2 şema denetimi (v1 tablosu/olmayan sütun reddi) ve ``rpc-names*.json`` ↔ RPC eşlenikleri,
+(5) v2 ``check_spend``, (6) CostLedger dry-run çağrısı + ``cost_estimate``, (7) Batch sahte yolu,
 (8) PII temizliği, (9) ``Runtime.from_env(dry_run=True)`` tamamen sahte.
 Her denetim ``TAMAM``/``HATA`` satırı yazar; biri bile düşerse çıkış kodu 1.
 """
@@ -22,7 +22,6 @@ from collections.abc import Callable
 from pathlib import Path
 
 from .adapters import base
-from .errors import DbPermissionError
 
 
 def _param_names(fn) -> list[str]:
@@ -52,15 +51,11 @@ def protocol_conformance(obj_or_cls, proto: type) -> list[str]:
 
 def fake_instances(tmp: Path) -> dict[str, list[object]]:
     from .fakes import (
-        FakeArxiv,
-        FakeCrossref,
         FakeEmbedding,
         FakeLLM,
         FakeNotifier,
         FakeOCR,
-        FakeScholar,
         FakeTranscriber,
-        FakeUnpaywall,
         FakeVision,
         JsonlDb,
         LocalDirStorage,
@@ -72,9 +67,6 @@ def fake_instances(tmp: Path) -> dict[str, list[object]]:
         "Vision": [FakeVision()],
         "Transcriber": [FakeTranscriber()],
         "OCR": [FakeOCR()],
-        "Scholar": [FakeScholar(), FakeScholar(source="semantic_scholar"), FakeArxiv()],
-        "DOIResolver": [FakeCrossref()],
-        "OAResolver": [FakeUnpaywall()],
         "DB": [JsonlDb.from_fixtures()],
         "Storage": [LocalDirStorage(tmp / "storage")],
         "Notifier": [FakeNotifier(echo=False)],
@@ -82,31 +74,22 @@ def fake_instances(tmp: Path) -> dict[str, list[object]]:
 
 
 def real_classes() -> dict[str, list[type]]:
-    from .adapters.anthropic import AnthropicLLM
-    from .adapters.arxiv import ArxivScholar
     from .adapters.cfai import CloudflareAILLM
-    from .adapters.crossref import CrossrefResolver
     from .adapters.gemini import GeminiEmbedding, GeminiLLM
     from .adapters.groq import GroqLLM
     from .adapters.media import LLMOCR, LLMTranscriber, LLMVision
     from .adapters.notify import LogNotifier
-    from .adapters.openalex import OpenAlexScholar
     from .adapters.openrouter import OpenRouterLLM
     from .adapters.postgrest import PostgrestDb
     from .adapters.router import ProviderRouter
-    from .adapters.semanticscholar import SemanticScholar
     from .adapters.storage import SupabaseStorage
-    from .adapters.unpaywall import UnpaywallResolver
 
     return {
-        "LLM": [GeminiLLM, GroqLLM, OpenRouterLLM, CloudflareAILLM, AnthropicLLM, ProviderRouter],
+        "LLM": [GeminiLLM, GroqLLM, OpenRouterLLM, CloudflareAILLM, ProviderRouter],
         "Embedding": [GeminiEmbedding],
         "Vision": [LLMVision],
         "Transcriber": [LLMTranscriber],
         "OCR": [LLMOCR],
-        "Scholar": [OpenAlexScholar, SemanticScholar, ArxivScholar],
-        "DOIResolver": [CrossrefResolver],
-        "OAResolver": [UnpaywallResolver],
         "DB": [PostgrestDb],
         "Storage": [SupabaseStorage],
         "Notifier": [LogNotifier],
@@ -182,28 +165,29 @@ def check_fake_llm_rule(_: Path) -> str:
 
 
 def check_jsonl_db(_: Path) -> str:
-    from .fakes import JsonlDb, rpc_names
+    from .errors import DbError
+    from .fakes import JsonlDb, legacy_rpc_names, rpc_names
     from .fakes.jsonl_rpc import RPCS
 
     db = JsonlDb.from_fixtures()
+    if sorted(RPCS) != sorted(rpc_names() + legacy_rpc_names()):
+        raise AssertionError(f"rpc-names*.json ↔ RPC eşlenikleri farklı: {sorted(RPCS)} / {rpc_names()}")
     try:
-        db.select("secure.answer_keys")
-    except DbPermissionError:
+        db.insert("tg_chats", {"chat_id": 1})
+    except DbError:
         pass
     else:
-        raise AssertionError("secure.answer_keys batch_worker'a açık")
-    rows = db.select("messages", limit=5)
-    if not rows or any("text_raw" in r for r in rows):
-        raise AssertionError("messages.text_raw batch_worker'a döndü")
-    if sorted(RPCS) != rpc_names():
-        raise AssertionError(f"rpc-names.json ↔ RPC eşlenikleri farklı: {sorted(RPCS)} / {rpc_names()}")
-    gate = db.rpc("check_spend", {"p_purpose": "chat"})[0]
-    if gate["state"] != "normal" or not gate["paid_allowed"]:
+        raise AssertionError("v1 tablosu (tg_chats) sahte dünyaya yazılabildi")
+    try:
+        db.insert("llm_calls", {"purpose": "chat", "model": "m", "status": "ok", "olmayan_sutun": 1})
+    except DbError:
+        pass
+    else:
+        raise AssertionError("v2 şemasında olmayan sütun reddedilmedi")
+    gate = db.rpc("check_spend", {"p_purpose": "chat", "p_student_ref": None})[0]
+    if gate["state"] != "normal" or not gate["paid_allowed"] or gate["downgrade"]:
         raise AssertionError(f"dev-seed'de sohbet bütçesi normal olmalı: {gate}")
-    lesson = db.rpc("check_spend", {"p_purpose": "lesson_analysis"})[0]
-    if lesson["lesson_month_usd"] <= 0 or lesson["day_usd"] != gate["day_usd"]:
-        raise AssertionError("ders harcaması ayrı bütçede değil")
-    return f"yetki taklidi, {len(RPCS)} RPC eşleniği, iki bütçeli check_spend"
+    return f"v2 şema denetimi, {len(RPCS)} RPC eşleniği, v2 check_spend"
 
 
 def check_ledger(tmp: Path) -> str:
@@ -236,7 +220,7 @@ def check_ledger(tmp: Path) -> str:
     db.flush()
     if not (tmp / "out" / "llm_calls.jsonl").is_file():
         raise AssertionError("out/llm_calls.jsonl yazılmadı")
-    return f"düşüş, şema, iki bütçe, cost_estimate.json ({est['total_usd']} $)"
+    return f"düşüş, şema, yumuşak tavan, cost_estimate.json ({est['total_usd']} $)"
 
 
 def check_batch(_: Path) -> str:
@@ -271,8 +255,8 @@ def check_runtime(tmp: Path) -> str:
     from .runtime import Runtime
 
     rt = Runtime.from_env(dry_run=True, out=tmp / "rt")
-    kinds = {type(x).__name__ for x in (rt.db, rt.llm, rt.embedding.inner, rt.doi, rt.oa, rt.storage, rt.notifier)}
-    want = {"JsonlDb", "FakeLLM", "FakeEmbedding", "FakeCrossref", "FakeUnpaywall", "LocalDirStorage", "FakeNotifier"}
+    kinds = {type(x).__name__ for x in (rt.db, rt.llm, rt.embedding.inner, rt.storage, rt.notifier)}
+    want = {"JsonlDb", "FakeLLM", "FakeEmbedding", "LocalDirStorage", "FakeNotifier"}
     if type(rt.embedding).__name__ != "LedgeredEmbedding":
         raise AssertionError("embedding CostLedger kapısından geçmiyor")
     if kinds != want or rt.mode != "fake":

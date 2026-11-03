@@ -47,6 +47,7 @@ export function ExamPriorityRow({ rank, topic, kind, hits, years, points, eviden
             )}
           </span>
         ) : null}
+        {points ? <span className="text-caption whitespace-nowrap font-medium text-ink tabular-nums sm:hidden">{points}</span> : null}
       </div>
       <div className="flex flex-col items-end gap-1">
         {total > 0 ? (

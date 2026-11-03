@@ -42,6 +42,12 @@ comment on column public.generated_documents.created_by is 'İsteyen profil';
 comment on column public.generated_documents.created_at is 'Oluşturulma zamanı';
 comment on column public.generated_documents.updated_at is 'Son güncelleme';
 -- end comments public.generated_documents
+-- Öğrencinin okuyabildiği belgelerde cevap anahtarı saklanmaz: kind <> 'answer_key' ise content bir nesnedir ve keys[]
+-- boş ya da yoktur (packages/contracts storedDocumentAst / splitDocumentKeys). Anahtarlar worker tarafından
+-- secure.exam_answer_keys'e (set_exam_key, source='generated') yazılır; kind='answer_key' satırlarını yalnız personel görür.
+alter table public.generated_documents add constraint generated_documents_no_keys
+check (kind = 'answer_key' or content is null
+       or (jsonb_typeof(content) = 'object' and coalesce(content -> 'keys', '[]'::jsonb) = '[]'::jsonb));
 create index generated_documents_student_kind on public.generated_documents (student_id, kind, created_at desc);
 create index generated_documents_course on public.generated_documents (course_id, created_at desc);
 alter table public.generated_documents enable row level security;

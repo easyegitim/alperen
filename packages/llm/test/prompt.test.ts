@@ -34,10 +34,10 @@ describe('istem blokları', () => {
     expect(renderTurnContext({ now: new Date('2026-11-01T22:30:00Z') })).toBe('Bugün 2026-11-02.');
   });
 
-  it('sistem mesajı desteği: Opus/Sonnet evet, Haiku hayır', () => {
+  it('sistem mesajı: üç modelde role:"system" (Haiku 400 dönerse geçit yedeğe geçer)', () => {
     expect(supportsSystemMessages(MODELS.opus)).toBe(true);
     expect(supportsSystemMessages(MODELS.sonnet)).toBe(true);
-    expect(supportsSystemMessages(MODELS.haiku)).toBe(false);
+    expect(supportsSystemMessages(MODELS.haiku)).toBe(true);
   });
 
   it('araçlar ada göre sıralanır (kararlı)', () => {
