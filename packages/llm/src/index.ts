@@ -13,5 +13,6 @@ export * from './ledger.js';
 export * from './refusal.js';
 export * from './tools.js';
 export * from './memory/pgMemory.js';
+export * from './dossier.js';
 export * from './gateway.js';
 export { FakeTransport, sampleFromSchema, type FakeReply, type FakeToolUse, type FakeRequestRecord } from './fake.js';

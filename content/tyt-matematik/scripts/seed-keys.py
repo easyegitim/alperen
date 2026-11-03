@@ -22,6 +22,13 @@ yerel ``postgres`` rolüyle çalışır. Adımlar tek işlemde (``begin … comm
 SQL ``psql`` istemcisine stdin'den verilir; anahtar değerleri komut satırına, çıktıya ya da dosyaya yazılmaz.
 Bağlantı parolası da komut satırına konmaz: URL'den ayrılıp alt sürecin ortamına ``PGPASSWORD`` olarak verilir.
 ``answer-keys.json`` yoksa ``SKIP: no keys`` yazar ve 0 ile çıkar.
+
+``--schema v2`` (supabase/migrations v2 tabanı; ``supabase/scripts/db-test.sh`` bunu kullanır): inceleyen ``staff``
+koordinatörü yerine ilk ``admin`` profilidir (yoksa boş); v1'in ``questions_approve_guard``/``ogrenmen.reviewer``
+mekanizması yoktur (onay doğrudan yazılır). Ek olarak ``export-sql.py --schema v2``'nin teşhis testi
+(``exams.kind='diagnostic'``) sorularına ``secure.exam_answer_keys`` satırı (``source='instructor'``) aynı anahtardan
+yazılır; böylece teşhis testi ``grade_exam_session`` ile notlanır. Var olan ``instructor`` kaynaklı sınav anahtarı
+güncellenir, diğer kaynaklar (eğitmenin ``uploaded`` düzeltmesi vb.) değiştirilmez. Varsayılan ``--schema v1``.
 """
 
 from __future__ import annotations
@@ -41,6 +48,8 @@ import _contentlib as lib  # noqa: E402
 from _contentlib import C, jsonb, num, q  # noqa: E402
 
 REVIEW_NOTE = "seed: teşhis anahtarı yazıldı"
+SCHEMAS = ("v1", "v2")
+SEED_ADMIN_V2 = "(select p.id from public.profiles p where p.role = 'admin' order by p.created_at limit 1)"
 SKIPPED_MARK = "ogrenmen-seed-keys-skipped:"
 
 
@@ -68,11 +77,14 @@ def verified_keys(content: lib.Content) -> list[tuple[str, dict, dict, str, str]
     return out
 
 
-def build_sql(content: lib.Content) -> str:
+def build_sql(content: lib.Content, schema: str = "v1") -> str:
+    if schema not in SCHEMAS:
+        raise lib.ContentError(f"bilinmeyen şema {schema!r} (v1 | v2)")
+    v2 = schema == "v2"
     rows = verified_keys(content)
     n = len(rows)
-    coordinator = ("(select s.id from public.staff s where s.role = 'coordinator' and s.active "
-                   "order by s.created_at limit 1)")
+    coordinator = SEED_ADMIN_V2 if v2 else ("(select s.id from public.staff s where s.role = 'coordinator' and s.active "
+                                            "order by s.created_at limit 1)")
     expected = ",\n  ".join(f"({q(qid)}, {q(code)}, {q(chash)})" for qid, _k, _r, code, chash in rows)
     lines = [
         "begin;",
@@ -113,8 +125,22 @@ def build_sql(content: lib.Content) -> str:
             "sympy_report = excluded.sympy_report, verified_at = excluded.verified_at\n"
             "  where secure.answer_keys.written_by = 'seed';"
         )
+    if v2:
+        # teşhis testi (exams.kind='diagnostic') soruları: aynı anahtar secure.exam_answer_keys'e (source='instructor')
+        lines.append(
+            "insert into secure.exam_answer_keys (exam_question_id, correct_option, numeric_value, source)\n"
+            "  select eq.id, case when eq.kind = 'mcq' then ak.correct_option end, "
+            "case when eq.kind = 'numeric' then app.parse_number(ak.numeric_value) end, 'instructor'\n"
+            "  from public.exam_questions eq join public.exams x on x.id = eq.exam_id and x.kind = 'diagnostic'\n"
+            "  join seed_keys_expected e on e.id = eq.question_id\n"
+            "  join secure.answer_keys ak on ak.question_id = eq.question_id and ak.written_by = 'seed'\n"
+            "  where eq.kind in ('mcq', 'numeric')\n"
+            "  on conflict (exam_question_id) do update set correct_option = excluded.correct_option, "
+            "numeric_value = excluded.numeric_value\n"
+            "  where secure.exam_answer_keys.source = 'instructor';"
+        )
+    lines += [] if v2 else ["select set_config('ogrenmen.reviewer', 'on', true);"]
     lines += [
-        "select set_config('ogrenmen.reviewer', 'on', true);",
         f"update public.questions set status = 'approved', reviewed_by = {coordinator}, reviewed_at = now(), "
         f"review_note = {q(REVIEW_NOTE)}",
         "  where id in (select e.id from seed_keys_expected e) and status in ('draft', 'pending_review');",
@@ -184,6 +210,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="postgres bağlantısı (service_role/postgres); varsayılan $OGRENMEN_DATABASE_URL")
     ap.add_argument("--content", type=Path, default=lib.CONTENT_DIR)
     ap.add_argument("--dry-run", action="store_true", help="anahtarları doğrula, DB'ye yazma (anahtar yazdırılmaz)")
+    ap.add_argument("--schema", choices=SCHEMAS, default="v1",
+                    help="hedef veritabanı tabanı: v1 (eski, varsayılan) | v2 (supabase/migrations v2; admin profili, "
+                         "teşhis testi sınav anahtarları)")
     args = ap.parse_args(argv)
     keys_path = args.content / "diagnostic" / "answer-keys.json"
     if not keys_path.exists():
@@ -191,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     try:
         content = lib.load_content(args.content)
-        sql = build_sql(content)
+        sql = build_sql(content, schema=args.schema)
     except lib.ContentError as exc:
         print(f"HATA: {exc}", file=sys.stderr)
         return 1

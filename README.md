@@ -15,9 +15,10 @@ Kök bir **bun çalışma alanıdır** (`apps/*`, `packages/*`); Python boru hat
 
 | Dizin | Ne | Durum |
 | --- | --- | --- |
-| `apps/web/` | Next.js web + PWA: öğrenci, veli, eğitmen | var (P0 iskeleti) |
-| `apps/worker/` | pg-boss iş işçisi (müfredat taslağı, dossier, gece işleri, PDF) | var (P0 iskeleti) |
-| `packages/llm/` | Anthropic geçidi: rotalar, önbellek, parse, akış, defter, Batch, fake | var (P0) |
+| `apps/web/` | Next.js web + PWA: öğrenci, veli, eğitmen | var (P1 öğrenci çekirdeği) |
+| `apps/worker/` | pg-boss iş işçisi (müfredat taslağı, öneriler, yükle/teşhis, dossier, gece işleri, PDF) | var (P1) |
+| `packages/llm/` | Anthropic geçidi: rotalar, önbellek, parse, akış, defter, Batch, dossier, fake | var (P1) |
+| `packages/prompts/` | ürün prompt'ları (sürümlü `.md` + kilit), katman birleştirme, eval (sahte kip), `prompt_versions` eşitlemesi | var (P1) |
 | `packages/design-system/` | marka kitabı, `tokens.json`, TSX bileşenleri ve önizleme | var (P0) |
 | `packages/contracts/` | sözleşmeler (JSON Schema, TS + Python doğrulayıcı; v2 şemaları) | var |
 | `packages/mastery-math/` | BKT matematiği: TS, Python ve SQL aynı vektörleri geçer | var |
@@ -28,7 +29,7 @@ Kök bir **bun çalışma alanıdır** (`apps/*`, `packages/*`); Python boru hat
 | `pipelines/ders/` | ders kaydı ve video analizi (ffmpeg + STT) | var |
 | `pipelines/verify/` | doğrulama HTTP servisi (SymPy; `tablet/verify.py`'den) | P3 (henüz yok) |
 | `packages/doc-render/` | belge AST'sinden PDF/HTML çıktısı | P3 (henüz yok) |
-| `supabase/` | migration'lar (0001–0019), seed'ler, RLS ve RPC testleri | v2 taban (RPC'ler dahil) |
+| `supabase/` | migration'lar (0001–0026), seed'ler, RLS ve RPC testleri | v2 taban + P1 ekleri |
 | `content/tyt-matematik/` | TYT Matematik müfredatı ve şablonları (1 numaralı tohum içerik) | var |
 | `fixtures/` | paylaşılan sahte veri (LLM cevapları, dev seed, ders/sınav örnekleri) | var |
 | `scripts/` | `check-all.sh`, `lib.sh`, RPC/kopya/fixture denetimleri, `secret-scan.sh` | var |
@@ -41,7 +42,7 @@ veritabanı testleri). Hiçbir hesap, anahtar ya da `.env` dosyası gerekmez; d�
 
 ```
 bun install                       # çalışma alanı bağımlılıkları (kök bun.lock)
-make check-quick                  # tüm denetimler, canlı servis olmadan (~6 dk)
+make check-quick                  # tüm denetimler, canlı servis olmadan (~10 dk)
 make check                        # aynısı, ağır adımlar dahil
 make check-live                   # + canlı Postgres (OGRENMEN_DATABASE_URL ya da yerel varsayılan)
 make db-test                      # yalnız veritabanına bağlı modüller, canlı kipte
@@ -61,47 +62,65 @@ verir; mevcut `check.sh` dosyaları örnektir. Paket kurulumu her zaman kökten 
 
 ## Nerede kaldık
 
-Plan `docs/PLAN-v2.md` §14 fazlarıyla ilerler. **P0 Temel tamamlandı** (2026-11-03 entegrasyon doğrulaması):
-`make check-quick` ve yerel Postgres ile `make check-live` yeşil (19 adım: 6 kök + 13 modül, 0 FAIL). Gerçek API
-anahtarı gerektiren adımlar anahtar yokken SKIP yazar; canlı kipte bile atlananlar aşağıdaki tabloda.
+Plan `docs/PLAN-v2.md` §14 fazlarıyla ilerler. **P0 Temel** tamamlandı; **P1 Öğrenci çekirdeği** kodu yazıldı ve
+2026-11-03 entegrasyon doğrulamasından geçti: `make check-quick` ve yerel Postgres ile `make check-live` yeşil
+(20 adım: 6 kök + 14 modül, 0 FAIL). Gerçek API anahtarı gerektiren adımlar anahtar yokken SKIP yazar.
+
+P1 uçtan uca yolculuk testi (`apps/web/e2e/p1-journey.spec.ts`, `OGRENMEN_LIVE=1`'de `apps/web/check.sh` koşar;
+elle: `OGRENMEN_LIVE=1 bun run --cwd apps/web test:journey`): geçici v2 veritabanı + Supabase uyumlu yerel köprü
+(`apps/web/e2e/journey/stack.ts`: Auth, PostgREST alt kümesi, Storage; RLS/RPC/Storage politikaları gerçek Postgres'te)
++ gerçek worker (pg-boss) + `next dev`, LLM sahte. Akış: e-posta koduyla giriş → onboarding "TYT Matematik" →
+`suggestions.refresh` → Bugün kartı → Başla → sorular → tek cümle sonuç → Koç'ta bir tur (PgChatStore, `llm_calls`)
+→ Yükle (fotoğraf, Storage) → `upload.intake` → `diagnosis.run` → "Çözümünü inceledim: …" tek cümle; ikinci test:
+yeni ders ("Lineer Cebir") → özel ders + `ai_draft` müfredat → `curriculum.draft` → Hazırlıyorum → Bugün.
 
 | Modül | Durum | Not |
 |---|---|---|
 | kök (sır taraması, drift, fixtures, RPC paritesi, betik testleri, workflow lint) | yeşil | actionlint yerelde yoksa SKIP, CI'da koşar |
-| `supabase` (v2 göçleri 0001–0019, RLS, RPC, SQL testleri) | yeşil | canlı kipte gerçek pg-boss şemasıyla da denetlenir |
-| `apps/web` (Next.js, Supabase Auth 3 rol + davet, kabuklar, PWA) | yeşil | `next build` ve Playwright E2E (sahte Supabase) canlı/ağır kipte koşar |
-| `apps/worker` (pg-boss iş kayıt defteri, zamanlamalar, PDF, sağlık, Dockerfile/Fly) | yeşil | pg-boss entegrasyon testi canlı kipte |
-| `packages/llm` (Anthropic geçidi: rotalar, önbellek, parse, akış, refusal, Batch, defter, fake) | yeşil | canlı Anthropic testi `ANTHROPIC_API_KEY` ister (SKIP) |
-| `packages/contracts` (zod-önce şemalar, JSON Schema + Python) | yeşil | |
-| `packages/design-system` (token → CSS/Tailwind, TSX bileşenler, önizleme) | yeşil | önizleme derlemesi yalnız ağır kipte |
-| `packages/mastery-math`, `packages/pii` | yeşil | |
+| `supabase` (göçler 0001–0026: öneriler, alıştırma, onboarding, hafıza düzeltme, dossier v2, müfredat kurucu, yükleme) | yeşil | canlı kipte gerçek pg-boss şemasıyla da denetlenir |
+| `apps/web` (Bugün · Koç · Gelişim, onboarding, test/sonuç, yükle/teşhis, eğitmen müfredat editörü) | yeşil | Playwright: sahte Supabase takımı + P1 yolculuğu (gerçek Postgres) canlı kipte |
+| `apps/worker` (curriculum.draft, suggestions.refresh, upload.intake, diagnosis.run, sohbet özeti, öneri incelemesi) | yeşil | pg-boss ve iş zinciri testleri canlı kipte |
+| `packages/llm` (geçit, dossier derleyici, hafıza işleyicileri, fake) | yeşil | canlı Anthropic testi `ANTHROPIC_API_KEY` ister (SKIP) |
+| `packages/prompts` (9 prompt, kilit, eval, `prompt_versions`) | yeşil | canlı `count_tokens` anahtar ister (SKIP) |
+| `packages/contracts`, `packages/design-system`, `packages/mastery-math`, `packages/pii` | yeşil | |
 | `pipelines/{common,tablet,kalem,ders}` | yeşil | canlı testleri v1 şemasına yazılıydı: v2'de SKIP |
 | `content/tyt-matematik` | yeşil | |
-| Mockup'lar (14 ekran, sadelik ilkesiyle yeniden çizildi) | tamam | bağlayıcı başvuru: https://claude.ai/artifact/NCt864XDLk6o6Rrm6dPDuo |
 
-**Bilinen boşluklar (P0 sonrası):**
+**Entegrasyonda düzeltilenler (2026-11-03):** `pipelines/common` `grants-v2.json` yeni göçlerle yeniden üretildi;
+`packages/prompts` modül listesine (betik testleri) eklendi; `apps/web` `dev` betiği `next dev --webpack` oldu
+(Turbopack çalışma alanı paketlerindeki `./x.js` → `./x.ts` içe aktarımlarını çözmüyor, Koç sayfası derlenmiyordu).
 
-- Canlı Claude testi hiç koşmadı (anahtar yok): geçit testi `cache_read_input_tokens > 0` kabul ölçütü ilk gerçek
-  anahtarla `OGRENMEN_LIVE=1 bash packages/llm/check.sh` ile doğrulanmalı (P1 başında).
-- Öğrenci kabuğu plan §13'teki 3 sekmeye (Bugün · Koç · Gelişim, Sor düğmesi) indi; `PdfViewer`, `SuggestionCard`,
-  `OneLineResult` bileşenleri tasarım sisteminde var. Ancak `suggestions` tablosu ve `suggestions.refresh` işi yok:
-  Bugün ekranı şimdilik boş durum çizer (P1 hazırlık işi).
-- `upsert_memory_file` öğrencinin kendi hafıza dosyalarını doğrudan yazmasına izin verir (aktör `student:<uid>` olarak
-  kaydedilir). Plan §3.2 "öğrenci okur, düzeltme ister" der: düzeltme isteği iş kuyruğuna (ör. `memory.correction`)
-  taşınmalı ya da kurucu doğrudan düzenlemeyi plana yazmalı.
-- TYT içeriği için v2 cevap anahtarı tohumu yok (`db-test.sh`: "SKIP: no keys"); `fixtures/db/dev-seed.json` ve
-  `fixtures/{kitap,panel,kulaklik}` hâlâ v1 verisini taşır (v1 Telegram satırları şemasız kalır; `bot-response-log`
-  şeması kaldırıldı). v2 tohum verisi ayrı iştir.
+**Bilinen boşluklar (P1 sonrası):**
+
+- **İlk alıştırma çıkmazı (yüksek):** TYT tohumunda alıştırma bankası yok; onaylı 20 soru teşhis testinindir ve
+  `start_practice` bitirilmemiş teşhisin sorusunu almaz (anahtar sızmasın), `practice.generate` işinin işleyicisi de
+  yok (registry'de `handler: null`). Yeni öğrencinin ilk "Başla"sı "Bu konu için soruları hazırlıyorum" ekranında kalır
+  (600 sn sonra set `abandoned`). Öğrencinin açtığı `ai_draft` derslerde banka hep boştur. Yolculuk testi bu adımı
+  `student-flow.db.test.ts` gibi teşhis sorularını alıştırma bankası sayarak geçer. Çözüm: `practice.generate`
+  işleyicisi (şablon stoğu + SymPy doğrulama) ya da ilk testi teşhis sınavına yönlendirmek; o zamana dek
+  `suggestions.refresh` yalnız uygun sorusu olan yapraklara alıştırma önermeli.
+- **Koç üretimde kapalı:** `PgChatStore` RLS'i aşan bağlantıyla okur; `checkDbRole` bu yüzden üretimde 503 verir
+  (yerelde yalnız `OGRENMEN_WEB_COACH_TRUSTED_DEV=1`). Üretim için okumalar kullanıcı JWT'siyle, yazımlar yalnız
+  EXECUTE yetkili `ogrenmen_web_coach` rolüne verilmiş SECURITY DEFINER koç RPC'leriyle yapılmalı (pg-store.ts başlığı).
+- **Worker rolü:** SQL'den kuyruğa atılan her iş (`onboarding_enroll`, `submit_upload`, `start_practice` …)
+  `enqueue_job`'ın sahibinin (migration rolü; Supabase'de `postgres`) `pgboss` şemasına yazma hakkına dayanır. Worker
+  başka rolle bağlanırsa işler sessizce düşer (`audit.events` `job.enqueue_failed`). Worker'ı migration rolüyle bağla
+  ya da `supabase/README.md`'deki yetkileri ver; yolculuk testi worker'ı `ogrenmen_owner` rolüyle açar.
+- Canlı Claude testi hiç koşmadı (anahtar yok): geçit `cache_read_input_tokens > 0` ölçütü ve prompt'ların
+  `count_tokens` ≥ 512 eşiği ilk gerçek anahtarla `OGRENMEN_LIVE=1 bash packages/llm/check.sh` ve
+  `packages/prompts/check.sh` ile doğrulanmalı.
+- Supabase Realtime hiçbir testte yok (köprüde yok; Hazırlıyorum ve sonuç ekranları yoklamaya düşer, çalışıyor).
+  Gerçek Supabase (GoTrue/PostgREST/Storage) ile duman testi barındırılan projede yapılmalı.
 - `pipelines/{tablet,kalem,ders}` birkaç v1 tablo/RPC kullanır (`LEGACY_PIPELINE_TABLES`,
   `fakes/rpc-names-legacy-v1.json`; parite tablosunda WARN); P3 (doğrulama servisi) ve P5 (ders HTTP servisi) ile
   kalkar. `pipelines/common` içindeki Gemini/Groq-sohbet/OpenRouter/CF-AI adaptörleri yalnız bu eski sahte akışlar
-  içindir; Claude yalnız `packages/llm`'dedir. `make ders` hedefi kaldırıldı (P5'te HTTP servisi olur).
-- `packages/doc-render` (belge AST → PDF) P3 işidir; henüz yok.
+  içindir; Claude yalnız `packages/llm`'dedir.
+- `fixtures/db/dev-seed.json` ve `fixtures/{kitap,panel,kulaklik}` hâlâ v1 verisini taşır; v2 tohum verisi ayrı iştir.
+- `packages/doc-render` (belge AST → PDF) P3 işidir; henüz yok (Bugün'deki belge kartları şimdilik yalnız testte).
 
-**Bir sonraki adım:** P1 öğrenci çekirdeği — önce P1 hazırlığı (`suggestions` tablosu + `suggestions.refresh` işi,
-Bugün/Koç/Gelişim ekranlarını mockup S02/S03/S08 ile görsel karşılaştırma), sonra ders seçimi + müfredat taslağı işi, dossier
-derleyici + hafıza işleyicileri, Koç sohbeti, Sor (yakalama → teşhis → observations) ve Konu haritası. Ekranlar
-mockup'lara (S01–S09b, S10/S10b, S12–S15) birebir uyar. P1 ilk gerçek Anthropic anahtarını ister.
+**Bir sonraki adım:** P1 kapanışı — ilk gerçek Anthropic anahtarıyla canlı geçit/prompt denetimi, alıştırma bankası
+(`practice.generate` ya da teşhis-önce akışı) ve koçun üretim yolu (JWT okumaları + koç RPC'leri); sonra P2 (deneme
+sınavı ve rapor). Ekranlar mockup'lara (S01–S09b, S10/S10b, S12–S15) birebir uyar.
 
 ## Arşiv notu
 

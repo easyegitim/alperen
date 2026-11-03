@@ -1,6 +1,7 @@
 # Next.js ve test çıktıları (kök .gitignore'a ek)
 .next/
 .next-e2e/
+.next-journey/
 next-env.d.ts
 test-results/
 playwright-report/

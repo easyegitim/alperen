@@ -3,7 +3,9 @@ import {
   assertMemoryPath,
   createMemoryHandlers,
   InMemoryStore,
+  MEMORY_CONFLICT_CODE,
   MEMORY_MAX_BYTES,
+  memoryContentHash,
   MemoryError,
   PARENT_SUMMARY_MAX_BYTES,
   PARENT_SUMMARY_PATH,
@@ -11,6 +13,7 @@ import {
   RpcMemoryStore,
   runMemoryCommand,
   UPSERT_MEMORY_FILE_SQL,
+  type MemoryStore,
   type PgQueryLike,
   type SupabaseLike,
 } from '../src/memory/pgMemory.js';
@@ -208,7 +211,11 @@ describe('PgStore (upsert_memory_file RPC)', () => {
         }
         if (sql === UPSERT_MEMORY_FILE_SQL) {
           if (fail) throw new Error(fail);
-          const [, path, content, op, , newPath] = values ?? [];
+          const [, path, content, op, , newPath, expected] = values ?? [];
+          if (expected !== null && expected !== undefined) {
+            const cur = rows.get(String(path));
+            if (cur === undefined || memoryContentHash(cur) !== expected) throw new Error('ERROR: OGR-MEM-028 dosya okunduktan sonra değişti');
+          }
           if (op === 'delete') rows.delete(String(path));
           else if (op === 'rename') {
             const c = rows.get(String(path));
@@ -232,11 +239,57 @@ describe('PgStore (upsert_memory_file RPC)', () => {
     await s.remove(SID, '/memories/b.md', 'coach');
     const rpc = log.filter((l) => l.sql.startsWith('select public.upsert_memory_file'));
     expect(rpc.map((l) => l.values)).toEqual([
-      [SID, '/memories/a.md', 'x', 'create', 'coach', null],
-      [SID, '/memories/a.md', null, 'rename', 'coach', '/memories/b.md'],
-      [SID, '/memories/b.md', null, 'delete', 'coach', null],
+      [SID, '/memories/a.md', 'x', 'create', 'coach', null, null],
+      [SID, '/memories/a.md', null, 'rename', 'coach', '/memories/b.md', null],
+      [SID, '/memories/b.md', null, 'delete', 'coach', null, null],
     ]);
     expect(log.some((l) => /^(insert|update|delete) /.test(l.sql))).toBe(false);
+  });
+
+  it('str_replace koşullu yazar (okunan içeriğin md5i); araya yazıcı girerse yeniden okur ve düzenlemeyi korur', async () => {
+    const { db, log } = fakeDb();
+    const s = new PgStore(db);
+    await s.write(SID, '/memories/p.md', 'a\nb', 'create', 'coach');
+    // Eşzamanlı yazıcı: işleyicinin ilk okumasından hemen sonra (yazımdan önce) dosyayı değiştirir
+    let raced = false;
+    const racing: PgQueryLike = {
+      query: async (sql: string, values?: unknown[]) => {
+        const r = await db.query(sql, values);
+        if (!raced && sql.startsWith('select content')) {
+          raced = true;
+          await s.write(SID, '/memories/p.md', 'a\nb\nc', 'insert', 'memory-delta');
+        }
+        return r;
+      },
+    };
+    const h = createMemoryHandlers({ store: new PgStore(racing), studentId: SID, actor: 'coach' });
+    await runMemoryCommand(h, { command: 'str_replace', path: '/memories/p.md', old_str: 'a', new_str: 'A' });
+    expect(await s.read(SID, '/memories/p.md')).toBe('A\nb\nc');
+    const cas = log.filter((l) => l.sql.startsWith('select public.upsert_memory_file') && l.values?.[3] === 'str_replace');
+    expect(cas).toHaveLength(2); // ilk deneme OGR-MEM-028, ikinci güncel içerikle
+    expect(cas[0]!.values?.[6]).toBe(memoryContentHash('a\nb'));
+    expect(cas[1]!.values?.[6]).toBe(memoryContentHash('a\nb\nc'));
+  });
+
+  it('iki kez çakışırsa OGR-MEM-028 modele hata olarak döner', async () => {
+    const store = new InMemoryStore();
+    await store.write(SID, '/memories/p.md', 'x', 'create', 'coach');
+    let n = 0;
+    const flaky: MemoryStore = {
+      list: (id) => store.list(id),
+      read: async (id, path) => {
+        const c = await store.read(id, path);
+        await store.write(id, path, `${c ?? ''}${++n}`, 'insert', 'memory-delta');
+        return c;
+      },
+      write: (...a) => store.write(...a),
+      remove: (...a) => store.remove(...a),
+      rename: (...a) => store.rename(...a),
+    };
+    const h = createMemoryHandlers({ store: flaky, studentId: SID, actor: 'coach' });
+    const e = await runMemoryCommand(h, { command: 'insert', path: '/memories/p.md', insert_line: 0, insert_text: 'y' }).catch((err: unknown) => err);
+    expect(e).toBeInstanceOf(MemoryError);
+    expect((e as MemoryError).code).toBe(MEMORY_CONFLICT_CODE);
   });
 
   it('DB hatası MemoryError koduna çevrilir', async () => {
@@ -307,9 +360,9 @@ describe('RpcMemoryStore (apps/web, kullanıcı JWT)', () => {
     await s.rename(SID, '/memories/profile.md', '/memories/p.md', 'coach');
     await s.remove(SID, '/memories/p.md', 'coach');
     expect(calls).toEqual([
-      { fn: 'upsert_memory_file', args: { p_student: SID, p_path: '/memories/profile.md', p_content: 'yeni', p_op: 'str_replace', p_actor: `student:${SID}`, p_new_path: null } },
-      { fn: 'upsert_memory_file', args: { p_student: SID, p_path: '/memories/profile.md', p_content: null, p_op: 'rename', p_actor: 'coach', p_new_path: '/memories/p.md' } },
-      { fn: 'upsert_memory_file', args: { p_student: SID, p_path: '/memories/p.md', p_content: null, p_op: 'delete', p_actor: 'coach', p_new_path: null } },
+      { fn: 'upsert_memory_file', args: { p_student: SID, p_path: '/memories/profile.md', p_content: 'yeni', p_op: 'str_replace', p_actor: `student:${SID}`, p_new_path: null, p_expected_hash: null } },
+      { fn: 'upsert_memory_file', args: { p_student: SID, p_path: '/memories/profile.md', p_content: null, p_op: 'rename', p_actor: 'coach', p_new_path: '/memories/p.md', p_expected_hash: null } },
+      { fn: 'upsert_memory_file', args: { p_student: SID, p_path: '/memories/p.md', p_content: null, p_op: 'delete', p_actor: 'coach', p_new_path: null, p_expected_hash: null } },
     ]);
   });
 

@@ -127,12 +127,21 @@
     "public.curricula": {
       "columns": [
         "authority",
+        "autopilot",
         "code",
         "created_at",
         "created_by",
+        "draft_error",
+        "draft_meta",
+        "draft_progress",
+        "draft_status",
+        "draft_updated_at",
+        "edited_at",
         "id",
         "label",
         "origin",
+        "previous_id",
+        "published_at",
         "source_refs",
         "status",
         "version",
@@ -666,6 +675,26 @@
         "delete": "*"
       }
     },
+    "public.memory_corrections": {
+      "columns": [
+        "created_at",
+        "id",
+        "path",
+        "requested_by",
+        "resolution_note",
+        "resolved_at",
+        "resolved_by",
+        "status",
+        "student_id",
+        "text"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
     "public.memory_facts": {
       "columns": [
         "approved",
@@ -842,6 +871,42 @@
         "source_type",
         "value",
         "weight"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.practice_set_items": {
+      "columns": [
+        "answered_at",
+        "attempt_id",
+        "created_at",
+        "no",
+        "question_id",
+        "set_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.practice_sets": {
+      "columns": [
+        "created_at",
+        "enrollment_id",
+        "finished_at",
+        "id",
+        "skill_ids",
+        "started_at",
+        "status",
+        "suggestion_id",
+        "summary",
+        "target_count"
       ],
       "service_role": {
         "select": "*",
@@ -1167,6 +1232,27 @@
         "seen_count",
         "solved_count",
         "style_id"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
+    "public.suggestions": {
+      "columns": [
+        "consumed_at",
+        "created_at",
+        "enrollment_id",
+        "expires_at",
+        "id",
+        "kind",
+        "payload",
+        "rank",
+        "student_id",
+        "subtitle",
+        "title"
       ],
       "service_role": {
         "select": "*",

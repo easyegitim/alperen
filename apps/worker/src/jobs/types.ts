@@ -18,9 +18,25 @@ export interface JobDeps {
   storage(): StorageLike;
   pdf: PdfRendererLike;
   push: PushSender;
-  /** Bu işin ürettiği yeni işler (zincirleme). */
-  enqueue(name: string, data: object, opts?: { startAfter?: number | Date; singletonKey?: string }): Promise<string | null>;
+  /** Bu işin ürettiği yeni işler (zincirleme). Tekilleştirme için `dedupe.ts` (debounced / oncePer) kullanılır. */
+  enqueue(name: string, data: object, opts?: EnqueueOptions): Promise<string | null>;
   now(): Date;
+}
+
+/**
+ * İş ekleme seçenekleri. Kuyruklar pg-boss `standard` politikasıyla açılır; orada `singletonKey` TEK BAŞINA hiçbir
+ * işi düşürmez: tekilleştirme `singletonSeconds` ile olur (aynı ad + anahtar + zaman dilimi tek iş, pg-boss job_i4).
+ * `debounce`: dilim doluysa iş bir sonraki dilimin başına ertelenir (o da doluysa düşer; bekleyen iş zaten
+ * en yeni veriyi görür). stately/short politikası kullanılmaz: SQL `enqueue_job` anahtarsız iş ekler ve bu
+ * politikalarda anahtarsız işler (tüm öğrenciler) tek iş sayılırdı.
+ */
+export interface EnqueueOptions {
+  startAfter?: number | Date;
+  singletonKey?: string;
+  /** Tekilleştirme dilimi (sn); singletonKey ile birlikte verilir. */
+  singletonSeconds?: number;
+  /** true: dilim doluysa bir sonraki dilime ertele (pg-boss singletonNextSlot). */
+  debounce?: boolean;
 }
 
 export interface JobInfo {

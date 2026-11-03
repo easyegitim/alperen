@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FakeTransport, Gateway, InMemoryLedger } from '@ogrenmen/llm';
+import { FakeTransport, Gateway, InMemoryLedger, renderDossierText, sha256Hex } from '@ogrenmen/llm';
 import { loadConfig } from '../src/config.js';
 import type { Db } from '../src/db.js';
 import { getJob } from '../src/jobs/registry.js';
@@ -73,17 +73,21 @@ describe('llm.ping', () => {
 describe('dossier.render', () => {
   const sid = '00000000-0000-0000-0000-000000000001';
   const cid = '00000000-0000-0000-0000-000000000002';
-  const body = { hash: 'abc123', student: { public_ref: 's_qk7m2rx4tn5a' } };
+  const body = { version: 2, as_of: '2026-11-03', hash: 'abc123', identity: { student_ref: 's_qk7m2rx4tn5a' } };
+  const textHash = sha256Hex(renderDossierText(body));
 
-  it('hash değiştiyse student_dossier_cache’e yazar', async () => {
+  it('metin hash\'i değiştiyse student_dossier_cache’e yazar', async () => {
     const db = fakeDb((t) => (t.includes('render_dossier') ? [{ dossier: body }] : []));
     const res = await getJob('dossier.render')!.handler!({ student_id: sid, course_id: cid }, ctxWith({ db }));
     expect(res.changed).toBe(true);
+    expect(res.hash).toBe(textHash);
     expect(db.calls.some((c) => /insert into public\.student_dossier_cache/.test(c.text))).toBe(true);
   });
 
   it('hash aynıysa yazmaz', async () => {
-    const db = fakeDb((t) => (t.includes('render_dossier') ? [{ dossier: body }] : t.includes('select hash') ? [{ hash: 'abc123' }] : []));
+    const db = fakeDb((t) =>
+      t.includes('render_dossier') ? [{ dossier: body }] : t.includes('from public.student_dossier_cache') ? [{ hash: textHash, rendered: 'x', updated_at: new Date() }] : [],
+    );
     const res = await getJob('dossier.render')!.handler!({ student_id: sid, course_id: cid }, ctxWith({ db }));
     expect(res.changed).toBe(false);
     expect(db.calls.some((c) => /insert into/.test(c.text))).toBe(false);
@@ -91,8 +95,9 @@ describe('dossier.render', () => {
 
   it('OGR-DOS-001 kalıcı hata', async () => {
     const db: Db = {
-      query: async () => {
-        throw new Error('OGR-DOS-001 kayıt yok');
+      query: async (text) => {
+        if (text.includes('render_dossier')) throw new Error('OGR-DOS-001 kayıt yok');
+        return { rows: [] };
       },
     };
     await expect(getJob('dossier.render')!.handler!({ student_id: sid, course_id: cid }, ctxWith({ db }))).rejects.toBeInstanceOf(PermanentJobError);
@@ -136,8 +141,8 @@ describe('push.send ve memory.compact', () => {
     await expect(getJob('push.send')!.handler!({ user_id: '00000000-0000-0000-0000-000000000003', title: 'x' }, ctxWith({ db }))).rejects.toBeInstanceOf(PermanentJobError);
   });
 
-  it('memory.compact iskeleti öğrenci sayar', async () => {
-    const db = fakeDb(() => [{ n: 3 }]);
-    expect(await getJob('memory.compact')!.handler!({}, ctxWith({ db }))).toEqual({ skeleton: true, students: 3 });
+  it('memory.compact sıkıştırılacak dosya yoksa Batch göndermez (ayrıntı: nightly.test.ts)', async () => {
+    const res = await getJob('memory.compact')!.handler!({ student_id: '00000000-0000-0000-0000-000000000003' }, ctxWith());
+    expect(res).toEqual({ phase: 'submit', students: 0, files: 0, batchId: null, chained: [] });
   });
 });

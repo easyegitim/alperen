@@ -12,9 +12,15 @@
  *   - her değişiklik bir sürüm satırı yazar (op, actor)
  * Hatalar `MemoryError` olarak fırlatılır; geçit bunu `is_error: true` araç sonucuna çevirir.
  *
- * Depolar: `PgStore` (apps/worker, service_role `pg` havuzu) ve `RpcMemoryStore` (apps/web, kullanıcı JWT'li Supabase
- * istemcisi). İkisi de yazımı `public.upsert_memory_file` RPC'si üzerinden yapar; kilit, sınırlar ve sürümleme DB'de tek yolda kalır.
+ *   - str_replace / insert koşullu yazar: okunan içeriğin md5'i (`memoryContentHash`) yazımla gider, DB öğrenci kilidi
+ *     altında karşılaştırır (OGR-MEM-028); eşzamanlı başka bir yazıcı (koç, memory-delta, gece sıkıştırması) araya
+ *     girdiyse işleyici güncel içeriği yeniden okuyup bir kez daha dener, düzenleme sessizce ezilmez.
+ *
+ * Depolar: `PgStore` (service_role `pg` havuzu: apps/worker ve apps/web koç sohbeti; hafıza yazımları bu yoldan) ve
+ * `RpcMemoryStore` (kullanıcı JWT'li Supabase istemcisi: okuma; yazım yalnız owner eğitmen ya da admin oturumunda).
+ * İkisi de yazımı `public.upsert_memory_file` RPC'si üzerinden yapar; kilit, sınırlar ve sürümleme DB'de tek yolda kalır.
  */
+import { createHash } from 'node:crypto';
 import { betaMemoryTool, type MemoryToolHandlers } from '@anthropic-ai/sdk/helpers/beta/memory';
 import type { BetaMemoryTool20250818Command } from '@anthropic-ai/sdk/resources/beta/messages/messages';
 
@@ -50,12 +56,26 @@ export interface MemoryFileMeta {
   updatedAt: string;
 }
 
+/** Koşullu yazım seçeneği: dosyanın okunduğu andaki içerik hash'i (`memoryContentHash`). */
+export interface MemoryWriteOptions {
+  /** Verilirse depo yalnız güncel içeriğin hash'i bununla aynıysa yazar; değilse OGR-MEM-028 `MemoryError`. */
+  expectedHash?: string;
+}
+
+/** Eşzamanlı yazım çakışması (dosya okunduktan sonra değişti). */
+export const MEMORY_CONFLICT_CODE = 'OGR-MEM-028';
+
+/** Koşullu yazımın hash'i: UTF-8 içeriğin md5'i (Postgres `md5(content)` ile aynı). Güvenlik için değil, sürüm eşliği için. */
+export function memoryContentHash(content: string): string {
+  return createHash('md5').update(content, 'utf8').digest('hex');
+}
+
 /** Depolama arayüzü (öğrenci başına). Sınır denetimleri işleyicidedir; depo yalnız saklar ve sürümler. */
 export interface MemoryStore {
   list(studentId: string): Promise<MemoryFileMeta[]>;
   read(studentId: string, path: string): Promise<string | null>;
-  /** Oluşturur ya da üzerine yazar; sürüm satırı ekler. */
-  write(studentId: string, path: string, content: string, op: MemoryOp, actor: string): Promise<void>;
+  /** Oluşturur ya da üzerine yazar; sürüm satırı ekler. `opts.expectedHash`: koşullu yazım (OGR-MEM-028). */
+  write(studentId: string, path: string, content: string, op: MemoryOp, actor: string, opts?: MemoryWriteOptions): Promise<void>;
   remove(studentId: string, path: string, actor: string): Promise<void>;
   rename(studentId: string, oldPath: string, newPath: string, actor: string): Promise<void>;
 }
@@ -149,6 +169,24 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
     const files = await store.list(studentId);
     return files.some((f) => f.path.startsWith(`${path}/`));
   };
+  /**
+   * Oku → düzenle → koşullu yaz. Araya başka yazıcı girerse (OGR-MEM-028) güncel içerik yeniden okunur ve düzenleme
+   * bir kez daha uygulanır (ör. old_str artık yoksa model bunu hata olarak görür); ikinci çakışma hata olarak döner.
+   */
+  const edit = async (path: string, op: 'str_replace' | 'insert', apply: (content: string) => string): Promise<void> => {
+    for (let attempt = 0; ; attempt++) {
+      const content = await mustRead(path);
+      const next = apply(content);
+      sizedFor(path, next);
+      try {
+        await store.write(studentId, path, next, op, actor, { expectedHash: memoryContentHash(content) });
+        return;
+      } catch (err) {
+        const e = toMemoryError(err);
+        if (!(e instanceof MemoryError) || e.code !== MEMORY_CONFLICT_CODE || attempt >= 1) throw e;
+      }
+    }
+  };
 
   return {
     async view(cmd) {
@@ -179,31 +217,31 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
     async str_replace(cmd) {
       const path = assertMemoryPath(cmd.path);
       writable(path);
-      const content = await mustRead(path);
-      if (typeof cmd.old_str !== 'string' || cmd.old_str === '') throw new MemoryError('OGR-MEM-020', 'old_str boş olamaz');
-      const first = content.indexOf(cmd.old_str);
-      if (first === -1) throw new MemoryError('OGR-MEM-021', `old_str dosyada yok: ${path}`);
-      if (content.indexOf(cmd.old_str, first + 1) !== -1) throw new MemoryError('OGR-MEM-022', `old_str birden çok kez geçiyor: ${path}`);
-      const next = content.slice(0, first) + (cmd.new_str ?? '') + content.slice(first + cmd.old_str.length);
-      sizedFor(path, next);
-      await store.write(studentId, path, next, 'str_replace', actor);
+      const oldStr = cmd.old_str;
+      if (typeof oldStr !== 'string' || oldStr === '') throw new MemoryError('OGR-MEM-020', 'old_str boş olamaz');
+      await edit(path, 'str_replace', (content) => {
+        const first = content.indexOf(oldStr);
+        if (first === -1) throw new MemoryError('OGR-MEM-021', `old_str dosyada yok: ${path}`);
+        if (content.indexOf(oldStr, first + 1) !== -1) throw new MemoryError('OGR-MEM-022', `old_str birden çok kez geçiyor: ${path}`);
+        return content.slice(0, first) + (cmd.new_str ?? '') + content.slice(first + oldStr.length);
+      });
       return `The memory file ${path} has been edited.`;
     },
 
     async insert(cmd) {
       const path = assertMemoryPath(cmd.path);
       writable(path);
-      const content = await mustRead(path);
-      const lines = content === '' ? [] : content.split('\n');
       const at = cmd.insert_line;
-      if (!Number.isInteger(at) || at < 0 || at > lines.length) {
-        throw new MemoryError('OGR-MEM-023', `insert_line 0..${lines.length} aralığında olmalı: ${at}`);
-      }
-      if (typeof cmd.insert_text !== 'string') throw new MemoryError('OGR-MEM-018', 'insert_text metin olmalı');
-      const ins = cmd.insert_text.endsWith('\n') ? cmd.insert_text.slice(0, -1).split('\n') : cmd.insert_text.split('\n');
-      const next = [...lines.slice(0, at), ...ins, ...lines.slice(at)].join('\n');
-      sizedFor(path, next);
-      await store.write(studentId, path, next, 'insert', actor);
+      const text = cmd.insert_text;
+      await edit(path, 'insert', (content) => {
+        const lines = content === '' ? [] : content.split('\n');
+        if (!Number.isInteger(at) || at < 0 || at > lines.length) {
+          throw new MemoryError('OGR-MEM-023', `insert_line 0..${lines.length} aralığında olmalı: ${at}`);
+        }
+        if (typeof text !== 'string') throw new MemoryError('OGR-MEM-018', 'insert_text metin olmalı');
+        const ins = text.endsWith('\n') ? text.slice(0, -1).split('\n') : text.split('\n');
+        return [...lines.slice(0, at), ...ins, ...lines.slice(at)].join('\n');
+      });
       return `The memory file ${path} has been edited (inserted after line ${at}).`;
     },
 
@@ -276,7 +314,13 @@ export class InMemoryStore implements MemoryStore {
   async read(studentId: string, path: string): Promise<string | null> {
     return this.bucket(studentId).get(path)?.content ?? null;
   }
-  async write(studentId: string, path: string, content: string, op: MemoryOp, actor: string): Promise<void> {
+  async write(studentId: string, path: string, content: string, op: MemoryOp, actor: string, opts: MemoryWriteOptions = {}): Promise<void> {
+    if (opts.expectedHash !== undefined) {
+      const cur = this.bucket(studentId).get(path)?.content;
+      if (cur === undefined || memoryContentHash(cur) !== opts.expectedHash) {
+        throw new MemoryError(MEMORY_CONFLICT_CODE, `dosya okunduktan sonra değişti: ${path}`);
+      }
+    }
     this.bucket(studentId).set(path, { content, updatedAt: this.clock().toISOString() });
     this.versions.push({ studentId, path, version: this.nextVersion(studentId, path), op, actor, content });
   }
@@ -303,7 +347,7 @@ export function toMemoryError(err: unknown): unknown {
   return new MemoryError(m[0], message.slice(message.indexOf(m[0]) + m[0].length).trim());
 }
 
-/** `public.upsert_memory_file` argümanları (supabase/migrations/0017_rpc.sql). */
+/** `public.upsert_memory_file` argümanları (supabase/migrations/0023_memory_corrections.sql). */
 export interface UpsertMemoryFileArgs {
   p_student: string;
   p_path: string;
@@ -311,10 +355,12 @@ export interface UpsertMemoryFileArgs {
   p_op: MemoryOp;
   p_actor: string;
   p_new_path: string | null;
+  /** Koşullu yazım: okunan içeriğin md5'i (null: koşulsuz). */
+  p_expected_hash: string | null;
 }
 
 export const UPSERT_MEMORY_FILE_SQL =
-  'select public.upsert_memory_file($1::uuid, $2, $3, $4, $5, $6) as result';
+  'select public.upsert_memory_file($1::uuid, $2, $3, $4, $5, $6, $7) as result';
 
 /** `pg` istemcisi için en dar arayüz. */
 export interface PgQueryLike {
@@ -363,22 +409,22 @@ export class PgStore implements MemoryStore {
   private async upsert(a: UpsertMemoryFileArgs): Promise<void> {
     assertParentSummaryWrite([a.p_path, a.p_new_path], a.p_actor, a.p_content);
     try {
-      await this.db.query(UPSERT_MEMORY_FILE_SQL, [a.p_student, a.p_path, a.p_content, a.p_op, a.p_actor, a.p_new_path]);
+      await this.db.query(UPSERT_MEMORY_FILE_SQL, [a.p_student, a.p_path, a.p_content, a.p_op, a.p_actor, a.p_new_path, a.p_expected_hash]);
     } catch (err) {
       throw toMemoryError(err);
     }
   }
 
-  write(studentId: string, path: string, content: string, op: MemoryOp, actor: string): Promise<void> {
-    return this.upsert({ p_student: studentId, p_path: path, p_content: content, p_op: op, p_actor: actor, p_new_path: null });
+  write(studentId: string, path: string, content: string, op: MemoryOp, actor: string, opts: MemoryWriteOptions = {}): Promise<void> {
+    return this.upsert({ p_student: studentId, p_path: path, p_content: content, p_op: op, p_actor: actor, p_new_path: null, p_expected_hash: opts.expectedHash ?? null });
   }
 
   remove(studentId: string, path: string, actor: string): Promise<void> {
-    return this.upsert({ p_student: studentId, p_path: path, p_content: null, p_op: 'delete', p_actor: actor, p_new_path: null });
+    return this.upsert({ p_student: studentId, p_path: path, p_content: null, p_op: 'delete', p_actor: actor, p_new_path: null, p_expected_hash: null });
   }
 
   rename(studentId: string, oldPath: string, newPath: string, actor: string): Promise<void> {
-    return this.upsert({ p_student: studentId, p_path: oldPath, p_content: null, p_op: 'rename', p_actor: actor, p_new_path: newPath });
+    return this.upsert({ p_student: studentId, p_path: oldPath, p_content: null, p_op: 'rename', p_actor: actor, p_new_path: newPath, p_expected_hash: null });
   }
 }
 
@@ -409,9 +455,11 @@ export interface SupabaseLike {
 }
 
 /**
- * Supabase deposu (apps/web route handler'ları, kullanıcı JWT'si). Okuma RLS'li `select` (memory_files_select),
- * yazım `public.upsert_memory_file` RPC'si: DB öğrenci erişimini (`assert_student_access`), yol/boyut/dosya sınırlarını
- * ve `parent_summary.md` korumasını (OGR-MEM-007) burada da uygular.
+ * Supabase deposu (kullanıcı JWT'li istemci). Okuma RLS'li `select` (memory_files_select): öğrenci kendi dosyalarını,
+ * veli yalnız `parent_summary.md`'yi görür. Yazım `public.upsert_memory_file` RPC'si üzerinden YALNIZ owner eğitmen ya
+ * da admin oturumunda çalışır: 0023'ten beri öğrenci ve veli JWT'si OGR-AUTH-001 alır (öğrenci düzeltmeyi
+ * `request_memory_correction` ile ister). Koç sohbetinin hafıza yazımları bu depodan değil `PgStore`'dan (service_role)
+ * geçer. DB yol/boyut/dosya sınırlarını ve `parent_summary.md` korumasını (OGR-MEM-007) burada da uygular.
  */
 export class RpcMemoryStore implements MemoryStore {
   constructor(private readonly client: SupabaseLike) {}
@@ -442,15 +490,92 @@ export class RpcMemoryStore implements MemoryStore {
     if (error) RpcMemoryStore.fail(error);
   }
 
-  write(studentId: string, path: string, content: string, op: MemoryOp, actor: string): Promise<void> {
-    return this.upsert({ p_student: studentId, p_path: path, p_content: content, p_op: op, p_actor: actor, p_new_path: null });
+  write(studentId: string, path: string, content: string, op: MemoryOp, actor: string, opts: MemoryWriteOptions = {}): Promise<void> {
+    return this.upsert({ p_student: studentId, p_path: path, p_content: content, p_op: op, p_actor: actor, p_new_path: null, p_expected_hash: opts.expectedHash ?? null });
   }
 
   remove(studentId: string, path: string, actor: string): Promise<void> {
-    return this.upsert({ p_student: studentId, p_path: path, p_content: null, p_op: 'delete', p_actor: actor, p_new_path: null });
+    return this.upsert({ p_student: studentId, p_path: path, p_content: null, p_op: 'delete', p_actor: actor, p_new_path: null, p_expected_hash: null });
   }
 
   rename(studentId: string, oldPath: string, newPath: string, actor: string): Promise<void> {
-    return this.upsert({ p_student: studentId, p_path: oldPath, p_content: null, p_op: 'rename', p_actor: actor, p_new_path: newPath });
+    return this.upsert({ p_student: studentId, p_path: oldPath, p_content: null, p_op: 'rename', p_actor: actor, p_new_path: newPath, p_expected_hash: null });
   }
+}
+
+// --- hafıza deltası (memory_delta rotası, Haiku) ------------------------------------------------------------
+
+/** `memory-delta` şemasının işlemi (packages/contracts `MemoryOp`; burada bağımsız tanımlı). */
+export type MemoryDeltaOp =
+  | { op: 'str_replace'; path: string; old_str: string; new_str: string }
+  | { op: 'insert'; path: string; insert_line: number; text: string };
+
+export interface MemoryDeltaOpResult {
+  index: number;
+  op: MemoryDeltaOp['op'];
+  path: string;
+  ok: boolean;
+  /** İşleyicinin döndürdüğü metin ya da hata iletisi. */
+  message: string;
+  /** Hata kodu (OGR-MEM-0xx) ya da null. */
+  code: string | null;
+}
+
+export interface MemoryDeltaResult {
+  applied: number;
+  failed: number;
+  results: MemoryDeltaOpResult[];
+}
+
+/** Delta en çok bu kadar işlem uygular (PLAN-v2 §3.1: ≤ 3); fazlası atlanır. */
+export const MEMORY_DELTA_MAX_OPS = 3;
+/** `memory_delta` işinin sürüm satırındaki yazanı. */
+export const MEMORY_DELTA_ACTOR = 'memory-delta';
+
+function isHandlers(x: MemoryToolHandlers | MemoryHandlerOptions): x is MemoryToolHandlers {
+  return typeof (x as MemoryToolHandlers).view === 'function' && typeof (x as MemoryToolHandlers).str_replace === 'function';
+}
+
+/**
+ * `memory_delta` çıktısını hafıza aracının AYNI işleyicilerinden geçirir (yol izin listesi, 8 KB, ≤ 12 dosya,
+ * parent_summary koruması, sürüm satırı). İşlemler sırayla ve birbirinden bağımsız uygulanır: biri düşerse
+ * (ör. old_str artık dosyada yok) diğerleri yine denenir; sonuç işlem başına raporlanır, hata fırlatılmaz
+ * (yalnız depo/DB bağlantı hataları yukarı çıkar). `insert` dosya yokken `insert_line: 0` ise dosyayı oluşturur
+ * (prompt: "Dosya yoksa ya da boşsa ilk satırı insert_line 0 ile eklersin").
+ */
+export async function applyMemoryDelta(
+  target: MemoryToolHandlers | MemoryHandlerOptions,
+  ops: readonly MemoryDeltaOp[],
+  opts: { maxOps?: number } = {},
+): Promise<MemoryDeltaResult> {
+  const handlers = isHandlers(target) ? target : createMemoryHandlers({ ...target, actor: target.actor || MEMORY_DELTA_ACTOR });
+  const max = opts.maxOps ?? MEMORY_DELTA_MAX_OPS;
+  const results: MemoryDeltaOpResult[] = [];
+  for (const [index, o] of ops.slice(0, max).entries()) {
+    try {
+      let message: string;
+      if (o.op === 'str_replace') {
+        message = await runMemoryCommand(handlers, { command: 'str_replace', path: o.path, old_str: o.old_str, new_str: o.new_str });
+      } else if (o.op === 'insert') {
+        try {
+          message = await runMemoryCommand(handlers, { command: 'insert', path: o.path, insert_line: o.insert_line, insert_text: o.text });
+        } catch (err) {
+          if (!(err instanceof MemoryError) || err.code !== 'OGR-MEM-017' || o.insert_line !== 0) throw err;
+          message = await runMemoryCommand(handlers, { command: 'create', path: o.path, file_text: o.text.endsWith('\n') ? o.text.slice(0, -1) : o.text });
+        }
+      } else {
+        throw new MemoryError('OGR-MEM-026', `bilinmeyen delta işlemi: ${String((o as { op?: unknown }).op)}`);
+      }
+      results.push({ index, op: o.op, path: o.path, ok: true, message, code: null });
+    } catch (err) {
+      const e = toMemoryError(err);
+      if (!(e instanceof MemoryError)) throw e;
+      results.push({ index, op: o.op, path: o.path, ok: false, message: e.message, code: e.code });
+    }
+  }
+  for (const [i, o] of ops.slice(max).entries()) {
+    results.push({ index: max + i, op: o.op, path: o.path, ok: false, message: `delta en çok ${max} işlem uygular`, code: 'OGR-MEM-027' });
+  }
+  const applied = results.filter((r) => r.ok).length;
+  return { applied, failed: results.length - applied, results };
 }

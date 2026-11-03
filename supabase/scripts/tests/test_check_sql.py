@@ -63,7 +63,9 @@ def test_real_migrations_pass(capsys):
 def test_v2_migration_set_names():
     names = sorted(p.name for p in MIGRATIONS.glob("*.sql"))
     assert names[0] == "0001_extensions.sql" and names[1] == "0002_roles_and_helpers.sql"
-    assert "0011_mastery.sql" in names and names[-3:] == ["0017_rpc.sql", "0018_rls.sql", "0019_views.sql"]
+    assert "0011_mastery.sql" in names and names[16:19] == ["0017_rpc.sql", "0018_rls.sql", "0019_views.sql"]
+    # P1 ekleri 0020+ (öneriler, alıştırma, onboarding, hafıza düzeltmeleri, dossier v2)
+    assert all(n[:4].isdigit() and int(n[:4]) >= 20 for n in names[19:]), names[19:]
     text = "\n".join(line.split("--", 1)[0] for p in MIGRATIONS.glob("*.sql")
                      for line in p.read_text(encoding="utf-8").splitlines() if not line.startswith("comment on"))
     for gone in ("bot_runtime", "batch_worker", "current_student", "public.staff ", "tg_chats", "consents", "quota_"):

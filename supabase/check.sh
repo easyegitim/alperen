@@ -18,6 +18,8 @@ python "$HERE/scripts/check_sql.py" "$HERE/migrations" --require-policies
 if ogr_is_live; then
   ogr_step "supabase: db-test.sh (canlı Postgres)"
   ogr_live_env
+  # TYT teşhis anahtar seed'i (content/tyt-matematik/scripts/seed-keys.py) SymPy ve sözleşme doğrulayıcısı ister
+  ogr_pip -e "$ROOT/packages/contracts/python" sympy
   export OGRENMEN_TEST_DB="${OGRENMEN_TEST_DB:-ogrenmen_check_$$}"
   # düşerse önce hata satırları (tail kesse bile görünür), sonra son satırlar
   out="$(bash "$HERE/scripts/db-test.sh" 2>&1)" || {

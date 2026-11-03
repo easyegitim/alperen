@@ -20,7 +20,7 @@ OGRENMEN_LLM=fake bun run --cwd "$HERE" test
 
 if ogr_is_live; then
   ogr_live_env
-  ogr_step "worker: pg-boss entegrasyonu (yerel Postgres, geçici şema)"
+  ogr_step "worker: canlı testler (pg-boss geçici şema; müfredat, öneri motoru ve gece işleri geçici veritabanında)"
   DATABASE_URL="${DATABASE_URL:-$OGRENMEN_DATABASE_URL}" bun run --cwd "$HERE" test:live
 else
   ogr_skip "worker: pg-boss entegrasyon testi (OGRENMEN_LIVE=1 ve canlı Postgres gerekir)"

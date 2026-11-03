@@ -5,13 +5,21 @@
  * açık olmalıdır, bu yüzden işleyicisi henüz olmayan SQL iş adları da buraya `handler: null` ile yazılır.
  */
 import { z } from 'zod';
+import { activityCompletedJob } from './activityCompleted.js';
+import { conversationSummarizeJob } from './conversationSummarize.js';
+import { curriculumDraftJob } from './curriculum-draft.js';
+import { curriculumMergeJob, proposalsCollectJob, proposalsReviewJob } from './curriculum-proposals.js';
+import { diagnosisRunJob } from './diagnosis.js';
+import { diagnosisFollowupJob } from './diagnosisFollowup.js';
 import { dossierRenderJob } from './dossierRender.js';
 import { llmPingJob } from './llmPing.js';
 import { memoryCompactJob } from './memoryCompact.js';
 import { noopJob } from './noop.js';
 import { pdfRenderJob } from './pdfRender.js';
 import { pushSendJob } from './pushSend.js';
+import { suggestionsRefreshJob } from './suggestionsRefresh.js';
 import type { AnyJobDefinition, JobDefinition, QueuePolicy } from './types.js';
+import { uploadIntakeJob } from './upload-intake.js';
 import { weeklySummaryJob } from './weeklySummary.js';
 
 /** Dead letter kuyruğu: yeniden denemeleri biten ve kalıcı hata veren işler buraya kopyalanır. */
@@ -34,10 +42,21 @@ export const JOBS: readonly AnyJobDefinition[] = [
   pdfRenderJob,
   pushSendJob,
   weeklySummaryJob,
-  pending('diagnosis.followup', 'Teşhis sonrası takip (P1): apply_diagnosis RPC ekler.', z.object({ analysis_id: uuid, enrollment_id: uuid })),
+  suggestionsRefreshJob,
+  activityCompletedJob,
+  conversationSummarizeJob,
+  uploadIntakeJob,
+  diagnosisRunJob,
+  diagnosisFollowupJob,
   pending('exam.report', 'Deneme raporu (P2): grade_exam_session RPC ekler.', z.object({ session_id: uuid })),
   pending('document.generate', 'Belge üretimi (P3): request_document RPC ekler.', z.object({ document_id: uuid, kind: z.string().min(1) })),
-  pending('curriculum.merge', 'Müfredat birleştirme (P1): decide_proposal(merge) RPC ekler.', z.object({ proposal_id: uuid })),
+  // 0021/0023 RPC'lerinin kuyruğa attığı işler (kuyruk açık değilse enqueue_job düşer, iş kaybolur); işleyiciler P1'de
+  pending('practice.generate', 'Alıştırma sorusu üretimi (P1): start_practice bankada soru yoksa ekler.', z.object({ set_id: uuid, enrollment_id: uuid }).passthrough()),
+  pending('memory.correction', 'Hafıza düzeltme isteği (P1): request_memory_correction ekler.', z.object({ correction_id: uuid, student_id: uuid }).passthrough()),
+  curriculumDraftJob,
+  curriculumMergeJob,
+  proposalsReviewJob,
+  proposalsCollectJob,
 ];
 
 const BY_NAME = new Map(JOBS.map((j) => [j.name, j]));

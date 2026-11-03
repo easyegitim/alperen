@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { GraduationCap, UserRound, UsersRound } from 'lucide-react';
 import { AppBrand } from '@/components/AppBrand';
@@ -10,7 +11,8 @@ import { needsOnboarding } from '@/lib/routing';
 import { parseInviteToken } from '@/lib/validation';
 import { getCurrentProfile } from '@/server/auth';
 import { hasActiveGuardianLink, listEnrollableCourses } from '@/server/queries';
-import { OgrenciFormu, VeliFormu } from './formlar';
+import { OnboardingQuestion } from '@/app/ogrenci/onboarding/soru';
+import { VeliFormu } from './formlar';
 
 export const metadata: Metadata = { title: 'Hoş geldin' };
 
@@ -33,7 +35,24 @@ export default async function HosGeldinPage({ searchParams }: { searchParams: Pr
   // Davet kabul edilmiş ama kurulum tamamlanmamışsa kod zaten tüketilmiştir: yalnız ad istenir.
   const tokenOptional = choice === 'veli' && profile?.role === 'parent' && (await hasActiveGuardianLink(user.id));
 
-  const courses = choice === 'ogrenci' ? await listEnrollableCourses() : [];
+  // Öğrenci: tek soruluk onboarding (mockup S01; src/app/ogrenci/onboarding). Kendi tam ekranını çizer.
+  if (choice === 'ogrenci') {
+    const courses = await listEnrollableCourses();
+    return (
+      <main id="icerik">
+        <OnboardingQuestion
+          courseTitles={[...new Set(courses.map((c) => c.title))]}
+          footer={
+            existing === null ? (
+              <Link href="/hos-geldin" className="text-small self-center text-ink-muted underline">
+                Rolü değiştir
+              </Link>
+            ) : null
+          }
+        />
+      </main>
+    );
+  }
 
   return (
     <main id="icerik" className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-8 px-4 py-10">
@@ -42,7 +61,7 @@ export default async function HosGeldinPage({ searchParams }: { searchParams: Pr
         <div>
           <h1 className="text-title-1 m-0 text-ink">Hoş geldin</h1>
           <p className="text-body mt-1 mb-0 text-ink-muted">
-            {choice === 'ogrenci' ? 'İki küçük soru yeterli.' : choice === 'veli' ? 'Çocuğunla bağlantı kurmak için davet kodunu gir.' : 'Öğrenmen’i nasıl kullanacaksın?'}
+            {choice === 'veli' ? 'Çocuğunla bağlantı kurmak için davet kodunu gir.' : 'Öğrenmen’i nasıl kullanacaksın?'}
           </p>
           <p className="text-small mt-2 mb-0 text-ink-muted">{user.email}</p>
         </div>
@@ -62,12 +81,11 @@ export default async function HosGeldinPage({ searchParams }: { searchParams: Pr
         </nav>
       ) : null}
 
-      {choice === 'ogrenci' ? <OgrenciFormu defaultName={defaultName} courses={courses} /> : null}
       {choice === 'veli' ? <VeliFormu defaultName={defaultName} defaultToken={defaultToken} tokenOptional={tokenOptional} /> : null}
       {choice === 'egitmen' ? (
         <div className="flex flex-col gap-4">
-          <Notice tone="info" title="Eğitmen hesabını easy ekibi açar">
-            Eğitmen hesabını easy ekibi açar. Hesabın açıldığında aynı e-posta adresiyle giriş yap; konsol açılır.
+          <Notice tone="info" title="Eğitmen hesabını Öğrenmen ekibi açar">
+            Hesabın açıldığında aynı e-posta adresiyle giriş yap; konsol açılır.
           </Notice>
           <LinkButton href="/hos-geldin" variant="quiet">
             Başka bir rol seç

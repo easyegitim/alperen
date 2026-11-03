@@ -45,7 +45,7 @@ test.describe('giriş', () => {
     await page.getByLabel('E-posta kodu').fill(OTP_CODE);
     await page.getByRole('button', { name: 'Giriş yap' }).click();
     await expect(page).toHaveURL(`${WEB_URL}/ogrenci`);
-    await expect(page.getByRole('heading', { level: 1, name: 'Merhaba, Ayşe' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Merhaba Ayşe' })).toBeVisible();
   });
 
   test('dışarı yönlendiren next parametresi yok sayılır', async ({ page }) => {

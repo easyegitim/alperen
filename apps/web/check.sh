@@ -15,8 +15,15 @@ bun run --cwd "$HERE" typecheck
 ogr_step "web: eslint (eslint-config-next, 0 uyarı)"
 bun run --cwd "$HERE" lint
 
-ogr_step "web: vitest (yönlendirme, doğrulama, tema, push, tip uyumu, DS giriş noktası)"
-bun run --cwd "$HERE" test
+if ogr_is_live; then
+  ogr_step "web: vitest (yönlendirme, doğrulama, tema, push, tip uyumu, DS giriş noktası, koç sohbeti, Bugün/Test/Gelişim + Postgres entegrasyonu: koç sohbeti, öğrenci akışı)"
+else
+  ogr_step "web: vitest (yönlendirme, doğrulama, tema, push, tip uyumu, DS giriş noktası, koç sohbeti, Bugün/Test/Gelişim; Postgres testleri OGRENMEN_LIVE=1 ister)"
+fi
+# Koç sohbeti her zaman sahte LLM ile sınanır (anahtar gerekmez); test/*.db.test.ts (koç sohbeti, öğrenci akışı:
+# onboarding_enroll → öneriler → start/answer/finish_practice; TYT anahtar seed'i) OGRENMEN_LIVE=1'de geçici
+# veritabanı kurar (packages/llm testing; yerel Postgres).
+OGRENMEN_LLM=fake bun run --cwd "$HERE" test
 
 if ogr_is_quick; then
   ogr_skip "web: next build (OGRENMEN_QUICK=1)"
@@ -30,8 +37,13 @@ else
 fi
 
 if ogr_is_live; then
-  ogr_step "web: Playwright E2E (sahte Supabase; giriş, rol yönlendirmesi, 3 kabuk x 390/1440 px ekran görüntüsü)"
-  bun run --cwd "$HERE" test:e2e
+  ogr_step "web: Playwright E2E (sahte Supabase + sahte LLM; giriş, rol yönlendirmesi, 3 kabuk x 390/1440 px, koç sohbeti, onboarding → Bugün → test → sonuç → Gelişim 390 px)"
+  # Sabit portlar: eşzamanlı koşular birbirini bozmasın diye kilitle serileştirilir.
+  flock /tmp/ogrenmen-web-e2e.lock bun run --cwd "$HERE" test:e2e
+  ogr_step "web: P1 yolculuğu E2E (gerçek Postgres + köprü + worker + next dev; sahte LLM): giriş → onboarding → Bugün → test → sonuç → koç → yükle → teşhis; yeni ders → curriculum.draft"
+  # Yığın (e2e/journey/stack.ts) geçici veritabanı kurar ve sonunda siler; sabit portlar (54398/3102/3103) kilitle serileştirilir.
+  flock /tmp/ogrenmen-web-journey.lock bun run --cwd "$HERE" test:journey
 else
   ogr_skip "web: Playwright E2E (OGRENMEN_LIVE=1 gerekir; tarayıcı: Chromium, PLAYWRIGHT_BROWSERS_PATH)"
+  ogr_skip "web: P1 yolculuğu E2E (OGRENMEN_LIVE=1 ve yerel Postgres gerekir)"
 fi

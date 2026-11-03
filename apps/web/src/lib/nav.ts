@@ -33,7 +33,7 @@ export interface NavItemDef {
 }
 
 /**
- * Öğrenci alt gezinme (PLAN-v2 §13): Bugün · Koç · Gelişim. "Sor" ortadaki kamera düğmesidir (FAB), listede yer almaz.
+ * Öğrenci alt gezinme (PLAN-v2 §13): Bugün · Koç · Gelişim. Sor/kamera artık ayrı bir düğme değil; yükleme Bugün'deki "+ yükle" bağlantısındadır.
  * Denemeler/Notlarım Gelişim › Belgelerim, Konu haritası Gelişim › Konular altındadır; Profil Gelişim içinden açılır.
  */
 export const STUDENT_NAV: NavItemDef[] = [
@@ -41,8 +41,6 @@ export const STUDENT_NAV: NavItemDef[] = [
   { id: 'koc', label: 'Koç', href: '/ogrenci/koc', icon: 'coach' },
   { id: 'gelisim', label: 'Gelişim', href: '/ogrenci/gelisim', icon: 'growth', alsoActive: ['/ogrenci/profil'] },
 ];
-
-export const STUDENT_FAB = { label: 'Sor', href: '/ogrenci/sor' } as const;
 
 /** Veli alt gezinme (PLAN-v2 §13): Özet · Sohbet. Bildirimler ve Ayarlar üstteki hesap bağlantılarıdır. */
 export const PARENT_NAV: NavItemDef[] = [

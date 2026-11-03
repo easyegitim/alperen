@@ -20,6 +20,7 @@
   "dependencies": {
     "@ogrenmen/contracts": "workspace:*",
     "@ogrenmen/llm": "workspace:*",
+    "@ogrenmen/prompts": "workspace:*",
     "@supabase/supabase-js": "2.118.0",
     "pg": "^8.23.1",
     "pg-boss": "^12.38.0",

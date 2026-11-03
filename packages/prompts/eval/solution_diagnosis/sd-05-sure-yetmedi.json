@@ -1,0 +1,65 @@
+{
+  "id": "sd-05-sure-yetmedi",
+  "route": "solution_diagnosis",
+  "title": "Deneme bağlamı: hareket problemi, iki doğru adımdan sonra süre yetmemiş",
+  "input": {
+    "course": "tyt-matematik",
+    "dossier": "Öğrenci: 12. sınıf, hedef TYT. tyt.mat.problem.hareket: orta (5 kanıt).",
+    "turn": {
+      "date": "2026-11-03",
+      "exam": "Okul denemesi, TYT Matematik, 38. soru / 40"
+    },
+    "user": "Deneme sorusu 38. Nereye kadar geldim: süre yetmedi.\nSoru: A kentinden saatte 60 km hızla yola çıkan bir araçtan 2 saat sonra, aynı yerden aynı yönde saatte 90 km hızla ikinci bir araç yola çıkıyor. İkinci araç birinciye kaç saat sonra yetişir?\nA) 2  B) 3  C) 4  D) 5  E) 6\n\nÇözümüm (karalama, transkripsiyon):\n1) 2 saatte 60 . 2 = 120 km önde\n2) hız farkı 90 - 60 = 30\n(burada bıraktım)"
+  },
+  "expected": {
+    "verdict": "incomplete",
+    "failing_step_no": 3,
+    "error_cause": "time",
+    "skill_ids_any": [
+      "tyt.mat.problem.hareket"
+    ],
+    "misconception_tags_empty": true,
+    "proposed_subskill": false
+  },
+  "fake_reply": [
+    {
+      "json": {
+        "question_text": "A kentinden saatte 60 km hızla yola çıkan bir araçtan 2 saat sonra, aynı yerden aynı yönde saatte 90 km hızla ikinci bir araç yola çıkıyor. İkinci araç birinciye kaç saat sonra yetişir? A) 2 B) 3 C) 4 D) 5 E) 6",
+        "student_work_text": "2 saatte 60 . 2 = 120 km önde; hız farkı 90 - 60 = 30; (burada bıraktım)",
+        "reference_solution_steps": [
+          "Birinci araç 2 saatte $60\\cdot 2=120$ km önde",
+          "Yaklaşma hızı $90-60=30$ km/sa",
+          "Süre $120/30=4$ saat, cevap C"
+        ],
+        "student_steps": [
+          {
+            "no": 1,
+            "text": "2 saatte 60 . 2 = 120 km önde",
+            "status": "ok"
+          },
+          {
+            "no": 2,
+            "text": "hız farkı 90 - 60 = 30",
+            "status": "ok"
+          },
+          {
+            "no": 3,
+            "text": "Aradaki yolu hız farkına bölmek",
+            "status": "missing"
+          }
+        ],
+        "failing_step_no": 3,
+        "verdict": "incomplete",
+        "error_cause": "time",
+        "why_tr": "İlk iki adımın doğruydu; süre yetseydi 120 km'yi hız farkı 30'a bölüp 4 saati bulacaktın.",
+        "skill_ids": [
+          "tyt.mat.problem.hareket"
+        ],
+        "misconception_tags": [],
+        "proposed_subskill": null,
+        "style_hint": "Aynı yönde yetişme problemi",
+        "confidence": 0.8
+      }
+    }
+  ]
+}

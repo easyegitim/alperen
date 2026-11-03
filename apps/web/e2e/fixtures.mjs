@@ -15,6 +15,10 @@ export const USERS = {
   instructor: { id: '00000000-0000-4000-8000-000000000003', email: 'zeynep@example.test' },
   invitee: { id: '00000000-0000-4000-8000-000000000005', email: 'davetli@example.test' },
   newcomer: { id: '00000000-0000-4000-8000-000000000004', email: 'yeni@example.test' },
+  // Onboarding E2E'si (e2e/bugun-test.spec.ts): profili yok; tek soruluk kurulumdan Bugün'e, teste ve Gelişim'e gider.
+  kurulum: { id: '00000000-0000-4000-8000-000000000006', email: 'kurulum@example.test' },
+  // Aynı akışın "Bilmiyorum" (tarihsiz) kolu: Gelişim'de "tarih yok" okunur.
+  kurulum2: { id: '00000000-0000-4000-8000-000000000007', email: 'kurulum2@example.test' },
 };
 
 const STUDENT_ID = '10000000-0000-4000-8000-000000000001';

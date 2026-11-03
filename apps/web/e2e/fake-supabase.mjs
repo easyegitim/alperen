@@ -4,8 +4,10 @@
 import http from 'node:http';
 import { FAKE_PORT, OTP_CODE, USERS, seedTables } from './fixtures.mjs';
 import { makeSession, userObject } from './jwt.mjs';
+import { handleUploads, seedUploadTables } from './fake-uploads.mjs';
+import { handlePractice, seedPracticeTables } from './fake-practice.mjs';
 
-const tables = seedTables();
+const tables = { ...seedTables(), ...seedUploadTables(), ...seedPracticeTables() };
 const requests = [];
 const invites = new Map();
 
@@ -46,12 +48,20 @@ function applyFilters(rows, searchParams) {
   let out = rows;
   for (const [key, value] of searchParams) {
     if (['select', 'order', 'limit', 'offset', 'columns'].includes(key)) continue;
-    const m = /^(eq|in|neq|is)\.(.*)$/.exec(value);
+    const m = /^(eq|in|neq|is|cs|gte|gt|lte|lt)\.(.*)$/.exec(value);
     if (!m) continue;
     const [, op, arg] = m;
     if (op === 'eq') out = out.filter((r) => String(r[key]) === arg);
     else if (op === 'neq') out = out.filter((r) => String(r[key]) !== arg);
+    else if (op === 'gte') out = out.filter((r) => r[key] != null && String(r[key]) >= arg);
+    else if (op === 'gt') out = out.filter((r) => r[key] != null && String(r[key]) > arg);
+    else if (op === 'lte') out = out.filter((r) => r[key] != null && String(r[key]) <= arg);
+    else if (op === 'lt') out = out.filter((r) => r[key] != null && String(r[key]) < arg);
     else if (op === 'is') out = out.filter((r) => (arg === 'null' ? r[key] == null : r[key] != null));
+    else if (op === 'cs') {
+      const want = arg.replace(/^\{|\}$/g, '').split(',').filter(Boolean).map((s) => s.replace(/^"|"$/g, ''));
+      out = out.filter((r) => Array.isArray(r[key]) && want.every((w) => r[key].map(String).includes(w)));
+    }
     else if (op === 'in') {
       const set = new Set(arg.replace(/^\(|\)$/g, '').split(',').map((s) => s.replace(/^"|"$/g, '')));
       out = out.filter((r) => set.has(String(r[key])));
@@ -120,6 +130,11 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, { 'access-control-allow-origin': '*' });
     return res.end();
   }
+
+  // Yükle → Teşhis eki (Storage nesneleri, submit_upload, worker benzetimi)
+  if (await handleUploads({ req, res, path, url, tables, send, readBody, userFromAuth })) return;
+  // Onboarding → Bugün → Test → Gelişim eki (P1 RPC'leri, şekil/belge Storage, worker benzetimi)
+  if (await handlePractice({ req, res, path, tables, send, readBody, userFromAuth })) return;
 
   // --- PostgREST ---
   const rpc = /^\/rest\/v1\/rpc\/(\w+)$/.exec(path);

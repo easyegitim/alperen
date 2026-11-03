@@ -15,7 +15,9 @@ const gateway = await createGateway({ ledger: new PgLedger(pool) }); // OGRENMEN
 // PLAN-v2 §4). Web yalnız WEB_LEDGER_ROUTES (coach_chat, coach_deep, parent_chat) çağırır; log_llm_call bunlara
 // izin verir, student_ref'i oturumdan türetir, cost_usd'yi kısar.
 const webGateway = await createGateway({ ledger: new RpcLedger(userSupabase) });
-const memory = { store: new RpcMemoryStore(userSupabase), studentId, actor: 'coach' };
+// Hafıza YAZIMI 0023'ten beri öğrenci JWT'siyle kapalıdır (OGR-AUTH-001): web'de hafıza aracı salt okunur açılır;
+// kalıcı yazımlar worker'dadır (diagnosis.followup → memory_delta, memory.correction, gece memory.compact).
+const memory = { store: new RpcMemoryStore(userSupabase), studentId, actor: 'coach', readOnly: true };
 
 // Yapılandırılmış (Opus 5.5 · high · solution-diagnosis): res.data tipli ve doğrulanmış
 const res = await gateway.call('solution_diagnosis', {
@@ -89,7 +91,7 @@ yeniden gönderilir; Batch içinde onarım turu yapılmaz.
 | parent_chat | Sonnet · low | — | get_child_summary, get_mastery_overview, get_recent_activity, get_exam_sessions, get_reports, request_report (strict) | akış |
 | report | Sonnet · medium | report-ast | get_mastery, get_recent_exams | akış |
 | memory_compaction | Sonnet · medium | memory-compaction | — | Batch |
-| memory_delta / conversation_summary / notification_copy | Haiku · low · kapalı | memory-delta / conversation-summary / notification-copy | — | senkron |
+| memory_delta / conversation_summary / notification_copy / suggestions_copy | Haiku · low · kapalı | memory-delta / conversation-summary / notification-copy / notification-copy | — | senkron |
 | eval_judge | Opus · high | eval-verdict | — | Batch |
 
 Kurallar (testlerle denetlenir): temperature/top_p/top_k ve zorlanmış `tool_choice` yok (ESLint de yasaklar);
@@ -119,12 +121,51 @@ kısıtını düşürdüğü için), yanıt loose şemayla doğrulanır; geçers
 | `OGRENMEN_LLM=fake` | ağsız deterministik taşıma (`fake.ts`): betik yanıtları → `packages/llm/fixtures/<rota>.json` ya da `packages/llm/fixtures/<rota>/` (v2 rota adları) → contracts `fixtures/<şema>/valid` → şemadan örnek; önbellek benzetimi |
 | `OGRENMEN_LLM_FIXTURES` | sahte taşımanın rota fikstür dizini (varsayılan `packages/llm/fixtures`) |
 | `ANTHROPIC_API_KEY` | gerçek taşıma (SDK ortamdan okur; koda yazılmaz) |
-| `OGRENMEN_LIVE=1` | `check.sh` canlı testleri koşar: Haiku (ikinci çağrıda `cache_read_input_tokens > 0`; tur sistem mesajı ya da yedeği), müfredat (birleşik web_search + format isteği 400 beklenir; iki adım uçtan uca) |
+| `OGRENMEN_LIVE=1` | `check.sh` veritabanı entegrasyonunu (geçici veritabanı: PgStore, applyMemoryDelta, renderDossier, ders bloğu) ve anahtar varsa canlı testleri koşar: Haiku (ikinci çağrıda `cache_read_input_tokens > 0`; tur sistem mesajı ya da yedeği), müfredat (birleşik web_search + format isteği 400 beklenir; iki adım uçtan uca) |
+
+Test yardımcısı (`@ogrenmen/llm/testing`, yalnız testler): `createTempDatabase()` yerel Postgres'te geçici v2
+veritabanı kurar (00_local_stub → göçler → seed'ler ogrenmen_owner rolüyle → TYT müfredatı), `drop()` siler;
+`seedStudents(pool)`. `test/*.db.test.ts` (`bun run test:db`, `OGRENMEN_LIVE=1`) ve apps/worker canlı testleri kullanır.
 
 Modüller: `routes.ts` · `client.ts` (taşıma, beta başlıkları) · `prompt.ts` (blok kurucular, kesme noktası denetimi) ·
 `parse.ts` · `stream.ts` · `batch.ts` · `pricing.ts` · `ledger.ts` (`PgLedger`, `RpcLedger`, `InMemoryLedger`) ·
-`refusal.ts` · `tools.ts` (`betaZodTool`; çalıştırıcılar enjekte) · `memory/pgMemory.ts` · `gateway.ts` · `fake.ts` ·
+`refusal.ts` · `tools.ts` (`betaZodTool`; çalıştırıcılar enjekte) · `memory/pgMemory.ts` · `dossier.ts` · `gateway.ts` · `fake.ts` ·
 `errors.ts`.
+
+## Dossier ve ders blokları (dossier.ts)
+
+```ts
+import { buildPromptSystem, CourseBlockCache, renderDossier, renderDossierText } from '@ogrenmen/llm';
+
+// worker (service_role pg): system[0] ürün (packages/prompts), system[1] ders, system[2] dossier
+const { system, dossier, course } = await buildPromptSystem(pool, { product: p.text, studentId, courseId,
+  dossier: { maxAgeMs: 5 * 60_000 } });       // önbellek tazeyse RPC çağrılmaz
+await gateway.call('coach_chat', { system, … });   // buildSystemBlocks → 1 sa · 1 sa · 5 dk kesme noktaları
+```
+
+- `renderDossier(db, studentId, courseId, { maxAgeMs?, write? })` → `{ text, hash, changed, fromCache, sourceHash,
+  enrollmentId, curriculumId, studentRef }`: `public.render_dossier` (v2) → `renderDossierText` (saf, deterministik:
+  açık sıralar, gün hassasiyeti, görünen ad yok, `hash` alanı metne girmez) → sha256(metin). Metin değişince
+  `student_dossier_cache` yazılır; aynıysa metin ve hash'e dokunulmaz, satır bayatsa (maxAgeMs) yalnız `updated_at`
+  ilerler (sonraki çağrılar ağır RPC'yi yeniden koşturmaz). OGR-DOS-001 (kayıt yok) → `DossierError`.
+- Kullanıcı metni system'e girmez: öğrencinin serbest metni (`enrollments.goal`, `students.school`) dossier metnine
+  yazılmaz; öğrencinin değiştirebildiği kısa etiketler alana özgü izin listesine uyarsa yazılır, uymazsa düşer:
+  sınıf `gradeLabel` (`\d{1,2}` · `mezun` · `lisans-N`), hedef sınav `targetExamLabel` (TYT, AYT, LGS, KPSS, YKS, ALES,
+  DGS, YDS, final), dönem `periodLabel` (`YKS 2027` biçimi ya da `2026 Güz/Bahar/Yaz`). Hedef koça hafızadan
+  (`goals.md`) veri olarak gelir.
+- Ders bloğunda (`courseTextTrust`) ders adı ve müfredat etiketi yalnız güvenliyse yazılır: onaylanmamış ai_draft
+  müfredatın (`origin = 'ai_draft'` ve `status <> 'active'`) etiketi ve öğrencinin açtığı dersin
+  (`courses.created_by` rolü student; onboarding serbest metni) adı düşer; yalnız ders kodu ve `kod@sürüm` kalır.
+  Öğrencinin açtığı ders yayımlanmış müfredata bağlıysa ad yerine müfredat etiketi yazılır (0024 `course_title` kuralı).
+- Sınırlar (PLAN-v2 §3.4, `DOSSIER_LIMITS`): en zayıf 20 + en güçlü 10 yaprak, ≤ 8 açık yanılgı, "Son etkinlik"
+  ≤ 10 satır (teşhis, deneme, alıştırma, onaylı ders gözlemi; yeniden eskiye). v2 alanları: hafıza dosya yolları
+  (içerik yok; içerik hafıza aracıyla okunur); aktif öneri sayısı yalnız gövdede varsa yazılır (0024 gövdesinde yok).
+- `renderCourseBlock(db, courseId, { curriculumId?, cache? })`: müfredat ağacı `• kod · ad` (yaprak) / `▸ kod · ad`
+  (üst düğüm; order_no sırası), ön koşullar, yanılgı etiketleri (etiket · kazanım · asıl sorun · açıklama), etkin
+  tarzlar (sıklığa göre). Süreç içi `CourseBlockCache` (ders + müfredat anahtarı, 10 dk).
+- apps/web kullanıcı JWT'siyle `render_dossier` RPC'sini çağırıp `renderDossierText` ile aynı metni üretebilir
+  (`student_dossier_cache`'e yalnız service_role yazar).
+- `estimateTokens` (karakter / 4, alt sınır): testler zengin dossier ve TYT ders bloğunun 512+ token olduğunu denetler.
 
 ## Hafıza (memory/pgMemory.ts)
 
@@ -134,9 +175,22 @@ Modüller: `routes.ts` · `client.ts` (taşıma, beta başlıkları) · `prompt.
 - `/memories/parent_summary.md` veliye açıktır (RLS): yalnız gece işi (`actor: 'memory-compact'` ya da açık
   `allowParentSummary`) yazar, ≤ 1.5 KB (OGR-MEM-007). Koç sohbeti yazamaz; aksi halde sohbet içeriği veliye sızar.
   `PgStore` service_role ile çalıştığından RPC bu kuralı uygulamaz; depo da ayrıca `assertParentSummaryWrite` ile denetler.
-- Depolar: `PgStore` (apps/worker, `pg`) ve `RpcMemoryStore` (apps/web, supabase-js). İkisi de yazımı
-  `public.upsert_memory_file(p_student, p_path, p_content, p_op, p_actor, p_new_path)` ile yapar; öğrenci kilidi,
-  sınırlar ve sürümleme DB'de tek yoldadır. DB hataları (`OGR-MEM-00x`) `MemoryError`'a çevrilir.
+- `applyMemoryDelta(opts | handlers, ops)`: `memory_delta` (Haiku) çıktısını AYNI işleyicilerden geçirir (yol izin
+  listesi, 8 KB, ≤ 12 dosya, parent_summary koruması, sürüm satırı; actor `memory-delta`). En çok 3 işlem; işlemler
+  bağımsızdır (biri düşerse diğerleri denenir), sonuç işlem başına `{ ok, code }`; dosya yokken `insert_line: 0`
+  dosyayı oluşturur. apps/worker `diagnosis.followup` kullanır.
+- Yazım kimliği (0023): `upsert_memory_file`'ı yalnız güvenilir çağıran (service_role / doğrudan Postgres: worker ve
+  apps/web koç turunun sunucuya özel `pg` bağlantısı, `src/server/chat/pg-store.ts`), owner eğitmen ve admin
+  çağırabilir; öğrenci ve veli JWT'siyle OGR-AUTH-001 (öğrenci düzeltmeyi `request_memory_correction` ile ister).
+- Depolar: `PgStore` (service_role `pg`: apps/worker ve apps/web koç sohbeti; hafıza yazımları bu yoldan) ve
+  `RpcMemoryStore` (kullanıcı JWT'li supabase-js: okuma; yazım yalnız owner eğitmen / admin oturumunda, öğrenci ve
+  veli JWT'si OGR-AUTH-001). İkisi de yazımı `public.upsert_memory_file(p_student, p_path, p_content, p_op, p_actor,
+  p_new_path, p_expected_hash)` ile yapar; öğrenci kilidi, sınırlar ve sürümleme DB'de tek yoldadır. DB hataları
+  (`OGR-MEM-0xx`) `MemoryError`'a çevrilir.
+- Eşzamanlı yazıcılar (koç, `memory-delta`, gece sıkıştırması): `str_replace` / `insert` okunan içeriğin md5'ini
+  (`memoryContentHash`) `p_expected_hash` olarak gönderir; DB öğrenci kilidi altında karşılaştırır, tutmazsa
+  OGR-MEM-028 (`MEMORY_CONFLICT_CODE`). İşleyici güncel içeriği yeniden okuyup düzenlemeyi bir kez daha uygular;
+  ikinci çakışma modele hata olarak döner. Hiçbir düzenleme sessizce ezilmez.
 
 ## Açık işler
 
@@ -148,4 +202,4 @@ Modüller: `routes.ts` · `client.ts` (taşıma, beta başlıkları) · `prompt.
   sonucu README ve rotalara işlenecek.
 - Batch'te `role:"system"` 400'ü öğe hatası olarak döner (yedekle yeniden deneme yalnız senkron `call`'da).
 
-Denetim: `bash packages/llm/check.sh` (typecheck + eslint + vitest; canlı test anahtar yoksa SKIP).
+Denetim: `bash packages/llm/check.sh` (typecheck + eslint + vitest; `OGRENMEN_LIVE=1` ile yerel Postgres entegrasyonu; canlı Anthropic testi anahtar yoksa SKIP).

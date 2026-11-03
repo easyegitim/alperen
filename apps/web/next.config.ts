@@ -6,7 +6,8 @@ import withSerwistInit from '@serwist/next';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '../..');
 
-// Üretim derlemesi webpack ile yapılır (Serwist eklentisi Turbopack'te çalışmaz); geliştirmede Turbopack + kapalı SW kullanılır.
+// Derleme ve geliştirme webpack ile yapılır: Serwist eklentisi Turbopack'te çalışmaz ve Turbopack çalışma alanı
+// paketlerindeki `./x.js` → `./x.ts` içe aktarımlarını çözmez (aşağıdaki extensionAlias; koç sayfası derlenmez). Geliştirmede SW kapalıdır.
 process.env.SERWIST_SUPPRESS_TURBOPACK_WARNING ??= '1';
 
 // Servis çalışanı: src/sw/sw.ts -> public/sw.js. Yalnız üretim derlemesinde açık (geliştirmede eski önbellek hata ayıklamayı bozar).
@@ -33,8 +34,19 @@ const nextConfig: NextConfig = {
   // `next dev` yönetilen AGENTS.md üretmesin (depoda ajan yönergeleri elle yönetilir).
   agentRules: false,
   poweredByHeader: false,
-  // Tasarım sistemi kaynak olarak paylaşılır (derleme yok).
-  transpilePackages: ['@ogrenmen/design-system'],
+  // Çalışma alanı paketleri kaynak olarak paylaşılır (derleme yok). llm/prompts/contracts yalnız sunucuda (koç sohbeti
+  // rota işleyicisi) kullanılır; ESM kaynakları `./x.js` ile `./x.ts`'i içe aktarır (extensionAlias aşağıda).
+  transpilePackages: ['@ogrenmen/design-system', '@ogrenmen/llm', '@ogrenmen/prompts', '@ogrenmen/contracts'],
+  webpack(config: { resolve?: { extensionAlias?: Record<string, string[]> }; module?: { rules?: unknown[] } }) {
+    config.resolve ??= {};
+    config.resolve.extensionAlias = { ...config.resolve.extensionAlias, '.js': ['.ts', '.tsx', '.js'] };
+    // packages/llm sahte taşıması fikstür dizinini `new URL('../fixtures/', import.meta.url)` ile bulur; webpack bunu
+    // varlık bağımlılığı sanmasın (dizin çözülemez). Yalnız OGRENMEN_LLM=fake yolunda okunur.
+    config.module ??= {};
+    config.module.rules ??= [];
+    config.module.rules.push({ test: /[\\/]packages[\\/]llm[\\/]src[\\/].*\.ts$/, parser: { url: false } });
+    return config;
+  },
   // Monorepo kökü: bun çalışma alanı sembolik bağlantılarını izleme kapsamına alır.
   outputFileTracingRoot: REPO_ROOT,
   turbopack: { root: REPO_ROOT },

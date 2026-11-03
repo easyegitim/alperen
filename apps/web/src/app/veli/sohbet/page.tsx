@@ -1,16 +1,20 @@
 import type { Metadata } from 'next';
-import { EmptyState } from '@/components/EmptyState';
-import { PageHeader } from '@/components/PageHeader';
+import { ScreenHeader } from '@/components/shell';
+import { requireRole } from '@/server/auth';
 
-export const metadata: Metadata = { title: "Sohbet" };
+export const metadata: Metadata = { title: 'Sohbet' };
 
-export default function Sayfa() {
+// Veli Sohbet (mockup S10b) iskeleti: veli ajanı (dossier ve rapor araçlarıyla; asla cevap anahtarı ya da koç sohbeti)
+// P6'da bağlanır.
+export default async function VeliSohbet() {
+  const { displayName } = await requireRole('parent', 'admin');
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <PageHeader title="Sohbet" description="Çocuğunla ilgili sorularını istediğin saatte sor." />
-      <EmptyState title="Sohbet henüz açık değil">
-        {"Çocuğunun durumunu, bu hafta ne çalıştığını ve nelere dikkat etmen gerektiğini sormak için burayı kullanacaksın. Yanıtlar öğrencinin kendi sohbetlerinden değil, onun için hazırlanan özet ve raporlardan gelir."}
-      </EmptyState>
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+      <ScreenHeader title="Sohbet" name={displayName} accountHref="/veli/ayarlar" size="sm" />
+      <p className="text-body-lg m-0 text-ink" data-testid="veli-durum">
+        Henüz veri yok.
+      </p>
+      <p className="text-body m-0 text-ink-muted">Çocuğunun bu hafta ne çalıştığını burada soracaksın.</p>
     </div>
   );
 }

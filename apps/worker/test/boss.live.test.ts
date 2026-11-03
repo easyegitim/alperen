@@ -7,6 +7,7 @@ import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp, type App } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
+import { debounced, oncePer } from '../src/jobs/dedupe.js';
 import { silentLogger } from '../src/log.js';
 import { installSchedules, removeSchedules, SCHEDULES } from '../src/schedules.js';
 
@@ -48,6 +49,32 @@ describe.skipIf(!live)('pg-boss entegrasyonu (geçici şema)', () => {
       return j?.state === 'completed' ? j : null;
     });
     expect(job.output).toMatchObject({ ok: true, echo: { a: 1 } });
+  });
+
+  it('tekilleştirme: aynı anahtarla iki gönderim tek iş (gece zinciri); debounce ikinciyi sonraki dilime erteler, üçüncüyü düşürür', async () => {
+    // standard kuyrukta singletonKey tek başına düşürmez: oncePer/debounced singletonSeconds ekler
+    const key = `t:${randomBytes(3).toString('hex')}`;
+    const startAfter = new Date(Date.now() + 3600_000); // işlenmesin
+    const a = await app.enqueue('suggestions.refresh', { reason: 'nightly' }, { startAfter, ...oncePer(key) });
+    const b = await app.enqueue('suggestions.refresh', { reason: 'nightly' }, { startAfter, ...oncePer(key) });
+    expect(a).toBeTruthy();
+    expect(b).toBeNull();
+    const plain = await app.boss.send('suggestions.refresh', { reason: 'nightly' }, { startAfter, singletonKey: `${key}:plain` });
+    const plain2 = await app.boss.send('suggestions.refresh', { reason: 'nightly' }, { startAfter, singletonKey: `${key}:plain` });
+    expect(plain && plain2).toBeTruthy(); // kanıt: yalnız anahtar yetmez (standard politika)
+    const dkey = `d:${randomBytes(3).toString('hex')}`;
+    const d1 = await app.enqueue('dossier.render', { student_id: '00000000-0000-4000-8000-00000000d001', course_id: '00000000-0000-4000-8000-00000000c001' }, { startAfter, ...debounced(dkey, 600) });
+    const d2 = await app.enqueue('dossier.render', { student_id: '00000000-0000-4000-8000-00000000d001', course_id: '00000000-0000-4000-8000-00000000c001' }, { startAfter, ...debounced(dkey, 600) });
+    const d3 = await app.enqueue('dossier.render', { student_id: '00000000-0000-4000-8000-00000000d001', course_id: '00000000-0000-4000-8000-00000000c001' }, { startAfter, ...debounced(dkey, 600) });
+    expect(d1).toBeTruthy();
+    expect(d2).toBeTruthy();
+    expect(d3).toBeNull();
+    const [j2] = await app.boss.findJobs<object>('dossier.render', { id: d2! });
+    expect(j2!.startAfter.getTime()).toBeGreaterThan(Date.now());
+    const jobs = await app.boss.findJobs<object>('suggestions.refresh', { key });
+    expect(jobs).toHaveLength(1);
+    await app.boss.cancel('dossier.render', [d1!, d2!]).catch(() => undefined);
+    await app.boss.cancel('suggestions.refresh', [a!, plain!, plain2!]).catch(() => undefined);
   });
 
   it('hatalı iş yeniden denenmeden başarısız olur (retryLimit 0)', async () => {

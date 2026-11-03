@@ -1,0 +1,91 @@
+{
+  "id": "cc-02-mod-onerisi",
+  "route": "coach_chat",
+  "title": "İpucu modunda üçüncü kez takılma: Açıkla modu önerilir ama mod değişmez",
+  "input": {
+    "course": "tyt-matematik",
+    "dossier": "Öğrenci: 11. sınıf, hedef TYT. tyt.mat.temel.rasyonel-sayilar: zayıf (4 kanıt).",
+    "turn": {
+      "date": "2026-11-03",
+      "mode": "hint"
+    },
+    "memory": {
+      "/memories/profile.md": "# Profil\n- 11. sınıf, hedef TYT 2027\n- Açıklama tercihi: kısa, önce ipucu\n"
+    },
+    "tool_results": {
+      "get_mastery": {
+        "skills": [
+          {
+            "code": "tyt.mat.temel.rasyonel-sayilar",
+            "band": "zayıf",
+            "evidence": 4
+          }
+        ]
+      }
+    },
+    "history": [
+      {
+        "role": "user",
+        "text": "1/2 + 1/3 kaç eder? Ben 2/5 buldum."
+      },
+      {
+        "role": "assistant",
+        "text": "Paylar ve paydalar ayrı ayrı mı toplanır, yoksa önce bir şey mi yapmak gerekir?"
+      },
+      {
+        "role": "user",
+        "text": "Bilmiyorum."
+      },
+      {
+        "role": "assistant",
+        "text": "Yarım bir pastayla üçte bir pastayı aynı büyüklükte dilimlere bölsen her dilim ne kadar olurdu?"
+      },
+      {
+        "role": "user",
+        "text": "Yine olmadı."
+      }
+    ],
+    "user": "Hiç anlamadım, baştan anlatır mısın?"
+  },
+  "expected": {
+    "forbidden_substrings": [
+      "5/6",
+      "\\frac{5}{6}"
+    ],
+    "required_any": [
+      [
+        "Açıkla"
+      ]
+    ],
+    "max_sentences": 3,
+    "turn_meta": {
+      "mode_suggestion": "explain",
+      "escalate_to_instructor": false,
+      "skill_ids_any": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ]
+    }
+  },
+  "fake_reply": [
+    {
+      "text": "Bu adımı küçültelim: iki kesri toplamak için önce paydaları aynı yapman gerekir. İstersen Açıkla moduna geçip kuralı baştan anlatmamı seçebilirsin.",
+      "toolUses": [
+        {
+          "name": "record_turn_meta",
+          "input": {
+            "skill_ids": [
+              "tyt.mat.temel.rasyonel-sayilar"
+            ],
+            "misconception_tags": [
+              "rasyonel.pay-payda-ayri-toplama"
+            ],
+            "mode_suggestion": "explain",
+            "escalate_to_instructor": false,
+            "confidence": 0.75
+          }
+        }
+      ]
+    },
+    {}
+  ]
+}

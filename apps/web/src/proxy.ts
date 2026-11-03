@@ -29,6 +29,17 @@ export async function proxy(request: NextRequest) {
   });
   if (decision.type === 'next') return session.response;
 
+  // API uçları oturumsuzken girişe yönlenmez: fetch yönlendirmeyi izleyip HTML alır ve istemci "bağlantı" hatası
+  // gösterirdi. Bunun yerine JSON 401 (istemci "Oturumun kapanmış" der).
+  if (session.userId === null && request.nextUrl.pathname.startsWith('/api/')) {
+    const res = NextResponse.json(
+      { error: { code: 'unauthenticated', message: 'Oturumun kapanmış. Yeniden giriş yap.' } },
+      { status: 401, headers: { 'Cache-Control': 'no-store' } },
+    );
+    for (const cookie of session.response.cookies.getAll()) res.cookies.set(cookie);
+    return res;
+  }
+
   const target = new URL(decision.to, request.url);
   const redirect = NextResponse.redirect(target);
   // Yenilenen oturum çerezleri yönlendirme yanıtına da taşınır.

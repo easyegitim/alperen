@@ -17,9 +17,17 @@
       "types": "./src/memory/pgMemory.ts",
       "default": "./src/memory/pgMemory.ts"
     },
+    "./dossier": {
+      "types": "./src/dossier.ts",
+      "default": "./src/dossier.ts"
+    },
     "./fake": {
       "types": "./src/fake.ts",
       "default": "./src/fake.ts"
+    },
+    "./testing": {
+      "types": "./src/testing/tempDb.ts",
+      "default": "./src/testing/tempDb.ts"
     },
     "./package.json": "./package.json"
   },
@@ -32,7 +40,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint --max-warnings 0 .",
     "test": "vitest run",
-    "test:live": "vitest run --config vitest.live.config.ts"
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "test:db": "vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",

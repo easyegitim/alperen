@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { AppBrand } from '@/components/AppBrand';
 import { InstallPrompt } from '@/components/InstallPrompt';
-import { RoleShell } from '@/components/RoleShell';
+import { TabShell } from '@/components/shell';
 import { SidebarFooter } from '@/components/SidebarFooter';
 import { requireRole } from '@/server/auth';
 
@@ -11,9 +11,8 @@ export const dynamic = 'force-dynamic';
 export default async function OgrenciLayout({ children }: { children: ReactNode }) {
   const { role, displayName } = await requireRole('student', 'admin');
   return (
-    <RoleShell variant="student" brand={<AppBrand size="sm" endorsement={false} />} footer={<SidebarFooter displayName={displayName} role={role} />}>
-      <InstallPrompt />
+    <TabShell variant="student" brand={<AppBrand size="sm" endorsement={false} />} footer={<SidebarFooter displayName={displayName} role={role} />} banner={<InstallPrompt />}>
       {children}
-    </RoleShell>
+    </TabShell>
   );
 }

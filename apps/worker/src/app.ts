@@ -8,6 +8,7 @@ import { describeConfig, type WorkerConfig } from './config.js';
 import { createPool, pingDb, type Db, type DbPool } from './db.js';
 import { createHealthServer, type HealthServer } from './health.js';
 import { DEAD_LETTER_QUEUE, JOBS, jobsForProcess, validateRegistry } from './jobs/registry.js';
+import { syncPromptVersions } from '@ogrenmen/prompts/db';
 import { PermanentJobError } from './jobs/errors.js';
 import type { AnyJobDefinition, JobContext, JobDeps, QueuePolicy } from './jobs/types.js';
 import { createLogger, errorFields, type Logger } from './log.js';
@@ -93,7 +94,12 @@ export function createApp(config: WorkerConfig, overrides: AppOverrides = {}): A
         return gatewayPromise;
       };
 
-  const enqueue: JobDeps['enqueue'] = async (name, data, opts) => boss.send(name, data, { ...(opts?.startAfter !== undefined ? { startAfter: opts.startAfter } : {}), ...(opts?.singletonKey ? { singletonKey: opts.singletonKey } : {}) });
+  const enqueue: JobDeps['enqueue'] = async (name, data, opts) =>
+    boss.send(name, data, {
+      ...(opts?.startAfter !== undefined ? { startAfter: opts.startAfter } : {}),
+      ...(opts?.singletonKey ? { singletonKey: opts.singletonKey } : {}),
+      ...(opts?.singletonSeconds ? { singletonSeconds: opts.singletonSeconds, singletonNextSlot: opts.debounce === true } : {}),
+    });
 
   const deps: JobDeps = {
     config,
@@ -165,6 +171,15 @@ export function createApp(config: WorkerConfig, overrides: AppOverrides = {}): A
       const plan = await planSchedules(config.schedules, db);
       if (plan.install) log.info('zamanlamalar kuruldu', { schedules: await installSchedules(boss), reason: plan.reason });
       else log.info('zamanlama kurulmadı; eski kayıtlar silindi', { reason: plan.reason, removed: await removeSchedules(boss) });
+    }
+
+    // Paketteki prompt sürümlerini prompt_versions'a yazar (active kaynağı, llm_calls.prompt_version bağı, metin sapması).
+    try {
+      const sync = await syncPromptVersions(db);
+      log.info('prompt sürümleri eşlendi', { inserted: sync.inserted, unchanged: sync.unchanged.length });
+      if (sync.drifted.length > 0) log.error('prompt metni yayımlanmış sürümden sapmış; yeni sürüm açılmalı', { drifted: sync.drifted });
+    } catch (err) {
+      log.error('prompt sürümleri eşlenemedi', errorFields(err));
     }
 
     started = true;

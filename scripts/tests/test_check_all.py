@@ -25,6 +25,7 @@ EXPECTED_MODULES = [
     "packages/llm",
     "packages/mastery-math",
     "packages/pii",
+    "packages/prompts",
     "pipelines/common",
     "pipelines/ders",
     "pipelines/kalem",

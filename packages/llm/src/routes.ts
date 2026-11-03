@@ -114,6 +114,7 @@ export const ROUTE_NAMES = [
   'memory_delta',
   'conversation_summary',
   'notification_copy',
+  'suggestions_copy',
   'eval_judge',
 ] as const;
 
@@ -142,7 +143,7 @@ type Spec<S extends SchemaName | null> = Omit<
   RouteConfig,
   'name' | 'maxIterations' | 'batchable' | 'stream' | 'fallbacks' | 'schema' | 'progressNote'
 > &
-  Partial<Pick<RouteConfig, 'maxIterations' | 'batchable' | 'stream'>> & { schema: S };
+  Partial<Pick<RouteConfig, 'maxIterations' | 'batchable' | 'stream' | 'progressNote'>> & { schema: S };
 
 /** Şema adını literal tipte tutar (gateway çıktı tipi `RouteOutput<R>` buradan türer). */
 function route<const S extends SchemaName | null>(name: RouteName, spec: Spec<S>): RouteConfig & { readonly schema: S } {
@@ -156,20 +157,24 @@ function route<const S extends SchemaName | null>(name: RouteName, spec: Spec<S>
     stream,
     // Sunucu taraflı yedek yalnız Opus/Sonnet senkron çağrılarda (Haiku'da sunucu yedeği yok; Batch reddeder).
     fallbacks: spec.mode === 'sync' && family !== 'haiku',
-    // Akışlı, araçlı, serbest metin, sunucu aracı olmayan rotalar (koç, veli).
+    // Varsayılan: akışlı, araçlı, serbest metin, sunucu aracı olmayan rotalar. Koç ve veli rotaları açıkça kapatır:
+    // gövdeleri "araç çağrısı için ayrıca cümle yazmazsın" der (tek balon ilkesi); iki talimat aynı blokta çelişir.
     progressNote:
-      stream && spec.schema === null && spec.tools.length > 0 && !spec.tools.some((t) => SERVER_TOOLS.has(t)),
+      spec.progressNote ??
+      (stream && spec.schema === null && spec.tools.length > 0 && !spec.tools.some((t) => SERVER_TOOLS.has(t))),
   };
 }
 
 /** Rota tablosu (PLAN-v2 §5 "LLM görev haritası"). */
 export const ROUTES = {
   coach_chat: route('coach_chat', {
+    progressNote: false,
     purpose: 'Koç sohbeti (ipucu/açıkla/çözüm modları)',
     model: MODELS.sonnet, effort: 'medium', thinking: 'adaptive', schema: null,
     tools: COACH_TOOLS, cache: CHAT, mode: 'sync', stream: true, maxTokens: 8000,
   }),
   coach_deep: route('coach_deep', {
+    progressNote: false,
     purpose: 'Koç: istek üzerine tam çözüm / derin açıklama',
     model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: null,
     tools: COACH_TOOLS, cache: CHAT, mode: 'sync', stream: true, maxTokens: 32000,
@@ -271,6 +276,7 @@ export const ROUTES = {
     tools: [], cache: SHARED, mode: 'sync', stream: true, maxTokens: 32000,
   }),
   parent_chat: route('parent_chat', {
+    progressNote: false,
     purpose: 'Veli sohbeti',
     model: MODELS.sonnet, effort: 'low', thinking: 'adaptive', schema: null,
     tools: PARENT_TOOLS, cache: CHAT, mode: 'sync', stream: true, maxTokens: 4000,
@@ -297,6 +303,11 @@ export const ROUTES = {
   }),
   notification_copy: route('notification_copy', {
     purpose: 'Bildirim metni',
+    model: MODELS.haiku, effort: 'low', thinking: 'off', schema: 'notification-copy',
+    tools: [], cache: PRODUCT_ONLY, mode: 'sync', maxTokens: 4000,
+  }),
+  suggestions_copy: route('suggestions_copy', {
+    purpose: 'Bugün öneri kartı metni (başlık + alt satır)',
     model: MODELS.haiku, effort: 'low', thinking: 'off', schema: 'notification-copy',
     tools: [], cache: PRODUCT_ONLY, mode: 'sync', maxTokens: 4000,
   }),

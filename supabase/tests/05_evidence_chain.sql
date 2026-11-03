@@ -209,11 +209,18 @@ begin
   perform t.raises(format($q$select public.decide_proposal(%L, true)$q$, v_prop), 'OGR-AUTH-002%', 'öğrenci öneriye karar veremez');
   perform t.as_user(t.u('inst'));
   v_res := public.decide_proposal(v_prop, true, 'mantıklı');
-  perform t.ok(v_res ->> 'status' = 'accepted' and (v_res ->> 'applied')::boolean
-               and exists (select 1 from public.skills s where s.curriculum_id = t.u('cur') and s.id = v_res ->> 'skill_id' and s.is_leaf
-                                                       and s.parent_id = 't.mat.a' and s.p_init = 0.3)
-               and not (select s.is_leaf from public.skills s where s.curriculum_id = t.u('cur') and s.id = 't.mat.a'),
-               'eğitmen kabulü: yeni yaprak (BKT varsayılanları), üst kazanım yaprak olmaktan çıkar');
+  -- yayındaki müfredatta kabul yeni taslak sürüme uygulanır (0025): yayındaki ağaç değişmez
+  perform t.ok(v_res ->> 'status' = 'accepted' and (v_res ->> 'applied')::boolean and (v_res ->> 'new_version')::boolean
+               and (v_res ->> 'curriculum_id')::uuid <> t.u('cur')
+               and exists (select 1 from public.skills s where s.curriculum_id = (v_res ->> 'curriculum_id')::uuid and s.id = v_res ->> 'skill_id'
+                                                       and s.is_leaf and s.parent_id = 't.mat.a' and s.p_init = 0.3)
+               and not (select s.is_leaf from public.skills s where s.curriculum_id = (v_res ->> 'curriculum_id')::uuid and s.id = 't.mat.a'),
+               'eğitmen kabulü: yeni yaprak açık taslak sürümde (BKT varsayılanları), üst kazanım orada yaprak olmaktan çıkar');
+  perform t.ok(not exists (select 1 from public.skills s where s.curriculum_id = t.u('cur') and s.id = v_res ->> 'skill_id')
+               and (select s.is_leaf from public.skills s where s.curriculum_id = t.u('cur') and s.id = 't.mat.a')
+               and (select cp.curriculum_id = (v_res ->> 'curriculum_id')::uuid and cp.payload ->> 'origin_curriculum_id' = t.v('cur')
+                      from public.curriculum_proposals cp where cp.id = v_prop),
+               'yayındaki ağaç değişmez; öneri taslak sürüme taşındı (origin_curriculum_id)');
   perform t.raises(format($q$select public.decide_proposal(%L, false)$q$, v_prop), 'OGR-PROP-002%', 'karara bağlanmış öneri tekrar karara bağlanamaz');
   perform t.as_admin();
   insert into public.curriculum_proposals (curriculum_id, kind, payload) values (t.u('cur'), 'add_prereq', '{"skill_id":"t.mat.b","prereq_id":"t.mat.a"}')
@@ -225,15 +232,16 @@ begin
   perform t.raises(format($q$select public.decide_proposal(%L, true)$q$, gen_random_uuid()), 'OGR-PROP-001%', 'olmayan öneri');
   perform t.as_admin();
 
-  -- otopilot: ai_draft müfredat + ders türü exam_track (runtime_flags.curriculum_autopilot) → öneri hemen kabul
+  -- otopilot yayındaki müfredatın ağacını yerinde değiştirmez: öneri açık kalır, gece incelemesi açık taslak sürüme
+  -- uygular (0026; otopilotlu taslakta hemen kabul ve gözlemin yeni yaprağa yazılması tests/17'de)
   update public.curricula c set origin = 'ai_draft' where c.id = t.u('cur');
   perform t.as_service();
   v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EB'), 'verdict', 'wrong', 'analysis', '{}'::jsonb,
             'proposed_subskill', jsonb_build_object('parent_id', 't.mat.b', 'id', 't.mat.b.1', 'name', 'Çift eksi')));
   perform t.as_admin();
-  perform t.ok((select cp.status = 'accepted' from public.curriculum_proposals cp join public.solution_analyses sa on sa.proposal_id = cp.id where sa.id = v_id)
-               and exists (select 1 from public.skills s where s.curriculum_id = t.u('cur') and s.id = 't.mat.b.1'),
-               'otopilot (ai_draft + exam_track) öneriyi hemen kabul eder');
+  perform t.ok((select cp.status = 'open' from public.curriculum_proposals cp join public.solution_analyses sa on sa.proposal_id = cp.id where sa.id = v_id)
+               and not exists (select 1 from public.skills s where s.curriculum_id = t.u('cur') and s.id = 't.mat.b.1'),
+               'yayındaki müfredatta teşhis önerisi açık kalır, ağaç değişmez');
 end $$;
 
 rollback;

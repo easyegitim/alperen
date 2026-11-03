@@ -44,18 +44,15 @@ test.describe('rol yönlendirmesi (sahte oturum)', () => {
     await expect(page).toHaveURL(`${WEB_URL}/hos-geldin`);
 
     await page.getByRole('link', { name: 'Öğrenciyim' }).click();
-    // Adım 1: ders seçimi (arama + çipler); seçmeden devam edilemez.
-    await expect(page.getByRole('heading', { name: 'Hangi sınava ya da derse hazırlanıyorsun?' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'TYT', exact: true })).toBeVisible();
+    // Tek soru (mockup S01): arama + 6 çip; seçmeden devam edilemez. Akışın sonu e2e/bugun-test.spec.ts'te.
+    await expect(page.getByRole('heading', { level: 1, name: 'Hangi sınava hazırlanıyorsun?' })).toBeVisible();
+    for (const chip of ['TYT', 'AYT', 'LGS', 'KPSS', 'Üniversite dersi', 'Diğer']) await expect(page.getByRole('button', { name: chip, exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Devam' })).toBeDisabled();
-    await page.getByLabel('TYT Matematik').check();
-    await page.getByRole('button', { name: 'Devam' }).click();
-    // Adım 2: hedef tarih; ad ve sınıf isteğe bağlı bölümde.
-    await expect(page.getByRole('heading', { name: 'Hedef tarihin?' })).toBeVisible();
-    await expect(page.getByLabel('Sınav ya da hedef tarihi')).toBeVisible();
-    await page.getByText('Adın ve sınıfın (isteğe bağlı)').click();
-    await expect(page.getByLabel('Adın')).toBeVisible();
-    await expect(page.getByLabel('Sınıfın')).toBeVisible();
+    await page.getByRole('button', { name: 'Üniversite dersi' }).click();
+    await expect(page.getByLabel('Sınav veya ders ara')).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Devam' })).toBeDisabled();
+    await page.getByLabel('Sınav veya ders ara').fill('Lineer Cebir');
+    await expect(page.getByRole('button', { name: 'Devam' })).toBeEnabled();
 
     await page.goto('/hos-geldin?rol=veli');
     await page.getByLabel('Adın').fill('Ali Veli');
@@ -64,7 +61,7 @@ test.describe('rol yönlendirmesi (sahte oturum)', () => {
     await expect(page.getByText('Davet kodu bulunamadı ya da daha önce kullanılmış.')).toBeVisible();
 
     await page.goto('/hos-geldin?rol=egitmen');
-    await expect(page.getByText('Eğitmen hesabını easy ekibi açar', { exact: true })).toBeVisible();
+    await expect(page.getByText('Eğitmen hesabını Öğrenmen ekibi açar', { exact: true })).toBeVisible();
   });
 });
 
@@ -102,10 +99,10 @@ test.describe('sayfa içerikleri', () => {
     }
   });
 
-  test('öğrenci: Gelişim Profil ve ayarlara, Koç sohbet karşılamasına açılır', async ({ page, context }) => {
+  test('öğrenci: Gelişim hesap simgesiyle Profil’e, Koç sohbet karşılamasına açılır', async ({ page, context }) => {
     await signInAs(context, 'student');
     await page.goto('/ogrenci/gelisim');
-    await page.getByRole('link', { name: 'Profil ve ayarlar' }).click();
+    await page.getByRole('link', { name: /^Hesabın:/ }).click();
     await expect(page).toHaveURL(`${WEB_URL}/ogrenci/profil`);
     await page.goto('/ogrenci/koc');
     await expect(page.getByRole('heading', { level: 1, name: 'Koç' })).toBeVisible();
@@ -128,7 +125,7 @@ test.describe('sayfa içerikleri', () => {
     await expect(page.getByRole('link', { name: 'Rapor iste' })).toBeVisible();
     await page.goto('/veli/raporlar');
     await expect(page).toHaveURL(`${WEB_URL}/veli`);
-    await page.getByRole('link', { name: 'Ayarlar' }).click();
+    await page.getByRole('link', { name: /^Hesabın/ }).click();
     await expect(page).toHaveURL(`${WEB_URL}/veli/ayarlar`);
     await expect(page.getByRole('heading', { name: 'Çocuk ekle' })).toBeVisible();
   });

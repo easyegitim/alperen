@@ -1,18 +1,18 @@
 import type { Metadata } from 'next';
-import { PageHeader } from '@/components/PageHeader';
-import { TutorMessage } from '@/ds';
+import { CoachChat } from '@/components/chat/CoachChat';
+import type { ChatBootstrap } from '@/lib/chat';
+import { requireRole } from '@/server/auth';
+import { loadBootstrap } from '@/server/chat/bootstrap';
+import { saveCoachMode } from './actions';
 
 export const metadata: Metadata = { title: 'Koç' };
 
-// Koç: klasik sohbet (PLAN-v2 §13). Sohbet bağlanana dek karşılama mesajı gösterilir; İpucu/Açıkla/Çözümü göster
-// seçicisi mesajın altına sohbet bağlandığında eklenir (şimdilik etkisiz bir kontrol çizilmez).
-export default function KocSayfasi() {
-  return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <PageHeader title="Koç" />
-      <TutorMessage from="tutor" name="Öğrenmen">
-        {'Merhaba. Ben senin AI koçunum. Takıldığın bir soruyu fotoğrafla ya da buraya yaz; önce ipucu veririm, çözümü görmek istersen sen seçersin.'}
-      </TutorMessage>
-    </div>
-  );
+// Koç (PLAN-v2 §13, mockup S03): klasik sohbet. Son koç sohbeti yüklenir; "Koça sor" derin bağlantısı
+// (?seed=<solution_analysis_id>) teşhis bağlamını ilk mesaja ekler.
+export default async function KocSayfasi({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  await requireRole('student', 'admin');
+  const params = await searchParams;
+  const seed = typeof params.seed === 'string' ? params.seed : null;
+  const initial: ChatBootstrap = await loadBootstrap(seed);
+  return <CoachChat initial={initial} saveMode={saveCoachMode} />;
 }

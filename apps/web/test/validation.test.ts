@@ -74,3 +74,13 @@ describe('davet hata iletileri', () => {
     expect(inviteErrorMessage('başka bir şey')).toContain('kabul edilemedi');
   });
 });
+
+describe('onboarding hata iletileri', () => {
+  it('OGR-ONB-003 ders seçimine döndürür', async () => {
+    const { onboardingErrorMessage, isCourseError } = await import('../src/app/ogrenci/onboarding/shared');
+    expect(onboardingErrorMessage('OGR-ONB-003')).toMatch(/yeni ders/);
+    expect(isCourseError('OGR-ONB-003')).toBe(true);
+    expect(isCourseError('OGR-ONB-001')).toBe(true);
+    expect(isCourseError('OGR-ONB-002')).toBe(false);
+  });
+});

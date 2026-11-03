@@ -71,7 +71,12 @@ insert into expected_columns values
     ('public.prompt_versions', 'id route version system_text schema_name model effort active created_at'),
     ('public.eval_cases', 'id route input expected upload_ids notes created_at'),
     ('public.eval_runs', 'id route prompt_version started_at finished_at scores summary created_at'),
-    ('audit.events', 'id actor_role actor_id action table_name row_id diff created_at');
+    ('audit.events', 'id actor_role actor_id action table_name row_id diff created_at'),
+    -- P1 ekleri (0020–0023)
+    ('public.suggestions', 'id student_id enrollment_id kind title subtitle payload rank expires_at consumed_at created_at'),
+    ('public.practice_sets', 'id enrollment_id suggestion_id status skill_ids target_count summary started_at finished_at created_at'),
+    ('public.practice_set_items', 'set_id no question_id attempt_id answered_at created_at'),
+    ('public.memory_corrections', 'id student_id path text status requested_by resolved_by resolution_note resolved_at created_at');
 
 do $$
 declare
@@ -90,7 +95,7 @@ begin
      and not exists (select 1 from expected_columns e where e.tbl = n.nspname || '.' || c.relname);
   perform t.ok(v_extra is null, 'listede olmayan tablo yok (fazla: ' || coalesce(v_extra, '-') || ')');
   select count(*) into v_n from expected_columns;
-  perform t.ok(v_n = 61, 'v2 tabanı 61 tablo (' || v_n || ')');
+  perform t.ok(v_n = 65, 'v2 tabanı 61 tablo + P1 ekleri 4 tablo (' || v_n || ')');
   perform t.ok(to_regclass('public.staff') is null and to_regclass('public.messages') is null and to_regclass('public.consents') is null
                and to_regclass('public.tg_chats') is null and to_regclass('public.quota_usage') is null
                and to_regclass('public.diagnostic_tests') is null and to_regclass('public.legal_texts') is null
@@ -136,7 +141,10 @@ insert into expected_checks values
   ('public.generated_documents', 'status', array['queued', 'generating', 'rendered', 'review', 'published', 'failed']),
   ('public.lessons', 'status', array['uploaded', 'processing', 'analyzed', 'approved', 'corrected', 'rejected', 'failed']),
   ('public.llm_calls', 'status', array['ok', 'error', 'refusal', 'max_tokens', 'bad_output']),
-  ('public.llm_calls', 'effort', array['low', 'medium', 'high', 'xhigh', 'max']);
+  ('public.llm_calls', 'effort', array['low', 'medium', 'high', 'xhigh', 'max']),
+  ('public.suggestions', 'kind', array['practice', 'weekly_homework', 'lesson_review', 'gap_analysis', 'mini_exam', 'document_ready', 'upload_result']),
+  ('public.practice_sets', 'status', array['needs_generation', 'in_progress', 'finished', 'abandoned']),
+  ('public.memory_corrections', 'status', array['open', 'applied', 'rejected']);
 
 do $$
 declare
@@ -185,7 +193,7 @@ begin
   select string_agg(n.nspname || '.' || c.relname, ', ') into v_bad
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where c.relkind = 'r' and n.nspname = 'public'
-     and ((not has_table_privilege('authenticated', c.oid, 'select') and c.relname <> 'question_styles')
+     and ((not has_table_privilege('authenticated', c.oid, 'select') and c.relname not in ('question_styles', 'curricula'))
           or has_table_privilege('authenticated', c.oid, 'insert') or has_table_privilege('authenticated', c.oid, 'update')
           or (has_table_privilege('authenticated', c.oid, 'delete') and c.relname not in ('notification_rules', 'push_subscriptions'))
           or has_table_privilege('authenticated', c.oid, 'truncate'));
@@ -472,6 +480,31 @@ begin
                  where x.curriculum_id = v_cur and x.kind = 'diagnostic' and qq.source = 'diagnostic') = 20,
                'teşhis testinin 20 sorusu soru bankasına bağlı');
   perform t.ok((select count(*) from public.figures f where f.review_status = 'verified') >= 1, 'teşhis şekilleri verified');
+end $$;
+
+-- TYT teşhis anahtarları (seed-keys.py --schema v2, db-test.sh iki kez uygular)
+insert into t.cfg values ('have_keys', :'have_keys');
+do $$
+declare
+  v_cur uuid;
+begin
+  if t.v('have_keys') <> '1' then
+    raise notice 'SKIP: no keys';
+    return;
+  end if;
+  select c.id into v_cur from public.curricula c where c.code = 'TYT-MAT' and c.version = '2026.1';
+  perform t.ok((select count(*) from public.questions qq join secure.answer_keys k on k.question_id = qq.id
+                 where qq.curriculum_id = v_cur and qq.source = 'diagnostic' and qq.status = 'approved'
+                   and k.written_by = 'seed' and k.sympy_status = 'verified'
+                   and app.answer_key_complete(qq.kind, k.correct_option, k.numeric_value)) = 20,
+               'seed-keys: 20 teşhis sorusu approved + SymPy doğrulanmış anahtar (secure.answer_keys)');
+  perform t.ok((select count(*) from public.exam_questions q join public.exams x on x.id = q.exam_id
+                 join secure.exam_answer_keys k on k.exam_question_id = q.id
+                 where x.curriculum_id = v_cur and x.kind = 'diagnostic' and k.source = 'instructor') = 20,
+               'seed-keys: teşhis testinin 20 sorusunda sınav anahtarı (secure.exam_answer_keys)');
+  perform t.ok((select count(*) from public.questions qq where qq.reviewed_by = (select p.id from public.profiles p where p.role = 'admin'
+                                                                                    order by p.created_at limit 1)
+                   and qq.source = 'diagnostic') = 20, 'onaylayan ilk admin profili');
 end $$;
 \if :have_content
 \i :seed2

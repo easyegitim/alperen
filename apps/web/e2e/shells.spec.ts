@@ -40,13 +40,15 @@ for (const shell of SHELLS) {
       }
       expect(await visibleNavLinks(page, shell.nav)).toEqual(shell.nav);
 
-      if (shell.role === 'student') {
-        // Ortadaki kamera düğmesi "Sor": her iki yerleşimde görünür bir bağlantı.
-        const fab = page.getByRole('link', { name: 'Sor', exact: true }).filter({ visible: true });
-        await expect(fab).toHaveCount(1);
-        await expect(fab).toHaveAttribute('href', '/ogrenci/sor');
-        const box = await fab.boundingBox();
-        expect(box && box.height >= 44 && box.width >= 44).toBe(true);
+      if (shell.role === 'student' || shell.role === 'parent') {
+        // Mockup S02/S10: alt çubukta yalnız sekmeler (ortada FAB yok); yükleme Bugün'deki "+ yükle" bağlantısında.
+        await expect(page.getByRole('link', { name: 'Sor', exact: true })).toHaveCount(0);
+        if (mobile) {
+          const bar = page.getByRole('navigation', { name: 'Ana gezinme (alt çubuk)' });
+          await expect(bar.getByRole('link')).toHaveCount(shell.nav.length);
+          const box = await bar.boundingBox();
+          expect(box && Math.round(box.height)).toBe(65); // 64 px çubuk + 1 px üst çizgi
+        }
       }
       if (!mobile) {
         // Masaüstünde kenar çubuğu: alt çubuk yok.

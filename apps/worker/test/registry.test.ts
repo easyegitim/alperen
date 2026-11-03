@@ -6,7 +6,7 @@ import { SCHEDULES } from '../src/schedules.js';
 
 describe('iş kayıt defteri', () => {
   it('beklenen iş adlarını kaydeder', () => {
-    for (const n of ['noop', 'llm.ping', 'memory.compact', 'dossier.render', 'pdf.render', 'push.send', 'weekly.summary']) {
+    for (const n of ['noop', 'llm.ping', 'memory.compact', 'dossier.render', 'pdf.render', 'push.send', 'weekly.summary', 'suggestions.refresh', 'activity.completed', 'conversation.summarize', 'diagnosis.followup']) {
       expect(getJob(n), n).toBeDefined();
     }
   });
@@ -30,7 +30,7 @@ describe('iş kayıt defteri', () => {
   });
 
   it('işleyicisi olmayan SQL iş adları da kuyruk olarak kayıtlıdır', () => {
-    for (const n of ['diagnosis.followup', 'exam.report', 'document.generate', 'curriculum.merge']) expect(getJob(n)?.handler).toBeNull();
+    for (const n of ['exam.report', 'document.generate', 'practice.generate', 'memory.correction']) expect(getJob(n)?.handler).toBeNull();
   });
 
   it('yük şemaları geçersiz yükü reddeder', () => {
@@ -71,6 +71,11 @@ describe('yapılandırma', () => {
     const id = '11111111-1111-4111-8111-111111111111';
     expect(getJob('diagnosis.followup')!.payload.safeParse({ analysis_id: id, enrollment_id: id }).success).toBe(true);
     expect(getJob('diagnosis.followup')!.payload.safeParse({ analysisId: id }).success).toBe(false);
+    expect(getJob('suggestions.refresh')!.payload.safeParse({ student_id: id, enrollment_id: id, reason: 'practice.finished', set_id: id }).success).toBe(true);
+    expect(getJob('suggestions.refresh')!.payload.safeParse({}).success).toBe(true);
+    expect(getJob('suggestions.refresh')!.payload.safeParse({ student_id: 'x' }).success).toBe(false);
+    expect(getJob('practice.generate')!.payload.safeParse({ set_id: id, enrollment_id: id, curriculum_id: id, skill_ids: ['a'], count: 8 }).success).toBe(true);
+    expect(getJob('memory.correction')!.payload.safeParse({ correction_id: id, student_id: id, path: '/memories/profile.md' }).success).toBe(true);
     expect(getJob('exam.report')!.payload.safeParse({ session_id: id }).success).toBe(true);
     expect(getJob('document.generate')!.payload.safeParse({ document_id: id, kind: 'rapor' }).success).toBe(true);
     expect(getJob('document.generate')!.payload.safeParse({ document_id: 'x', kind: 'rapor' }).success).toBe(false);

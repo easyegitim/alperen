@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { contractRegistry, LLM_OUTPUT_SCHEMA_NAMES } from '@ogrenmen/contracts';
 import { FALLBACK_BETA } from '../src/client.js';
-import { collectBreakpoints, PROGRESS_NOTE } from '../src/prompt.js';
+import { collectBreakpoints } from '../src/prompt.js';
 import { familyOf, MODELS, ROUTE_NAMES, ROUTES, validateRoute, type RouteConfig, type RouteName } from '../src/routes.js';
 import { COURSE, DOSSIER, hasKeyDeep, PRODUCT, setup } from './helpers.js';
 
@@ -25,8 +25,8 @@ function body(route: RouteName, opts: { batch?: boolean } = {}) {
 }
 
 describe('rota tablosu', () => {
-  it('görevdeki 26 rota + curriculum_research (müfredat iki adım) tanımlı', () => {
-    expect(ROUTE_NAMES).toHaveLength(27);
+  it('görevdeki 26 rota + curriculum_research (müfredat iki adım) + suggestions_copy (Bugün kartları) tanımlı', () => {
+    expect(ROUTE_NAMES).toHaveLength(28);
     for (const n of ROUTE_NAMES) expect(ROUTES[n].name).toBe(n);
   });
 
@@ -151,8 +151,8 @@ describe('istek gövdesi', () => {
   it('system blokları sırayla ürün, ders, dossier; değişken bilgi system\'de değil', () => {
     const b = body('coach_chat');
     const sys = b.system as { text: string }[];
-    // Koç rotası akışlı + araçlı + serbest metin: ürün bloğunun sonunda sabit ilerleme notu.
-    expect(sys.map((s) => s.text)).toEqual([`${PRODUCT}\n\n${PROGRESS_NOTE}`, COURSE, DOSSIER]);
+    // Koç rotası tek balon ilkesi gereği ilerleme notu almaz: ürün bloğu olduğu gibi gider.
+    expect(sys.map((s) => s.text)).toEqual([PRODUCT, COURSE, DOSSIER]);
     const diag = body('solution_diagnosis').system as { text: string }[];
     expect(diag.map((s) => s.text)).toEqual([PRODUCT, COURSE, DOSSIER]);
     expect(JSON.stringify(sys)).not.toContain('2026-11-02');
@@ -268,13 +268,15 @@ describe('denetim düzeltmeleri (rotalar)', () => {
     expect(validateRoute(ROUTES.style_question_gen)).toEqual([]);
   });
 
-  it('ilerleme notu yalnız akışlı, araçlı, serbest metin, sunucu araçsız rotalarda', () => {
+  it('koç ve veli rotaları ilerleme notu almaz (gövde "ayrıca cümle yazmazsın" der; tek balon)', () => {
     const withNote = ROUTE_NAMES.filter((n) => (ROUTES[n] as RouteConfig).progressNote);
-    expect(withNote).toEqual(['coach_chat', 'coach_deep', 'parent_chat']);
+    expect(withNote).toEqual([]);
     const { gateway } = setup();
-    const b = gateway.buildRequest('coach_deep', { system: { product: PRODUCT }, user: 'x' });
-    expect((b.system as { text: string }[])[0]?.text.endsWith(PROGRESS_NOTE)).toBe(true);
+    for (const n of ['coach_chat', 'coach_deep', 'parent_chat'] as const) {
+      const b = gateway.buildRequest(n, { system: { product: PRODUCT }, user: 'x' });
+      expect((b.system as { text: string }[])[0]?.text).toBe(PRODUCT);
+    }
     // Opus'ta thinking yine gönderilmez.
-    expect(b).not.toHaveProperty('thinking');
+    expect(gateway.buildRequest('coach_deep', { system: { product: PRODUCT }, user: 'x' })).not.toHaveProperty('thinking');
   });
 });

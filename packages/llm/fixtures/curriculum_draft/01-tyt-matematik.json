@@ -1,0 +1,255 @@
+{
+  "nodes": [
+    {
+      "code": "tyt.mat",
+      "parent_code": null,
+      "name": "TYT Matematik",
+      "description": "TYT Temel Matematik Testi kapsamı (sahte taslak örneği).",
+      "kind": "unit",
+      "exam_weight_hint": null,
+      "sources": [
+        "https://www.osym.gov.tr/TR,29560/2026-yks-kilavuzu.html"
+      ]
+    },
+    {
+      "code": "tyt.mat.sayilar",
+      "parent_code": "tyt.mat",
+      "name": "Sayılar ve işlemler",
+      "description": "Sayı kümeleri, rasyonel sayılar ve üslü ifadeler.",
+      "kind": "unit",
+      "exam_weight_hint": 0.35,
+      "sources": [
+        "https://www.osym.gov.tr/TR,29560/2026-yks-kilavuzu.html"
+      ]
+    },
+    {
+      "code": "tyt.mat.sayilar.rasyonel",
+      "parent_code": "tyt.mat.sayilar",
+      "name": "Rasyonel sayılar",
+      "description": "Rasyonel sayılarla dört işlem ve sıralama.",
+      "kind": "outcome",
+      "exam_weight_hint": null,
+      "sources": [
+        "https://tymm.meb.gov.tr/ogretim-programlari/matematik"
+      ]
+    },
+    {
+      "code": "tyt.mat.sayilar.rasyonel.dort-islem",
+      "parent_code": "tyt.mat.sayilar.rasyonel",
+      "name": "Rasyonel sayılarda dört işlem",
+      "description": "Payda eşitleyerek toplama, çıkarma; çarpma ve bölme.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.sayilar.rasyonel.siralama",
+      "parent_code": "tyt.mat.sayilar.rasyonel",
+      "name": "Rasyonel sayıları sıralama",
+      "description": "Ortak payda ya da ondalık gösterimle karşılaştırma.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.sayilar.uslu",
+      "parent_code": "tyt.mat.sayilar",
+      "name": "Üslü ifadeler",
+      "description": "Üs kuralları ve üslü denklemler.",
+      "kind": "outcome",
+      "exam_weight_hint": null,
+      "sources": [
+        "https://tymm.meb.gov.tr/ogretim-programlari/matematik"
+      ]
+    },
+    {
+      "code": "tyt.mat.sayilar.uslu.kurallar",
+      "parent_code": "tyt.mat.sayilar.uslu",
+      "name": "Üs kuralları",
+      "description": "Çarpma, bölme ve üssün üssü kuralları.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.sayilar.uslu.denklem",
+      "parent_code": "tyt.mat.sayilar.uslu",
+      "name": "Üslü denklemler",
+      "description": "Tabanları eşitleyerek çözülen denklemler.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.sayilar.koklu",
+      "parent_code": "tyt.mat.sayilar",
+      "name": "Köklü ifadeler",
+      "description": "Kök kuralları ve paydayı rasyonel yapma.",
+      "kind": "outcome",
+      "exam_weight_hint": null,
+      "sources": [
+        "https://tymm.meb.gov.tr/ogretim-programlari/matematik"
+      ]
+    },
+    {
+      "code": "tyt.mat.sayilar.koklu.sadelestirme",
+      "parent_code": "tyt.mat.sayilar.koklu",
+      "name": "Köklü ifadeleri sadeleştirme",
+      "description": "Kök dışına çıkarma ve benzer köklerle işlem.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.sayilar.koklu.eslenik",
+      "parent_code": "tyt.mat.sayilar.koklu",
+      "name": "Paydayı rasyonel yapma",
+      "description": "Eşlenikle çarpma.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.problemler",
+      "parent_code": "tyt.mat",
+      "name": "Problemler",
+      "description": "Sözel problemleri denkleme çevirme.",
+      "kind": "unit",
+      "exam_weight_hint": 0.4,
+      "sources": [
+        "https://www.osym.gov.tr/TR,29560/2026-yks-kilavuzu.html"
+      ]
+    },
+    {
+      "code": "tyt.mat.problemler.oran",
+      "parent_code": "tyt.mat.problemler",
+      "name": "Oran ve orantı",
+      "description": "Doğru ve ters orantı.",
+      "kind": "outcome",
+      "exam_weight_hint": null,
+      "sources": [
+        "https://tymm.meb.gov.tr/ogretim-programlari/matematik"
+      ]
+    },
+    {
+      "code": "tyt.mat.problemler.oran.dogru-ters",
+      "parent_code": "tyt.mat.problemler.oran",
+      "name": "Doğru ve ters orantı",
+      "description": "Orantı sabitini bulma.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.problemler.oran.bolusturme",
+      "parent_code": "tyt.mat.problemler.oran",
+      "name": "Orantılı bölüştürme",
+      "description": "Bir çokluğu verilen oranlarda paylaştırma.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.problemler.yuzde",
+      "parent_code": "tyt.mat.problemler",
+      "name": "Yüzde problemleri",
+      "description": "Yüzde, kâr ve zarar.",
+      "kind": "outcome",
+      "exam_weight_hint": null,
+      "sources": [
+        "https://tymm.meb.gov.tr/ogretim-programlari/matematik"
+      ]
+    },
+    {
+      "code": "tyt.mat.problemler.yuzde.yuzde-hesabi",
+      "parent_code": "tyt.mat.problemler.yuzde",
+      "name": "Yüzde hesabı",
+      "description": "Bir sayının yüzdesini bulma ve yüzde değişim.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.problemler.yuzde.kar-zarar",
+      "parent_code": "tyt.mat.problemler.yuzde",
+      "name": "Kâr ve zarar",
+      "description": "Maliyet üzerinden kâr ve zarar.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.problemler.hareket",
+      "parent_code": "tyt.mat.problemler",
+      "name": "Hareket problemleri",
+      "description": "Yol, hız ve zaman ilişkisi.",
+      "kind": "outcome",
+      "exam_weight_hint": null,
+      "sources": [
+        "https://tymm.meb.gov.tr/ogretim-programlari/matematik"
+      ]
+    },
+    {
+      "code": "tyt.mat.problemler.hareket.karsilasma",
+      "parent_code": "tyt.mat.problemler.hareket",
+      "name": "Karşılaşma ve yetişme",
+      "description": "Aynı ya da zıt yönde hareket.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "tyt.mat.problemler.hareket.ortalama-hiz",
+      "parent_code": "tyt.mat.problemler.hareket",
+      "name": "Ortalama hız",
+      "description": "Toplam yol bölü toplam zaman.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    }
+  ],
+  "prerequisites": [
+    {
+      "skill_code": "tyt.mat.sayilar.rasyonel.siralama",
+      "prereq_code": "tyt.mat.sayilar.rasyonel.dort-islem",
+      "strength": 0.6
+    },
+    {
+      "skill_code": "tyt.mat.sayilar.uslu.denklem",
+      "prereq_code": "tyt.mat.sayilar.uslu.kurallar",
+      "strength": 0.9
+    },
+    {
+      "skill_code": "tyt.mat.problemler.oran.bolusturme",
+      "prereq_code": "tyt.mat.sayilar.rasyonel.dort-islem",
+      "strength": 0.7
+    },
+    {
+      "skill_code": "tyt.mat.problemler.yuzde.kar-zarar",
+      "prereq_code": "tyt.mat.problemler.yuzde.yuzde-hesabi",
+      "strength": 0.9
+    }
+  ],
+  "misconception_tags": [
+    {
+      "tag": "taslak-rasyonel.pay-payda-ayri-toplama",
+      "skill_code": "tyt.mat.sayilar.rasyonel.dort-islem",
+      "text_instructor": "Kesirleri toplarken payları ve paydaları ayrı ayrı topluyor.",
+      "text_student": "Kesirleri toplamadan önce paydaları eşitlersin, sonra yalnız payları toplarsın."
+    },
+    {
+      "tag": "taslak-uslu.us-carpma-toplama",
+      "skill_code": "tyt.mat.sayilar.uslu.kurallar",
+      "text_instructor": "Aynı tabanlı çarpımda üsleri çarpıyor.",
+      "text_student": "Aynı tabanlı üslü sayıları çarparken üsleri toplarsın."
+    },
+    {
+      "tag": "taslak-hareket.hiz-ortalamasi",
+      "skill_code": "tyt.mat.problemler.hareket.ortalama-hiz",
+      "text_instructor": "Ortalama hızı iki hızın aritmetik ortalaması sanıyor.",
+      "text_student": "Ortalama hız, toplam yolun toplam zamana bölümüdür."
+    }
+  ],
+  "confidence": 0.72,
+  "notes_for_instructor": "Sahte taşıma (OGRENMEN_LLM=fake) için deterministik örnek: 2 ünite, ünite başına 3 kazanım, kazanım başına 2 alt kazanım. Gerçek taslak resmi programa ve ÖSYM kılavuzuna göre kurulur."
+}

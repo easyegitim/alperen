@@ -1,0 +1,101 @@
+{
+  "note": "Yayımlanmış prompt sürümleri değişmez: metin değişirse yeni sürüm açın (bkz. README). Üreten: scripts/build-bundle.ts",
+  "defaults": {
+    "coach_chat": "v1",
+    "coach_deep": "v1",
+    "conversation_summary": "v1",
+    "curriculum_draft": "v1",
+    "curriculum_research": "v1",
+    "memory_delta": "v1",
+    "parent_chat": "v1",
+    "solution_diagnosis": "v1",
+    "suggestions_copy": "v1"
+  },
+  "prompts": {
+    "coach_chat@v1": {
+      "sha256": "bea88d042a13f2dc6096febb1888b6acaf5152880b173ef823caab8538d79b23",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": null,
+      "tools": [
+        "get_mastery",
+        "get_recent_exams",
+        "memory",
+        "record_turn_meta",
+        "search_evidence"
+      ]
+    },
+    "coach_deep@v1": {
+      "sha256": "bc4bb3cb44abbac5478871b4e570cab4c7b0b3e3a634f45da70d134d6e2298eb",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": null,
+      "tools": [
+        "get_mastery",
+        "get_recent_exams",
+        "memory",
+        "record_turn_meta",
+        "search_evidence"
+      ]
+    },
+    "conversation_summary@v1": {
+      "sha256": "315d07cceb624b584a0dc92c103e5171817fa2ce6c800fd940938975440404ad",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "conversation-summary",
+      "tools": []
+    },
+    "curriculum_draft@v1": {
+      "sha256": "20317985096be6a7c81e0e57e03b9c3e0c2cba335a9fccf032769fda41dbb230",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "curriculum-draft",
+      "tools": []
+    },
+    "curriculum_research@v1": {
+      "sha256": "801e26f3c4d3bfa64ba59e3df40b5aa632ad5d6418fd4f6dac17b73d0d509621",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": null,
+      "tools": [
+        "web_fetch",
+        "web_search"
+      ]
+    },
+    "memory_delta@v1": {
+      "sha256": "7d121cc8d4264dd1014552104f51e733a4ebd31792d7b38526d3b8a8b82260cd",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "memory-delta",
+      "tools": []
+    },
+    "parent_chat@v1": {
+      "sha256": "88448b1330c8f3ef8f20f54f11043fcc5dc7c8bd4e6a7ead78656da62e663f58",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "schema": null,
+      "tools": [
+        "get_child_summary",
+        "get_exam_sessions",
+        "get_mastery_overview",
+        "get_recent_activity",
+        "get_reports",
+        "request_report"
+      ]
+    },
+    "solution_diagnosis@v1": {
+      "sha256": "631691380e1320dc6db5ada097220442ead7447e1cd8eaab400308cc3daa51f2",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "solution-diagnosis",
+      "tools": []
+    },
+    "suggestions_copy@v1": {
+      "sha256": "012665ecf6bc9fb58633657ccb315dc7f4e85fa338ec5efeb098102baf90201e",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "notification-copy",
+      "tools": []
+    }
+  }
+}

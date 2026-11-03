@@ -1,60 +1,51 @@
 import type { Metadata } from 'next';
 import { EmptyState } from '@/components/EmptyState';
-import { PageHeader } from '@/components/PageHeader';
-import { FileText } from 'lucide-react';
 import { LinkButton } from '@/components/LinkButton';
-import { Avatar, Badge } from '@/ds';
-import { GRADE_LABELS, GRADES } from '@/lib/validation';
+import { ScreenHeader } from '@/components/shell';
+import { Badge } from '@/ds';
+import { firstName } from '@/lib/format';
 import { requireRole } from '@/server/auth';
 import { listChildren } from '@/server/queries';
 
 export const metadata: Metadata = { title: 'Özet' };
 
+// Veli Özet (mockup S10) iskeleti: çocuğun adı, tek cümle durum, "Soru sor" (tek birincil) ve "Rapor iste".
+// Tek cümle durum, üç sayı ve son rapor P6'da (veli ajanı ve haftalık özet) bağlanır; şimdilik "Henüz veri yok."
 export default async function VeliOzet() {
   const { user, displayName } = await requireRole('parent', 'admin');
   const children = await listChildren(user.id);
+  const only = children.length === 1 ? children[0] : null;
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <PageHeader title={displayName ? `Merhaba, ${displayName.split(' ')[0]}` : 'Özet'} description="Çocuğunun durumu tek bakışta." />
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
+      <ScreenHeader title={only ? firstName(only.name) || 'Özet' : 'Özet'} name={displayName} accountHref="/veli/ayarlar" size="sm" />
       {children.length === 0 ? (
         <EmptyState title="Henüz bağlı bir çocuk yok">
           {'Çocuğunla bağlantı kurmak için öğrencinin gönderdiği davet kodunu Ayarlar sayfasından girebilirsin.'}
         </EmptyState>
       ) : (
-        <ul aria-label="Çocukların" className="m-0 flex list-none flex-col gap-4 p-0">
-          {children.map((c) => (
-            <li key={c.id} className="flex flex-col gap-4 rounded-lg border border-line bg-surface-raised p-4">
-              <div className="flex items-center gap-3">
-                <Avatar name={c.name} variant="photo" size="lg" />
-                <div className="flex min-w-0 flex-col">
-                  <span className="text-title-3 truncate text-ink">{c.name}</span>
-                  <span className="text-small text-ink-muted">{c.grade && (GRADES as readonly string[]).includes(c.grade) ? GRADE_LABELS[c.grade as (typeof GRADES)[number]] : 'Sınıf belirtilmedi'}</span>
-                </div>
-                <Badge tone="neutral" className="ml-auto">
-                  Bağlı
+        <>
+          <ul aria-label="Çocukların" className="m-0 flex list-none flex-col gap-4 p-0">
+            {children.map((c) => (
+              <li key={c.id} className="flex flex-col gap-3">
+                <Badge tone="ai" className="self-start">
+                  {c.name}
                 </Badge>
-              </div>
-              <p className="text-small m-0 text-ink-muted">Tek cümlelik durum ve üç sayı ilk veriler geldiğinde burada görünür.</p>
-            </li>
-          ))}
-        </ul>
+                <p className="text-body-lg m-0 text-ink" data-testid="veli-durum">
+                  Henüz veri yok.
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-col gap-2">
+            <LinkButton href="/veli/sohbet" variant="primary" size="lg" block>
+              Soru sor
+            </LinkButton>
+            <LinkButton href="/veli/sohbet?istek=rapor" variant="quiet" size="lg" block>
+              Rapor iste
+            </LinkButton>
+          </div>
+        </>
       )}
-      <section aria-labelledby="son-rapor" className="flex flex-col gap-3">
-        <h2 id="son-rapor" className="text-title-2 m-0 text-ink">
-          Son rapor
-        </h2>
-        <EmptyState title="Henüz rapor yok" headingLevel={3}>
-          {'Haftalık özet ve deneme raporları hazırlandığında en sonuncusu burada PDF olarak durur.'}
-        </EmptyState>
-        <div className="flex flex-wrap gap-3">
-          <LinkButton href="/veli/sohbet?istek=rapor" variant="secondary" icon={<FileText size={18} />}>
-            Rapor iste
-          </LinkButton>
-          <LinkButton href="/veli/sohbet" variant="quiet">
-            Soru sor
-          </LinkButton>
-        </div>
-      </section>
     </div>
   );
 }

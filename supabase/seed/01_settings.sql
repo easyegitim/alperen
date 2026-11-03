@@ -17,5 +17,11 @@ insert into public.settings (key, value, description) values
   ('dossier_open_misconceptions', '8'::jsonb, 'Dossier bloğundaki en çok açık yanılgı sayısı'),
   ('lesson_auto_apply_threshold', '0.8'::jsonb, 'Ders iddiasının eğitmen onayı beklemeden uygulandığı güven (lessons varsayılanı)'),
   ('guardian_invite_hours', '72'::jsonb, 'Veli davetinin geçerlilik süresi (saat)'),
-  ('llm_call_max_cost_usd', '5'::jsonb, 'Personel oturumunda log_llm_call çağrı başına en çok maliyet (USD; worker sınırsız)')
+  ('llm_call_max_cost_usd', '5'::jsonb, 'Personel oturumunda log_llm_call çağrı başına en çok maliyet (USD; worker sınırsız)'),
+  ('suggestions_today_max', '4'::jsonb, 'Bugün ekranında en çok öneri (kahraman kart + 3 kutu; list_today_suggestions)'),
+  ('practice_set_size', '8'::jsonb, 'Öneriden açılan alıştırma setinin varsayılan soru sayısı (start_practice; 1–10)'),
+  ('practice_daily_sets', '10'::jsonb, 'Koç yolundan (öneri olmadan) kayıt başına son 24 saatte en çok yeni alıştırma seti (start_practice, OGR-PRAC-007)'),
+  ('practice_generation_timeout_s', '600'::jsonb, 'Bankası boş alıştırma setinin (needs_generation) üretim için beklediği en çok süre (saniye); aşınca set generation_timeout ile kapanır'),
+  ('practice_repeat_wrong_weight', '0.5'::jsonb, 'Daha önce görülmüş soruya yanlış cevabın gözlem ağırlığı (doğru tekrar 0; kanıt sayılmaz)'),
+  ('onboarding_created_daily', '3'::jsonb, 'Öğrencinin onboarding''de son 24 saatte en çok açabileceği yeni ders taslağı (OGR-ONB-003)')
 on conflict (key) do nothing;

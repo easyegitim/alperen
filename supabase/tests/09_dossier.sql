@@ -1,7 +1,8 @@
 -- tests/09_dossier.sql — render_dossier(p_student, p_course) şekli (docs/PLAN-v2.md §2, §3.3, §3.4): kimlik (görünen ad
 -- yok), en zayıf 20 / en güçlü 10 kanıtlı yaprak (ayrık, sıralı, 14 g trend), açık yanılgılar ≤ 8, 30 g hata-nedeni
 -- histogramı (5 anahtar), son 10 teşhis, son 3 deneme, tarz boşlukları, ders iddiaları; hash kararlı ve gövdeye bağlı;
--- yetki (öğrenci, bağlı eğitmen, admin, worker; veli değil).
+-- yetki (öğrenci, bağlı eğitmen, admin, worker; veli değil). v2 (0024): aktif öneri sayısı, son bitmiş alıştırma özeti,
+-- hafıza dosya yolları (içerik yok).
 begin;
 \ir _fixture.sql
 
@@ -59,6 +60,19 @@ begin
   insert into public.question_styles (course_id, code, name, status, frequency_score) values (v_course, 'S-LOW', 'Zayıf', 'active', 0.8) returning id into v_st;
   insert into public.style_coverage (enrollment_id, style_id, seen_count, solved_count, correct_count) values (v_enr, v_st, 4, 4, 1);
   insert into public.question_styles (course_id, code, name, status, frequency_score) values (v_course, 'S-OLD', 'Emekli', 'retired', 1.0);
+  -- v2: öneriler (2 aktif bu kayıtta + 1 kayıtsız; başlatılmış, süresi dolmuş ve başka kayıttaki sayılmaz), alıştırmalar, hafıza
+  insert into public.suggestions (student_id, enrollment_id, kind, title, rank, consumed_at, expires_at) values
+    (t.u('A'), v_enr, 'practice', 'Aktif 1', 0, null, null), (t.u('A'), v_enr, 'gap_analysis', 'Aktif 2', 1, null, now() + interval '1 day'),
+    (t.u('A'), null, 'document_ready', 'Notun hazır', 2, null, null), (t.u('A'), v_enr, 'practice', 'Başlatılmış', 3, now(), null),
+    (t.u('A'), v_enr, 'practice', 'Süresi dolmuş', 4, null, now() - interval '1 minute'), (t.u('A'), t.u('EA'), 'practice', 'Başka ders', 5, null, null);
+  insert into public.practice_sets (enrollment_id, status, skill_ids, summary, started_at, finished_at) values
+    (v_enr, 'finished', array['b.01'], '{"total": 8, "correct": 3, "top_misconception": {"tag": "eski"}, "weak_skill": {"skill_id": "b.01"}}',
+     now() - interval '3 days', now() - interval '3 days'),
+    (v_enr, 'finished', array['b.02', 'b.03'], '{"total": 8, "correct": 6, "top_misconception": null, "weak_skill": {"skill_id": "b.03"}}',
+     now() - interval '1 hour', now() - interval '1 hour'),
+    (v_enr, 'in_progress', array['b.04'], null, now(), null);
+  insert into public.memory_files (student_id, path, content) values
+    (t.u('A'), '/memories/patterns.md', 'Gizli örüntü metni'), (t.u('A'), '/memories/profile.md', 'Gizli profil metni');
 end $$;
 
 do $$
@@ -74,8 +88,16 @@ begin
   v_d2 := public.render_dossier(t.u('A'), t.u('bcourse'));
   perform t.as_admin();
   select string_agg(k, ',' order by k) into v_keys from jsonb_object_keys(v_d) as k;
-  perform t.ok(v_keys = 'as_of,error_causes_30d,hash,identity,mastery,open_misconceptions,recent_diagnoses,recent_exams,recent_lesson_claims,style_gaps,version',
+  perform t.ok(v_keys = 'as_of,error_causes_30d,hash,identity,last_practice,mastery,memory_paths,open_misconceptions,recent_diagnoses,recent_exams,recent_lesson_claims,style_gaps,version',
                'dossier üst anahtarları (' || v_keys || ')');
+  perform t.ok((v_d ->> 'version')::int = 2, 'dossier sürümü 2');
+  perform t.ok(not v_d ? 'active_suggestions', 'aktif öneri sayısı gövdede yok (hash kararlı)');
+  perform t.ok((v_d -> 'last_practice' ->> 'total')::int = 8 and (v_d -> 'last_practice' ->> 'correct')::int = 6
+               and v_d -> 'last_practice' ->> 'weak_skill' = 'b.03' and v_d -> 'last_practice' -> 'top_misconception' = 'null'::jsonb
+               and v_d -> 'last_practice' -> 'skill_ids' = '["b.02", "b.03"]'::jsonb,
+               'son bitmiş alıştırma özeti (süren set değil): ' || coalesce(v_d ->> 'last_practice', '-'));
+  perform t.ok(v_d -> 'memory_paths' = '["/memories/patterns.md", "/memories/profile.md"]'::jsonb and position('Gizli' in v_d::text) = 0,
+               'hafıza dosya yolları sıralı, içerik yok');
   perform t.ok(v_d -> 'identity' ->> 'student_ref' = (select s.public_ref from public.students s where s.id = t.u('A'))
                and v_d -> 'identity' ->> 'course_code' = 'T-BIG' and v_d -> 'identity' ->> 'curriculum' = 'T-BIG@1'
                and (v_d -> 'identity' ->> 'days_to_exam')::int between 199 and 201 and v_d -> 'identity' ->> 'goal' = 'TYT matematikte 30 net'
@@ -105,6 +127,9 @@ begin
   perform t.ok(v_d -> 'recent_lesson_claims' = '[]'::jsonb, 'ders iddiası yoksa boş dizi');
   perform t.ok(v_d = v_d2 and v_d ->> 'hash' = encode(sha256(convert_to((v_d - 'hash')::text, 'UTF8')), 'hex'),
                'hash kararlı ve gövdenin sha256''sı');
+  -- öneri başlatmak (Başla) hash'i değiştirmez: dossier ve system[2] önbelleği bozulmaz
+  update public.suggestions s set consumed_at = now() where s.student_id = t.u('A') and s.title = 'Aktif 1';
+  perform t.ok(public.render_dossier(t.u('A'), t.u('bcourse')) ->> 'hash' = v_d ->> 'hash', 'öneri başlatılınca hash değişmez');
   update public.mastery m set p = 0.01 where m.enrollment_id = t.u('benr') and m.skill_id = 'b.35';
   perform t.ok(public.render_dossier(t.u('A'), t.u('bcourse')) ->> 'hash' <> v_d ->> 'hash', 'ustalık değişince hash değişir');
 end $$;
@@ -118,6 +143,8 @@ begin
   perform t.ok(public.render_dossier(t.u('A'), t.u('bcourse')) ? 'hash', 'admin dossier alır');
   perform t.as_service();
   perform t.ok(public.render_dossier(t.u('A'), t.u('course')) -> 'mastery' -> 'weakest' = '[]'::jsonb, 'worker; kanıtsız kayıtta boş listeler');
+  perform t.ok(public.render_dossier(t.u('B'), t.u('course')) -> 'last_practice' = 'null'::jsonb
+               and public.render_dossier(t.u('B'), t.u('course')) -> 'memory_paths' = '[]'::jsonb, 'alıştırmasız öğrencide null, boş dizi');
   perform t.as_user(t.u('parent'));
   perform t.raises(format($q$select public.render_dossier(%L, %L)$q$, t.u('A'), t.u('bcourse')), 'OGR-AUTH-001%', 'veli dossier alamaz');
   perform t.as_user(t.u('can'));

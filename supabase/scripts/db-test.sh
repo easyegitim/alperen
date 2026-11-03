@@ -6,12 +6,13 @@
 #   veritabanına DOKUNMAZ — "ogrenmen" adı reddedilir), sırayla uygular:
 #     tests/00_local_stub.sql (süper kullanıcıyla) → migrations/*.sql → seed/*.sql → müfredat seed'i
 #     (content/tyt-matematik/scripts/export-sql.py --schema v2, çalışma anında üretilir; betik yoksa "SKIP: no content")
-#     → seed'ler ve müfredat seed'i ikinci kez (tekrar uygulanabilirlik) → tests/[0-9][0-9]_*.sql (psql -v ON_ERROR_STOP=1)
+#     → seed'ler ve müfredat seed'i ikinci kez (tekrar uygulanabilirlik) → TYT teşhis anahtarları (content/tyt-matematik/
+#     scripts/seed-keys.py --schema v2, iki kez: SymPy ile doğrulanır, secure.answer_keys + teşhis testi
+#     secure.exam_answer_keys, 20 soru approved; betik ya da içerik yoksa "SKIP: no keys") → tests/[0-9][0-9]_*.sql
 #     → scripts/pgboss-check.mjs (enqueue_job ↔ gerçek pg-boss şeması; apps/worker'ın pg-boss'u yoksa SKIP).
 #   Migration ve seed adımları süper kullanıcı OLMAYAN migration sahibiyle (ogrenmen_owner, 00_local_stub.sql; Supabase'de
 #   "postgres"in eşleniği) çalışır; testler bağlanan kullanıcıyla. v2'de cevap anahtarları yalnız public.set_exam_key()
-#   ile secure.answer_keys'e yazılır (testler kendi anahtarlarını böyle kurar); TYT içeriği için v2 anahtar seed'i henüz
-#   yok (TODO content: set_exam_key çağıran seed): "SKIP: no keys".
+#   ile, soru bankası anahtarları güvenilir oturumda secure.answer_keys'e yazılır; TYT anahtarlarını seed-keys.py yazar.
 #   01_schema.sql pg_cron zamanlamalarını apps/worker/src/schedules.ts SCHEDULES ile karşılaştırır (dosya yoksa SKIP).
 #   Çıktıda FAIL geçerse ya da bir adım düşerse 1 ile çıkar.
 #
@@ -115,7 +116,18 @@ fi
 apply_seeds "$TESTURL"
 apply_seeds "$TESTURL"   # ikinci kez: seed'ler ve müfredat seed'i tekrar uygulanabilir
 echo "  seed'ler iki kez uygulandı; have_content=$HAVE_CONTENT"
-echo "  SKIP: no keys (TYT içeriği için v2 anahtar seed'i yok: set_exam_key/secure.answer_keys; TODO content)"
+HAVE_KEYS=0
+SEED_KEYS="$CDIR/seed-keys.py"
+if [ "$HAVE_CONTENT" = 1 ] && [ -f "$SEED_KEYS" ] && [ -f "$CDIR/../diagnostic/answer-keys.json" ]; then
+  for pass in 1 2; do   # ikinci kez: anahtar seed'i tekrar uygulanabilir
+    "$PY" "$SEED_KEYS" --schema v2 --database-url "$TESTURL" >"$WORK/keys.log" 2>&1 \
+      || { cat "$WORK/keys.log"; echo "HATA: seed-keys.py --schema v2 (geçiş $pass)" >&2; exit 1; }
+  done
+  HAVE_KEYS=1
+  echo "  $(tail -1 "$WORK/keys.log")"
+else
+  echo "  SKIP: no keys (content/tyt-matematik seed-keys.py ya da answer-keys.json yok)"
+fi
 unset PGOPTIONS
 
 PII_CASES="$("$PY" -c "import json,sys;print(json.dumps(json.load(open(sys.argv[1]))['hash_cases']))" "$ROOT/packages/pii/cases.json" 2>/dev/null || echo '[]')"
@@ -128,7 +140,7 @@ for f in "$DIR"/tests/[0-9][0-9]_*.sql; do
   name="$(basename "$f")"
   [ "$name" = "00_local_stub.sql" ] && continue
   echo "== $name"
-  if run_file "$TESTURL" "$f" -v have_content="$HAVE_CONTENT" -v seed2="$WORK/seed2.sql" \
+  if run_file "$TESTURL" "$f" -v have_content="$HAVE_CONTENT" -v have_keys="$HAVE_KEYS" -v seed2="$WORK/seed2.sql" \
        -v pii_hash_cases="$PII_CASES" -v bkt_vectors="$BKT_VECTORS" -v worker_schedules="$WORKER_SCHEDULES" >"$WORK/out.log" 2>&1; then
     :
   else
