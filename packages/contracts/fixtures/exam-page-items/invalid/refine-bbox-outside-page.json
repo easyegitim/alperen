@@ -1,0 +1,47 @@
+{
+  "items": [
+    {
+      "no": 7,
+      "section": "Matematik",
+      "kind": "mcq",
+      "stem_text": "Bir kenarı 4 cm olan karenin çevresi kaç cm'dir?",
+      "options": [
+        {
+          "key": "A",
+          "text": "8"
+        },
+        {
+          "key": "B",
+          "text": "12"
+        },
+        {
+          "key": "C",
+          "text": "16"
+        },
+        {
+          "key": "D",
+          "text": "20"
+        },
+        {
+          "key": "E",
+          "text": "24"
+        }
+      ],
+      "continues_from_previous": false,
+      "continues_on_next": false,
+      "figures": [
+        {
+          "bbox": {
+            "x": 0.8,
+            "y": 0.2,
+            "w": 0.5,
+            "h": 0.2
+          },
+          "description": "Taşan kutu"
+        }
+      ],
+      "legibility": "clear"
+    }
+  ],
+  "page_notes": null
+}

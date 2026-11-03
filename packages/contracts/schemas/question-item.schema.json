@@ -3,78 +3,61 @@
   "$id": "https://ogrenmen.easy/schemas/question-item.json",
   "title": "QuestionItem",
   "description": "Soru maddesi. Cevap anahtarı BU NESNEDE YOKTUR (answer-key ayrı sözleşmedir).",
-  "x-version": "1.0",
+  "x-version": "2.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "curriculum_code",
-    "kind",
-    "skill_ids",
-    "stem",
-    "figure",
-    "source",
-    "verification"
-  ],
   "properties": {
     "schema_version": {
+      "type": "string",
       "const": "1.0"
     },
     "id": {
-      "$ref": "common.json#/$defs/uuid"
+      "type": "string",
+      "format": "uuid"
     },
     "curriculum_code": {
       "type": "string",
-      "pattern": "^[A-Z]{2,5}-[A-Z]{2,5}@[0-9]{4}\\.[0-9]+$",
-      "examples": [
-        "TYT-MAT@2026.1"
-      ]
+      "pattern": "^[A-Z0-9]{2,8}(-[A-Z0-9]{2,8})*@[0-9]{4}\\.[0-9]+$",
+      "description": "Örnek: TYT-MAT@2026.1"
     },
     "kind": {
+      "type": "string",
       "enum": [
         "mcq",
         "numeric"
       ]
     },
     "skill_ids": {
-      "type": "array",
       "minItems": 1,
       "maxItems": 3,
+      "type": "array",
       "items": {
-        "$ref": "common.json#/$defs/skillId"
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
       }
     },
     "stem": {
       "type": "string",
       "minLength": 10,
       "maxLength": 900,
-      "description": "Soru kökü; formüller düz metin/kod biçiminde; şekil varsa kök şekli kelimelerle de anlatır"
+      "description": "Soru kökü; formüller düz metin/kod; şekil varsa kök şekli kelimelerle de anlatır"
     },
     "stem_values": {
+      "description": "Şekil denetiminin karşılaştırdığı değerler",
       "type": "object",
       "additionalProperties": {
         "type": [
           "number",
           "string"
         ]
-      },
-      "description": "Şekil denetiminin karşılaştırdığı değerler (kenar, açı, eksen)"
+      }
     },
     "figure": {
-      "oneOf": [
-        {
-          "type": "null"
-        },
+      "anyOf": [
         {
           "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "tool",
-            "code",
-            "alt_text"
-          ],
           "properties": {
             "tool": {
+              "type": "string",
               "enum": [
                 "matplotlib",
                 "svg",
@@ -96,11 +79,10 @@
               "type": "string",
               "minLength": 15,
               "maxLength": 400,
-              "description": "Şekli kelimelerle anlatır (Telegram altyazısı, alt)"
+              "description": "Şekli kelimelerle anlatır"
             },
             "expected_px": {
               "type": "object",
-              "additionalProperties": false,
               "properties": {
                 "min_w": {
                   "type": "integer"
@@ -114,13 +96,14 @@
                 "max_h": {
                   "type": "integer"
                 }
-              }
+              },
+              "additionalProperties": false
             },
             "render": {
               "type": "object",
-              "additionalProperties": false,
               "properties": {
                 "status": {
+                  "type": "string",
                   "enum": [
                     "pending",
                     "rendered",
@@ -140,6 +123,7 @@
                   "type": "integer"
                 },
                 "vision": {
+                  "type": "string",
                   "enum": [
                     "pending",
                     "match",
@@ -153,28 +137,38 @@
                   "minimum": 0,
                   "maximum": 3
                 }
-              }
+              },
+              "additionalProperties": false
             }
-          }
+          },
+          "required": [
+            "tool",
+            "code",
+            "alt_text"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
         }
       ]
     },
     "options": {
-      "type": "array",
+      "description": "Tam dört şık, anahtarlar sırayla A, B, C, D; en az iki şık misconception_tag=null taşır",
       "minItems": 4,
       "maxItems": 4,
-      "description": "Tam dört şık, anahtarlar sırayla A, B, C, D (yinelenen, eksik ya da sırası bozuk anahtar düşer; Telegram A·B·C·D düğmeleri ve grade_attempt aynı sırayı varsayar). En az iki şık misconception_tag=null taşır (doğru şık + en az bir etiketsiz çeldirici).",
+      "type": "array",
       "items": {
         "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "key",
-          "text",
-          "misconception_tag"
-        ],
         "properties": {
           "key": {
-            "$ref": "common.json#/$defs/optionKey"
+            "type": "string",
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
           },
           "text": {
             "type": "string",
@@ -182,17 +176,24 @@
             "maxLength": 200
           },
           "misconception_tag": {
-            "oneOf": [
+            "anyOf": [
               {
-                "type": "null"
+                "type": "string",
+                "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$",
+                "description": "Yanlış şıkkın kodladığı yanılgı; doğru şık ve en az bir çeldirici null taşır"
               },
               {
-                "$ref": "common.json#/$defs/tag"
+                "type": "null"
               }
-            ],
-            "description": "Yanlış şıkkın kodladığı yanılgı. DOĞRU ŞIK BU DİZİDEN ÇIKARILAMAZ: doğru şık null taşır VE en az bir çeldirici de null taşır (en az iki null zorunlu); LLM ve öğrenci yolu şıkları app.strip_tags ile etiketsiz görür."
+            ]
           }
-        }
+        },
+        "required": [
+          "key",
+          "text",
+          "misconception_tag"
+        ],
+        "additionalProperties": false
       },
       "contains": {
         "type": "object",
@@ -244,9 +245,12 @@
       ]
     },
     "difficulty": {
-      "$ref": "common.json#/$defs/probability"
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
     },
     "source": {
+      "type": "string",
       "enum": [
         "template",
         "llm",
@@ -256,7 +260,6 @@
     },
     "template": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string"
@@ -264,28 +267,51 @@
         "params": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "template-params.json#/$defs/value"
-          },
-          "description": "Şablon parametreleri (template-params ile aynı değer kuralı: sayı, metin, mantıksal, null, bunların düz dizisi ya da bir düzey düz nesne)"
+            "anyOf": [
+              {
+                "type": [
+                  "number",
+                  "string",
+                  "boolean",
+                  "null"
+                ]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "number",
+                    "string",
+                    "boolean",
+                    "null"
+                  ]
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "number",
+                    "string",
+                    "boolean",
+                    "null"
+                  ]
+                }
+              }
+            ]
+          }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "verification": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "schema",
-        "sympy",
-        "render",
-        "vision",
-        "attempts",
-        "status"
-      ],
       "properties": {
         "schema": {
           "type": "boolean"
         },
         "sympy": {
+          "type": "string",
           "enum": [
             "verified",
             "failed",
@@ -294,6 +320,7 @@
           ]
         },
         "render": {
+          "type": "string",
           "enum": [
             "ok",
             "failed",
@@ -303,6 +330,7 @@
           ]
         },
         "vision": {
+          "type": "string",
           "enum": [
             "match",
             "mismatch",
@@ -317,6 +345,7 @@
           "maximum": 3
         },
         "status": {
+          "type": "string",
           "enum": [
             "draft",
             "pending_review",
@@ -331,17 +360,26 @@
             "null"
           ]
         }
-      }
+      },
+      "required": [
+        "schema",
+        "sympy",
+        "render",
+        "vision",
+        "attempts",
+        "status"
+      ],
+      "additionalProperties": false
     },
     "provenance": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "model": {
           "type": "string"
         },
         "cost_usd": {
-          "$ref": "common.json#/$defs/usd"
+          "type": "number",
+          "minimum": 0
         },
         "prompt_version": {
           "type": "string"
@@ -350,11 +388,24 @@
           "type": "string"
         },
         "created_at": {
-          "$ref": "common.json#/$defs/dateTime"
+          "type": "string",
+          "format": "date-time"
         }
-      }
+      },
+      "additionalProperties": false
     }
   },
+  "required": [
+    "schema_version",
+    "curriculum_code",
+    "kind",
+    "skill_ids",
+    "stem",
+    "figure",
+    "source",
+    "verification"
+  ],
+  "additionalProperties": false,
   "allOf": [
     {
       "if": {

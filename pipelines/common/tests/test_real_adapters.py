@@ -17,6 +17,7 @@ from ogrenmen_common.adapters.cfai import CloudflareAILLM
 from ogrenmen_common.adapters.crossref import CrossrefResolver
 from ogrenmen_common.adapters.gemini import GeminiEmbedding, GeminiLLM
 from ogrenmen_common.adapters.groq import GroqLLM, seconds_to_ts
+from ogrenmen_common.adapters.notify import LogNotifier, format_notice
 from ogrenmen_common.adapters.openalex import OpenAlexScholar, abstract_from_index, strip_doi
 from ogrenmen_common.adapters.openrouter import OpenRouterLLM
 from ogrenmen_common.adapters.postgrest import MESSAGES_COLUMNS, PostgrestDb, filter_params, order_param
@@ -24,7 +25,6 @@ from ogrenmen_common.adapters.router import ProviderRouter
 from ogrenmen_common.adapters.semanticscholar import SemanticScholar
 from ogrenmen_common.adapters.storage import SupabaseStorage
 from ogrenmen_common.adapters.structured import api_model, parse_json_text
-from ogrenmen_common.adapters.telegram_notify import TelegramNotifier
 from ogrenmen_common.adapters.unpaywall import UnpaywallResolver
 from ogrenmen_common.errors import AdapterError, DbError, DbPermissionError, RpcError, StorageError
 from ogrenmen_common.fakes import FakeLLM
@@ -315,14 +315,21 @@ def test_supabase_storage():
         SupabaseStorage("", "jwt")
 
 
-def test_telegram_notifier():
-    rec = Recorder(httpx.Response(200, json={"ok": True}))
-    TelegramNotifier("123:abc", "42", transport=rec.transport()).notify("Ekim: 12,4 $ / 24 $ (%52)!", level="warning")
-    body = json.loads(rec.requests[0].content)
-    assert rec.requests[0].url.path == "/bot123:abc/sendMessage"
-    assert body == {"chat_id": "42", "text": "Dikkat · Ekim: 12,4 $ / 24 $ (%52).", "disable_web_page_preview": True}
-    with pytest.raises(AdapterError):
-        TelegramNotifier("t", "1", transport=Recorder(httpx.Response(200, json={"ok": False})).transport()).notify("x")
+def test_log_notifier_writes_formatted_notice_to_stream():
+    import io
+
+    buf = io.StringIO()
+    LogNotifier(buf).notify("Ekim: 12,4 $ / 24 $ (%52)!", level="warning")
+    assert buf.getvalue() == "[bildirim] Dikkat · Ekim: 12,4 $ / 24 $ (%52).\n"
+
+
+def test_format_notice_rules():
+    assert format_notice("a\nb\nc\nd\ne") == "Bilgi · a\nb\nc\nd"  # en çok 4 satır
+    assert "!" not in format_notice("Merhaba!") and "\U0001F600" not in format_notice("tamam \U0001F600")
+    with pytest.raises(ValueError):
+        format_notice("x", level="kritik")
+    with pytest.raises(ValueError):
+        format_notice("   ")
 
 
 @pytest.mark.live

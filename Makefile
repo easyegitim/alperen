@@ -1,27 +1,30 @@
-# Öğrenmen kök Makefile (M13L) — hesapsız yerel denetimler ve geliştirme kısayolları.
-# Modüller bağımsız kalır (workspaces yok); her hedef ilgili betiği depo kökünün mutlak yoluyla çağırır.
+# Öğrenmen 2.0 kök Makefile — hesapsız yerel denetimler ve geliştirme kısayolları.
+# Kod dizinleri bağımsızdır (bun çalışma alanı: apps/*, packages/*; Python boru hatları: pipelines/*; supabase/).
+# Her hedef ilgili betiği depo kökünün mutlak yoluyla çağırır; denetimlerin tek kapısı scripts/check-all.sh'tir.
 SHELL := /bin/bash
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PYTHON ?= python3
 FILL_OUT ?= /tmp/ogrenmen-fill-dry
 
-.PHONY: help check check-quick db-test db-migrate rpc-parity fixtures-valid drift fill-dry ders dev dev-worker dev-panel
+.PHONY: help check check-quick check-live db-test db-migrate rpc-parity fixtures-valid drift fill-dry ders dev-web dev-worker
 
 help:
 	@echo "Öğrenmen hedefleri:"
-	@echo "  make check         tüm modül kabul komutları (scripts/check-all.sh)"
-	@echo "  make check-quick   aynısı, ağır build adımları olmadan (wrangler build, panel üretim derlemesi)"
-	@echo "  make db-test       canlı Postgres testleri (OGRENMEN_DATABASE_URL gerekir; yoksa SKIP)"
-	@echo "  make db-migrate    barındırılan projeye ilk kurulum: migration'lar + seed 01-04 + müfredat + cevap anahtarları"
+	@echo "  make check         tüm denetimler: kök betikleri + her modülün check.sh'i (OGRENMEN_LIVE kabuktaki değerde)"
+	@echo "  make check-quick   aynısı, canlı servis ve ağır derleme olmadan (CI quick işi)"
+	@echo "  make check-live    aynısı, OGRENMEN_LIVE=1 ile (canlı Postgres dahil; OGRENMEN_DATABASE_URL ya da yerel varsayılan)"
+	@echo "  make db-test       yalnız veritabanına bağlı modüller canlı kipte (supabase, tablet, ders, kalem; CI live-db işi)"
+	@echo "  make db-migrate    barındırılan projeye ilk kurulum: migration'lar + seed + müfredat + cevap anahtarları"
 	@echo "                     (DB_URL gerekir; yalnız yeni bir migration: MIGRATION=supabase/migrations/00NN_ad.sql)"
-	@echo "  make rpc-parity    RPC adı + parametre paritesi (Worker, panel, pipelines ↔ migration'lar)"
+	@echo "  make rpc-parity    RPC adı + parametre paritesi (pipelines ↔ migration'lar)"
 	@echo "  make fixtures-valid  fixtures/llm sözleşmeleri + dev-seed denetimi"
 	@echo "  make drift         BKT ve PII SQL kopyalarının migration'larla birebirliği"
 	@echo "  make fill-dry      tablet template --fill dry-run (çıktı: FILL_OUT=$(FILL_OUT))"
-	@echo "  make ders          ders kaydı → analiz zinciri (register → analyze --lesson); kurucu makinesinde:"
+	@echo "  make ders          ders kaydı -> analiz zinciri (register -> analyze --lesson); kurucu makinesinde:"
 	@echo "                     make ders STUDENT=s_… STAFF=<staff uuid> HELD_AT=2026-10-20T18:00 VIDEO=<yol> [DURATION=90]"
 	@echo "                     (OGRENMEN_VIDEO_DIR gerekir; video o dizinin içinde, adı yalnız tarih + ders no)"
-	@echo "  make dev           yerel sahte bot + panel nasıl açılır"
+	@echo "  make dev-web       apps/web geliştirme sunucusu (bun run --cwd apps/web dev)"
+	@echo "  make dev-worker    apps/worker geliştirme süreci (bun run --cwd apps/worker dev)"
 
 check:
 	bash "$(ROOT)/scripts/check-all.sh"
@@ -29,8 +32,12 @@ check:
 check-quick:
 	bash "$(ROOT)/scripts/check-all.sh" --quick
 
+check-live:
+	bash "$(ROOT)/scripts/check-all.sh" --live
+
+# Canlı Postgres gerektiren modüller; atlanan canlı test FAIL sayılır (scripts/lib.sh ogr_live_pytest).
 db-test:
-	bash "$(ROOT)/scripts/check-all.sh" --live-only
+	bash "$(ROOT)/scripts/check-all.sh" --live --only supabase,pipelines/tablet,pipelines/ders,pipelines/kalem
 
 # docs/runbook/kurucu.md §1.2 ve supabase/README.md "kök make db-migrate". DB_URL kurucunun kabuğundan gelir
 # (parola komut satırına yazılmaz; kurucu.md "Kabuk ortamı"). İlk kurulumda tüm migration'lar sırayla, her biri tek
@@ -92,22 +99,8 @@ ders:
 	$(PYTHON) -m ogrenmen_ders analyze --lesson "$$lesson" --video "$(VIDEO)" \
 	  $(if $(TRANSCRIBER),--transcriber "$(TRANSCRIBER)") $(DERS_ARGS)
 
-dev:
-	@echo "Yerel geliştirme (hesap ve anahtar gerekmez; iki ayrı terminal):"
-	@echo ""
-	@echo "  1) Sahte Telegram + Worker:  make dev-worker"
-	@echo "     (bun run --cwd $(ROOT)/apps/worker dev:fake — Worker :8787, sahte Bot API :8788)"
-	@echo "     Mesaj gönder: curl -X POST localhost:8788/sendUpdate -H 'content-type: application/json' \\"
-	@echo "                     -d @$(ROOT)/fixtures/telegram/private_text.json"
-	@echo "     Botun cevabı:  curl localhost:8788/outbox"
-	@echo ""
-	@echo "  2) Eğitmen paneli (mock veri):  make dev-panel"
-	@echo "     (bun run --cwd $(ROOT)/apps/panel dev:mock — http://localhost:3000 ; rol: ?role=coordinator|instructor|observer)"
-	@echo ""
-	@echo "  İlk kez: bun install --cwd $(ROOT)/apps/worker && bun install --cwd $(ROOT)/apps/panel"
+dev-web:
+	bun run --cwd "$(ROOT)/apps/web" dev
 
 dev-worker:
-	bun run --cwd "$(ROOT)/apps/worker" dev:fake
-
-dev-panel:
-	bun run --cwd "$(ROOT)/apps/panel" dev:mock
+	bun run --cwd "$(ROOT)/apps/worker" dev

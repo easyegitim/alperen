@@ -22,20 +22,20 @@
 
 ## Yapay zekânın sınırları
 
-- Yapay zekâ not, puan, devamsızlık yazmaz ve bunlar hakkında konuşmaz; böyle bir soru `Notice` `handoff` ile eğitmene gider ve kime iletildiği yazılır.
-- Her yapay zekâ cevabı kimliğini taşır (`TutorMessage` "AI öğretmen"). Yapay zekâ ile üretilen ders, soru ve şekil `ai` rozeti ya da `FigureFrame` denetim durumu taşır; "Öğrenmen sana göre hazırladı" notu gizlenmez.
+- Her yapay zekâ cevabı kimliğini taşır (`TutorMessage` "AI öğretmen"). Yapay zekâ ile üretilen ders, not, soru ve şekil `ai` rozeti ya da `FigureFrame` denetim durumu taşır; "Öğrenmen sana göre hazırladı" notu gizlenmez.
 - Denetimden geçmemiş şekil ve soru öğrenciye gösterilmez; onay kuyruğunda `warning` "Onay bekliyor" ile bekler.
-- Bot emin değilse bunu söyler: "Bundan emin değilim; hocana soralım." Emin görünmek için cümle kurmaz.
+- Bot emin değilse bunu söyler: "Bundan emin değilim; hocana soralım." Emin görünmek için cümle kurmaz. Konu eğitmenin kararıysa (not, devamsızlık, puan) `Notice` `handoff` ile eğitmene gider ve kime iletildiği yazılır.
+- Yanıt modu öğrencinindir: varsayılan İpucu, öğrenci "Açıkla" ya da "Çözümü göster"e geçer; sistem modu kendiliğinden açmaz.
+- Yapay zekâ iddiaları geri alınabilir ve düzeltilebilir: hafıza dosyaları görünür ("Düzeltme iste"), öğrenci teşhisi düzeltebilir.
 
-## Kişisel veri ve onay
+## Kişisel veri
 
-- Kayıt bildirimi: gruba katılan herkes `Notice` `legal` ile bilgilendirilir — "Bu gruptaki mesajlar Öğrenmen tarafından kaydedilir ve 90 gün sonra silinir." Yazılan süre gerçek saklama süresiyle aynıdır; süre değişirse metin değişir.
-- 18 yaş altı için veli onayı alınmadan sohbet başlamaz. Onay ekranı `legal` tonunda, tek sayfa; başlıklar `title-3`, metin `body`; kabul düğmesi `primary` "Onaylıyorum", vazgeçme `quiet` "Şimdi değil". Önceden işaretli kutu yok.
-- Arayüz öğrencinin adını gösterebilir; yapay zekâya giden bağlamda ad, okul ve sınıf yer almaz. Bu, "Verilerin nasıl kullanılıyor?" bağlantısı altında tek paragrafla, çocuğun anlayacağı dille anlatılır.
-- Ham ders videosu silinince öğrenciye ve veliye söylenir; transkriptin kaldığı da.
+- Arayüz öğrencinin adını gösterebilir; yapay zekâya giden bağlamda ad, okul ve sınıf yer almaz (sade ad hash'leme). Bu, "Verilerin nasıl kullanılıyor?" bağlantısı altında tek paragrafla, çocuğun anlayacağı dille anlatılır.
+- Hukuk ve onay metinleri şimdilik üründe yoktur. Eklendiklerinde `Notice` `legal` tonuyla gösterilir; yazılan saklama süresi gerçek süreyle aynıdır, süre değişirse metin değişir; önceden işaretli onay kutusu olmaz.
+- Veli yalnızca çocuğunun raporlarını, özetlerini ve bildirimlerini görür; ham koç sohbetini, cevap anahtarını ve ham yüklemeleri görmez.
+- Ham ders videosu silinince eğitmene söylenir; transkriptin kaldığı da.
 
-## Ses
+## Kamera ve yükleme
 
-- Mikrofon yalnızca öğrenci düğmeye basılı tutarken açıktır; otomatik açılma, sürekli dinleme yok.
-- Ses düğmesi `Button` `secondary`; basılıyken `primary` dolgu ve "Dinliyor" etiketi, bırakınca "Gönderildi". Dinleme süresi göstergesi `ink-muted` küçük metin.
-- Sesli yanıt varsayılan kapalıdır; öğrenci açar. Sesli yanıt verilen her mesajın metni de ekranda durur.
+- Kamera yalnızca öğrenci "Fotoğraf çek" düğmesine bastığında açılır; otomatik açılma yok. Her sayfa gönderilmeden önce önizlenir; öğrenci döndürebilir ve kaldırabilir.
+- Yüklenen fotoğraf soruyu ve çözümü okumak içindir; "Çözümüm de var" işaretlenmezse sayfalar yalnızca soru sayılır.

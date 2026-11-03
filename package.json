@@ -1,23 +1,23 @@
 {
   "name": "ogrenmen",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Öğrenmen monorepo kökü — yalnız betik kısayolları; modüller kendi package.json/pyproject.toml'larıyla bağımsız kurulur (workspaces yok).",
+  "description": "Öğrenmen 2.0 monorepo kökü: bun workspace (apps/*, packages/*) ve betik kısayolları. Python boru hatları (pipelines/*) ve Supabase (supabase/) kendi araçlarıyla çalışır.",
   "type": "module",
+  "packageManager": "bun@1.4.2",
   "engines": {
     "node": ">=22"
   },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "check": "bash scripts/check-all.sh",
     "check:quick": "bash scripts/check-all.sh --quick",
-    "db-test": "bash scripts/check-all.sh --live-only",
-    "db-migrate": "make db-migrate",
-    "rpc-parity": "python3 scripts/check-rpc-parity.py",
-    "fixtures-valid": "python3 scripts/check-fixtures.py",
-    "drift": "python3 scripts/check-drift.py",
-    "secret-scan": "bash scripts/secret-scan.sh",
-    "fill-dry": "make fill-dry",
-    "dev:worker": "bun run --cwd apps/worker dev:fake",
-    "dev:panel": "bun run --cwd apps/panel dev:mock"
+    "check:live": "bash scripts/check-all.sh --live",
+    "dev:web": "bun run --cwd apps/web dev",
+    "dev:worker": "bun run --cwd apps/worker dev",
+    "secret-scan": "bash scripts/secret-scan.sh"
   }
 }

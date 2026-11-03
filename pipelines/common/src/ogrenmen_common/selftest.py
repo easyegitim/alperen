@@ -89,13 +89,13 @@ def real_classes() -> dict[str, list[type]]:
     from .adapters.gemini import GeminiEmbedding, GeminiLLM
     from .adapters.groq import GroqLLM
     from .adapters.media import LLMOCR, LLMTranscriber, LLMVision
+    from .adapters.notify import LogNotifier
     from .adapters.openalex import OpenAlexScholar
     from .adapters.openrouter import OpenRouterLLM
     from .adapters.postgrest import PostgrestDb
     from .adapters.router import ProviderRouter
     from .adapters.semanticscholar import SemanticScholar
     from .adapters.storage import SupabaseStorage
-    from .adapters.telegram_notify import TelegramNotifier
     from .adapters.unpaywall import UnpaywallResolver
 
     return {
@@ -109,7 +109,7 @@ def real_classes() -> dict[str, list[type]]:
         "OAResolver": [UnpaywallResolver],
         "DB": [PostgrestDb],
         "Storage": [SupabaseStorage],
-        "Notifier": [TelegramNotifier],
+        "Notifier": [LogNotifier],
     }
 
 

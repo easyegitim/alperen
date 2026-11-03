@@ -22,32 +22,6 @@ create function app.helper(p_days int) returns int language sql as $$ select p_d
 create view public.my_view as select 1 as one;
 """
 
-WORKER_TS = """
-// Yorumdaki çağrı sayılmaz: this.rpc('yok_boyle', { p_q: 1 })
-const s = "this.rpc('dize_icinde', {})";
-const re = /it's/g;
-export class Db {
-  private rpc<T>(name: string, args: Record<string, unknown> = {}): Promise<T> { return fetch(name, args) as T; }
-  async a() { return this.rpc<{ id: string; n: number }[]>('foo', { p_a: 1 }); }
-  async b() {
-    return this.rpc('foo', {
-      p_a: 2,          // satır sonu yorumu
-      'p_b': `x${1}`,
-    });
-  }
-  async c() { const p_a = 3; return this.rpc('foo', { p_a, p_b: null }); }
-  async d() { return this.rpc('bar'); }
-  async e(payload: unknown) { return this.rpc('baz', { p: payload }); }
-  async f() { return this.rpc('outs', { p_x: 1 }); }
-}
-"""
-
-PANEL_TS = """
-export const live = {
-  async x(db: Db) { return db.rpc<number>('foo', { p_a: 1 }, { anon: true }); },
-};
-"""
-
 PY_CALLER = '''
 RPC_NAME = "tpl"
 
@@ -80,16 +54,9 @@ def bar(db):
 '''
 
 
-def make_world(root: Path, *, worker: str = WORKER_TS, panel: str = PANEL_TS, py: str = PY_CALLER,
-               jsonl: str = JSONL_RPC, sql: str = SQL, worker_names=None, panel_names=None, common_names=None,
+def make_world(root: Path, *, py: str = PY_CALLER, jsonl: str = JSONL_RPC, sql: str = SQL, common_names=None,
                blueprint: str | None = None) -> Path:
     write(root / "supabase/migrations/0001_all.sql", sql)
-    write(root / "apps/worker/src/data/postgrest.ts", worker)
-    write(root / "apps/worker/src/data/fake.ts", "class F { rpc(n: string) {} x() { this.rpc('foo'); } }\n")
-    write(root / "apps/worker/test/rpc-names.json",
-          json.dumps({"rpc": worker_names if worker_names is not None else ["bar", "baz", "foo", "outs"]}))
-    write(root / "apps/panel/lib/data/live.ts", panel)
-    write(root / "apps/panel/test/rpc-names.json", json.dumps(panel_names if panel_names is not None else ["foo"]))
     write(root / "pipelines/common/src/ogrenmen_common/fakes/rpc-names.json",
           json.dumps(common_names if common_names is not None else ["bar", "foo", "tpl"]))
     write(root / "pipelines/common/src/ogrenmen_common/fakes/jsonl_rpc.py", jsonl)
@@ -111,63 +78,42 @@ def test_clean_world_passes(parity, tmp_path):
     assert fails == [], fails
     assert warns == []
     calls = [r for r in rows if r.source.startswith("çağrı:")]
-    # 6 Worker (yorum, dize ve fake.ts sayılmaz) + 1 panel + 4 pipelines çağrısı
-    assert sorted(r.source for r in calls).count("çağrı:worker") == 6
-    assert sum(r.source == "çağrı:panel" for r in calls) == 1
     assert sum(r.source == "çağrı:pipelines" for r in calls) == 4
-    assert not any(r.rpc in ("yok_boyle", "dize_icinde") for r in rows)
+    assert not any(r.source in ("çağrı:worker", "çağrı:panel") for r in rows)
 
 
 def test_unknown_key_fails(parity, tmp_path):
-    worker = WORKER_TS.replace("{ p_a: 1 }", "{ p_a: 1, p_zzz: 2 }", 1)
-    _, fails, _ = run_check(parity, make_world(tmp_path, worker=worker))
+    py = PY_CALLER.replace('db.rpc("foo", {"p_a": 1})', 'db.rpc("foo", {"p_a": 1, "p_zzz": 2})')
+    _, fails, _ = run_check(parity, make_world(tmp_path, py=py))
     assert len(fails) == 1
     assert fails[0].rpc == "foo" and "bilinmeyen anahtar: p_zzz" in fails[0].detail
 
 
 def test_missing_required_fails_but_default_may_be_omitted(parity, tmp_path):
-    panel = PANEL_TS.replace("{ p_a: 1 }", "{ p_b: 'x' }")
-    _, fails, _ = run_check(parity, make_world(tmp_path, panel=panel))
-    assert [f.source for f in fails] == ["çağrı:panel"]
+    py = PY_CALLER.replace('db.rpc("foo", {"p_a": 1})', 'db.rpc("foo", {"p_b": "x"})')
+    _, fails, _ = run_check(parity, make_world(tmp_path, py=py))
+    assert [f.source for f in fails] == ["çağrı:pipelines"]
     assert "eksik zorunlu parametre: p_a" in fails[0].detail
 
 
 def test_out_params_are_not_inputs(parity, tmp_path):
-    worker = WORKER_TS.replace("{ p_x: 1 }", "{ p_x: 1, total: 2 }")
-    _, fails, _ = run_check(parity, make_world(tmp_path, worker=worker))
+    py = PY_CALLER + '    db.rpc("outs", {"p_x": 1, "total": 2})\n'
+    _, fails, _ = run_check(parity, make_world(tmp_path, py=py, common_names=["bar", "foo", "tpl", "outs"],
+                                               jsonl=JSONL_RPC + "\n@rpc\ndef outs(db, p_x):\n    return 1\n"))
     assert len(fails) == 1 and "bilinmeyen anahtar: total" in fails[0].detail
 
 
 def test_name_list_entry_without_function_fails(parity, tmp_path):
-    _, fails, warns = run_check(parity, make_world(tmp_path, panel_names=["foo", "olmayan_rpc"]))
-    assert [(f.source, f.rpc) for f in fails] == [("ad:panel", "olmayan_rpc")]
-    assert [(w.source, w.rpc) for w in warns] == [("çağrı:panel", "olmayan_rpc")]  # listede ama çağrılmıyor
-
-
-def test_called_name_missing_from_frozen_list_fails(parity, tmp_path):
-    _, fails, _ = run_check(parity, make_world(tmp_path, worker_names=["bar", "baz", "foo"]))
-    assert [(f.source, f.rpc) for f in fails] == [("çağrı:worker", "outs")]
-    assert "rpc-names.json listesinde yok" in fails[0].detail
+    jsonl = JSONL_RPC + "\n@rpc\ndef olmayan_rpc(db):\n    return 1\n"
+    _, fails, _ = run_check(parity, make_world(tmp_path, common_names=["bar", "foo", "tpl", "olmayan_rpc"],
+                                               jsonl=jsonl))
+    assert ("ad:pipelines", "olmayan_rpc") in {(f.source, f.rpc) for f in fails}
 
 
 def test_call_to_function_absent_from_sql_fails(parity, tmp_path):
-    worker = WORKER_TS.replace("this.rpc('bar')", "this.rpc('nope')")
-    _, fails, _ = run_check(parity, make_world(tmp_path, worker=worker, worker_names=["bar", "baz", "foo", "outs",
-                                                                                       "nope"]))
-    assert {(f.source, f.rpc) for f in fails} == {("ad:worker", "nope"), ("çağrı:worker", "nope")}
-
-
-@pytest.mark.parametrize("body", ["{ ...extra }", "args", "{ [k]: 1 }"])
-def test_unresolvable_ts_body_fails(parity, tmp_path, body):
-    worker = WORKER_TS.replace("this.rpc('bar')", f"this.rpc('bar', {body})")
-    _, fails, _ = run_check(parity, make_world(tmp_path, worker=worker))
-    assert len(fails) == 1 and fails[0].rpc == "bar"
-
-
-def test_dynamic_ts_name_fails(parity, tmp_path):
-    worker = WORKER_TS.replace("this.rpc('bar')", "this.rpc(name)")
-    _, fails, _ = run_check(parity, make_world(tmp_path, worker=worker))
-    assert len(fails) == 1 and fails[0].rpc == "?" and "sabit dize değil" in fails[0].detail
+    py = PY_CALLER.replace('db.rpc("bar")', 'db.rpc("nope")')
+    _, fails, _ = run_check(parity, make_world(tmp_path, py=py))
+    assert [(f.source, f.rpc) for f in fails] == [("çağrı:pipelines", "nope")]
 
 
 def test_python_unknown_key_and_unresolved_builder(parity, tmp_path):
@@ -293,8 +239,8 @@ def test_real_repository_passes():
 
 
 def test_cli_exit_code_and_json(parity, tmp_path, capsys):
-    worker = WORKER_TS.replace("{ p_a: 1 }", "{ p_q: 1 }", 1)
-    make_world(tmp_path, worker=worker)
+    py = PY_CALLER.replace('db.rpc("foo", {"p_a": 1})', 'db.rpc("foo", {"p_q": 1})')
+    make_world(tmp_path, py=py)
     rc = parity.main(["--root", str(tmp_path), "--json", "--only-problems"])
     out = json.loads(capsys.readouterr().out)
     assert rc == 1
@@ -310,19 +256,55 @@ def staff_keys(db):
 '''
 
 
-def test_staff_marked_pipeline_call_checked_against_panel_list(parity, tmp_path):
-    # İşaretli eğitmen çağrısı batch_worker listesinde aranmaz; panel listesinde varsa geçer.
-    rows, fails, _ = run_check(parity, make_world(tmp_path, py=PY_CALLER + STAFF_CALL, panel_names=["foo", "baz"]))
+def test_staff_marked_pipeline_call_is_checked_against_sql_only(parity, tmp_path):
+    # İşaretli eğitmen çağrısı batch_worker eşlenik listesinde aranmaz; SQL imzasına uyması yeter.
+    rows, fails, _ = run_check(parity, make_world(tmp_path, py=PY_CALLER + STAFF_CALL))
     assert not [r for r in fails if r.rpc == "baz"], fails
     assert any(r.rpc == "baz" and "eğitmen oturumu" in r.detail for r in rows)
 
 
-def test_staff_marked_call_missing_from_panel_list_fails(parity, tmp_path):
-    _, fails, _ = run_check(parity, make_world(tmp_path, py=PY_CALLER + STAFF_CALL))
-    assert any(r.rpc == "baz" and "panel" in r.detail for r in fails), fails
+def test_staff_marked_call_with_wrong_key_still_fails(parity, tmp_path):
+    py = PY_CALLER + STAFF_CALL.replace('{"p": 1}', '{"q": 1}')
+    _, fails, _ = run_check(parity, make_world(tmp_path, py=py))
+    assert any(r.rpc == "baz" and "bilinmeyen anahtar: q" in r.detail for r in fails), fails
 
 
 def test_unmarked_staff_only_call_still_fails(parity, tmp_path):
     py = PY_CALLER + STAFF_CALL.replace("# rpc-parity: staff (eğitmen JWT'si)", "# yorum")
-    _, fails, _ = run_check(parity, make_world(tmp_path, py=py, panel_names=["foo", "baz"]))
+    _, fails, _ = run_check(parity, make_world(tmp_path, py=py))
     assert any(r.rpc == "baz" and "rpc-names.json listesinde yok" in r.detail for r in fails), fails
+
+
+# --- TypeScript çağrı ayrıştırıcısı (henüz bir pakete bağlı değil; apps/web gelince kullanılacak) ------------
+
+TS_SAMPLE = """
+// Yorumdaki çağrı sayılmaz: this.rpc('yok_boyle', { p_q: 1 })
+const s = "this.rpc('dize_icinde', {})";
+const re = /it's/g;
+export class Db {
+  async a() { return this.rpc<{ id: string }[]>('foo', { p_a: 1 }); }
+  async b() {
+    return this.rpc('foo', {
+      p_a: 2,          // satır sonu yorumu
+      'p_b': `x${1}`,
+    });
+  }
+  async c() { const p_a = 3; return this.rpc('foo', { p_a, p_b: null }); }
+  async d() { return this.rpc('bar'); }
+  async e(name: string) { return this.rpc(name); }
+  async f(extra: object) { return this.rpc('foo', { ...extra }); }
+}
+"""
+
+
+def test_ts_rpc_call_parser(parity):
+    calls = parity.ts_rpc_calls(TS_SAMPLE, Path("x.ts"))
+    by_name = [(c.rpc, sorted(c.keys) if c.keys is not None else None) for c in calls]
+    assert ("foo", ["p_a"]) in by_name
+    assert by_name.count(("foo", ["p_a", "p_b"])) == 2
+    assert ("bar", []) in by_name
+    assert not any(c.rpc in ("yok_boyle", "dize_icinde") for c in calls)
+    dynamic = [c for c in calls if c.rpc is None]
+    assert len(dynamic) == 1 and "sabit dize değil" in dynamic[0].note
+    spread = [c for c in calls if c.rpc == "foo" and c.keys is None]
+    assert len(spread) == 1

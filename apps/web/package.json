@@ -1,0 +1,49 @@
+{
+  "name": "@ogrenmen/web",
+  "version": "2.0.0",
+  "description": "Öğrenmen web uygulaması: öğrenci, veli ve eğitmen için tek Next.js uygulaması (PWA); Supabase Auth + RLS ile konuşur",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "icons": "node scripts/make-icons.mjs",
+    "build": "next build --webpack",
+    "start": "next start",
+    "typecheck": "next typegen && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.sw.json",
+    "lint": "eslint --max-warnings 0 .",
+    "test": "vitest run",
+    "build:e2e": "node e2e/build.mjs",
+    "test:e2e": "node e2e/build.mjs && playwright test"
+  },
+  "dependencies": {
+    "@ogrenmen/design-system": "workspace:*",
+    "@serwist/next": "9.5.13",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.118.0",
+    "lucide-react": "1.66.0",
+    "next": "16.4.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "serwist": "9.5.13",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@playwright/test": "1.56.1",
+    "@tailwindcss/postcss": "4.3.4",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.1.0",
+    "@testing-library/user-event": "14.5.2",
+    "@types/node": "22.10.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.4",
+    "jsdom": "25.0.1",
+    "sharp": "0.35.5",
+    "tailwindcss": "4.3.4",
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "2.1.9"
+  }
+}

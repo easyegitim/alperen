@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/notification-copy.json",
+  "title": "NotificationCopy",
+  "description": "Bildirim başlığı, gövdesi ve isteğe bağlı eylem etiketi. Ünlemsiz, emojisiz.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 60
+    },
+    "body": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 240
+    },
+    "action_label": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 30
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Düğme etiketi; eylem yoksa null"
+    }
+  },
+  "required": [
+    "title",
+    "body",
+    "action_label"
+  ],
+  "additionalProperties": false
+}

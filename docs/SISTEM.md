@@ -1,3 +1,7 @@
+> **Not (v2):** Bu belge v1'i (Telegram botu) anlatır; v2 planı `docs/PLAN-v2.md` (ayrıntı: `docs/PLAN-v2-detail.md`).
+> Telegram botu (`apps/worker`), eski panel (`apps/panel`), `pipelines/kitap` ve `pipelines/kulaklik_batch` depodan kaldırıldı;
+> bu kodlar commit `4e2b756`'da durur. Aşağıdaki içerik olduğu gibi bırakıldı.
+
 # Öğrenmen nasıl çalışıyor: kurucu rehberi
 
 > Bu dosya doğrudan koddan okunarak yazıldı (2026-11-01, son commit `1bf6830`). Kod ile `docs/BLUEPRINT.md` farklı olduğunda **kod esas alındı** ve fark not edildi.

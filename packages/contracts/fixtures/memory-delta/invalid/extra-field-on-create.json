@@ -1,0 +1,10 @@
+{
+  "ops": [
+    {
+      "op": "create",
+      "path": "/memories/profile.md",
+      "text": "# Profil\n\n- Sınıf: 12\n- Hedef: TYT",
+      "old_str": "x"
+    }
+  ]
+}

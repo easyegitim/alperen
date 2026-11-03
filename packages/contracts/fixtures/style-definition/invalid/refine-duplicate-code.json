@@ -1,0 +1,28 @@
+{
+  "styles": [
+    {
+      "cluster_id": "k1",
+      "code": "tablo-yorumlu-yuzde",
+      "name": "Tablo yorumlu yüzde",
+      "description": "Tablodaki verilerden yüzde artış ve azalış hesaplatan çok adımlı sorular.",
+      "format": "mcq",
+      "trick": "Birim ve baz değişimi saklıdır",
+      "difficulty_band": "medium",
+      "skill_ids": [
+        "tyt.mat.yuzde"
+      ]
+    },
+    {
+      "cluster_id": "k2",
+      "code": "tablo-yorumlu-yuzde",
+      "name": "Tablo yorumlu yüzde",
+      "description": "Tablodaki verilerden yüzde artış ve azalış hesaplatan çok adımlı sorular.",
+      "format": "mcq",
+      "trick": "Birim ve baz değişimi saklıdır",
+      "difficulty_band": "medium",
+      "skill_ids": [
+        "tyt.mat.yuzde"
+      ]
+    }
+  ]
+}

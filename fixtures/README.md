@@ -6,6 +6,9 @@ veritabanı geliştirme seed'i (M02) **aynı** dosyaları okur; hiçbiri buraya 
 
 ## Üretim ve denetim
 
+> **v2 notu:** Telegram güncelleme fixture'ları (`telegram/`) ve üreticisi kaldırıldı (Telegram botu v2'de yok). Kalan
+> fixture'lar v1 şemasını (Telegram sütunları dahil) taşır; v2 veritabanı göçü gelince yeniden üretilir.
+
 JSON dosyaları elle düzenlenmez; `fixtures/scripts/` altındaki üreticiler deterministik olarak yazar
 (aynı girdi → bayt düzeyinde aynı çıktı).
 
@@ -66,8 +69,6 @@ metin`: ad, telefon, e-posta, @kullanıcı, okul, şube kalmamış) ve yasaklı 
 | Yol | İçerik | Okuyan |
 | --- | --- | --- |
 | `db/dev-seed.json` | 1 **aktif** müfredat `{code:'TYT-MAT', year:2026, version:'2026.1', status:'active'}`, `settings.default_period='YKS 2027'`, 3 öğrenci, 1 eğitmen, 1 koordinatör, 1 gözlemci, 1 grup, 40 mesaj, 12 olgu, 30 `bot_responses`, 1 taslak ders analizi; ayrıca 21 kazanım, 27 yanılgı etiketi, 20 teşhis maddesi + anahtarları, 12 şablon sorusu (11 onaylı), 3 LLM sorusu, onaylı öncelik planı, araştırma çıktısı, alarmlar, harcama defteri | Worker FakeDb, panel mock, M02 `gen-dev-seed.py` |
-| `telegram/*.json` | Bot API Update örnekleri (`telegram-update` şeması) | Worker senaryoları, `dev:fake` |
-| `telegram/api/*.json` | Sahte Bot API yanıtları: `getMe.privacy_on/off`, `getChatMember.administrator/member/administrator_no_pin` | Worker sahte Telegram |
 | `llm/<amaç>/*.json` | LLM sahte yanıtları (aşağıda) | Worker `test/fakes/providers.ts`, `ogrenmen_common.fakes.FakeLLM` |
 | `tablet/` | `llm-question*.json` (question-generation zarfları), `generation_requests.json` (2 `pool_miss` + 1 `exam_variant`), `figures/{good.py, blank.py, net.py, bad.svg}` | M06 |
 | `kitap/` | OpenAlex, Semantic Scholar, arXiv (normalize JSON; 2 kayıt, biri DOI'siz), Crossref (`crossref-ok.json`: DOI → yanıt; `crossref-404.json`: `10.9999/fake`), Unpaywall (DOI → kayıt), `sample.pdf`, `requests.json` (2 `queued` + 1 `done`) | M10 |
@@ -105,8 +106,6 @@ içe alır (AST reddi, çalıştırılmaz); `bad.svg` bozuk XML'dir.
 
 ## Notlar
 
-- `telegram/oversized.json` gövdesi 64 KB'ı aşar (işlenmez); `telegram/long_text.json` 4.000 karakteri aşan
-  ama 64 KB altında kalan metindir (kırpılır).
 - Kitap fixture'larındaki Cepeda 2006, Rohrer & Taylor 2007 ve Dunlosky 2013 kayıtları gerçek yayınların üst
   verisidir; `10.9999/fake`, `10.5555/ogrenmen.mismatch` ve arXiv kayıtları (ay alanı 13) bilerek sentetiktir.
 - Sınav PDF'i ve OCR metinleri özgündür; gerçek bir sınavdan kopyalanmamıştır.

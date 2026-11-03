@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# supabase/scripts/backup-public.sh — şifreli mantıksal yedek (BLUEPRINT §8.3, §12 #54). Kurucunun makinesinde,
-# service_role/postgres bağlantısıyla (OGRENMEN_DATABASE_URL) çalışır; GitHub'da service_role YOKTUR.
+# supabase/scripts/backup-public.sh — şifreli mantıksal yedek (v2). Kurucunun makinesinde, postgres bağlantısıyla
+# (OGRENMEN_DATABASE_URL) çalışır; GitHub'da veritabanı parolası ve service_role anahtarı YOKTUR.
 #
-#   varsayılan  public + audit şemaları, public.messages HARİÇ (ham sohbet yedeğe girmez), secure HARİÇ
-#   --secure    yalnız secure şeması (kişisel veri ve cevap anahtarları; elle, kurucu makinesinde)
+#   varsayılan  public + audit şemaları, secure HARİÇ
+#   --secure    yalnız secure şeması (cevap anahtarları; elle, kurucu makinesinde)
 #
 # Çıktı age ile şifrelenir: alıcı anahtarı BACKUP_AGE_PUBKEY (age1…) ya da --recipient. Şifresiz yedek yazılmaz.
 # Kullanım: backup-public.sh [--secure] [--out dosya] [--recipient age1…]
@@ -38,7 +38,7 @@ OUT="${OUT:-ogrenmen-$MODE-$STAMP.sql.age}"
 if [ "$MODE" = secure ]; then
   ARGS=(--schema=secure)
 else
-  ARGS=(--schema=public --schema=audit --exclude-table=public.messages --exclude-table-data=public.tg_updates)
+  ARGS=(--schema=public --schema=audit)
 fi
 
 umask 077

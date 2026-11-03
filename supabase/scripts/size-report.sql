@@ -1,14 +1,8 @@
--- supabase/scripts/size-report.sql — depolama bütçesi raporu (BLUEPRINT §3.12; Supabase ücretsiz plan 500 MB Postgres).
+-- supabase/scripts/size-report.sql — depolama raporu (v2). Yalnız okur; tablo ve sütun adları dışında veri göstermez.
 -- Kullanım: psql "$OGRENMEN_DATABASE_URL" -f supabase/scripts/size-report.sql
--- Eşikler: 350 MB uyarı (compute_table_sizes → instructor_alerts ops), 450 MB storage_pressure (mesaj saklama 60 gün,
--- prompt 14 gün, olgu tavanı 200). Bu rapor yalnız okur; tablo ve sütun adları dışında veri göstermez.
 
 \echo '== Toplam (public + secure + audit)'
-select pg_size_pretty(sum(pg_total_relation_size(c.oid))) as toplam,
-       round(100.0 * sum(pg_total_relation_size(c.oid)) / (500 * 1024 * 1024), 1) as butce_yuzde,
-       case when sum(pg_total_relation_size(c.oid)) > 450 * 1024 * 1024 then 'storage_pressure (> 450 MB)'
-            when sum(pg_total_relation_size(c.oid)) > 350 * 1024 * 1024 then 'uyarı (> 350 MB)'
-            else 'normal' end as durum
+select pg_size_pretty(sum(pg_total_relation_size(c.oid))) as toplam
   from pg_class as c
   join pg_namespace as n on n.oid = c.relnamespace
  where c.relkind in ('r', 'p', 'm') and n.nspname in ('public', 'secure', 'audit');
@@ -25,35 +19,35 @@ select n.nspname || '.' || c.relname as tablo,
  order by pg_total_relation_size(c.oid) desc
  limit 15;
 
-\echo '== Riskli sütunlar (§3.12): bot_responses.prompt_text ve memory_facts gömmeleri'
-select 'bot_responses.prompt_text' as kalem, count(*) filter (where br.prompt_text is not null) as dolu_satir,
-       pg_size_pretty(coalesce(sum(pg_column_size(br.prompt_text)), 0)) as boyut
-  from public.bot_responses as br
+\echo '== Büyüyen sütunlar: sohbet içeriği, yükleme metni ve gömmeler'
+select 'conversation_messages.content' as kalem, count(*) as dolu_satir,
+       pg_size_pretty(coalesce(sum(pg_column_size(cm.content)), 0)) as boyut
+  from public.conversation_messages as cm
 union all
-select 'memory_facts.embedding', count(*) filter (where mf.embedding is not null),
-       pg_size_pretty(coalesce(sum(pg_column_size(mf.embedding)), 0))
-  from public.memory_facts as mf
+select 'uploads.extracted_text', count(*) filter (where u.extracted_text is not null),
+       pg_size_pretty(coalesce(sum(pg_column_size(u.extracted_text)), 0))
+  from public.uploads as u
 union all
-select 'messages.text_raw + text_llm', count(*) filter (where m.text_raw is not null or m.text_llm is not null),
-       pg_size_pretty(coalesce(sum(pg_column_size(m.text_raw)) + sum(pg_column_size(m.text_llm)), 0))
-  from public.messages as m;
+select 'uploads.embedding', count(*) filter (where u.embedding is not null),
+       pg_size_pretty(coalesce(sum(pg_column_size(u.embedding)), 0))
+  from public.uploads as u
+union all
+select 'solution_analyses.embedding', count(*) filter (where sa.embedding is not null),
+       pg_size_pretty(coalesce(sum(pg_column_size(sa.embedding)), 0))
+  from public.solution_analyses as sa
+union all
+select 'library_chunks.embedding', count(*) filter (where lc.embedding is not null),
+       pg_size_pretty(coalesce(sum(pg_column_size(lc.embedding)), 0))
+  from public.library_chunks as lc;
 
-\echo '== Öğrenci başına aktif olgu (tavan 300; storage_pressure iken 200) — en yüksek 5'
-select count(*) as aktif_olgu
-  from public.memory_facts as mf
- where mf.status = 'active'
+\echo '== Öğrenci başına hafıza dosyası boyutu — en yüksek 5'
+select count(*) as dosya, sum(mf.bytes) as bayt
+  from public.memory_files as mf
  group by mf.student_id
- order by count(*) desc
+ order by sum(mf.bytes) desc
  limit 5;
 
-\echo '== Son 14 günün toplam boyutu (table_sizes_daily, compute_table_sizes yazar)'
-select t.day, pg_size_pretty(sum(t.total_bytes)) as toplam
-  from public.table_sizes_daily as t
- where t.day > current_date - 14
- group by t.day
- order by t.day;
-
-\echo '== Saklama bayrakları'
+\echo '== Çalışma bayrakları'
 select rf.key, rf.value
   from public.runtime_flags as rf
- where rf.key in ('storage_pressure', 'cron_owner');
+ where rf.key in ('cron_owner', 'degraded_mode', 'paid_llm_enabled');

@@ -1,0 +1,21 @@
+{
+  "ops": [
+    {
+      "op": "str_replace",
+      "path": "/memories/patterns.md",
+      "old_str": "- 2026-10-28 paydaları eşitlemeden toplama (2×)",
+      "new_str": "- 2026-11-02 paydaları eşitlemeden toplama (3×)"
+    },
+    {
+      "op": "insert",
+      "path": "/memories/patterns.md",
+      "insert_line": 4,
+      "text": "- 2026-11-02 işlem hatası: eksi işareti dağıtma"
+    },
+    {
+      "op": "create",
+      "path": "/memories/profile.md",
+      "text": "# Profil\n\n- Sınıf: 12\n- Hedef: TYT"
+    }
+  ]
+}

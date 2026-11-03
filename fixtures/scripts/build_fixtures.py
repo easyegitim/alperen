@@ -27,7 +27,6 @@ import kulaklik  # noqa: E402
 import lesson  # noqa: E402
 import panel  # noqa: E402
 import tablet  # noqa: E402
-import telegram  # noqa: E402
 from content import sk  # noqa: E402
 from fxlib import FIX, STUDENTS, role_hashes_for, scrub  # noqa: E402
 
@@ -183,11 +182,6 @@ def build() -> dict[str, Any]:
     msgs_day = kulaklik.messages_day(seed)
     by_text = {m["text_llm"]: m["id"] for m in msgs_day if m["text_llm"]}
     out: dict[str, Any] = {"db/dev-seed.json": seed}
-
-    for name, upd in telegram.updates().items():
-        out[f"telegram/{name}.json"] = upd
-    for name, resp in telegram.api_responses().items():
-        out[f"telegram/api/{name}.json"] = resp
 
     for purpose, files in llm_files(seed, by_text).items():
         for fname, obj in files:

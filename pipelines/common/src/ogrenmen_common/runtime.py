@@ -28,8 +28,8 @@ Kurallar:
 
 Ortam değişkenleri (§8.2): ``SUPABASE_URL``, ``SUPABASE_ANON_KEY``, ``SUPABASE_BATCH_JWT``,
 ``GEMINI_PAID_KEY``, ``GEMINI_FREE_KEY``, ``GROQ_KEY``, ``OPENROUTER_KEY``, ``CF_AI_TOKEN`` +
-``CF_ACCOUNT_ID``, ``ANTHROPIC_KEY``, ``UNPAYWALL_EMAIL``, ``S2_API_KEY``, ``TELEGRAM_OPS_BOT_TOKEN`` +
-``ADMIN_CHAT_ID``; ``OGRENMEN_FIXTURES``, ``OGRENMEN_OUT``, ``OGRENMEN_ADAPTERS`` (fake|real).
+``CF_ACCOUNT_ID``, ``ANTHROPIC_KEY``, ``UNPAYWALL_EMAIL``, ``S2_API_KEY``;
+``OGRENMEN_FIXTURES``, ``OGRENMEN_OUT``, ``OGRENMEN_ADAPTERS`` (fake|real).
 """
 
 from __future__ import annotations
@@ -185,13 +185,13 @@ class Runtime:
         from .adapters.crossref import CrossrefResolver
         from .adapters.gemini import GeminiBatchClient, GeminiEmbedding, GeminiLLM
         from .adapters.groq import GroqLLM
+        from .adapters.notify import LogNotifier
         from .adapters.openalex import OpenAlexScholar
         from .adapters.openrouter import OpenRouterLLM
         from .adapters.postgrest import PostgrestDb
         from .adapters.router import ProviderRouter
         from .adapters.semanticscholar import SemanticScholar
         from .adapters.storage import SupabaseStorage
-        from .adapters.telegram_notify import TelegramNotifier
         from .adapters.unpaywall import UnpaywallResolver
 
         warnings: list[str] = []
@@ -205,10 +205,7 @@ class Runtime:
         url, jwt, anon = env.get("SUPABASE_URL"), env.get("SUPABASE_BATCH_JWT"), env.get("SUPABASE_ANON_KEY")
         real_db = bool(url and jwt)
         storage_tmp: Path | None = None
-        if env.get("TELEGRAM_OPS_BOT_TOKEN") and env.get("ADMIN_CHAT_ID"):
-            notifier: Notifier = TelegramNotifier(env["TELEGRAM_OPS_BOT_TOKEN"], env["ADMIN_CHAT_ID"])
-        else:
-            notifier = FakeNotifier()
+        notifier: Notifier = LogNotifier()
 
         adapters_by_provider: dict[str, LLM] = {}
         if env.get("GEMINI_PAID_KEY"):

@@ -46,8 +46,7 @@ def test_real_without_keys_falls_back_with_warnings(capsys):
 def test_real_with_keys_builds_real_adapters():
     env = {"SUPABASE_URL": "https://p.example.org", "SUPABASE_BATCH_JWT": "j", "SUPABASE_ANON_KEY": "a",
            "GEMINI_PAID_KEY": "g1", "GEMINI_FREE_KEY": "g2", "GROQ_KEY": "q", "CF_AI_TOKEN": "c",
-           "CF_ACCOUNT_ID": "acc", "UNPAYWALL_EMAIL": "ops@example.org", "TELEGRAM_OPS_BOT_TOKEN": "1:t",
-           "ADMIN_CHAT_ID": "9"}
+           "CF_ACCOUNT_ID": "acc", "UNPAYWALL_EMAIL": "ops@example.org"}
     r = Runtime.from_env(dry_run=False, env=env, quiet=True)
     assert r.mode == "real" and r.warnings == []
     assert type(r.llm).__name__ == "ProviderRouter" and set(r.llm.adapters) == {"gemini-paid", "gemini-free", "groq",
@@ -55,7 +54,7 @@ def test_real_with_keys_builds_real_adapters():
     assert r.llm.available("gemini-2.5-flash-lite") and not r.llm.available("meta-llama/llama-3.3-70b-instruct:free")
     names = {type(x).__name__ for x in (r.db, r.storage, r.embedding, r.oa, r.doi, r.notifier)}
     assert names == {"PostgrestDb", "SupabaseStorage", "LedgeredEmbedding", "UnpaywallResolver", "CrossrefResolver",
-                     "TelegramNotifier"}
+                     "LogNotifier"}
     assert type(r.embedding.inner).__name__ == "GeminiEmbedding"
     assert (r.embedding.inner.model, r.embedding.dims) == ("gemini-embedding-001", 768)
     assert r.embedding.inner.client.headers["x-goog-api-key"] == "g1"  # ücretli anahtar (gemini-paid)

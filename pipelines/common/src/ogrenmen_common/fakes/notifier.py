@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from typing import TextIO
 
-from ..adapters.telegram_notify import format_notice
+from ..adapters.notify import format_notice
 
 
 class FakeNotifier:

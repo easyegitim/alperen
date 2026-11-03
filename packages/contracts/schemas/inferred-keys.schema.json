@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/inferred-keys.json",
+  "title": "InferredKeys",
+  "description": "Anahtarı olmayan denemede çıkarılan cevap anahtarı: soru başına şık ya da sayısal değer, özet çözüm, güven ve kodla doğrulandı mı.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "keys": {
+      "maxItems": 500,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "correct_option": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "MCQ ise doğru şık, değilse null"
+          },
+          "numeric_value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sayısal soru ise SymPy dizesi ('7/8', '2*sqrt(3)'), değilse null"
+          },
+          "canonical_expr": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "sympy.sympify edilebilir ifade ya da null"
+          },
+          "solution_summary": {
+            "type": "string",
+            "maxLength": 800
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "checked_with_code": {
+            "type": "boolean",
+            "description": "Sonuç code_execution ile doğrulandı mı"
+          }
+        },
+        "required": [
+          "question_no",
+          "correct_option",
+          "numeric_value",
+          "canonical_expr",
+          "solution_summary",
+          "confidence",
+          "checked_with_code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 600
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "keys",
+    "notes"
+  ],
+  "additionalProperties": false
+}

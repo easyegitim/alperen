@@ -1,0 +1,16 @@
+{
+  "styles": [
+    {
+      "cluster_id": "k1",
+      "code": "dogrudan-islem",
+      "name": "Tablo yorumlu yüzde",
+      "description": "Tablodaki verilerden yüzde artış ve azalış hesaplatan çok adımlı sorular.",
+      "format": "mcq",
+      "trick": null,
+      "difficulty_band": "medium",
+      "skill_ids": [
+        "tyt.mat.yuzde"
+      ]
+    }
+  ]
+}

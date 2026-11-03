@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/memory-compaction.json",
+  "title": "MemoryCompaction",
+  "description": "Sıkıştırılmış hafıza dosyaları: yol ve yeni içerik (her biri en çok 4 KB).",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "files": {
+      "minItems": 1,
+      "maxItems": 12,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^\\/memories\\/[A-Za-z0-9._-]+(\\/[A-Za-z0-9._-]+)*$"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "description": "Yeni dosya içeriği; en çok 4 KB"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "files"
+  ],
+  "additionalProperties": false
+}

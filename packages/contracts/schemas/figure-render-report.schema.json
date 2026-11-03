@@ -2,59 +2,149 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ogrenmen.easy/schemas/figure-render-report.json",
   "title": "FigureRenderReport",
-  "description": "Şekil denetim raporu (zincir vision_check): PNG + stem_values karşılaştırması {matches_stem, mismatches, notes}; isteğe bağlı olarak render adımının boyut/durum özeti. mismatch → attempts+1 ve 'kodu düzelt' ile yeniden üretim.",
-  "x-version": "1.0",
+  "description": "Şekil denetim raporu: PNG ile stem_values karşılaştırması; isteğe bağlı render özeti. mismatch durumunda kod düzeltilip yeniden üretilir.",
+  "x-version": "2.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "matches_stem",
-    "mismatches"
-  ],
   "properties": {
     "schema_version": {
+      "type": "string",
       "const": "1.0"
     },
     "figure_id": {
-      "$ref": "common.json#/$defs/uuid"
+      "type": "string",
+      "format": "uuid"
     },
     "matches_stem": {
       "type": "boolean",
       "description": "Şekil soru kökündeki değerlerle uyuşuyor mu"
     },
     "status": {
+      "type": "string",
       "enum": [
         "match",
         "mismatch"
-      ],
-      "description": "figures.vision_status karşılığı; matches_stem ile tutarlı olmalı"
+      ]
     },
     "mismatches": {
-      "type": "array",
       "maxItems": 20,
+      "type": "array",
       "items": {
-        "oneOf": [
+        "anyOf": [
           {
             "type": "string",
             "minLength": 1,
             "maxLength": 300
           },
           {
-            "$ref": "#/$defs/mismatch"
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "description": "stem_values anahtarı ya da şekil öğesi"
+              },
+              "expected": {
+                "type": [
+                  "number",
+                  "string",
+                  "null"
+                ]
+              },
+              "observed": {
+                "type": [
+                  "number",
+                  "string",
+                  "null"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "field"
+            ],
+            "additionalProperties": false
           }
         ]
       }
     },
     "notes": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "maxLength": 600
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 600
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "render": {
-      "$ref": "#/$defs/render"
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "failed",
+            "size_mismatch",
+            "blank",
+            "skipped"
+          ]
+        },
+        "tool": {
+          "type": "string",
+          "enum": [
+            "matplotlib",
+            "svg",
+            "tikz",
+            "vega-lite",
+            "schemdraw",
+            "rdkit",
+            "graphviz",
+            "latex",
+            "template"
+          ]
+        },
+        "width_px": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "height_px": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pixel_variance": {
+          "type": "number",
+          "minimum": 0
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "log": {
+          "type": "string",
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": false
     }
   },
+  "required": [
+    "matches_stem",
+    "mismatches"
+  ],
+  "additionalProperties": false,
   "allOf": [
     {
       "if": {
@@ -100,95 +190,5 @@
         }
       }
     }
-  ],
-  "$defs": {
-    "mismatch": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "field"
-      ],
-      "properties": {
-        "field": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 80,
-          "description": "stem_values anahtarı ya da şekil öğesi"
-        },
-        "expected": {
-          "type": [
-            "number",
-            "string",
-            "null"
-          ]
-        },
-        "observed": {
-          "type": [
-            "number",
-            "string",
-            "null"
-          ]
-        },
-        "note": {
-          "type": "string",
-          "maxLength": 300
-        }
-      }
-    },
-    "render": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "status"
-      ],
-      "properties": {
-        "status": {
-          "enum": [
-            "ok",
-            "failed",
-            "size_mismatch",
-            "blank",
-            "skipped"
-          ]
-        },
-        "tool": {
-          "enum": [
-            "matplotlib",
-            "svg",
-            "tikz",
-            "vega-lite",
-            "schemdraw",
-            "rdkit",
-            "graphviz",
-            "latex",
-            "template"
-          ]
-        },
-        "width_px": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "height_px": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "bytes": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "pixel_variance": {
-          "type": "number",
-          "minimum": 0
-        },
-        "duration_ms": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "log": {
-          "type": "string",
-          "maxLength": 4000
-        }
-      }
-    }
-  }
+  ]
 }

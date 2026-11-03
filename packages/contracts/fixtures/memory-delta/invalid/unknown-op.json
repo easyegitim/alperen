@@ -1,0 +1,8 @@
+{
+  "ops": [
+    {
+      "op": "delete",
+      "path": "/memories/patterns.md"
+    }
+  ]
+}

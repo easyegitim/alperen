@@ -1,0 +1,52 @@
+{
+  "name": "@ogrenmen/llm",
+  "version": "0.1.0",
+  "description": "Öğrenmen Anthropic geçidi: rotalar, önbellek blokları, parse/onarım, akış, Batch, defter (llm_calls), hafıza aracı işleyicileri, deterministik sahte istemci",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./routes": {
+      "types": "./src/routes.ts",
+      "default": "./src/routes.ts"
+    },
+    "./memory": {
+      "types": "./src/memory/pgMemory.ts",
+      "default": "./src/memory/pgMemory.ts"
+    },
+    "./fake": {
+      "types": "./src/fake.ts",
+      "default": "./src/fake.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./src/index.ts",
+  "files": [
+    "src",
+    "fixtures"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "test": "vitest run",
+    "test:live": "vitest run --config vitest.live.config.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
+    "@ogrenmen/contracts": "workspace:*",
+    "pg": "^8.23.1",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "22.10.2",
+    "@types/pg": "^8.23.1",
+    "eslint": "9.39.5",
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "2.1.9"
+  }
+}

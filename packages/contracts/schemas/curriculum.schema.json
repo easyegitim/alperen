@@ -2,25 +2,20 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ogrenmen.easy/schemas/curriculum.json",
   "title": "CurriculumBundle",
-  "description": "Müfredat sürümünün birleşik doğrulaması: curriculum.json + skills.json + prerequisites.json tek nesnede ({curriculum, skills, prerequisites}). Tekil dosyalar $defs ile doğrulanabilir (curriculum#/$defs/skill vb.).",
-  "x-version": "1.0",
+  "description": "Müfredat sürümü: curriculum.json + skills.json + prerequisites.json tek nesnede.",
+  "x-version": "2.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "curriculum",
-    "skills",
-    "prerequisites"
-  ],
   "properties": {
     "schema_version": {
+      "type": "string",
       "const": "1.0"
     },
     "curriculum": {
       "$ref": "#/$defs/curriculum"
     },
     "skills": {
-      "type": "array",
       "minItems": 1,
+      "type": "array",
       "items": {
         "$ref": "#/$defs/skill"
       }
@@ -32,31 +27,27 @@
       }
     }
   },
+  "required": [
+    "curriculum",
+    "skills",
+    "prerequisites"
+  ],
+  "additionalProperties": false,
   "$defs": {
     "curriculum": {
       "type": "object",
-      "additionalProperties": false,
-      "description": "curriculum.json (curricula satırı + dönem + teşhis istisnaları)",
-      "required": [
-        "code",
-        "authority",
-        "year",
-        "version",
-        "label",
-        "status"
-      ],
       "properties": {
         "schema_version": {
+          "type": "string",
           "const": "1.0"
         },
         "code": {
           "type": "string",
-          "pattern": "^[A-Z]{2,5}-[A-Z]{2,5}$",
-          "examples": [
-            "TYT-MAT"
-          ]
+          "pattern": "^[A-Z0-9]{2,8}(-[A-Z0-9]{2,8})*$",
+          "description": "Örnek: TYT-MAT"
         },
         "authority": {
+          "type": "string",
           "enum": [
             "MEB",
             "ÖSYM",
@@ -72,9 +63,7 @@
         "version": {
           "type": "string",
           "pattern": "^[0-9]{4}\\.[0-9]+$",
-          "examples": [
-            "2026.1"
-          ]
+          "description": "Örnek: 2026.1"
         },
         "label": {
           "type": "string",
@@ -82,18 +71,17 @@
           "maxLength": 120
         },
         "status": {
+          "type": "string",
           "enum": [
             "draft",
             "active",
             "retired"
-          ],
-          "description": "Zorunlu; export-sql.py curricula.status olarak aynen yazar"
+          ]
         },
         "period_label": {
           "type": "string",
           "minLength": 3,
-          "maxLength": 40,
-          "description": "settings.default_period ile aynı (ör. 'YKS 2027')"
+          "maxLength": 40
         },
         "sources": {
           "type": "array",
@@ -105,33 +93,36 @@
         "diagnostic_exempt": {
           "type": "array",
           "items": {
-            "$ref": "common.json#/$defs/skillId"
-          },
-          "description": "Teşhis maddesi olmayan, pratikte ölçülen yapraklar"
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+          }
         }
-      }
+      },
+      "required": [
+        "code",
+        "authority",
+        "year",
+        "version",
+        "label",
+        "status"
+      ],
+      "additionalProperties": false
     },
     "skill": {
       "type": "object",
-      "additionalProperties": false,
-      "description": "skills.json öğesi (skills satırı)",
-      "required": [
-        "id",
-        "parent_id",
-        "name",
-        "is_leaf"
-      ],
       "properties": {
         "id": {
-          "$ref": "common.json#/$defs/skillId"
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
         },
         "parent_id": {
-          "oneOf": [
+          "anyOf": [
             {
-              "type": "null"
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
             },
             {
-              "$ref": "common.json#/$defs/skillId"
+              "type": "null"
             }
           ]
         },
@@ -141,15 +132,18 @@
           "maxLength": 120
         },
         "description": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "maxLength": 600
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 600
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "is_leaf": {
-          "type": "boolean",
-          "description": "Düğüm kazanımlar (false) mastery tutmaz"
+          "type": "boolean"
         },
         "order_no": {
           "type": "integer",
@@ -175,23 +169,25 @@
           "minimum": 0.001,
           "maximum": 0.999
         }
-      }
+      },
+      "required": [
+        "id",
+        "parent_id",
+        "name",
+        "is_leaf"
+      ],
+      "additionalProperties": false
     },
     "prerequisite": {
       "type": "object",
-      "additionalProperties": false,
-      "description": "prerequisites.json öğesi (skill_prerequisites satırı)",
-      "required": [
-        "skill_id",
-        "prereq_id",
-        "strength"
-      ],
       "properties": {
         "skill_id": {
-          "$ref": "common.json#/$defs/skillId"
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
         },
         "prereq_id": {
-          "$ref": "common.json#/$defs/skillId"
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
         },
         "strength": {
           "type": "number",
@@ -199,13 +195,20 @@
           "maximum": 1
         },
         "source": {
+          "type": "string",
           "enum": [
             "curriculum",
             "instructor",
             "inferred"
           ]
         }
-      }
+      },
+      "required": [
+        "skill_id",
+        "prereq_id",
+        "strength"
+      ],
+      "additionalProperties": false
     }
   }
 }

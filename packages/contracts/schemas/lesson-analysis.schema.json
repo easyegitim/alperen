@@ -2,10 +2,543 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ogrenmen.easy/schemas/lesson-analysis.json",
   "title": "LessonAnalysis",
-  "description": "Ders videosu analizi (güçlü model, şema zorunlu). Her kazanım iddiası zaman damgalı alıntıyla gelir; adlar yerine ÖĞRENCİ/EĞİTMEN etiketi.",
-  "x-version": "1.0",
+  "description": "Ders videosu analizi: kazanımlar (alıntılı kanıtla), sorular, tereddütler, yanılgılar, taahhütler, konuşma dengesi, ders bilgisi (course_insights).",
+  "x-version": "2.0",
   "type": "object",
-  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "lesson_ref": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "student_ref": {
+      "type": "string",
+      "pattern": "^s_[a-z2-7]{12}$",
+      "description": "students.public_ref; ad ve uuid asla"
+    },
+    "duration_min": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+          },
+          "mastery_estimate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "evidence": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "speaker": {
+                  "type": "string",
+                  "enum": [
+                    "ÖĞRENCİ",
+                    "EĞİTMEN"
+                  ]
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 300,
+                  "description": "Alıntı; ad içermez"
+                },
+                "t": {
+                  "type": "string",
+                  "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+                  "description": "HH:MM:SS"
+                },
+                "t_end": {
+                  "type": "string",
+                  "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+                  "description": "HH:MM:SS"
+                }
+              },
+              "required": [
+                "speaker",
+                "quote",
+                "t"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "skill_id",
+          "mastery_estimate",
+          "confidence",
+          "evidence"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "t": {
+            "type": "string",
+            "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+            "description": "HH:MM:SS"
+          },
+          "quote": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "answered": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "t",
+          "quote"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "hesitations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "t": {
+            "type": "string",
+            "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+            "description": "HH:MM:SS"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "said_dont_understand",
+              "long_silence",
+              "wrong_answer",
+              "asked_repeat"
+            ]
+          },
+          "quote": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "t",
+          "kind"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "misconceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$",
+                "description": "Katalogdaki etiket; yoksa null ve metin serbest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "skill_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+          },
+          "text_instructor": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "text_student": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "resolved_in_lesson": {
+            "type": "boolean"
+          },
+          "evidence": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "speaker": {
+                  "type": "string",
+                  "enum": [
+                    "ÖĞRENCİ",
+                    "EĞİTMEN"
+                  ]
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 300,
+                  "description": "Alıntı; ad içermez"
+                },
+                "t": {
+                  "type": "string",
+                  "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+                  "description": "HH:MM:SS"
+                },
+                "t_end": {
+                  "type": "string",
+                  "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+                  "description": "HH:MM:SS"
+                }
+              },
+              "required": [
+                "speaker",
+                "quote",
+                "t"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "skill_id",
+          "text_instructor",
+          "text_student",
+          "evidence"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "commitments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "who": {
+            "type": "string",
+            "enum": [
+              "ÖĞRENCİ",
+              "EĞİTMEN"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "homework",
+              "promise",
+              "deadline"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "t": {
+            "type": "string",
+            "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+            "description": "HH:MM:SS"
+          }
+        },
+        "required": [
+          "who",
+          "kind",
+          "text",
+          "t"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "talk": {
+      "type": "object",
+      "properties": {
+        "student_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "student_questions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attention": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "morale": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "unknown"
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 300
+        }
+      },
+      "required": [
+        "student_ratio",
+        "student_questions",
+        "attention",
+        "morale"
+      ],
+      "additionalProperties": false
+    },
+    "previous_profile_check": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "misconception_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "still_present",
+              "improved",
+              "not_observed"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "speaker": {
+                  "type": "string",
+                  "enum": [
+                    "ÖĞRENCİ",
+                    "EĞİTMEN"
+                  ]
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 300,
+                  "description": "Alıntı; ad içermez"
+                },
+                "t": {
+                  "type": "string",
+                  "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+                  "description": "HH:MM:SS"
+                },
+                "t_end": {
+                  "type": "string",
+                  "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+                  "description": "HH:MM:SS"
+                }
+              },
+              "required": [
+                "speaker",
+                "quote",
+                "t"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "misconception_id",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "next_step": {
+      "type": "object",
+      "properties": {
+        "for_student": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "for_instructor": {
+          "type": "string",
+          "maxLength": 400
+        }
+      },
+      "required": [
+        "for_student",
+        "for_instructor"
+      ],
+      "additionalProperties": false
+    },
+    "course_insights": {
+      "default": [],
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "syllabus_topic",
+              "exam_hint",
+              "assignment",
+              "resource",
+              "other"
+            ]
+          },
+          "topic": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 400
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence": {
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "speaker": {
+                  "type": "string",
+                  "enum": [
+                    "ÖĞRENCİ",
+                    "EĞİTMEN"
+                  ]
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 300,
+                  "description": "Alıntı; ad içermez"
+                },
+                "t": {
+                  "type": "string",
+                  "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+                  "description": "HH:MM:SS"
+                },
+                "t_end": {
+                  "type": "string",
+                  "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+                  "description": "HH:MM:SS"
+                }
+              },
+              "required": [
+                "speaker",
+                "quote",
+                "t"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "topic",
+          "text",
+          "skill_id",
+          "evidence"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "model_notes": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "prompt_version": {
+          "type": "string"
+        },
+        "cost_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "tokens_in": {
+          "type": "integer"
+        },
+        "tokens_out": {
+          "type": "integer"
+        },
+        "frames": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "model",
+        "prompt_version",
+        "cost_usd",
+        "tokens_in",
+        "tokens_out"
+      ],
+      "additionalProperties": false
+    }
+  },
   "required": [
     "schema_version",
     "lesson_ref",
@@ -20,329 +553,5 @@
     "next_step",
     "model_notes"
   ],
-  "properties": {
-    "schema_version": {
-      "const": "1.0"
-    },
-    "lesson_ref": {
-      "$ref": "common.json#/$defs/uuid"
-    },
-    "student_ref": {
-      "$ref": "common.json#/$defs/studentRef"
-    },
-    "duration_min": {
-      "type": "integer",
-      "minimum": 1
-    },
-    "skills": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "skill_id",
-          "mastery_estimate",
-          "confidence",
-          "evidence"
-        ],
-        "properties": {
-          "skill_id": {
-            "$ref": "common.json#/$defs/skillId"
-          },
-          "mastery_estimate": {
-            "$ref": "common.json#/$defs/probability"
-          },
-          "confidence": {
-            "$ref": "common.json#/$defs/probability"
-          },
-          "evidence": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 5,
-            "items": {
-              "$ref": "common.json#/$defs/timedQuote"
-            },
-            "description": "Kanıtsız kazanım geçersiz"
-          }
-        }
-      }
-    },
-    "questions": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "t",
-          "quote"
-        ],
-        "properties": {
-          "t": {
-            "$ref": "common.json#/$defs/ts"
-          },
-          "quote": {
-            "type": "string",
-            "maxLength": 300
-          },
-          "skill_id": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "common.json#/$defs/skillId"
-              }
-            ]
-          },
-          "answered": {
-            "type": "boolean"
-          }
-        }
-      }
-    },
-    "hesitations": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "t",
-          "kind"
-        ],
-        "properties": {
-          "t": {
-            "$ref": "common.json#/$defs/ts"
-          },
-          "kind": {
-            "enum": [
-              "said_dont_understand",
-              "long_silence",
-              "wrong_answer",
-              "asked_repeat"
-            ]
-          },
-          "quote": {
-            "type": "string",
-            "maxLength": 300
-          },
-          "skill_id": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "common.json#/$defs/skillId"
-              }
-            ]
-          }
-        }
-      }
-    },
-    "misconceptions": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "text_instructor",
-          "text_student",
-          "skill_id",
-          "evidence"
-        ],
-        "properties": {
-          "tag": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "common.json#/$defs/tag"
-              }
-            ],
-            "description": "Katalogdaki etiket; yoksa null ve metin serbest"
-          },
-          "skill_id": {
-            "$ref": "common.json#/$defs/skillId"
-          },
-          "text_instructor": {
-            "type": "string",
-            "maxLength": 200
-          },
-          "text_student": {
-            "type": "string",
-            "maxLength": 200
-          },
-          "resolved_in_lesson": {
-            "type": "boolean"
-          },
-          "evidence": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "$ref": "common.json#/$defs/timedQuote"
-            }
-          }
-        }
-      }
-    },
-    "commitments": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "who",
-          "kind",
-          "text",
-          "t"
-        ],
-        "properties": {
-          "who": {
-            "$ref": "common.json#/$defs/speaker"
-          },
-          "kind": {
-            "enum": [
-              "homework",
-              "promise",
-              "deadline"
-            ]
-          },
-          "text": {
-            "type": "string",
-            "maxLength": 300
-          },
-          "due": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "common.json#/$defs/date"
-              }
-            ]
-          },
-          "t": {
-            "$ref": "common.json#/$defs/ts"
-          }
-        }
-      }
-    },
-    "talk": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "student_ratio",
-        "student_questions",
-        "attention",
-        "morale"
-      ],
-      "properties": {
-        "student_ratio": {
-          "$ref": "common.json#/$defs/probability"
-        },
-        "student_questions": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "attention": {
-          "enum": [
-            "low",
-            "medium",
-            "high"
-          ]
-        },
-        "morale": {
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "unknown"
-          ]
-        },
-        "notes": {
-          "type": "string",
-          "maxLength": 300
-        }
-      }
-    },
-    "previous_profile_check": {
-      "type": "array",
-      "description": "seed_profile'daki açık yanılgılar için",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "misconception_id",
-          "status"
-        ],
-        "properties": {
-          "misconception_id": {
-            "$ref": "common.json#/$defs/uuid"
-          },
-          "status": {
-            "enum": [
-              "still_present",
-              "improved",
-              "not_observed"
-            ]
-          },
-          "evidence": {
-            "type": "array",
-            "items": {
-              "$ref": "common.json#/$defs/timedQuote"
-            }
-          }
-        }
-      }
-    },
-    "next_step": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "for_student",
-        "for_instructor"
-      ],
-      "properties": {
-        "for_student": {
-          "type": "string",
-          "maxLength": 400
-        },
-        "for_instructor": {
-          "type": "string",
-          "maxLength": 400
-        }
-      }
-    },
-    "model_notes": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "model",
-        "prompt_version",
-        "cost_usd",
-        "tokens_in",
-        "tokens_out"
-      ],
-      "properties": {
-        "model": {
-          "type": "string"
-        },
-        "prompt_version": {
-          "type": "string"
-        },
-        "cost_usd": {
-          "$ref": "common.json#/$defs/usd"
-        },
-        "tokens_in": {
-          "type": "integer"
-        },
-        "tokens_out": {
-          "type": "integer"
-        },
-        "frames": {
-          "type": "integer"
-        }
-      }
-    }
-  }
+  "additionalProperties": false
 }

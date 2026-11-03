@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import copy
-
 import pytest
 from conftest import CASES, FIXTURES, read_json
 
@@ -24,17 +22,6 @@ def test_normalization():
     assert not _core.contains_forbidden("Kesir problemleri", "kesin")
     assert _core.forbidden_stems("ÇIKACAK") == ["çikacak", "çikacağ"]
     assert _core.forbidden_stems("tahmin") == ["tahmin"]
-
-
-@pytest.mark.parametrize("text", ["Tahmini sorular", "Bu konu kesin çıkacak", "GARANTİ puan", "çıkacak sorular"])
-def test_priority_plan_rejects_forbidden_words(text):
-    plan = read_json(FIXTURES / "exam-priority-plan" / "valid" / "two-years.json")
-    bad = copy.deepcopy(plan)
-    bad["rows"][0]["topic"] = text
-    issues = oc.errors("exam-priority-plan", bad)
-    hits = [i for i in issues if i.keyword == "x-forbidden-words"]
-    assert hits
-    assert isinstance(hits[0].params["word"], str)
 
 
 def test_instructor_alert_words():

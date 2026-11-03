@@ -1,0 +1,31 @@
+{
+  "booklet_type": "Z",
+  "answers": [
+    {
+      "question_no": 1,
+      "status": "marked",
+      "marked_option": "C",
+      "marks_seen": [
+        "C"
+      ],
+      "note": null
+    },
+    {
+      "question_no": 2,
+      "status": "blank",
+      "marked_option": null,
+      "marks_seen": [],
+      "note": null
+    },
+    {
+      "question_no": 3,
+      "status": "multiple",
+      "marked_option": null,
+      "marks_seen": [
+        "B",
+        "D"
+      ],
+      "note": "Çift işaret, boş sayıldı"
+    }
+  ]
+}

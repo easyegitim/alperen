@@ -2,27 +2,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ogrenmen.easy/schemas/memory-fact.json",
   "title": "MemoryFact",
-  "description": "Gece olgu çıkarımının tek olgusu (memory_facts satırı). Kaynak mesaj numarası zorunlu; ad içermez.",
-  "x-version": "1.0",
+  "description": "Tek olgu: tür, metin (isimsiz), kaynak mesaj numaraları, güven, onay gerekliliği.",
+  "x-version": "2.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "student_ref",
-    "kind",
-    "text",
-    "source_message_ids",
-    "confidence",
-    "requires_approval"
-  ],
   "properties": {
     "schema_version": {
+      "type": "string",
       "const": "1.0"
     },
     "student_ref": {
-      "$ref": "common.json#/$defs/studentRef"
+      "type": "string",
+      "pattern": "^s_[a-z2-7]{12}$",
+      "description": "students.public_ref; ad ve uuid asla"
     },
     "kind": {
+      "type": "string",
       "enum": [
         "promise",
         "deadline",
@@ -41,50 +35,67 @@
       "description": "İsim yok; 'öğrenci' veya 'eğitmen' der; üçüncü tekil"
     },
     "source_message_ids": {
-      "type": "array",
       "minItems": 1,
       "maxItems": 8,
+      "type": "array",
       "items": {
         "type": "integer"
-      },
-      "description": "messages.id — kaynak zorunlu; günün mesajları arasında olmalı (pipeline doğrular)"
+      }
     },
     "confidence": {
-      "$ref": "common.json#/$defs/probability"
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
     },
     "valid_until": {
-      "oneOf": [
+      "anyOf": [
         {
-          "type": "null"
+          "type": "string",
+          "format": "date"
         },
         {
-          "$ref": "common.json#/$defs/date"
+          "type": "null"
         }
       ]
     },
     "morale_signal": {
-      "type": [
-        "integer",
-        "null"
-      ],
-      "minimum": -2,
-      "maximum": 2
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": -2,
+          "maximum": 2
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "requires_approval": {
       "type": "boolean",
-      "description": "not/devamsızlık/puan/ödeme içeriyorsa true; bot approved olmadan kullanmaz"
+      "description": "not/devamsızlık/puan/ödeme içeriyorsa true"
     },
     "skill_id": {
-      "oneOf": [
+      "anyOf": [
         {
-          "type": "null"
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
         },
         {
-          "$ref": "common.json#/$defs/skillId"
+          "type": "null"
         }
       ]
     }
   },
+  "required": [
+    "schema_version",
+    "student_ref",
+    "kind",
+    "text",
+    "source_message_ids",
+    "confidence",
+    "requires_approval"
+  ],
+  "additionalProperties": false,
   "allOf": [
     {
       "if": {

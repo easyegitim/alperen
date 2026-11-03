@@ -5,7 +5,7 @@ Denetimler:
   1. fixtures/**/*.json parse edilir.
   2. fixtures/llm/<amaç>/*.json klasör → şema eşlemesiyle packages/contracts/schemas'a karşı doğrulanır;
      bad-schema*.json GEÇMEMELİDİR; her klasörde ≥ 1 bad-schema.json vardır; §2.3 sayı kuralları.
-  3. telegram/*.json → telegram-update; tablet/llm-question*.json → question-generation; ders/*.json,
+  3. tablet/llm-question*.json → question-generation; ders/*.json,
      kalem/ocr-*.json, tablet/generation_requests.json, kitap ve panel sözleşme nesneleri.
   4. dev-seed.json değişmezleri: tam bir aktif müfredat, settings.default_period, sayılar (3 öğrenci, 1 eğitmen,
      1 koordinatör, 1 gözlemci, 1 grup, 40 mesaj, 12 olgu, 30 bot cevabı, 1 taslak ders analizi), kanıt zinciri,
@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(ROOT / "packages" / "contracts" / "python"))
 from ogrenmen_contracts._core import find_forbidden_word  # noqa: E402
 
-from fxlib import NEWCOMER, UNCONSENTED, all_name_hashes, name_token_hashes, scrub, uuid_from_b64url  # noqa: E402
+from fxlib import NEWCOMER, UNCONSENTED, all_name_hashes, name_token_hashes, scrub  # noqa: E402
 
 LLM_SCHEMA = {
     "chat": "tutor-reply", "chat_group": "tutor-reply", "nightly_facts": "nightly-facts-output",
@@ -181,28 +181,6 @@ def check_llm() -> None:
 
 
 def check_contract_files() -> None:
-    for p in sorted((FIX / "telegram").glob("*.json")):
-        e = errs("telegram-update", json.loads(p.read_text()))
-        if e:
-            fail(f"telegram/{p.name}: {e[:2]}")
-    for name in ("private_text", "private_start", "callback_answer", "group_mention", "group_plain",
-                 "group_instructor_reply", "new_member", "new_member_service_message", "bot_added",
-                 "bot_added_not_admin", "edited_message", "voice", "oversized", "group_unconsented_mention"):
-        if not (FIX / "telegram" / f"{name}.json").exists():
-            fail(f"telegram/{name}.json yok")
-    pt = load("telegram/private_text.json")["message"]["from"]
-    if pt.get("first_name") != "Elif" or pt.get("last_name") != "Kaya":
-        fail("telegram/private_text.json: from Elif Kaya olmalı")
-    if len((FIX / "telegram/oversized.json").read_bytes()) <= 64 * 1024:
-        fail("telegram/oversized.json 64 KB'tan büyük olmalı")
-    if load("telegram/bot_added_not_admin.json")["my_chat_member"]["new_chat_member"]["status"] != "member":
-        fail("bot_added_not_admin: status='member' olmalı")
-    if load("telegram/api/getChatMember.member.json")["result"]["status"] != "member":
-        fail("telegram/api/getChatMember.member.json status='member' olmalı")
-    if "new_chat_members" not in load("telegram/new_member_service_message.json")["message"]:
-        fail("new_member_service_message: new_chat_members yok")
-    check_callback()
-
     if errs("question-generation", load("tablet/llm-question.json")):
         fail("tablet/llm-question.json geçersiz")
     if errs("question-generation", load("tablet/llm-question-bad-sympy.json")):
@@ -366,34 +344,6 @@ def check_seed() -> None:
         e = errs("instructor-alert", c) + forbidden_words("instructor-alert", c)
         if e:
             fail(f"dev-seed: alarm {a['id']}: {e[:2]}")
-
-
-def check_callback() -> None:
-    """ans:<session b64url>:<question b64url>:<key> — ≤ 64 bayt, kayıpsız; Elif'in açık teşhis oturumu ve
-    o oturumun sıradaki maddesi (M04 tam UUID'yi sessions.diagnostic_session_id ile denetler)."""
-    seed = load("db/dev-seed.json")
-    cq = load("telegram/callback_answer.json")["callback_query"]
-    datas = [cq["data"]] + [b["callback_data"] for row in cq["message"]["reply_markup"]["inline_keyboard"] for b in row]
-    sess = {x["id"]: x for x in seed["diagnostic_sessions"]}
-    tests = {t["id"]: t for t in seed["diagnostic_tests"]}
-    session_ids = {x["diagnostic_session_id"] for x in seed["sessions"] if x["diagnostic_session_id"]}
-    for d in datas:
-        parts = d.split(":")
-        if len(d.encode("utf-8")) > 64 or len(parts) != 4 or parts[0] != "ans" or parts[3] not in "ABCD":
-            fail(f"callback_answer: biçim ans:<22>:<22>:<A-D>, ≤ 64 bayt ({d!r})")
-            continue
-        try:
-            sid, qid = uuid_from_b64url(parts[1]), uuid_from_b64url(parts[2])
-        except ValueError as e:
-            fail(f"callback_answer: base64url çözülemedi ({e})")
-            continue
-        ds = sess.get(sid)
-        if ds is None or sid not in session_ids:
-            fail(f"callback_answer: oturum {sid} dev-seed sessions/diagnostic_sessions'da yok")
-            continue
-        items = tests[ds["test_id"]]["item_ids"]
-        if ds["current_index"] >= len(items) or items[ds["current_index"]] != qid:
-            fail(f"callback_answer: soru {qid} oturumun sıradaki maddesi değil")
 
 
 def check_kulaklik() -> None:

@@ -1,10 +1,9 @@
-# Öğrenmen CI (M13L) — hesapsız: hiçbir adım gizli anahtar istemez.
-#   quick:   sır taraması + actionlint + tüm modül kabul komutları,
-#            ağır build adımları olmadan (make check-quick)
-#   heavy:   M04 wrangler build ve M11 panel mock build + statik pakette
-#            anahtar/CDN taraması (check-all.sh --only M04,M11, tam kip)
-#   db-live: pgvector'lü Postgres hizmet konteyneriyle canlı db-test
-#            + tablet live (make db-test)
+# Öğrenmen 2.0 CI — hesapsız: hiçbir adım gizli anahtar istemez.
+#   quick:   sır taraması + actionlint + her modülün check.sh'i,
+#            canlı servis ve ağır derleme olmadan (make check-quick)
+#   live-db: pgvector'lü Postgres hizmet konteyneriyle veritabanına bağlı
+#            modüller canlı kipte (make db-test)
+# Araçlar: Node 22 (.nvmrc), bun 1.4, Python 3.13, ffmpeg, psql.
 # Eylemler commit SHA'sına sabitlenir (yorumda sürüm).
 name: ci
 
@@ -23,14 +22,13 @@ concurrency:
 env:
   PYTHONUNBUFFERED: "1"
   NEXT_TELEMETRY_DISABLED: "1"
-  WRANGLER_SEND_METRICS: "false"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
   quick:
-    name: kabul (make check-quick)
+    name: hızlı denetim (make check-quick)
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       # actions/checkout v4.4.0
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -59,6 +57,8 @@ jobs:
             packages/pii/py/pyproject.toml
             pipelines/common/pyproject.toml
             pipelines/tablet/pyproject.toml
+            pipelines/kalem/pyproject.toml
+            pipelines/ders/pyproject.toml
             content/tyt-matematik/pyproject.toml
 
       - name: Sistem araçları (ffmpeg, psql)
@@ -75,43 +75,22 @@ jobs:
           sympy==1.14.0 matplotlib==3.11.2 numpy==2.5.3
           httpx==0.28.1 jsonschema==4.26.0
 
+      - name: Bun bağımlılıkları (kilit dosyasına göre)
+        run: bun install --frozen-lockfile
+
       - name: actionlint
         run: actionlint .github/workflows/*.yml
 
-      - name: Kabul komutları (hızlı)
+      - name: Denetimler (hızlı)
         run: make check-quick
 
-      - name: Kabul komutları izlenen dosyaları değiştirmedi
+      - name: Denetimler izlenen dosyaları değiştirmedi
         run: git diff --exit-code
 
-  heavy:
-    name: ağır build (M04 wrangler, M11 panel + anahtar taraması)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      # actions/checkout v4.4.0
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-
-      # actions/setup-node v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version-file: .nvmrc
-
-      # oven-sh/setup-bun v2.2.0
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
-        with:
-          bun-version: 1.4.2
-
-      - name: M04 + M11 tam kip (build adımları dahil; giz yok)
-        run: bash scripts/check-all.sh --only M04,M11
-
-      - name: Build izlenen dosyaları değiştirmedi
-        run: git diff --exit-code
-
-  db-live:
+  live-db:
     name: canlı veritabanı (make db-test)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -133,6 +112,16 @@ jobs:
       # actions/checkout v4.4.0
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
+      # actions/setup-node v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+
+      # oven-sh/setup-bun v2.2.0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.4.2
+
       # actions/setup-python v5.6.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
@@ -140,25 +129,29 @@ jobs:
           cache: pip
           cache-dependency-path: |
             packages/contracts/python/pyproject.toml
+            packages/mastery-math/python/pyproject.toml
+            packages/pii/py/pyproject.toml
             pipelines/common/pyproject.toml
             pipelines/tablet/pyproject.toml
+            pipelines/kalem/pyproject.toml
+            pipelines/ders/pyproject.toml
             content/tyt-matematik/pyproject.toml
 
-      - name: psql istemcisi
+      - name: Sistem araçları (ffmpeg, psql)
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client
+          sudo apt-get install -y --no-install-recommends \
+            ffmpeg postgresql-client
 
-      - name: Yerel Python paketleri (export-sql, seed-keys, tablet live)
+      - name: Python araçları (sabit sürüm)
         run: >-
           python -m pip install
-          pytest==9.2.0 pglast==8.7
+          ruff==0.17.3 pytest==9.2.0 sqlfluff==4.4.0 pglast==8.7
           sympy==1.14.0 matplotlib==3.11.2 numpy==2.5.3
-          -e packages/contracts/python
-          -e packages/mastery-math/python
-          -e packages/pii/py
-          -e "pipelines/common[dev]"
-          -e "pipelines/tablet[dev]"
+          httpx==0.28.1 jsonschema==4.26.0
 
-      - name: Canlı testler (db-test.sh + tablet live; atlanan test FAIL)
+      - name: Bun bağımlılıkları (kilit dosyasına göre)
+        run: bun install --frozen-lockfile
+
+      - name: Canlı testler (atlanan canlı test FAIL sayılır)
         run: make db-test

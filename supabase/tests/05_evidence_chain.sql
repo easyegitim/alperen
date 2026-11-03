@@ -1,190 +1,199 @@
--- tests/05_evidence_chain.sql — kanıt zinciri şema kısıtıdır (BLUEPRINT §3.3, §3.7, §9.1): kaynaksız gözlem yok,
--- ders iddiası onaysız profile işlenmez, sohbet/çıkarım gözlemleri kanıt sayısını artırmaz, hafıza erişimi FTS'e düşer.
+-- tests/05_evidence_chain.sql — kanıt zinciri: apply_diagnosis → solution_analyses → observations
+-- (source_type='solution_analysis') → apply_observation → mastery / mastery_history / misconceptions / style_coverage;
+-- careless/time ağırlığı 0.5; deneme bağlamında ağırlık 0; okunamayan çözüm gözlem üretmez; doğrulama hataları
+-- (OGR-DIAG-00x); alt kazanım önerisi ve otopilot; decide_proposal.
 begin;
 \ir _fixture.sql
 
-create function t.vec(p_hot int, p_sign numeric default 1) returns text language sql immutable as $$
-  select '[' || string_agg(case when g = p_hot then p_sign::text else '0' end, ',' order by g) || ']' from generate_series(1, 768) as g
-$$;
-grant execute on function t.vec(int, numeric) to public;
-
--- Kaynaksız / yanlış kayda bağlı gözlem → OGR-EVID-001; müfredat uyuşmazlığı → OGR-CURR-002
 do $$
 declare
-  v_other uuid;
+  v_style uuid;
+  v_other_course uuid;
 begin
-  perform t.raises(format('insert into public.observations (enrollment_id, skill_id, kind, value, source_type, source_id, source_locator, created_by_role) '
-                          'values (%L, %L, %L, 1, %L, %L, %L, %L)', t.u('EA'), 'tyt.mat.temel.sayilar', 'practice', 'attempt', '999999', 'yok', 'grader'),
-                   'OGR-EVID-001%', 'kaynaksız insert → OGR-EVID-001');
-  perform t.raises(format('insert into public.observations (enrollment_id, skill_id, kind, source_type, source_id, source_locator, created_by_role) '
-                          'values (%L, %L, %L, %L, %L, %L, %L)', t.u('EB'), 'tyt.mat.temel.sayilar', 'chat_question', 'message', t.v('msg_a_q'), 'Sohbet', 'bot_runtime'),
-                   'OGR-EVID-001%', 'başka öğrencinin mesajına bağlı gözlem → OGR-EVID-001');
-  perform t.raises(format('insert into public.observations (enrollment_id, skill_id, kind, source_type, source_id, source_locator, created_by_role) '
-                          'values (%L, %L, %L, %L, %L, %L, %L)', t.u('EA'), 'tyt.mat.temel.sayilar', 'chat_question', 'message', 'abc', 'Sohbet', 'bot_runtime'),
-                   'OGR-EVID-001%', 'geçersiz kaynak kimliği → OGR-EVID-001');
-  insert into public.curricula (code, authority, year, version, label, status) values ('TST-X', 'OTHER', 2026, '1', 'Başka', 'draft') returning id into v_other;
-  perform t.raises(format('insert into public.observations (enrollment_id, curriculum_id, skill_id, kind, source_type, source_id, source_locator, created_by_role) '
-                          'values (%L, %L, %L, %L, %L, %L, %L, %L)', t.u('EA'), v_other, 'tyt.mat.temel.sayilar', 'chat_question', 'message', t.v('msg_a_q'), 'x', 'bot_runtime'),
-                   'OGR-CURR-002%', 'curriculum_id kayıtla uyuşmazsa OGR-CURR-002');
+  insert into public.question_styles (course_id, curriculum_id, code, name, skill_ids, status, frequency_score)
+  values (t.u('course'), t.u('cur'), 'ST-1', 'Dağılma tuzağı', array['t.mat.a'], 'active', 0.8) returning id into v_style;
+  insert into t.cfg values ('style', v_style::text);
+  insert into public.courses (code, title, curriculum_id) values ('BASKA', 'Başka ders', t.u('cur')) returning id into v_other_course;
+  insert into public.question_styles (course_id, code, name, status) values (v_other_course, 'ST-X', 'Başka tarz', 'active') returning id into v_style;
+  insert into t.cfg values ('style_other', v_style::text);
 end $$;
 
--- Sohbet gözlemleri: p ve evidence_count değişmez; yanılgı sayacı artar (3 kanıtta open)
+-- 1) öğrenci JWT'siyle yanlış teşhis (işlem hatası, yanılgı etiketli, tarzlı)
 do $$
 declare
-  v_i int;
-  v_mc record;
+  v_id uuid;
+  v_o public.observations%rowtype;
+  v_p numeric;
 begin
-  perform t.as_bot(t.u('A'));
-  for v_i in 1..5 loop
-    perform public.record_chat_observation(t.u('EA'), 'tyt.mat.temel.rasyonel-sayilar', 'chat_question', t.v('msg_a_q')::bigint, 'kesirleri nasıl toplarım', null);
-  end loop;
-  for v_i in 1..3 loop
-    perform public.record_chat_observation(t.u('EA'), 'tyt.mat.temel.rasyonel-sayilar', 'chat_misconception', t.v('msg_a_q')::bigint,
-                                           'payları ayrı topladım', 'rasyonel.pay-payda-ayri-toplama');
-  end loop;
-  perform t.raises(format('select public.record_chat_observation(%L, %L, %L, %s, %L, null)', t.u('EA'), 'tyt.mat.temel.rasyonel-sayilar', 'practice',
-                          t.v('msg_a_q'), 'x'), 'OGR-OBS-001%', 'sohbet yolu yalnız chat_* gözlemi');
+  perform t.as_user(t.u('elif'));
+  v_id := public.apply_diagnosis(jsonb_build_object(
+    'enrollment_id', t.u('EA'), 'verdict', 'wrong', 'error_cause', 'procedure', 'failing_step_no', 2,
+    'skill_ids', jsonb_build_array('t.mat.a'), 'misconception_tags', jsonb_build_array('t.a.isaret-hatasi'),
+    'style_id', t.u('style'), 'question_text', '2 − (3 − 5) = ?', 'student_work_text', '2 − 3 − 5 = −6',
+    'quote', '2 − 3 − 5', 'confidence', 0.9, 'model', 'claude-opus-5-5', 'cost_usd', 0.04,
+    'analysis', jsonb_build_object('steps', jsonb_build_array('a', 'b', 'c'))));
   perform t.as_admin();
-  perform t.ok(not exists (select 1 from public.mastery m where m.enrollment_id = t.u('EA') and m.skill_id = 'tyt.mat.temel.rasyonel-sayilar'),
-               '8 sohbet gözlemi mastery satırı açmaz (p ve evidence_count değişmez)');
-  perform t.ok((select count(*) from public.observations o where o.enrollment_id = t.u('EA') and o.kind like 'chat_%' and o.applied_at is not null
-                  and not o.counts_for_mastery and o.source_locator like 'Sohbet · %') = 8, 'sohbet gözlemleri kaynaklı ve uygulanmış (counts_for_mastery=false)');
-  select mc.* into v_mc from public.misconceptions mc where mc.enrollment_id = t.u('EA') and mc.tag = 'rasyonel.pay-payda-ayri-toplama';
-  perform t.ok(v_mc.evidence_count = 3 and v_mc.status = 'open', 'chat_misconception ×3 → yanılgı open (misconception_open_evidence=3)');
-  perform t.ok((select count(*) from public.misconception_evidence me where me.misconception_id = v_mc.id) = 3, 'yanılgı kanıt bağları');
-  -- çözüldü işareti kanıt gözlemi ister (check kısıtı)
-  perform t.raises(format('update public.misconceptions set status = %L where id = %L', 'resolved', v_mc.id), '23514', 'resolved → resolved_by + resolution_observation_id zorunlu');
-  perform t.as_staff(t.u('inst_a'));
-  perform public.resolve_misconception(v_mc.id, (select me.observation_id from public.misconception_evidence me where me.misconception_id = v_mc.id limit 1));
-  perform t.as_admin();
-  perform t.ok((select mc.status = 'resolved' and mc.resolved_by = t.u('inst_a') from public.misconceptions mc where mc.id = v_mc.id), 'resolve_misconception kanıtla');
-  perform t.as_bot(t.u('A'));
-  perform public.record_chat_observation(t.u('EA'), 'tyt.mat.temel.rasyonel-sayilar', 'chat_misconception', t.v('msg_a_q')::bigint, 'yine ayrı topladım', 'rasyonel.pay-payda-ayri-toplama');
-  perform t.as_admin();
-  perform t.ok((select mc.status from public.misconceptions mc where mc.id = v_mc.id) = 'pending_review'
-               and (select count(*) from public.misconceptions mc where mc.enrollment_id = t.u('EA') and mc.tag = 'rasyonel.pay-payda-ayri-toplama') = 1,
-               'çözülmüş yanılgıda yeni kanıt aynı satırı yeniden incelemeye açar');
+  insert into t.cfg values ('SA1', v_id::text);
+  perform t.ok((select sa.verdict = 'wrong' and sa.failing_step_no = 2 and sa.error_cause = 'procedure' and sa.skill_ids = array['t.mat.a']
+                  and sa.misconception_tags = array['t.a.isaret-hatasi'] and sa.style_id = t.u('style') and sa.cost_usd = 0.04
+                  from public.solution_analyses sa where sa.id = v_id), 'solution_analyses satırı yazıldı');
+  select o.* into v_o from public.observations o where o.source_type = 'solution_analysis' and o.source_id = v_id::text;
+  perform t.ok(v_o.kind = 'practice' and v_o.value = 0 and v_o.weight = 1 and v_o.error_cause = 'procedure'
+               and v_o.misconception_tag = 't.a.isaret-hatasi' and v_o.applied_at is not null and v_o.confidence = 0.9
+               and v_o.quote = '2 − 3 − 5' and v_o.created_by_role = 'authenticated', 'gözlem: practice, değer 0, ağırlık 1, kaynak teşhis, uygulandı');
+  select m.p into v_p from public.mastery m where m.enrollment_id = t.u('EA') and m.skill_id = 't.mat.a';
+  perform t.ok(abs(v_p - app.bkt_step(0.3, false, 0.25, 0.1, 0.1)) < 0.00001, 'ustalık BKT ile düştü (0.30 → 0.14865)');
+  perform t.ok(exists (select 1 from public.mastery_history h where h.observation_id = v_o.id and h.method = 'bkt'), 'mastery_history satırı');
+  perform t.ok((select mc.status = 'pending_review' and mc.evidence_count = 1 from public.misconceptions mc
+                 where mc.enrollment_id = t.u('EA') and mc.tag = 't.a.isaret-hatasi'), 'yanılgı sayacı açıldı');
+  perform t.ok(exists (select 1 from public.observations o where o.enrollment_id = t.u('EA') and o.skill_id = 't.mat.b' and o.kind = 'inferred'
+                        and o.source_type = 'observation' and o.source_id = v_o.id::text), 'ön koşul çıkarımı (t.mat.b) gözleme bağlı');
+  perform t.ok((select sc.seen_count = 1 and sc.solved_count = 1 and sc.correct_count = 0 from public.style_coverage sc
+                 where sc.enrollment_id = t.u('EA') and sc.style_id = t.u('style')), 'style_coverage güncellendi');
+  perform t.ok(exists (select 1 from audit.events e where e.action = 'job.enqueue_skipped' and e.diff ->> 'name' = 'diagnosis.followup'
+                        and e.diff -> 'data' ->> 'analysis_id' = v_id::text), 'diagnosis.followup işi aynı işlemde denendi (pgboss yok → audit)');
+  -- kanıt zinciri: her gözlemin kaynak satırı var
+  perform t.ok(not exists (select 1 from public.observations o
+                            where o.enrollment_id = t.u('EA') and o.source_type = 'solution_analysis'
+                              and not exists (select 1 from public.solution_analyses sa where sa.id::text = o.source_id)),
+               'her teşhis gözleminin kaynak satırı var');
 end $$;
 
--- Ön koşul çıkarımı: inferred gözlem p'yi günceller ama evidence_count artırmaz; tek seviye
+-- 2) careless ağırlığı, doğru teşhis, çok kazanım, okunamayan
 do $$
 declare
-  v_q uuid;
-begin
-  insert into public.questions (curriculum_id, skill_ids, kind, stem, options, difficulty, source, content_hash, status)
-  values (t.u('cur'), array['tyt.mat.temel.rasyonel-sayilar'], 'mcq', 'Çıkarım sorusu: 1/3 + 1/6 kaçtır?',
-          '[{"key":"A","text":"2/9","misconception_tag":"rasyonel.payda-esitlemeden-toplama"},{"key":"B","text":"1/2","misconception_tag":null},
-            {"key":"C","text":"2/18","misconception_tag":"rasyonel.pay-payda-ayri-toplama"},{"key":"D","text":"1/18","misconception_tag":null}]',
-          0.5, 'instructor', 'test-inferred-1', 'draft') returning id into v_q;
-  insert into secure.answer_keys (question_id, correct_option, solution, sympy_status, written_by) values (v_q, 'B', '1/3 = 2/6; 2/6 + 1/6 = 3/6 = 1/2.', 'verified', 'staff:test');
-  perform set_config('ogrenmen.reviewer', 'on', true);
-  update public.questions q set status = 'approved' where q.id = v_q;
-  perform set_config('ogrenmen.reviewer', 'off', true);
-  perform t.as_bot(t.u('A'));
-  perform public.grade_attempt(t.u('EA'), v_q, '{"key":"A"}', 'practice', null, 800);
-  perform t.as_admin();
-  perform t.ok((select count(*) from public.observations o where o.enrollment_id = t.u('EA') and o.kind = 'inferred'
-                  and o.skill_id = 'tyt.mat.temel.ebob-ekok' and o.source_type = 'observation') = 1, 'payda-eşitlemeden etiketi → ebob-ekok çıkarım gözlemi');
-  perform t.ok((select m.evidence_count = 0 and m.p < 0.3 from public.mastery m where m.enrollment_id = t.u('EA') and m.skill_id = 'tyt.mat.temel.ebob-ekok'),
-               'inferred: evidence_count 0, p düştü');
-  perform t.ok((select mh.method from public.mastery_history mh where mh.enrollment_id = t.u('EA') and mh.skill_id = 'tyt.mat.temel.ebob-ekok') = 'inferred',
-               'mastery_history yöntemi inferred');
-  perform t.ok(not exists (select 1 from public.observations o where o.source_type = 'observation'
-                             and o.source_id in (select x.id::text from public.observations x where x.kind = 'inferred')), 'çıkarım yeniden çıkarım üretmez');
-end $$;
-
--- Ders raporu onaysız profile işlenmez: write_lesson_analysis yalnız taslak + bekleyen iddia; onay tek yol
-do $$
-declare
-  v_lesson uuid;
-  v_an uuid;
-  v_claim uuid;
-  v_dec jsonb;
+  v_id uuid;
   v_n int;
 begin
-  perform t.as_batch();
-  v_lesson := public.register_lesson('s_aaaaaaaaaaaa', t.u('inst_a'), now() - interval '2 days', 90, 'local:test.mp4');
-  v_an := public.write_lesson_analysis(v_lesson, '{"weak":[]}', '{
-    "schema_version":"1.0","lesson_ref":"00000000-0000-0000-0000-000000000001","student_ref":"s_aaaaaaaaaaaa",
-    "skills":[{"skill_id":"tyt.mat.temel.rasyonel-sayilar","mastery_estimate":0.6,"confidence":0.8,
-               "evidence":[{"speaker":"ÖĞRENCİ","quote":"Paydaları eşitledim, 7/8 buldum.","t":"00:14:32"}]}],
-    "questions":[{"t":"00:05:00","quote":"Bu neden böyle oluyor?","skill_id":null,"answered":true}],
-    "hesitations":[{"t":"00:07:00","kind":"long_silence"}],
-    "misconceptions":[{"tag":null,"skill_id":"tyt.mat.temel.rasyonel-sayilar","text_instructor":"Payı paydaya bölmeyi karıştırıyor.",
-                       "text_student":"Pay ve payda yer değiştirmez.","evidence":[{"speaker":"ÖĞRENCİ","quote":"Önce paydayı paya böldüm.","t":"00:20:10"}]}],
-    "commitments":[{"who":"ÖĞRENCİ","kind":"homework","text":"Öğrenci 10 kesir sorusu çözecek.","due":"2026-12-01","t":"00:40:00"}],
-    "talk":{"student_ratio":0.4,"student_questions":3,"attention":"medium","morale":"low"},
-    "previous_profile_check":[],"next_step":{"for_student":"Payda eşitleme pratiği","for_instructor":"Kesir modeliyle tekrar"},
-    "model_notes":{"model":"fake","prompt_version":"lesson.v1","cost_usd":0.2,"tokens_in":1,"tokens_out":1}}', 'fake-lesson', 0.2);
+  perform t.as_user(t.u('can'));
+  v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EB'), 'verdict', 'wrong', 'error_cause', 'careless',
+            'skill_ids', jsonb_build_array('t.mat.b'), 'analysis', '{}'::jsonb));
   perform t.as_admin();
-  perform t.ok((select count(*) from public.lesson_claims lc where lc.analysis_id = v_an) = 7 and
-               (select count(*) from public.lesson_claims lc where lc.analysis_id = v_an and lc.kind = 'talk') = 1,
-               'write_lesson_analysis: 7 iddia (talk tam 1)');
-  perform t.ok(not exists (select 1 from public.observations o where o.source_type = 'lesson_claim'), 'analiz yazımı gözlem YAZMAZ');
-  perform t.ok((select count(*) from public.instructor_alerts a where a.kind = 'ops' and a.ref ->> 'lesson_id' = v_lesson::text and a.status = 'open') = 1,
-               'ops alarmı: Ders raporu onay bekliyor');
-  select lc.id into v_claim from public.lesson_claims lc where lc.analysis_id = v_an and lc.kind = 'skill_mastery';
-  perform t.raises(format('insert into public.observations (enrollment_id, skill_id, kind, value, source_type, source_id, source_locator, created_by_role) '
-                          'values (%L, %L, %L, 0.6, %L, %L, %L, %L)', t.u('EA'), 'tyt.mat.temel.rasyonel-sayilar', 'lesson', 'lesson_claim', v_claim, 'Ders', 'instructor'),
-                   'OGR-EVID-001%', 'onaysız (pending) ders iddiasına bağlı gözlem → OGR-EVID-001');
-  perform t.raises(format('update public.lesson_claims set status = %L where id = %L', 'approved', v_claim), 'OGR-LESSON-003%', 'iddia durumu yalnız approve_lesson_analysis ile');
-  perform t.as_staff(t.u('obs'));
-  perform t.raises(format('select public.approve_lesson_analysis(%L, %L)', v_an, '[]'), 'OGR-AUTH-002%', 'gözlemci ders raporu onaylayamaz');
-  perform t.as_staff(t.u('inst_a'));
-  select jsonb_agg(case lc.kind
-                     when 'misconception' then jsonb_build_object('claim_id', lc.id, 'status', 'edited',
-                                                                  'edited_value', jsonb_build_object('text', 'Pay ile paydayı karıştırıyor.', 'text_student', 'Pay üstte, payda altta kalır.'))
-                     when 'hesitation' then jsonb_build_object('claim_id', lc.id, 'status', 'rejected')
-                     else jsonb_build_object('claim_id', lc.id, 'status', 'approved') end)
-    into v_dec from public.lesson_claims lc where lc.analysis_id = v_an;
-  v_n := public.approve_lesson_analysis(v_an, v_dec);
-  perform t.raises(format('select public.approve_lesson_analysis(%L, %L)', v_an, '[]'), 'OGR-LESSON-001%', 'ikinci karar OGR-LESSON-001');
-  perform t.as_admin();
-  perform t.ok(v_n = 4, 'uygulanan iddia sayısı 4 (kazanım, yanılgı, ödev, konuşma) — ' || v_n);
-  perform t.ok((select count(*) from public.observations o join public.lesson_claims lc on lc.id::text = o.source_id
-                 where o.source_type = 'lesson_claim' and lc.analysis_id = v_an and o.kind = 'lesson') = 2, 'onaylı iddialardan lesson gözlemleri');
-  perform t.ok((select abs(mh.p_after - (mh.p_before + 0.24 * (0.6 - mh.p_before))) < 0.00001 and (mh.params ->> 'w')::numeric = 0.24
-                  from public.mastery_history mh where mh.enrollment_id = t.u('EA') and mh.skill_id = 'tyt.mat.temel.rasyonel-sayilar' and mh.method = 'blend' and (mh.params ->> 'm')::numeric = 0.6),
-               'ders karışımı p = p + 0.3·c·(m − p), w = 0.24');
-  perform t.ok((select m.evidence_count from public.mastery m where m.enrollment_id = t.u('EA') and m.skill_id = 'tyt.mat.temel.rasyonel-sayilar') = 3,
-               'ders gözlemleri kanıt sayısını artırır (pratik 1 + ders 2)');
-  perform t.ok((select count(*) from public.misconceptions mc where mc.enrollment_id = t.u('EA') and mc.tag is null and mc.status = 'open'
-                  and mc.text_instructor = 'Pay ile paydayı karıştırıyor.') = 1, 'etiketsiz yanılgı düzeltilmiş metniyle kaybolmaz');
-  perform t.ok((select count(*) from public.memory_facts f where f.student_id = t.u('A') and f.kind = 'deadline' and f.valid_until = '2026-12-01'
-                  and f.source_lesson_claim_id is not null and f.embedding is null) = 1, 'ödev iddiası → deadline olgusu (kaynak iddia, gömme boş)');
-  perform t.ok((select f.morale_signal from public.memory_facts f where f.student_id = t.u('A') and f.kind = 'morale') = -2, 'talk morale=low → morale_signal −2');
-  perform t.ok((select la.status from public.lesson_analyses la where la.id = v_an) = 'corrected' and (select l.status from public.lessons l where l.id = v_lesson) = 'corrected',
-               'düzeltmeli karar → analiz ve ders corrected');
-  perform t.ok((select a.status from public.instructor_alerts a where a.kind = 'ops' and a.ref ->> 'lesson_id' = v_lesson::text) = 'done', 'ops alarmı kapandı');
+  perform t.ok((select abs(m.p - (0.3 + 0.5 * (app.bkt_step(0.3, false, 0.25, 0.1, 0.1) - 0.3))) < 0.00001
+                  from public.mastery m where m.enrollment_id = t.u('EB') and m.skill_id = 't.mat.b'),
+               'careless: ağırlık 0.5 → p = p0 + 0.5·(bkt − p0)');
+  perform t.ok((select (h.params ->> 'w')::numeric = 0.5 and h.params ->> 'error_cause' = 'careless'
+                  from public.mastery_history h join public.observations o on o.id = h.observation_id
+                 where o.source_id = v_id::text), 'mastery_history.params w = 0.5, error_cause = careless');
+
+  v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EB'), 'verdict', 'correct', 'error_cause', 'concept',
+            'skill_ids', jsonb_build_array('t.mat.a', 't.mat.b', 't.mat.a'), 'misconception_tags', jsonb_build_array('t.a.isaret-hatasi'),
+            'analysis', '{}'::jsonb));
+  select count(*) into v_n from public.observations o where o.source_id = v_id::text and o.value = 1 and o.misconception_tag is null
+                                                     and o.error_cause is null;
+  perform t.ok(v_n = 2, 'doğru teşhis: tekil kazanım başına 1 gözlem, değer 1, etiket/neden yok (' || v_n || ')');
+
+  v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EB'), 'verdict', 'wrong', 'error_cause', 'concept',
+            'skill_ids', jsonb_build_array('t.mat.a', 't.mat.b'), 'misconception_tags', jsonb_build_array('t.a.isaret-hatasi'),
+            'analysis', '{}'::jsonb));
+  perform t.ok((select o.misconception_tag from public.observations o where o.source_id = v_id::text and o.skill_id = 't.mat.a') = 't.a.isaret-hatasi'
+               and (select o.misconception_tag from public.observations o where o.source_id = v_id::text and o.skill_id = 't.mat.b') is null,
+               'çok kazanımda etiket, etiketin kazanımına bağlanır');
+
+  v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EB'), 'verdict', 'unreadable',
+            'skill_ids', jsonb_build_array('t.mat.a'), 'analysis', '{}'::jsonb));
+  perform t.ok(exists (select 1 from public.solution_analyses sa where sa.id = v_id)
+               and not exists (select 1 from public.observations o where o.source_id = v_id::text), 'okunamayan çözüm: satır var, gözlem yok');
 end $$;
 
--- 'retrieve_memory ranks null-embedding facts by fts only'
+-- 3) deneme bağlamı: ağırlık 0, kanıt sayılmaz, exam_responses.solution_analysis_id bağlanır
 do $$
 declare
-  v_q text := t.vec(1);
-  v_rows jsonb;
-  v_null bigint;
+  v_exam uuid;
+  v_q uuid;
+  v_sess uuid;
+  v_resp uuid;
+  v_p0 numeric;
+  v_n0 int;
+  v_id uuid;
 begin
-  insert into public.memory_facts (student_id, kind, text, source_message_ids, embedding, created_at)
-  values (t.u('A'), 'other', 'Ödev teslimi cuma günü yapılacak.', array[t.v('msg_a_q')::bigint], null, now() - interval '3 days')
-  returning id into v_null;
-  insert into public.memory_facts (student_id, kind, text, source_message_ids, embedding, created_at) values
-    (t.u('A'), 'topic_asked', 'Öğrenci üslü sayıları sordu.', array[t.v('msg_a_q')::bigint], t.vec(1)::halfvec, now() - interval '1 day'),
-    (t.u('A'), 'preference', 'Öğrenci kısa açıklamaları seviyor.', array[t.v('msg_a_q')::bigint], t.vec(2)::halfvec, now() - interval '2 days');
-  insert into public.memory_facts (student_id, kind, text, source_message_ids, requires_approval, approved)
-  values (t.u('A'), 'instructor_fact', 'Ödev notu 70.', array[t.v('msg_a_q')::bigint], true, false);
-  perform t.as_bot(t.u('A'));
-  select jsonb_agg(jsonb_build_object('id', m.fact_id, 'score', m.score)) into v_rows from public.retrieve_memory(v_q::halfvec, 'ödev teslimi', 10) m;
-  perform t.ok((select bool_and(e ->> 'score' is not null) from jsonb_array_elements(v_rows) e), 'skorlar NULL değil (NULLS FIRST hatası yok)');
-  perform t.ok((v_rows -> 1 ->> 'id')::bigint = v_null and (v_rows -> 1 ->> 'score')::numeric > 0,
-               'embedding''siz olgu p_text eşleşince FTS payıyla yukarı çıkar (2. sıra)');
-  select jsonb_agg(jsonb_build_object('id', m.fact_id, 'score', m.score)) into v_rows from public.retrieve_memory(v_q::halfvec, 'üçgen alanı', 10) m;
-  perform t.ok((v_rows -> (jsonb_array_length(v_rows) - 1) ->> 'id')::bigint = v_null and (v_rows -> (jsonb_array_length(v_rows) - 1) ->> 'score')::numeric < 0.000001,
-               'eşleşmezse embedding''siz olgu listenin sonunda (skor ≈ 0, NULL değil)');
-  select jsonb_agg(m.fact_id) into v_rows from public.retrieve_memory(null, 'ödev teslimi', 10) m;
-  perform t.ok((v_rows ->> 0)::bigint = v_null, 'p_query null → yalnız FTS sıralaması');
-  perform t.ok((select count(*) from public.retrieve_memory(null, 'ödev notu', 10) m where m.text = 'Ödev notu 70.') = 0, 'onay gerektiren olgu onaysızken gelmez');
+  insert into public.exams (curriculum_id, course_id, kind, source, title, status) values (t.u('cur'), t.u('course'), 'deneme', 'uploaded', 'D1', 'ready')
+  returning id into v_exam;
+  insert into public.exam_questions (exam_id, no, kind, skill_ids) values (v_exam, 1, 'mcq', array['t.mat.a']) returning id into v_q;
+  v_sess := public.start_exam_session(v_exam, t.u('EA'), 'uploaded');
+  v_resp := public.record_exam_response(v_sess, v_q, 'C');
+  insert into t.cfg values ('RESP', v_resp::text);
+  select m.p, m.evidence_count into v_p0, v_n0 from public.mastery m where m.enrollment_id = t.u('EA') and m.skill_id = 't.mat.a';
+  perform t.as_user(t.u('elif'));
+  v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EA'), 'exam_response_id', v_resp, 'verdict', 'wrong',
+            'error_cause', 'time', 'skill_ids', jsonb_build_array('t.mat.a'), 'analysis', '{}'::jsonb));
   perform t.as_admin();
+  perform t.ok((select m.p = v_p0 and m.evidence_count = v_n0 from public.mastery m where m.enrollment_id = t.u('EA') and m.skill_id = 't.mat.a'),
+               'deneme bağlamı: p ve kanıt sayısı değişmez (notlama zaten saydı)');
+  perform t.ok((select o.weight = 0 and not o.counts_for_mastery and o.error_cause = 'time' from public.observations o where o.source_id = v_id::text),
+               'deneme bağlamı gözlemi ağırlık 0, hata nedeni taşır');
+  perform t.ok((select r.solution_analysis_id = v_id from public.exam_responses r where r.id = v_resp), 'exam_responses.solution_analysis_id bağlandı');
+end $$;
+
+-- 4) doğrulama hataları
+do $$
+begin
+  perform t.as_user(t.u('elif'));
+  perform t.raises($q$select public.apply_diagnosis('[]')$q$, 'OGR-DIAG-001%', 'girdi nesne olmalı');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'wrong'))$q$, t.u('EA')),
+                   'OGR-DIAG-001%', 'analysis alanı gerekli');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'belki', 'analysis', '{}'::jsonb))$q$, t.u('EA')),
+                   'OGR-DIAG-001%', 'verdict enum');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'wrong', 'error_cause', 'tembellik',
+                            'analysis', '{}'::jsonb))$q$, t.u('EA')), 'OGR-DIAG-001%', 'error_cause enum');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'wrong',
+                            'skill_ids', jsonb_build_array('t.mat'), 'analysis', '{}'::jsonb))$q$, t.u('EA')), 'OGR-DIAG-002%', 'yaprak olmayan kazanım');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'wrong',
+                            'skill_ids', jsonb_build_array('t.mat.yok'), 'analysis', '{}'::jsonb))$q$, t.u('EA')), 'OGR-DIAG-002%', 'müfredatta olmayan kazanım');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'wrong',
+                            'misconception_tags', jsonb_build_array('yok.etiket'), 'analysis', '{}'::jsonb))$q$, t.u('EA')), 'OGR-DIAG-003%', 'bilinmeyen yanılgı etiketi');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'wrong', 'failing_step_no', 4,
+                            'analysis', jsonb_build_object('steps', jsonb_build_array(1, 2, 3))))$q$, t.u('EA')), 'OGR-DIAG-004%', 'bozulan adım ≤ adım sayısı');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'wrong', 'exam_response_id', %L,
+                            'analysis', '{}'::jsonb))$q$, t.u('EA'), gen_random_uuid()), 'OGR-DIAG-005%', 'kayda ait olmayan deneme cevabı');
+  perform t.raises(format($q$select public.apply_diagnosis(jsonb_build_object('enrollment_id', %L, 'verdict', 'wrong', 'style_id', %L,
+                            'analysis', '{}'::jsonb))$q$, t.u('EA'), t.u('style_other')), 'OGR-DIAG-005%', 'başka dersin tarzı');
+  perform t.as_admin();
+end $$;
+
+-- 5) alt kazanım önerisi, decide_proposal, otopilot
+do $$
+declare
+  v_id uuid;
+  v_prop uuid;
+  v_res jsonb;
+begin
+  perform t.as_user(t.u('elif'));
+  v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EA'), 'verdict', 'wrong', 'analysis', '{}'::jsonb,
+            'proposed_subskill', jsonb_build_object('parent_id', 't.mat.a', 'name', 'Parantez önünde eksi', 'description', 'Eksiyi dağıtma')));
+  perform t.as_admin();
+  select sa.proposal_id into v_prop from public.solution_analyses sa where sa.id = v_id;
+  perform t.ok((select cp.status = 'open' and cp.kind = 'add_subskill' and cp.evidence_ids = array[v_id] from public.curriculum_proposals cp where cp.id = v_prop),
+               'teşhis alt kazanım önerisi açar (eğitmen müfredatı: otopilot yok)');
+  perform t.as_user(t.u('elif'));
+  perform t.raises(format($q$select public.decide_proposal(%L, true)$q$, v_prop), 'OGR-AUTH-002%', 'öğrenci öneriye karar veremez');
+  perform t.as_user(t.u('inst'));
+  v_res := public.decide_proposal(v_prop, true, 'mantıklı');
+  perform t.ok(v_res ->> 'status' = 'accepted' and (v_res ->> 'applied')::boolean
+               and exists (select 1 from public.skills s where s.curriculum_id = t.u('cur') and s.id = v_res ->> 'skill_id' and s.is_leaf
+                                                       and s.parent_id = 't.mat.a' and s.p_init = 0.3)
+               and not (select s.is_leaf from public.skills s where s.curriculum_id = t.u('cur') and s.id = 't.mat.a'),
+               'eğitmen kabulü: yeni yaprak (BKT varsayılanları), üst kazanım yaprak olmaktan çıkar');
+  perform t.raises(format($q$select public.decide_proposal(%L, false)$q$, v_prop), 'OGR-PROP-002%', 'karara bağlanmış öneri tekrar karara bağlanamaz');
+  perform t.as_admin();
+  insert into public.curriculum_proposals (curriculum_id, kind, payload) values (t.u('cur'), 'add_prereq', '{"skill_id":"t.mat.b","prereq_id":"t.mat.a"}')
+  returning id into v_prop;
+  perform t.as_user(t.u('inst'));
+  perform t.raises(format($q$select public.decide_proposal(%L, true)$q$, v_prop), 'OGR-PROP-003%', 'ön koşul döngüsü reddedilir');
+  perform t.ok(public.decide_proposal(v_prop, false, 'döngü') ->> 'status' = 'rejected', 'öneri reddedilir');
+  perform t.as_user(t.u('admin'));
+  perform t.raises(format($q$select public.decide_proposal(%L, true)$q$, gen_random_uuid()), 'OGR-PROP-001%', 'olmayan öneri');
+  perform t.as_admin();
+
+  -- otopilot: ai_draft müfredat + ders türü exam_track (runtime_flags.curriculum_autopilot) → öneri hemen kabul
+  update public.curricula c set origin = 'ai_draft' where c.id = t.u('cur');
+  perform t.as_user(t.u('can'));
+  v_id := public.apply_diagnosis(jsonb_build_object('enrollment_id', t.u('EB'), 'verdict', 'wrong', 'analysis', '{}'::jsonb,
+            'proposed_subskill', jsonb_build_object('parent_id', 't.mat.b', 'id', 't.mat.b.1', 'name', 'Çift eksi')));
+  perform t.as_admin();
+  perform t.ok((select cp.status = 'accepted' from public.curriculum_proposals cp join public.solution_analyses sa on sa.proposal_id = cp.id where sa.id = v_id)
+               and exists (select 1 from public.skills s where s.curriculum_id = t.u('cur') and s.id = 't.mat.b.1'),
+               'otopilot (ai_draft + exam_track) öneriyi hemen kabul eder');
 end $$;
 
 rollback;

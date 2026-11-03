@@ -35,7 +35,7 @@ def _isolated_env(monkeypatch):
     for key in ("OGRENMEN_FAKES", "OGRENMEN_NOW", "OGRENMEN_ADAPTERS", "OGRENMEN_FIXTURES", "OGRENMEN_OUT",
                 "SUPABASE_URL", "SUPABASE_BATCH_JWT", "SUPABASE_ANON_KEY", "GEMINI_PAID_KEY", "GEMINI_FREE_KEY",
                 "GROQ_KEY", "OPENROUTER_KEY", "CF_AI_TOKEN", "CF_ACCOUNT_ID", "ANTHROPIC_KEY", "UNPAYWALL_EMAIL",
-                "S2_API_KEY", "TELEGRAM_OPS_BOT_TOKEN", "ADMIN_CHAT_ID", "GITHUB_ACTIONS"):
+                "S2_API_KEY", "GITHUB_ACTIONS"):
         monkeypatch.delenv(key, raising=False)
 
 

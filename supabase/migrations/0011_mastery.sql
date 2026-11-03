@@ -1,6 +1,7 @@
--- 0011_mastery.sql — ustalık güncellemesi (BKT, ADR-0001; BLUEPRINT §3.7). packages/mastery-math/sql/bkt.sql
--- aşağıdaki işaretler arasına BİREBİR kopyalanır (M13 check-all.sh diff ile sapmayı yakalar). Ustalığı yazan tek
--- yer public.apply_observation()'dır; diğer fonksiyonlar gözlem ekleyip onu çağırır.
+-- 0011_mastery.sql — ustalık fonksiyonları (BKT, ADR-0001; docs/PLAN-v2-detail.md §2.1). packages/mastery-math/sql/bkt.sql
+-- aşağıdaki işaretler arasına BİREBİR kopyalanır (scripts/check-drift.py bu dosya adını bekler; supabase/scripts/lint.sh de
+-- sapmayı yakalar). Ustalığı yazan tek yer public.apply_observation()'dır; diğer fonksiyonlar gözlem ekleyip onu çağırır.
+-- Gövdeler yalnız 0004–0010 tablolarını okur (ders iddiaları 0012'de; plpgsql gövdesi çağrı anında çözülür).
 
 -- begin bkt
 -- Öğrenmen ustalık matematiği (BKT) — tek kaynak: packages/mastery-math.
@@ -119,20 +120,20 @@ $$;
 comment on function app.numeric_equal(text, text, numeric) is 'İki sayısal cevabı ayrıştırıp |a−b| ≤ tolerans ile karşılaştırır; ayrıştırılamayan → false.';
 revoke all on function app.numeric_equal(text, text, numeric) from public;
 
--- Anahtar biçimi: mcq için doğru şık, numeric için ayrıştırılabilir sayısal cevap. grade_attempt, register_answer_key,
--- set_answer_key ve app.questions_approve_guard aynı kuralı kullanır (null şık "her cevap doğru" sayılmaz).
+-- Anahtar biçimi: mcq için doğru şık (A–E), numeric için ayrıştırılabilir sayısal cevap (null şık "her cevap doğru"
+-- sayılmaz). Soru bankası ve sınav puanlaması aynı kuralı kullanır.
 create or replace function app.answer_key_complete(p_kind text, p_correct_option text, p_numeric_value text) returns boolean
 language sql
 immutable
 set search_path = pg_catalog, app
 as $$
   select case p_kind
-           when 'mcq' then p_correct_option is not null and p_correct_option in ('A', 'B', 'C', 'D')
+           when 'mcq' then p_correct_option is not null and p_correct_option in ('A', 'B', 'C', 'D', 'E')
            when 'numeric' then app.parse_number(p_numeric_value) is not null
            else false
          end
 $$;
-comment on function app.answer_key_complete(text, text, text) is 'Anahtar soru türüne göre eksiksiz mi: mcq → doğru şık, numeric → ayrıştırılabilir sayı.';
+comment on function app.answer_key_complete(text, text, text) is 'Anahtar soru türüne göre eksiksiz mi: mcq → doğru şık (A–E), numeric → ayrıştırılabilir sayı.';
 revoke all on function app.answer_key_complete(text, text, text) from public;
 
 -- Ön koşul ipucu: kazanımda p < 0.4 ∧ n ≥ 5 ve ön koşulunda p < 0.5 ∧ n ≥ 5 → öneri metni (teşhis değil)
@@ -157,8 +158,12 @@ $$;
 comment on function app.infer_prereq_gap(uuid, text) is 'Zayıf kazanımın zayıf ön koşulunu "Asıl sorun alt konuda olabilir: <ad>" olarak döner; yoksa null.';
 revoke all on function app.infer_prereq_gap(uuid, text) from public;
 
--- Gözlemi ustalığa uygular (tek yazan). Sohbet gözlemleri p ve kanıt sayısını değiştirmez ama yanılgı sayacına
--- katılır; çıkarım gözlemi kanıt sayısını artırmaz; ön koşul çıkarımı tek seviye ve döngüsüzdür.
+-- Gözlemi ustalığa uygular (tek yazan; v1 semantiği). İkili gözlem (diagnostic, practice, test, resolution):
+-- g = guess_override ?? skills.p_guess, p' = bkt_step(p, value ≥ 0.5, g, s, t); ağırlık w < 1 ise adım kısaltılır:
+-- p' = p + w·(bkt_step − p) (careless/time teşhisleri w = 0.5 ile yazılır; w = 1 → v1 ile birebir). Sürekli gözlem
+-- (lesson, instructor): blend_step(p, value, confidence). Çıkarım (inferred): g' = inferred_guess(g, w), yanlış adım,
+-- kanıt sayısı artmaz. Sohbet gözlemleri (chat_question, chat_misconception) p'yi ve kanıt sayısını değiştirmez ama
+-- yanılgı sayacına katılır. Ön koşul çıkarımı tek seviye ve döngüsüzdür.
 create or replace function public.apply_observation(p_obs bigint) returns void
 language plpgsql
 security definer
@@ -202,9 +207,13 @@ begin
     if v_o.kind in ('diagnostic', 'practice', 'test', 'resolution') then
       v_g := coalesce(v_o.guess_override, v_sk.p_guess);
       v_p1 := app.bkt_step(v_p0, v_o.value >= 0.5, v_g, v_sk.p_slip, v_sk.p_learn);
+      if v_p1 is not null and v_o.weight < 1 then
+        v_p1 := v_p0 + v_o.weight * (v_p1 - v_p0);
+      end if;
       v_inc := case when v_o.counts_for_mastery then 1 else 0 end;
       v_mth := 'bkt';
-      v_prm := jsonb_build_object('g', v_g, 's', v_sk.p_slip, 't', v_sk.p_learn, 'w', v_o.weight, 'guess_override', v_o.guess_override);
+      v_prm := jsonb_build_object('g', v_g, 's', v_sk.p_slip, 't', v_sk.p_learn, 'w', v_o.weight, 'guess_override', v_o.guess_override,
+                                  'error_cause', v_o.error_cause);
     elsif v_o.kind in ('lesson', 'instructor') then
       v_p1 := app.blend_step(v_p0, v_o.value, v_o.confidence);
       v_inc := 1;
@@ -286,6 +295,8 @@ begin
   end if;
 end
 $$;
-comment on function public.apply_observation(bigint) is 'Gözlemi ustalığa uygular (BKT/karışım/çıkarım), mastery_history yazar, yanılgı sayacını ve ön koşul çıkarımını işler.';
+comment on function public.apply_observation(bigint) is 'Gözlemi ustalığa uygular (BKT + ağırlık/guess_override, karışım, çıkarım), mastery_history yazar, yanılgı sayacını ve ön koşul çıkarımını işler.';
 revoke all on function public.apply_observation(bigint) from public;
--- Doğrudan çağrı yok: grade_attempt, record_chat_observation, approve_lesson_analysis, add_instructor_note içinden çağrılır.
+-- Doğrudan istemci çağrısı yok: apply_diagnosis, grade_exam_session, ders iddiası onayı ve eğitmen notu RPC'leri (B2)
+-- ve worker (service_role) çağırır.
+grant execute on function public.apply_observation(bigint) to service_role;

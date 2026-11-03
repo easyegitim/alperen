@@ -6,7 +6,7 @@ bu komut aynı sayıları temel tablolardan çıkarır: ``questions.status='pend
 eski şekiller sayılmaz) ve açık ``generation_requests``. "İki denemede doğrulamayı geçemedi" satırı yalnız 2 deneme
 kuralının notunu (``2 başarısız deneme`` öneki) sayar; diğer üretim notları (şekil düzeltme vb.) ayrı satırdır. Çıktı
 ``out/review_queue.json``; ``--push`` kurucuya/koordinatöre tek satırlık bildirim gönderir (``Notifier``; gerçek
-kipte Telegram ops botu, dry-run'da stdout). Metin Türkçe, emoji ve ünlem yok; öğrenci kimliği ya da soru metni yok.
+kipte stderr günlüğü, dry-run'da stdout). Metin Türkçe, emoji ve ünlem yok; öğrenci kimliği ya da soru metni yok.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def collect(rt: Any) -> dict[str, Any]:
 
 
 def message(summary: dict[str, Any]) -> str:
-    """Bildirim metni (telegram.md: bir fikir, dört satırı geçmez, emoji/ünlem yok)."""
+    """Bildirim metni (bir fikir, dört satırı geçmez, emoji/ünlem yok)."""
     q = summary["questions"]
     f = summary["figures"]
     lines = [f"Onay kuyruğunda {q['pending_review']} soru ve {f['pending']} şekil bekliyor."]

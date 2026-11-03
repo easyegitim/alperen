@@ -1,11 +1,11 @@
-Öğrenmen, easy eğitim şirketinin yapay zekâ destekli öğrenme modelidir: her öğrenciye kendi hızında eşlik eden bir AI öğretmen. Arayüz sakin ve aydınlıktır; dikkat içerikte ve öğretmenle yapılan sohbette kalır. Kimlik, maskotun pelerin mavisi, kitap laciverti ve kemer altınından; kurumsal imza easy'nin morundan gelir. İlk sürüm bir Telegram botudur, web arayüzü sonra gelir; ikisinin kuralları aynı, yüzeyleri ayrı bölümlerdedir (Telegram'da Öğrenmen · Eğitmen paneli · Güven ve şeffaflık).
+Öğrenmen, easy eğitim şirketinin yapay zekâ destekli öğrenme modelidir: her öğrenciye kendi hızında eşlik eden bir AI öğretmen. Arayüz sakin ve aydınlıktır; dikkat içerikte ve öğretmenle yapılan sohbette kalır. Kimlik, maskotun pelerin mavisi, kitap laciverti ve kemer altınından; kurumsal imza easy'nin morundan gelir. Ürün tek bir web uygulamasıdır (PWA, sonra mağaza): öğrenci, veli ve eğitmen aynı sistemi kullanır; yüzeyleri ayrı bölümlerdedir (Öğrenmen · Eğitmen konsolu · Güven ve şeffaflık).
 
 ## İçerik ilkeleri
 
 - **Sen dili, sıcak ama ciddi.** Öğrenciye "sen" diye hitap et. Öğretmen konuşur gibi yaz, reklam gibi değil.
   - Yap: "Harika gidiyorsun. Şimdi paydaları eşitleyelim."
   - Yapma: "Süpersin!!! 🚀 Hadi bakalım!"
-- **Sokratik varsayılan.** AI öğretmen bir balonda tek bir şey söyler ve çoğu zaman bir soruyla bitirir; cevabı hemen vermez, ipucu verir. Öğrenci isterse `ModeToggle` ile doğrudan cevap moduna geçer; sistem bu modu kendiliğinden açmaz.
+- **İpucu modu varsayılan, öğrenci değiştirir.** AI öğretmen bir balonda tek bir şey söyler ve çoğu zaman bir soruyla bitirir; varsayılan modda cevabı hemen vermez, ipucu verir. Öğrenci isterse `ModeToggle` ile **Açıkla** ya da **Çözümü göster** moduna geçer; sistem modu kendiliğinden değiştirmez.
 - **Hata utandırmaz.** Yanlışta "Tekrar dene" de ve nedenini tek cümleyle açıkla: "Paylar ve paydalar ayrı ayrı toplanmaz." "Yanlış!" yazma.
 - **Kanıt yoksa iddia yok.** Ustalık, kavram yanılgısı ve ders raporu maddeleri kaynağıyla (`EvidenceQuote`) gelir; gözlem sayısı eşiğin altındaysa "Henüz yeterli kanıt yok" yazılır, yüzde yazılmaz.
 - **Tahmin değil öncelik.** Sınav modellemesi "sıklık analizine göre öncelik" diye sunulur; "çıkacak", "kesin", "tahmin" kelimeleri kullanılmaz.
@@ -45,23 +45,54 @@
 
 - Ürün imzası `BrandLockup`: easy işareti + "Öğrenmen". Açık zeminde `easy-isaret-mor.png`, koyu zeminde ve `navy`/`primary` dolgu üzerinde `easy-isaret-beyaz.png`. Özgün mor zeminli logo (`easy-logo-mor-zemin.png`) kurumsal kullanım içindir.
 - İşareti yeniden çizme, renklendirme, eğme; çevresinde işaret yüksekliğinin en az dörtte biri kadar boşluk bırak.
-- Maskot (`ogrenmen-maskot.webp`) AI öğretmenin yüzüdür: karşılama ekranı, boş durumlar, ders sonu, `TutorMessage` avatarı ve Telegram bot profili. Üzerine metin yazma, logo yerine kullanma, yüzünü ve kulaklığını kırpma.
+- Maskot (`ogrenmen-maskot.webp`) AI öğretmenin yüzüdür: karşılama ekranı, boş durumlar, ders sonu, `TutorMessage` avatarı ve PWA uygulama ikonu. Üzerine metin yazma, logo yerine kullanma, yüzünü ve kulaklığını kırpma.
 
-## Şekil ve ses
+## Şekil ve kamera
 
 - Soru şekilleri görüntü modeliyle değil koddan üretilir ve `FigureFrame` içinde, `paper` zemininde, `navy` çizgi ve sabit #0030a2 vurguyla (açık temanın `primary` değeri) gösterilir; şekil tema değişkeni kullanmaz, iki temada aynı dosya. Her şeklin alternatif metni şekli kelimelerle anlatır. Denetimden geçmemiş şekil öğrenciye gösterilmez.
-- Mikrofon yalnızca öğrenci basılı tutarken açıktır; ses düğmesi basılıyken `primary` dolgu ve "Dinliyor" etiketi taşır. Sesli yanıt varsayılan kapalıdır ve metni her zaman ekranda kalır.
+- Kamera yalnızca öğrenci "Fotoğraf çek" düğmesine bastığında açılır; her sayfa gönderilmeden önce önizlenir, döndürülebilir ve kaldırılabilir (`CameraSheet`).
 
 ## İkonografi
 
-Sistemde henüz özel bir ikon seti yok. Bileşenler işlevsel karakterler kullanır: ✓ (doğru/tamamlandı/doğrulandı), ✕ (yanlış/hata/kaldırılacak), ★ (seri/ödül), · (meta ayırıcı). Bir ikon seti eklenene kadar emoji kullanma; ikon her zaman bir metin etiketinin yanında durur.
+İkon seti **Lucide** (`lucide-react`); ikon her zaman bir metin etiketinin yanında durur, tek başına anlam taşımaz (etiketsiz ikon düğmesi yok). İkonlar dekoratiftir (`aria-hidden`), anlamı metin taşır. İşlevsel karakterler ✓ (doğru/tamamlandı/doğrulandı), ✕ (yanlış/hata/kaldırılacak), ★ (seri/ödül), · (meta ayırıcı) metinle birlikte kalır. Emoji kullanma.
+
+## Kullanım
+
+Paket kaynak olarak paylaşılır (derleme yok). Next.js uygulamasında `transpilePackages: ['@ogrenmen/design-system']`; Tailwind 4 ana CSS dosyasında:
+
+```css
+@import "tailwindcss";
+@import "@ogrenmen/design-system/styles/tokens.css";   /* --og-* değişkenleri, [data-theme=light|dark], .og-text-* ölçeği, Lexend/JetBrains Mono */
+@import "@ogrenmen/design-system/styles/theme.css";    /* Tailwind @theme eşlemesi: bg-primary, text-ink, rounded-lg, shadow-ai, text-title-1 ... */
+@import "@ogrenmen/design-system/styles/base.css";     /* grafik paleti, yazıyor animasyonu, .og-doc belge tipografisi */
+@import "@ogrenmen/design-system/styles/katex.css";    /* yalnızca matematik gösteren sayfalarda */
+@source "../node_modules/@ogrenmen/design-system/src"; /* bileşen sınıflarının taranması için; yolu uygulamaya göre ayarla */
+```
+
+```tsx
+import { Button, TutorMessage, ModeToggle, MathText } from '@ogrenmen/design-system';
+// <html lang="tr" data-theme="light"> — koyu tema için data-theme="dark"; verilmezse işletim sistemi tercihi geçerli.
+```
+
+- Tema `data-theme` ile değişir; renkler `tokens.json` içindeki açık/koyu çiftlerden üretilir. Tailwind sınıfları (`bg-surface-raised`, `text-ink-muted`, `border-line`) ve CSS değişkenleri (`var(--og-primary)`) aynı değerleri verir.
+- Her bileşen `className` kabul eder ve React 19 `ref` özelliğini ilgili DOM öğesine iletir. Etkileşimli denetimler gerçek `button`/`input`/`label`/`a` öğeleridir; odak halkası (`focus-ring`) hiçbir yerde gizlenmez; dokunma hedefi en az 44px.
+- Matematik `MathText` (`$…$` içeren metin) ve `Tex` ile KaTeX üzerinden çizilir; çıktı `htmlAndMathml` olduğu için ekran okuyucu MathML'i okur (`@ogrenmen/design-system/math` ya da ana dışa aktarım).
+- `tokens.json` değişince `bun run tokens` (ya da `node scripts/tokens-to-css.mjs`) `src/styles/tokens.css`, `src/styles/theme.css` ve `tailwind.preset.ts` dosyalarını yeniden üretir; bunlar elle düzenlenmez. `check.sh` yeniden üretimin temiz olduğunu doğrular (sapma denetimi).
+- Önizleme: `bun run --cwd packages/design-system preview` (geliştirme) ve `preview:build` (statik çıktı, `preview/dist`); tüm bileşenler açık/koyu temada görülür.
+- Doğrulama: `bash packages/design-system/check.sh` (tokens sapması, tsc, eslint, vitest, önizleme derlemesi).
 
 ## Bileşenler
 
-`components/bundle.js` sayfaya `window.Ogrenmen` olarak yüklenir ve React 18 bekler; stiller `components/bundle.css` içinde, `og-` önekiyle. Her bileşenin kılavuzu kendi `README.md` dosyasındadır.
+Kaynak `src/components/*.tsx`; her bileşenin kılavuzu `components/<Ad>/README.md` dosyasındadır (spesifikasyon; `preview.html` dosyaları eski tasarım kartı önizlemeleridir). `components/bundle.css` yalnızca o eski önizlemeler içindir.
 
-- Marka ve temel: `BrandLockup`, `Button`, `Badge`, `TextField`, `ProgressBar`, `Notice`.
-- Öğrenci (Kulaklık, Tablet, Kalem): `TutorMessage`, `ModeToggle`, `LessonCard`, `QuizOption`, `FigureFrame`, `ExamPriorityRow`.
-- Profil (Gözlük): `MasteryMeter`, `MisconceptionItem`, `EvidenceQuote`.
+- Marka ve temel: `BrandLockup`, `Button` (`buttonClasses` bağlantıyı düğme gibi gösterir), `Badge`, `TextField`, `ProgressBar`, `Notice`, `Avatar`, `Cover`.
+- Öğrenci (Kulaklık, Tablet, Kalem): `TutorMessage`, `ModeToggle`, `LessonCard`, `QuizOption`, `FigureFrame`, `ExamPriorityRow` (`ExamPriorityList`), `CameraSheet`, `StepLadder`, `DocumentViewer`, `ExamPlayer` (`Timer`, `AnswerGrid`, `useCountdown`).
+- Profil (Gözlük): `MasteryMeter`, `MisconceptionItem`, `EvidenceQuote`, `OutcomeHeatmap`, `Tree` / `TreeNode`, `MemoryFileCard`.
 - Araştırma (Kitap): `CitationCard`.
-- Eğitmen paneli: `StatTile`, `AlertRow`; `TutorMessage` `review` satırı.
+- Eğitmen konsolu: `StatTile`, `AlertRow`, `ReportChart`; `TutorMessage` `review` satırı (bkz. `egitmen-konsolu.md`).
+- Kabuk: `AppShell` (mobilde alt gezinme + "Sor" düğmesi, masaüstünde kenar çubuğu).
+- Yardımcılar: `MathText`, `Tex`, `renderMath`, `renderMathML`; `formatPercent`, `formatDelta`, `formatNumber`, `formatClock`; `masteryDisplay` (kanıt eşiği mantığı); `ERROR_CAUSE_LABELS`, `TUTOR_MODES`.
+
+## Grafik
+
+Grafikler yalnızca zaman içindeki değişim içindir; bir sayı `StatTile` olur. Tek eksen, ince işaretler, ızgara ve eksen metni geri planda. Palet sabittir ve doğrulanmıştır: tek seri `primary`; çok seri sabit sırada `--og-viz-1..8` (mavi, turuncu, su yeşili, sarı, magenta, yeşil, mor, kırmızı; koyu temada ayrı basamaklar). Renk seriye bağlıdır, sıraya değil; dokuzuncu renk üretilmez. Açık temada 3. ile 5. yuva 3:1 altında kaldığından çok serili her grafikte lejant ve tablo görünümü bulunur. Isı haritası tek mavi sıralı rampadır (`--og-seq-1..7`) ve her hücre yüzdeyi yazar.

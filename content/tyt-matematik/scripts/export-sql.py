@@ -22,6 +22,13 @@ Cevap anahtarı üretmez: anahtarları ``seed-keys.py`` yazar ve teşhis sorular
 müfredat tabloları; teşhis, şablon ve hukuk metinleri ilk sürümde kalır). Değer ``YYYY.N`` biçiminde ve
 ``curriculum.json`` sürümünden büyük olmalıdır (aynı ya da eski sürüm etkin müfredatı ``draft``'a düşürürdü).
 Kimlikler deterministiktir: ``uuid5(NAMESPACE_OGRENMEN, "<code>@<version>")``.
+
+``--schema v2`` (supabase/migrations v2 tabanı; ``supabase/scripts/db-test.sh`` bunu kullanır): ``curricula.origin =
+'seed'``; teşhis testi ``diagnostic_tests`` yerine ``exams`` (``kind='diagnostic'``, ``source='instructor'``,
+``status='published'``) + ``exam_questions`` (``question_id`` soru bankasına bağlı, aynı sıra) olarak yazılır; şekilleri
+inceleyen ``staff`` koordinatörü yerine ilk ``admin`` profilidir (yoksa boş); hukuk metinleri (``legal_texts``) ve
+saklama süreleri yoktur. Varsayılan ``--schema v1`` eski tabanın çıktısıdır (içerik testleri bunu sınar); v1 saklama
+kaynakları (``04_retention_policies.sql``, ``tg_chats`` migration'ı) depoda yoksa BLUEPRINT yedeğine uyarıyla düşer.
 """
 
 from __future__ import annotations
@@ -41,6 +48,8 @@ import templates  # noqa: E402
 AS_VERSION = re.compile(r"\d{4}\.\d+")
 SEED_COORDINATOR = ("(select s.id from public.staff s where s.role = 'coordinator' and s.active "
                     "order by s.created_at limit 1)")
+SEED_ADMIN_V2 = "(select p.id from public.profiles p where p.role = 'admin' order by p.created_at limit 1)"
+SCHEMAS = ("v1", "v2")
 
 
 def curriculum_row(cur: dict, as_version: str | None, status: str | None) -> dict:
@@ -84,7 +93,11 @@ def drift_guard_sql(expected: list[tuple[str, str, str, str | None]]) -> str:
 
 def build_sql(content: lib.Content, *, as_version: str | None = None, status: str | None = None,
               retention: lib.RetentionSource | None = None, placeholders: dict | None = None,
-              legal_docs: list[lib.LegalDoc] | None = None, warnings: list[str] | None = None) -> str:
+              legal_docs: list[lib.LegalDoc] | None = None, warnings: list[str] | None = None,
+              schema: str = "v1") -> str:
+    if schema not in SCHEMAS:
+        raise lib.ContentError(f"bilinmeyen şema {schema!r} (v1 | v2)")
+    v2 = schema == "v2"
     warnings = warnings if warnings is not None else []
     cur = curriculum_row(content.curriculum, as_version, status)
     code = f"{cur['code']}@{cur['version']}"
@@ -96,9 +109,12 @@ def build_sql(content: lib.Content, *, as_version: str | None = None, status: st
         "begin;",
         "",
         "-- müfredat sürümü",
-        "insert into public.curricula (id, code, authority, year, version, label, status) values "
-        f"({q(cur_id)}, {q(cur['code'])}, {q(cur['authority'])}, {num(cur['year'])}, {q(cur['version'])}, "
-        f"{q(cur['label'])}, {q(cur['status'])})",
+        ("insert into public.curricula (id, code, authority, year, version, label, status, origin) values "
+         f"({q(cur_id)}, {q(cur['code'])}, {q(cur['authority'])}, {num(cur['year'])}, {q(cur['version'])}, "
+         f"{q(cur['label'])}, {q(cur['status'])}, 'seed')") if v2 else
+        ("insert into public.curricula (id, code, authority, year, version, label, status) values "
+         f"({q(cur_id)}, {q(cur['code'])}, {q(cur['authority'])}, {num(cur['year'])}, {q(cur['version'])}, "
+         f"{q(cur['label'])}, {q(cur['status'])})"),
         "  on conflict (id) do update set label = excluded.label, status = excluded.status;",
         "",
         "-- kazanımlar (önce düğümler, sonra yapraklar; bileşik anahtar (curriculum_id, id))",
@@ -162,7 +178,7 @@ def build_sql(content: lib.Content, *, as_version: str | None = None, status: st
             "render_status, vision_status, review_status, reviewed_by, reviewed_at) values "
             f"({q(C.uid('figure', code_hash))}, {q(fig['tool'])}, {q(src)}, {q(code_hash)}, {q(fig['alt_text'])}, "
             f"{q(fig['png_path'])}, {width}, {height}, {png.stat().st_size}, 'rendered', 'not_applicable', 'verified', "
-            f"{SEED_COORDINATOR}, now())\n"
+            f"{SEED_ADMIN_V2 if v2 else SEED_COORDINATOR}, now())\n"
             "  on conflict do nothing;"
         )
 
@@ -194,6 +210,29 @@ def build_sql(content: lib.Content, *, as_version: str | None = None, status: st
             "yeniden inceleme)"]
     out.append(drift_guard_sql(expected))
     version = content.curriculum["version"]
+    if v2:
+        exam_id = C.uid("diagnostic_test", code)
+        out += [
+            "",
+            "-- teşhis testi v2: exams(kind='diagnostic') + exam_questions (sabit sıra; soru bankasına bağlı)",
+            "insert into public.exams (id, curriculum_id, kind, source, title, question_count, status) values "
+            f"({q(exam_id)}, {q(cur_id)}, 'diagnostic', 'instructor', {q(cur['label'] + ' teşhis testi')}, "
+            f"{len(content.items)}, 'published')",
+            "  on conflict (id) do update set title = excluded.title, question_count = excluded.question_count;",
+        ]
+        for no, (item, qid) in enumerate(zip(content.items, item_ids, strict=True), start=1):
+            options = [{"key": o["key"], "text": o["text"]} for o in item["options"]]
+            out.append(
+                "insert into public.exam_questions (id, exam_id, no, kind, stem_text, options, skill_ids, difficulty, "
+                f"question_id) values ({q(C.uid('exam_question', f'{code}#{no}'))}, {q(exam_id)}, {no}, "
+                f"{q(item['kind'])}, {q(item['stem'])}, {jsonb(options)}, {text_array(item['skill_ids'])}, "
+                f"{num(item['difficulty'])}, {q(qid)})\n"
+                "  on conflict (exam_id, no) do update set kind = excluded.kind, stem_text = excluded.stem_text, "
+                "options = excluded.options, skill_ids = excluded.skill_ids, difficulty = excluded.difficulty, "
+                "question_id = excluded.question_id;"
+            )
+        out += ["", "commit;", ""]
+        return "\n".join(out)
     out += [
         "",
         "-- teşhis testi (sabit sıra)",
@@ -218,6 +257,12 @@ def build_sql(content: lib.Content, *, as_version: str | None = None, status: st
     return "\n".join(out)
 
 
+def _has_v1_retention_source(repo_root: Path) -> bool:
+    """v1 tabanının ``tg_chats`` migration'ı depoda mı (v2 tabanında yoktur)."""
+    mig = repo_root / "supabase" / "migrations"
+    return mig.is_dir() and any("tg_chats" in p.read_text(encoding="utf-8") for p in mig.glob("*.sql"))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="TYT Matematik müfredat seed'ini SQL olarak üretir")
     ap.add_argument("--out", type=Path, required=True, help="yazılacak .sql dosyası")
@@ -231,6 +276,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--migrations", type=Path, default=None, help="varsayılan supabase/migrations")
     ap.add_argument("--strict-sources", action="store_true",
                     help="M02 seed/migration yoksa BLUEPRINT yedeğine düşme, hata ver")
+    ap.add_argument("--schema", choices=SCHEMAS, default="v1",
+                    help="hedef veritabanı tabanı: v1 (eski, varsayılan) | v2 (supabase/migrations v2; exams, hukuk metni yok)")
     args = ap.parse_args(argv)
 
     try:
@@ -251,16 +298,20 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         warnings: list[str] = []
         retention = placeholders = legal_docs = None
-        if args.as_version is None:
+        if args.as_version is None and args.schema == "v1":
+            migrations = args.migrations
+            if migrations is None and not args.strict_sources and not _has_v1_retention_source(lib.REPO_ROOT):
+                # v2 tabanında tg_chats yok: v1 çıktısı saklama sürelerini BLUEPRINT yedeğinden (uyarıyla) okur
+                migrations = lib.REPO_ROOT / "supabase" / "migrations-v1-yok"
             legal_docs = lib.load_legal_docs(args.hukuk)
             placeholders = lib.read_json(args.hukuk / "placeholders.json")
-            retention = lib.load_retention(lib.REPO_ROOT, args.retention_seed, args.migrations,
+            retention = lib.load_retention(lib.REPO_ROOT, args.retention_seed, migrations,
                                            allow_fallback=not args.strict_sources)
             if retention.fallback:
                 warnings.append("supabase/seed/04_retention_policies.sql ya da tg_chats migration'ı yok; gün sayıları "
                                 f"yedek kaynaktan okundu: {', '.join(retention.origin)}")
         sql = build_sql(content, as_version=args.as_version, status=args.status, retention=retention,
-                        placeholders=placeholders, legal_docs=legal_docs, warnings=warnings)
+                        placeholders=placeholders, legal_docs=legal_docs, warnings=warnings, schema=args.schema)
     except lib.ContentError as exc:
         print(f"HATA: {exc}", file=sys.stderr)
         return 1

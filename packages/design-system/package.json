@@ -1,0 +1,81 @@
+{
+  "name": "@ogrenmen/design-system",
+  "version": "2.0.0",
+  "description": "Öğrenmen tasarım sistemi: tokens.json -> CSS değişkenleri / Tailwind 4 teması ve React 19 bileşenleri (kaynak olarak paylaşılır, derleme yok)",
+  "private": true,
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./math": {
+      "types": "./src/math.tsx",
+      "default": "./src/math.tsx"
+    },
+    "./styles/tokens.css": "./src/styles/tokens.css",
+    "./styles/theme.css": "./src/styles/theme.css",
+    "./styles/base.css": "./src/styles/base.css",
+    "./styles/katex.css": "./src/styles/katex.css",
+    "./tailwind.preset": {
+      "types": "./tailwind.preset.ts",
+      "default": "./tailwind.preset.ts"
+    },
+    "./tokens.json": "./tokens.json",
+    "./fonts/*": "./fonts/*",
+    "./assets/*": "./assets/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "fonts",
+    "assets",
+    "tokens.json",
+    "tailwind.preset.ts"
+  ],
+  "scripts": {
+    "tokens": "node scripts/tokens-to-css.mjs",
+    "tokens:check": "node scripts/tokens-to-css.mjs --check",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "test": "vitest run",
+    "preview": "vite --config preview/vite.config.ts",
+    "preview:build": "vite build --config preview/vite.config.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "katex": "0.16.11",
+    "lucide-react": "1.66.0",
+    "recharts": "3.10.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@tailwindcss/vite": "4.3.4",
+    "@testing-library/dom": "10.4.0",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.1.0",
+    "@testing-library/user-event": "14.5.2",
+    "@types/katex": "0.16.7",
+    "@types/node": "22.10.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "4.3.4",
+    "eslint": "9.39.5",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "jsdom": "25.0.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tailwindcss": "4.3.4",
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "5.4.21",
+    "vitest": "2.1.9"
+  }
+}

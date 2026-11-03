@@ -2,25 +2,26 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ogrenmen.easy/schemas/answer-key.json",
   "title": "AnswerKey",
-  "description": "Cevap anahtarı: yalnız pipeline/seed ↔ register_answer_key. Worker bu şemayı içe almaz; secure.answer_keys satırının sözleşmesi.",
-  "x-version": "1.0",
+  "description": "Cevap anahtarı: doğru şık ya da sayısal değer, adım adım çözüm ve SymPy doğrulama durumu.",
+  "x-version": "2.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "question_id",
-    "solution",
-    "sympy_status"
-  ],
   "properties": {
     "question_id": {
-      "$ref": "common.json#/$defs/uuid"
+      "type": "string",
+      "format": "uuid"
     },
     "correct_option": {
-      "$ref": "common.json#/$defs/optionKey"
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
     },
     "numeric_value": {
       "type": "string",
-      "description": "SymPy string: '7/8', '2*sqrt(3)'"
+      "description": "SymPy dizesi: '7/8', '2*sqrt(3)'"
     },
     "numeric_tolerance": {
       "type": "number",
@@ -34,9 +35,10 @@
       "type": "string",
       "minLength": 10,
       "maxLength": 2000,
-      "description": "Adım adım çözüm; doğrudan modda reveal_solution bunu döner"
+      "description": "Adım adım çözüm"
     },
     "sympy_status": {
+      "type": "string",
       "enum": [
         "verified",
         "failed",
@@ -45,7 +47,6 @@
     },
     "sympy_report": {
       "type": "object",
-      "additionalProperties": false,
       "properties": {
         "expr": {
           "type": "string"
@@ -62,9 +63,16 @@
         "note": {
           "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
     }
   },
+  "required": [
+    "question_id",
+    "solution",
+    "sympy_status"
+  ],
+  "additionalProperties": false,
   "oneOf": [
     {
       "required": [

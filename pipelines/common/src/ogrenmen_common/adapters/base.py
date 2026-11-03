@@ -333,7 +333,7 @@ class Storage(Protocol):
 
 @runtime_checkable
 class Notifier(Protocol):
-    """Kurucuya/operasyona kısa bildirim (Telegram DM ya da stdout)."""
+    """Kurucuya/operasyona kısa bildirim (gerçekte stderr günlüğü, sahtede stdout)."""
 
     def notify(self, text: str, *, level: str = "info") -> None: ...
 

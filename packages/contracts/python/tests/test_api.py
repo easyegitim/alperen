@@ -22,7 +22,7 @@ def test_validate_raises_with_all_issues():
         oc.validate("exam-priority-plan", bad)
     err = info.value
     assert err.schema_id == "https://ogrenmen.easy/schemas/exam-priority-plan.json"
-    assert {"const", "additionalProperties", "x-forbidden-words"} <= {i.keyword for i in err.issues}
+    assert {"const", "additionalProperties"} <= {i.keyword for i in err.issues}
     assert str(err).startswith("OGR-CONTRACT-001")
 
 

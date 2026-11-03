@@ -1,32 +1,13 @@
 {
   "name": "@ogrenmen/contracts",
   "version": "0.1.0",
-  "description": "Öğrenmen sözleşmeleri: JSON Schema (2020-12), models.json, TS ve Python doğrulayıcılar",
+  "description": "Öğrenmen sözleşmeleri: zod-önce şemalar (strict/loose), JSON Schema 2020-12 dışa aktarımı, Python doğrulayıcı",
   "private": true,
   "type": "module",
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    },
-    "./validators": {
-      "types": "./src/validators.ts",
-      "default": "./src/validators.ts"
-    },
-    "./answer-key": {
-      "types": "./src/answer-key.ts",
-      "default": "./src/answer-key.ts"
-    },
-    "./gemini": {
-      "types": "./src/gemini-schema.ts",
-      "default": "./src/gemini-schema.ts"
-    },
-    "./forbidden-words": {
-      "types": "./src/forbidden-words.ts",
-      "default": "./src/forbidden-words.ts"
-    },
-    "./types": {
-      "types": "./src/generated/index.d.ts"
     },
     "./models.json": "./models.json",
     "./schemas/*": "./schemas/*",
@@ -39,18 +20,18 @@
     "fixtures"
   ],
   "scripts": {
-    "gen": "bun scripts/gen.ts",
+    "export": "bun scripts/export-json-schema.ts",
+    "export:check": "bun scripts/export-json-schema.ts --check",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "ajv": "8.17.1",
-    "ajv-formats": "3.0.1"
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@types/node": "22.10.2",
-    "json-schema-to-typescript": "15.0.4",
     "typescript": "5.6.3",
     "vitest": "2.1.9"
-  }
+  },
+  "types": "./src/index.ts"
 }

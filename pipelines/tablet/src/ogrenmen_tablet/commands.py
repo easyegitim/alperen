@@ -73,17 +73,12 @@ def open_env(args: argparse.Namespace, env: Mapping[str, str] | None, *, needs_l
         finally:
             rt.close()
         return
+    from ogrenmen_common.adapters.notify import LogNotifier
     from ogrenmen_common.adapters.postgrest import PostgrestDb
     from ogrenmen_common.adapters.storage import SupabaseStorage
-    from ogrenmen_common.fakes import FakeNotifier
 
     url, jwt, anon = env["SUPABASE_URL"], env["SUPABASE_BATCH_JWT"], env.get("SUPABASE_ANON_KEY")
-    if env.get("TELEGRAM_OPS_BOT_TOKEN") and env.get("ADMIN_CHAT_ID"):
-        from ogrenmen_common.adapters.telegram_notify import TelegramNotifier
-
-        notifier: Any = TelegramNotifier(env["TELEGRAM_OPS_BOT_TOKEN"], env["ADMIN_CHAT_ID"], transport=transport)
-    else:
-        notifier = FakeNotifier()
+    notifier: Any = LogNotifier()
     lite = LiteRuntime(db=PostgrestDb(url, jwt, anon_key=anon, transport=transport),
                        storage=SupabaseStorage(url, jwt, anon_key=anon, transport=transport), notifier=notifier,
                        out=out)

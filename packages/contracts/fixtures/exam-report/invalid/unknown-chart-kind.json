@@ -1,0 +1,36 @@
+{
+  "kind": "report",
+  "title": "Deneme 3 analizi",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": null,
+    "generated_on": "2026-11-02",
+    "language": "tr",
+    "personalized": true,
+    "duration_min": null
+  },
+  "sections": [
+    {
+      "no": 1,
+      "title": "Genel görünüm"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "id": "r1",
+      "section_no": 1,
+      "level": 1,
+      "text": "Genel görünüm"
+    },
+    {
+      "type": "chart",
+      "id": "r3",
+      "section_no": 1,
+      "chart_kind": "pie",
+      "title": "Pasta",
+      "data_ref": "x"
+    }
+  ],
+  "keys": []
+}

@@ -131,19 +131,11 @@ def test_forbidden_words_use_contracts_turkish_fold():
     assert check_fixtures.forbidden_words("exam-priority-plan", {"note": "Sıklık analizine göre öncelik"}) == []
 
 
-def test_callback_data_is_lossless_and_short():
-    from fxlib import uid, uuid_b64url, uuid_from_b64url
+def test_uuid_b64url_is_lossless_and_short():
+    from fxlib import uuid_b64url, uuid_from_b64url
 
-    cq = json.loads((FIX / "telegram/callback_answer.json").read_text(encoding="utf-8"))["callback_query"]
-    _, s, q, key = cq["data"].split(":")
-    assert len(cq["data"].encode()) <= 64 and key == "A"
-    assert uuid_from_b64url(s) == uid("diagnostic_session", "elif")
-    assert uuid_from_b64url(q) == uid("question", "DIAG-2026.1-01")
     u = "ffffffff-0000-4000-8000-0123456789ab"
     assert uuid_from_b64url(uuid_b64url(u)) == u and len(uuid_b64url(u)) == 22
-    check_fixtures.errors.clear()
-    check_fixtures.check_callback()
-    assert check_fixtures.errors == []
 
 
 def test_lesson_morale_analyses_are_complete():

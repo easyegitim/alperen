@@ -4,26 +4,26 @@
 Denetimler (her biri tabloda bir satır; herhangi bir FAIL → çıkış 1):
 
 (a) Ad paritesi
-    * ``apps/worker/test/rpc-names.json`` ∪ ``apps/panel/test/rpc-names.json`` ∪
-      ``pipelines/common/src/ogrenmen_common/fakes/rpc-names.json`` içindeki her ad, migration'larda
+    * ``pipelines/common/src/ogrenmen_common/fakes/rpc-names.json`` içindeki her ad, migration'larda
       (``supabase/migrations/*.sql``, pglast ile) gövdesi olan bir ``create function public.<ad>`` olmalı.
     * §3.0 "Görünümler ve yardımcılar" nesneleri (görünümler ve ``app.*`` yardımcıları) migration'da gövdeli
       olarak var olmalı; tablo imza verdiyse parametre adları SQL imzasıyla aynı olmalı.
-    * Çağrı yerlerinde görülen her ad ilgili ``rpc-names.json`` listesinde olmalı (liste dondurulmuş sözleşmedir;
-      pipelines için ``fakes/rpc-names.json``: JsonlDb'de eşleniği olmayan bir RPC ``--dry-run``'da patlardı).
-      Worker ve panel listesinde olup hiç çağrılmayan ad yalnız WARN'dur (pipelines listesi ertelenmiş modüllerin
-      eşleniklerini de taşıdığı için orada bu uyarı yazılmaz).
+    * Çağrı yerlerinde görülen her ad ``rpc-names.json`` listesinde olmalı (liste dondurulmuş sözleşmedir:
+      JsonlDb'de eşleniği olmayan bir RPC ``--dry-run``'da patlardı). Listede olup hiç çağrılmayan ad uyarı değildir
+      (liste ertelenmiş modüllerin eşleniklerini de taşır).
 
 (b) Parametre paritesi — gönderilen gövde anahtarları SQL imzasının giriş parametreleriyle karşılaştırılır:
-    * Worker: ``apps/worker/src/**/*.ts`` içindeki ``.rpc('<ad>', { p_…: … })`` çağrıları
-      (``src/data/fake.ts`` FakeDb'dir, PostgREST çağrısı değildir; taranmaz).
-    * Panel: ``apps/panel/lib/data/live.ts`` içindeki ``db.rpc('<ad>', { … })`` çağrıları.
     * Pipelines: ``pipelines/*/src/**/*.py`` içindeki ``<db>.rpc("<ad>", {…})`` çağrıları (``PostgrestDb.rpc`` ve
       ``JsonlDb.rpc`` aynı imzayı paylaşır); ad sabiti ve ``dict`` döndüren yardımcı (ör. ``rpc_params()``) çözülür.
+      ``# rpc-parity: staff`` işaretli çağrı eğitmen oturumuyla yapılır: yalnız SQL imzasına karşı denetlenir,
+      ``rpc-names.json`` (batch_worker eşlenikleri) listesinde aranmaz.
     * JsonlDb eşlenikleri: ``fakes/jsonl_rpc.py``'deki ``@rpc`` fonksiyonlarının parametre adları ve
       zorunluluk durumu SQL imzasıyla birebir; ``fakes/rpc-names.json`` kayıtlı eşleniklerle aynı küme.
     Bilinmeyen anahtar ya da eksik zorunlu parametre (SQL'de ``default`` yok) → FAIL. Çözümlenemeyen ad ya da
     gövde (değişken, yayma) → FAIL: parite kanıtlanamıyorsa geçmiş sayılmaz.
+
+TypeScript tarafı (apps/web, apps/worker, packages/llm) bu betikte henüz denetlenmez: ``ts_rpc_calls`` ayrıştırıcısı
+(``.rpc('<ad>', { … })``) ileride o paketler Supabase RPC çağırdığında kullanılmak üzere durur.
 
 Kullanım: ``python scripts/check-rpc-parity.py [--root <depo>] [--only-problems] [--json]``
 """
@@ -43,13 +43,8 @@ from pglast import ast as pg
 
 ROOT_DEFAULT = Path(__file__).resolve().parent.parent
 
-WORKER_NAMES = "apps/worker/test/rpc-names.json"
-PANEL_NAMES = "apps/panel/test/rpc-names.json"
 COMMON_NAMES = "pipelines/common/src/ogrenmen_common/fakes/rpc-names.json"
 JSONL_RPC = "pipelines/common/src/ogrenmen_common/fakes/jsonl_rpc.py"
-WORKER_SRC = "apps/worker/src"
-WORKER_EXCLUDE = ("data/fake.ts",)
-PANEL_LIVE = "apps/panel/lib/data/live.ts"
 MIGRATIONS = "supabase/migrations"
 BLUEPRINT = "docs/BLUEPRINT.md"
 
@@ -715,7 +710,7 @@ def check(root: Path, required_objects: tuple[str, ...] = SECTION_2_10_OBJECTS) 
     rows: list[Row] = []
 
     # (a) ad listeleri ⊆ create function
-    lists = {"worker": WORKER_NAMES, "panel": PANEL_NAMES, "pipelines": COMMON_NAMES}
+    lists = {"pipelines": COMMON_NAMES}
     names_by_source: dict[str, list[str]] = {}
     for source, rel in lists.items():
         names = _load_names(root / rel)
@@ -752,30 +747,15 @@ def check(root: Path, required_objects: tuple[str, ...] = SECTION_2_10_OBJECTS) 
             rows.append(Row(FAIL, "§3.0", obj, MIGRATIONS, "migration'larda yok (adı geçen ama tanımı olmayan nesne)"))
 
     # (b) çağrı yerleri
-    worker_files = sorted(
-        p for p in (root / WORKER_SRC).rglob("*.ts")
-        if not any(_rel(root / WORKER_SRC, p) == ex for ex in WORKER_EXCLUDE)
-    )
-    worker_calls = [c for f in worker_files for c in ts_rpc_calls(f.read_text(encoding="utf-8"), f)]
-    panel_path = root / PANEL_LIVE
-    if not panel_path.exists():
-        raise ParityError(f"panel kaynağı yok: {panel_path}")
-    panel_calls = ts_rpc_calls(panel_path.read_text(encoding="utf-8"), panel_path)
     py_files = sorted(p for p in (root / "pipelines").glob("*/src/**/*.py"))
     py_calls = py_rpc_calls(py_files)
 
-    for source, calls, listed, warn_uncalled in (
-        ("worker", worker_calls, names_by_source["worker"], True),
-        ("panel", panel_calls, names_by_source["panel"], True),
-        ("pipelines", py_calls, names_by_source["pipelines"], False),
-    ):
-        called: set[str] = set()
+    for source, calls, listed in (("pipelines", py_calls, names_by_source["pipelines"]),):
         for c in calls:
             where = f"{_rel(root, c.file)}:{c.line}"
             if c.rpc is None:
                 rows.append(Row(FAIL, f"çağrı:{source}", "?", where, c.note))
                 continue
-            called.add(c.rpc)
             fns = cat.function(c.rpc)
             if not fns:
                 rows.append(Row(FAIL, f"çağrı:{source}", c.rpc, where, "migration'larda create function yok"))
@@ -784,20 +764,13 @@ def check(root: Path, required_objects: tuple[str, ...] = SECTION_2_10_OBJECTS) 
                 rows.append(Row(FAIL, f"çağrı:{source}", c.rpc, where, c.note or "gövde çözümlenemedi"))
                 continue
             status, detail = compare_keys(fns, c.keys)
-            if source == "pipelines" and _staff_marked(c):
-                # Eğitmen oturumuyla (OGRENMEN_STAFF_JWT) yapılan çağrı: batch_worker listesine değil,
-                # eğitmen paneli RPC listesine göre denetlenir. İşaret: aynı ya da üst satırda
-                # "# rpc-parity: staff" yorumu.
-                if c.rpc not in names_by_source["panel"]:
-                    status, detail = FAIL, f"eğitmen çağrısı ama panel rpc-names.json listesinde yok; {detail}"
-                else:
-                    detail = f"eğitmen oturumu; {detail}"
+            if _staff_marked(c):
+                # Eğitmen oturumuyla (OGRENMEN_STAFF_JWT) yapılan çağrı: batch_worker eşlenik listesinde aranmaz,
+                # yalnız SQL imzasına karşı denetlenir. İşaret: aynı ya da üst satırda "# rpc-parity: staff".
+                detail = f"eğitmen oturumu; {detail}"
             elif c.rpc not in listed:
                 status, detail = FAIL, f"rpc-names.json listesinde yok; {detail}"
             rows.append(Row(status, f"çağrı:{source}", c.rpc, where, detail))
-        if warn_uncalled:
-            for name in sorted(set(listed) - called):
-                rows.append(Row(WARN, f"çağrı:{source}", name, lists[source], "listede var ama kaynakta çağrı yok"))
 
     # (b) JsonlDb eşlenikleri ↔ SQL imzası
     fake_path = root / JSONL_RPC
@@ -856,7 +829,7 @@ def render_table(rows: list[Row]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="RPC adı + parametre adı paritesi (Worker, panel, pipelines ↔ SQL).")
+    ap = argparse.ArgumentParser(description="RPC adı + parametre adı paritesi (pipelines ↔ SQL).")
     ap.add_argument("--root", type=Path, default=ROOT_DEFAULT, help="depo kökü (varsayılan: betiğin üst dizini)")
     ap.add_argument("--only-problems", action="store_true", help="yalnız FAIL ve WARN satırlarını yaz")
     ap.add_argument("--json", action="store_true", help="tablo yerine JSON yaz")

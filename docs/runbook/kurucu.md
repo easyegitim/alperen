@@ -1,5 +1,7 @@
 # Kurucu runbook'u — hesaplar, deploy, yedek, anahtar döndürme, harcama tavanı
 
+> **Not (v2):** Bu runbook v1 (Telegram botu + Cloudflare) kurulumunu anlatır; v2 planı `docs/PLAN-v2.md`. v2 için yeni runbook P0 sonunda yazılır.
+
 Tek sayfa, sırayla uygulanır. Her şey kurucunun makinesinde, depo kökünden (`cd alperen`) çalışır. Anahtarlar yalnız
 `wrangler secret put` (Worker), parola yöneticisi ve kabuk ortamına girer; depoya, `.env`'e ya da GitHub'a yazılmaz.
 `service_role` anahtarı ve proje JWT secret'ı bu makineden çıkmaz. Önce `make check-quick` yeşil olmalı.

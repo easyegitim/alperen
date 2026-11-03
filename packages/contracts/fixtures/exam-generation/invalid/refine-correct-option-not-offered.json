@@ -1,0 +1,60 @@
+{
+  "title": "Rasyonel sayılar mini deneme",
+  "items": [
+    {
+      "no": 1,
+      "section": "Matematik",
+      "kind": "mcq",
+      "stem": "1/2 + 1/3 işleminin sonucu kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "1/5"
+        },
+        {
+          "key": "B",
+          "text": "2/5"
+        },
+        {
+          "key": "C",
+          "text": "5/6"
+        }
+      ],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "easy"
+    },
+    {
+      "no": 2,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    }
+  ],
+  "keys": [
+    {
+      "question_no": 1,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": null,
+      "solution": "Paydalar 6'da eşitlenir: 3/6 + 2/6 = 5/6."
+    },
+    {
+      "question_no": 2,
+      "correct_option": null,
+      "numeric_value": "6",
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    }
+  ]
+}

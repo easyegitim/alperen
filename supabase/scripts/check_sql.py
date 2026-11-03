@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Migration kümesinin statik denetimi (BLUEPRINT §2.4) — pglast sözdizimi ağacıyla, canlı DB gerekmez.
+"""Migration kümesinin statik denetimi (v2; docs/PLAN-v2-detail.md §2) — pglast sözdizimi ağacıyla, canlı DB gerekmez.
 
 Denetimler (kod → anlam):
   OGR-LINT-PARSE         dosya ayrıştırılamıyor
   OGR-LINT-RLS           public/secure/audit tablosu için kümenin herhangi bir dosyasında ENABLE + FORCE RLS yok
-  OGR-LINT-POLICY        tablo için CREATE POLICY yok ve scripts/no-policy-allowlist.json'da değil (ya da liste bayat)
-  OGR-LINT-SECURE        secure/audit nesnesine bot_runtime|batch_worker|authenticated|anon GRANT'i (dosya başına)
+  OGR-LINT-POLICY        (yalnız --require-policies) tablo için CREATE POLICY yok ve --allowlist'te değil (ya da liste
+                         bayat); B1 tabanında politikalar yoktur, RLS politikaları B2'de eklenince açılır
+  OGR-LINT-SECURE        secure/audit nesnesine authenticated|anon GRANT'i (dosya başına; service_role serbest)
   OGR-LINT-GRANTALL      GRANT ALL yasak
   OGR-LINT-BASELINE      0002'de ALTER DEFAULT PRIVILEGES … REVOKE ya da REVOKE ALL ON ALL TABLES IN SCHEMA public
                          FROM anon, authenticated yok
@@ -15,9 +16,12 @@ Denetimler (kod → anlam):
   OGR-LINT-VARCONFLICT   plpgsql: v_ öneksiz yerel değişken, p_ öneksiz parametre ya da değişken/dönüş sütunu adıyla
                          aynı adlı sütuna takma adsız başvuru
   OGR-LINT-COMMENT       tablo ya da sütunun comment on açıklaması yok
-  OGR-LINT-MATRIX        --grants-matrix: migration GRANT'leri tests/grants_matrix.json ile birebir değil
+  OGR-LINT-CREATEDAT     public/secure/audit tablosunda created_at sütunu yok
+  OGR-LINT-UUIDPK        tek sütunlu uuid birincil anahtar (FK değilse) default gen_random_uuid() değil
+  OGR-LINT-HALFVEC       halfvec sütunu 1024 boyutlu değil (Voyage voyage-3.5)
+  OGR-LINT-MATRIX        fonksiyonda PUBLIC'e EXECUTE verilmiş
 
-Kullanım: python check_sql.py <migrations> [--grants-matrix tests/grants_matrix.json] [--allowlist …] [--dump-grants]
+Kullanım: python check_sql.py <migrations> [--require-policies] [--allowlist …] [--dump-grants]
 Çıkış: hata yoksa 0, varsa 1 (her hata bir satır: KOD dosya: açıklama).
 """
 
@@ -35,7 +39,8 @@ import pglast
 from pglast import ast
 from pglast.enums import AlterTableType, ConstrType, GrantTargetType, ObjectType, RoleSpecType
 
-APP_ROLES = ("anon", "authenticated", "bot_runtime", "batch_worker")
+APP_ROLES = ("anon", "authenticated")
+HALFVEC_DIM = 1024
 TABLE_SCHEMAS = ("public", "secure", "audit")
 VOLATILE_TIME = {"now", "clock_timestamp", "statement_timestamp", "transaction_timestamp", "timeofday", "random"}
 
@@ -129,7 +134,7 @@ def collect_tables(files):
 
 # --- denetimler ------------------------------------------------------------------------------------
 
-def check_rls_policies(files, tables, allowlist: set[str], ctx: Ctx) -> None:
+def check_rls_policies(files, tables, allowlist: set[str], ctx: Ctx, require_policies: bool = False) -> None:
     enabled, forced, policies = set(), set(), defaultdict(int)
     for f in files:
         for raw in f.stmts:
@@ -149,12 +154,15 @@ def check_rls_policies(files, tables, allowlist: set[str], ctx: Ctx) -> None:
             ctx.err("OGR-LINT-RLS", f.path.name, f"{name}: ENABLE ROW LEVEL SECURITY yok")
         if name not in forced:
             ctx.err("OGR-LINT-RLS", f.path.name, f"{name}: FORCE ROW LEVEL SECURITY yok")
+        if not require_policies:
+            continue
         if policies[name] == 0 and name not in allowlist:
             ctx.err("OGR-LINT-POLICY", f.path.name, f"{name}: CREATE POLICY yok ve no-policy-allowlist'te değil")
         if policies[name] > 0 and name in allowlist:
             ctx.err("OGR-LINT-POLICY", f.path.name, f"{name}: allowlist'te ama politikası var (liste bayat)")
-    for name in sorted(allowlist - set(tables)):
-        ctx.err("OGR-LINT-POLICY", "no-policy-allowlist.json", f"{name}: böyle bir tablo yok (liste bayat)")
+    if require_policies:
+        for name in sorted(allowlist - set(tables)):
+            ctx.err("OGR-LINT-POLICY", "no-policy-allowlist.json", f"{name}: böyle bir tablo yok (liste bayat)")
 
 
 def check_grants_per_file(files, ctx: Ctx) -> None:
@@ -332,6 +340,41 @@ def expr_sql(query: str, mode: int) -> str | None:
     return "select " + q
 
 
+def type_name(tn: ast.TypeName) -> str:
+    return tn.names[-1].sval if tn.names else ""
+
+
+def type_mods(tn: ast.TypeName) -> list[int]:
+    out = []
+    for m in tn.typmods or ():
+        val = getattr(m, "val", None)
+        if isinstance(val, ast.Integer):
+            out.append(val.ival)
+    return out
+
+
+def check_table_shapes(tables, ctx: Ctx) -> None:
+    """created_at her tabloda; tek sütunlu uuid pk default gen_random_uuid(); halfvec(1024)."""
+    for name, (f, st) in sorted(tables.items()):
+        if name.split(".")[0] not in TABLE_SCHEMAS:
+            continue
+        cols = [el for el in (st.tableElts or ()) if isinstance(el, ast.ColumnDef)]
+        if not any(c.colname == "created_at" for c in cols):
+            ctx.err("OGR-LINT-CREATEDAT", f.path.name, f"{name}: created_at sütunu yok")
+        for c in cols:
+            tname = type_name(c.typeName)
+            cons = list(c.constraints or ())
+            if tname == "halfvec" and type_mods(c.typeName) != [HALFVEC_DIM]:
+                ctx.err("OGR-LINT-HALFVEC", f.path.name, f"{name}.{c.colname}: halfvec({HALFVEC_DIM}) olmalı")
+            is_pk = any(k.contype == ConstrType.CONSTR_PRIMARY for k in cons)
+            is_fk = any(k.contype == ConstrType.CONSTR_FOREIGN for k in cons)
+            if tname == "uuid" and is_pk and not is_fk:
+                default = next((k.raw_expr for k in cons if k.contype == ConstrType.CONSTR_DEFAULT), None)
+                ok = isinstance(default, ast.FuncCall) and default.funcname[-1].sval == "gen_random_uuid"
+                if not ok:
+                    ctx.err("OGR-LINT-UUIDPK", f.path.name, f"{name}.{c.colname}: uuid pk default gen_random_uuid() değil")
+
+
 def check_comments(files, tables, columns, ctx: Ctx) -> None:
     commented_tables, commented_cols = set(), set()
     for f in files:
@@ -433,46 +476,6 @@ def effective_grants(files, tables, views, columns):
     return out_rels, out_funcs, public_leaks
 
 
-STORAGE_POLICY_RE = re.compile(r"create policy (\w+) on storage\.objects", re.I)
-
-
-def compare_matrix(files, rels, funcs, matrix: dict, ctx: Ctx) -> None:
-    mt = matrix.get("tables", {})
-    for rel in sorted(set(rels) | set(mt)):
-        if rel not in rels:
-            ctx.err("OGR-LINT-MATRIX", "grants_matrix.json", f"{rel}: matriste var, migration'larda tablo/görünüm yok")
-            continue
-        if rel not in mt:
-            ctx.err("OGR-LINT-MATRIX", "grants_matrix.json", f"{rel}: migration'da var, matriste yok")
-            continue
-        want = {role: {p: (v if v == "*" else sorted(v)) for p, v in privs.items()} for role, privs in mt[rel].items()}
-        have = rels[rel]
-        for role in sorted(set(want) | set(have)):
-            w, h = want.get(role, {}), have.get(role, {})
-            for p in sorted(set(w) | set(h)):
-                if w.get(p) != h.get(p):
-                    ctx.err("OGR-LINT-MATRIX", "grants_matrix.json",
-                            f"{rel} {role} {p}: matris {w.get(p, '—')} ≠ migration {h.get(p, '—')}")
-    mf = matrix.get("functions", {})
-    for name in sorted(set(funcs) | set(mf)):
-        if name not in funcs:
-            ctx.err("OGR-LINT-MATRIX", "grants_matrix.json", f"{name}: matriste var, migration'da fonksiyon yok")
-        elif name not in mf:
-            if name.startswith("public.") or funcs[name]["grants"]:
-                ctx.err("OGR-LINT-MATRIX", "grants_matrix.json", f"{name}: migration'da var, matriste yok")
-        elif sorted(mf[name].get("grants", [])) != funcs[name]["grants"]:
-            ctx.err("OGR-LINT-MATRIX", "grants_matrix.json",
-                    f"{name}: matris {sorted(mf[name].get('grants', []))} ≠ migration {funcs[name]['grants']}")
-    storage = matrix.get("storage", {}).get("storage.objects", {})
-    declared = {p["name"] for p in storage.get("policies", [])}
-    found = set()
-    for f in files:
-        if f.path.name.startswith("0017"):
-            found |= set(STORAGE_POLICY_RE.findall(f.sql))
-    for name in sorted(declared ^ found):
-        ctx.err("OGR-LINT-MATRIX", "grants_matrix.json", f"storage.objects politikası {name}: matris ve 0017 uyuşmuyor")
-
-
 def dump_matrix(rels, funcs, existing: dict | None) -> dict:
     out = dict(existing or {})
     out["tables"] = rels
@@ -484,9 +487,10 @@ def main(argv: list[str] | None = None) -> int:
     here = Path(__file__).resolve().parent
     ap = argparse.ArgumentParser(description="Supabase migration kümesinin statik denetimi (pglast)")
     ap.add_argument("migrations", type=Path)
-    ap.add_argument("--grants-matrix", type=Path, default=None)
+    ap.add_argument("--require-policies", action="store_true",
+                    help="her RLS tablosunda CREATE POLICY ya da --allowlist kaydı iste (B2 RLS politikalarıyla açılır)")
     ap.add_argument("--allowlist", type=Path, default=here / "no-policy-allowlist.json")
-    ap.add_argument("--dump-grants", action="store_true", help="migration'lardan hesaplanan matrisi stdout'a yaz (inceleme için)")
+    ap.add_argument("--dump-grants", action="store_true", help="migration'lardan hesaplanan yetki kümesini stdout'a yaz (inceleme için)")
     args = ap.parse_args(argv)
     ctx = Ctx()
     files = load(args.migrations, ctx)
@@ -498,19 +502,16 @@ def main(argv: list[str] | None = None) -> int:
     allowlist = {t["name"] if isinstance(t, dict) else t for t in allow_doc.get("tables", [])}
     rels, funcs, leaks = effective_grants(files, tables, views, columns)
     if args.dump_grants:
-        existing = json.loads(args.grants_matrix.read_text(encoding="utf-8")) if args.grants_matrix and args.grants_matrix.exists() else None
-        print(json.dumps(dump_matrix(rels, funcs, existing), ensure_ascii=False, indent=2))
+        print(json.dumps(dump_matrix(rels, funcs, None), ensure_ascii=False, indent=2))
         return 0
-    check_rls_policies(files, tables, allowlist, ctx)
+    check_rls_policies(files, tables, allowlist, ctx, require_policies=args.require_policies)
     check_grants_per_file(files, ctx)
     check_baseline(files, ctx)
     check_functions_and_generated(files, tables, views, columns, ctx)
     check_comments(files, tables, columns, ctx)
+    check_table_shapes(tables, ctx)
     for name in leaks:
         ctx.err("OGR-LINT-MATRIX", "migrations", f"{name}: PUBLIC'e EXECUTE verilmiş")
-    if args.grants_matrix is not None:
-        matrix = json.loads(args.grants_matrix.read_text(encoding="utf-8"))
-        compare_matrix(files, rels, funcs, matrix, ctx)
     if ctx.errors:
         print("\n".join(ctx.errors), file=sys.stderr)
         print(f"check_sql: {len(ctx.errors)} hata", file=sys.stderr)

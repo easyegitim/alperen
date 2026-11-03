@@ -30,7 +30,7 @@ src/ogrenmen_common/
 ├── adapters/media.py       LLMVision, LLMOCR, LLMTranscriber (CostLedger üzerinden; Whisper → diarize pencereleri)
 ├── adapters/openalex.py  semanticscholar.py  arxiv.py  crossref.py  unpaywall.py
 ├── adapters/postgrest.py   PostgrestDb (messages sütun listesinde text_raw YOK; insert/update returning=minimal|representation)
-├── adapters/storage.py     SupabaseStorage      telegram_notify.py  TelegramNotifier
+├── adapters/storage.py     SupabaseStorage      notify.py  LogNotifier, format_notice
 ├── fakes/                  FakeLLM, FakeEmbedding, FakeVision, FakeTranscriber, FakeOCR, FakeScholar, FakeArxiv,
 │                           FakeCrossref, FakeUnpaywall, JsonlDb (+ jsonl_rpc.py), LocalDirStorage, FakeNotifier,
 │                           rpc-names.json
@@ -87,12 +87,12 @@ with cli_base.open_runtime(args) as rt:              # çıkışta out/*.jsonl +
 | Koşul | Sonuç |
 | --- | --- |
 | `OGRENMEN_FAKES=1`, `dry_run=True` ya da `adapters="fake"` | tamamen sahte, ağ yok; saat `OGRENMEN_NOW` ya da fixture "şimdi"si `2026-10-20T09:00:00Z` |
-| gerçek kip, veritabanı + model anahtarları var | `PostgrestDb`, `SupabaseStorage`, `ProviderRouter` (anahtarı olan sağlayıcılar), `LedgeredEmbedding(GeminiEmbedding)` (`GEMINI_PAID_KEY`), OpenAlex/S2/arXiv, Crossref, Unpaywall, `TelegramNotifier`, `GeminiBatchClient` |
+| gerçek kip, veritabanı + model anahtarları var | `PostgrestDb`, `SupabaseStorage`, `ProviderRouter` (anahtarı olan sağlayıcılar), `LedgeredEmbedding(GeminiEmbedding)` (`GEMINI_PAID_KEY`), OpenAlex/S2/arXiv, Crossref, Unpaywall, `LogNotifier` (stderr), `GeminiBatchClient` |
 | gerçek kip, ne veritabanı ne model anahtarı | her şey sahte (`mode='mixed'`), `warnings` + stderr'de Türkçe uyarı |
 | gerçek veritabanı var, hiçbir model anahtarı yok | **kurulmaz** — `AdapterError` `OGR-ADP-001 gerçek veritabanıyla sahte model kullanılmaz` (fixture çıktıları ve sahte maliyet satırları üretim tablolarına yazılmaz) |
 | model anahtarı var, `SUPABASE_URL`/`SUPABASE_BATCH_JWT` yok | **kurulmaz** — `AdapterError` (ücretli çağrı gerçek defter ve `check_spend` tavanı olmadan yapılmaz; ilke 2 ve 3) |
 | gerçek veritabanı var, `GEMINI_PAID_KEY` yok | embedding `embed` çağrısında `OGR-ADP-001` ile reddedilir (sahte vektör yazılmaz); `GEMINI_FREE_KEY` embedding için **hiç** kullanılmaz (ücretsiz katman veriyle eğitir, §9.1) |
-| diğer eksik anahtarlar (Telegram, Unpaywall) | o adaptör sahteye düşer, `warnings` + stderr'de Türkçe uyarı (sessiz düşüş yok) |
+| diğer eksik anahtarlar (Unpaywall) | o adaptör sahteye düşer, `warnings` + stderr'de Türkçe uyarı (sessiz düşüş yok) |
 
 `cli_base.runtime_from_args`: gerçek çalışma istenip `SUPABASE_URL` ya da `SUPABASE_BATCH_JWT` yoksa iş
 `--dry-run` olarak koşar ve başarılı sayılır; GitHub Actions'ta `::warning::` satırı yazar (§2.9).

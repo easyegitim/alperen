@@ -1,139 +1,157 @@
-"""check-all.sh: biten her modülün kabul komutları gerçekten adım olarak koşuyor mu.
-
-M07 (`pipelines/kulaklik_batch`) bitmişti ama `check-all.sh` beş kabul komutunun hiçbirini çalıştırmıyordu
-(M13 entegrasyon bulgusu). Bu testler üç yoldan yakalar: README "Nerede kaldık" tablosundaki bitmiş modüller
-`--list`'te olmalı; modül README'sinin "Kurulum ve kabul" bloğundaki her komut, `/tmp` → `$W` ve depo kökü →
-`$ROOT` dönüşümüyle o modülün adım gövdelerinde geçmeli; adım gövdelerinde sabit `/tmp/` yolu kalmamalı.
-"""
+"""check-all.sh: keşif, bayraklar, çıkış kodları ve check.sh sözleşmesi (sahte depo üzerinde; gerçek modül koşmaz)."""
 
 from __future__ import annotations
 
-import re
+import os
+import shutil
+import stat
 import subprocess
+from pathlib import Path
 
 import pytest
-from conftest import REPO, SCRIPTS
+from conftest import REPO, SCRIPTS, write
 
 CHECK_ALL = SCRIPTS / "check-all.sh"
-SCRIPT = CHECK_ALL.read_text(encoding="utf-8")
+LIB = SCRIPTS / "lib.sh"
 
-# Modül README'si → check-all'daki modül adı (kabul komutları README'de kod bloğu olarak yazılı olanlar).
-MODULE_READMES = {
-    "M06": "pipelines/tablet/README.md",
-    "M07": "pipelines/kulaklik_batch/README.md",
-    "M08": "pipelines/ders/README.md",
-    "M09": "pipelines/kalem/README.md",
-    "M10": "pipelines/kitap/README.md",
-}
+# Gerçek depoda check.sh'i olması gereken (korunan) modüller.
+EXPECTED_MODULES = [
+    "content/tyt-matematik",
+    "packages/contracts",
+    "packages/mastery-math",
+    "packages/pii",
+    "pipelines/common",
+    "pipelines/ders",
+    "pipelines/kalem",
+    "pipelines/tablet",
+    "supabase",
+]
 
 
-def run_check_all(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["bash", str(CHECK_ALL), *args], capture_output=True, text=True, check=False)
+def run(root: Path, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    full_env = {**os.environ, "TMPDIR": str(root / "tmp")}
+    (root / "tmp").mkdir(exist_ok=True)
+    full_env.update(env or {})
+    return subprocess.run(["bash", str(root / "scripts/check-all.sh"), *args], capture_output=True, text=True,
+                          check=False, env=full_env)
 
 
-def listed_steps() -> list[tuple[str, str]]:
-    out = run_check_all("--list")
+def make_repo(tmp_path: Path, checks: dict[str, str]) -> Path:
+    """Küçük sahte depo: gerçek check-all.sh + lib.sh, kök adımları geçen taklitler, verilen check.sh gövdeleri."""
+    root = tmp_path / "repo"
+    (root / "scripts").mkdir(parents=True)
+    shutil.copy(CHECK_ALL, root / "scripts/check-all.sh")
+    shutil.copy(LIB, root / "scripts/lib.sh")
+    for name in ("secret-scan.sh",):
+        write(root / "scripts" / name, "#!/usr/bin/env bash\necho ok\n")
+    for name in ("check-drift.py", "check-fixtures.py", "check-rpc-parity.py"):
+        write(root / "scripts" / name, "print('ok')\n")
+    write(root / "Makefile", "check check-quick db-test:\n\t@true\n")
+    write(root / ".github/workflows/ci.yml", 'name: x\n"on": push\njobs: {}\n')
+    for module, body in checks.items():
+        path = write(root / module / "check.sh", "#!/usr/bin/env bash\nset -euo pipefail\n" + body)
+        path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    return root
+
+
+def only_modules(root: Path, *patterns: str, flags: tuple[str, ...] = ()) -> subprocess.CompletedProcess[str]:
+    return run(root, "--only", ",".join(patterns), *flags)
+
+
+def test_discovers_check_sh_in_sorted_order(tmp_path):
+    root = make_repo(tmp_path, {"packages/b": "echo b", "apps/web": "echo web", "pipelines/z": "echo z",
+                                "supabase": "echo s", "content/c": "echo c"})
+    out = run(root, "--list")
     assert out.returncode == 0, out.stderr
-    rows = []
-    for line in out.stdout.splitlines():
-        parts = line.split()
-        if len(parts) >= 3:
-            rows.append((parts[0], parts[2]))  # (modül, fonksiyon)
-    return rows
+    names = [line.split()[0] for line in out.stdout.splitlines()]
+    modules = [n for n in names if not n.startswith("root:")]
+    assert modules == ["apps/web", "content/c", "packages/b", "pipelines/z", "supabase"]
+    assert any(n.startswith("root:") for n in names)
 
 
-def function_body(name: str) -> str:
-    m = re.search(rf"^{re.escape(name)}\(\) \{{\n(.*?)^\}}", SCRIPT, re.S | re.M)
-    assert m, f"{name} fonksiyonu check-all.sh'ta yok"
-    return m.group(1)
+def test_directory_without_check_sh_is_ignored_with_warning(tmp_path):
+    root = make_repo(tmp_path, {"packages/a": "echo a"})
+    write(root / "packages/newpkg/package.json", "{}")
+    out = only_modules(root, "packages/")
+    assert out.returncode == 0, out.stdout + out.stderr
+    assert "UYARI: packages/newpkg içinde check.sh yok" in out.stdout
+    assert "PASS" in out.stdout and "1 PASS, 0 FAIL, 0 SKIP" in out.stdout
 
 
-def normalize(text: str) -> str:
-    """Satır devamlarını birleştirir, yorumları ve tırnakları atar, boşlukları sadeleştirir."""
-    text = text.replace("\\\n", " ")
-    text = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
-    text = text.replace('"', "").replace("'", "")
-    return re.sub(r"\s+", " ", text).strip()
+def test_any_fail_exits_1_and_shows_log_tail(tmp_path):
+    root = make_repo(tmp_path, {"packages/ok": "echo fine", "packages/bad": "echo yanlis-cikti; exit 3"})
+    out = only_modules(root, "packages/")
+    assert out.returncode == 1
+    assert "FAIL" in out.stdout and "yanlis-cikti" in out.stdout and "1 PASS, 1 FAIL" in out.stdout
 
 
-def readme_acceptance_commands(readme: str) -> list[str]:
-    text = (REPO / readme).read_text(encoding="utf-8")
-    m = re.search(r"^## Kurulum ve kabul\n.*?^```\n(.*?)^```", text, re.S | re.M)
-    assert m, f"{readme}: 'Kurulum ve kabul' kod bloğu yok"
-    return [line for line in m.group(1).splitlines() if line.strip()]
+def test_exit_77_is_module_skip_and_skip_lines_annotate_pass(tmp_path):
+    skip_all = 'source "$(dirname "$0")/../../scripts/lib.sh"; ogr_skip_all "anahtar yok"'
+    root = make_repo(tmp_path, {"packages/all": skip_all,
+                                "packages/part": 'echo "SKIP: canlı adım (OGRENMEN_LIVE=1 değil)"'})
+    out = only_modules(root, "packages/")
+    assert out.returncode == 0, out.stdout
+    result_lines = out.stdout.splitlines()
+    assert any(ln.startswith("SKIP") and "packages/all" in ln and "[SKIP: anahtar yok]" in ln for ln in result_lines)
+    assert any(ln.startswith("PASS") and "packages/part" in ln and "[SKIP: canlı adım" in ln for ln in result_lines)
+    assert "1 PASS, 0 FAIL, 1 SKIP" in out.stdout
 
 
-def to_check_all_form(command: str) -> str:
-    # check-all komutları kök yolunu $ROOT'tan, /tmp çıktılarını çalışmaya özel $W'den alır.
-    return normalize(command.replace("/home/user/alperen", "$ROOT").replace("/tmp/", "$W/"))
+def test_quick_and_live_flags_set_environment(tmp_path):
+    body = 'echo "LIVE=$OGRENMEN_LIVE QUICK=$OGRENMEN_QUICK"; test "$OGRENMEN_LIVE-$OGRENMEN_QUICK" = "$EXPECT"'
+    root = make_repo(tmp_path, {"packages/env": body})
+    for flags, expect in ((("--quick",), "0-1"), (("--live",), "1-0"), ((), "0-0")):
+        out = run(root, "--only", "packages/env", *flags, env={"EXPECT": expect, "OGRENMEN_LIVE": "0"})
+        assert out.returncode == 0, (flags, out.stdout)
+    wrong = run(root, "--only", "packages/env", "--quick", env={"EXPECT": "1-0"})
+    assert wrong.returncode == 1  # beklenti tutmazsa FAIL (testin kendisini doğrular)
 
 
-def test_only_m07_is_a_known_module():
-    out = run_check_all("--only", "M07", "--list")
+def test_quick_and_live_conflict_and_unknown_option(tmp_path):
+    root = make_repo(tmp_path, {"packages/a": "true"})
+    assert run(root, "--quick", "--live").returncode == 2
+    assert run(root, "--yok").returncode == 2
+
+
+def test_empty_selection_is_not_green(tmp_path):
+    root = make_repo(tmp_path, {"packages/a": "true"})
+    out = run(root, "--only", "yok-boyle-bir-modul")
+    assert out.returncode == 1 and "boş koşu yeşil sayılmaz" in out.stdout
+
+
+def test_modules_run_from_neutral_directory(tmp_path):
+    root = make_repo(tmp_path, {"packages/cwd": 'test "$(pwd)" != "$ROOT_UNDER_TEST"'})
+    out = run(root, "--only", "packages/cwd", env={"ROOT_UNDER_TEST": str(root)})
+    assert out.returncode == 0, out.stdout
+
+
+def test_real_repo_lists_all_expected_modules():
+    out = subprocess.run(["bash", str(CHECK_ALL), "--list"], capture_output=True, text=True, check=False)
     assert out.returncode == 0, out.stderr
+    names = {line.split()[0] for line in out.stdout.splitlines()}
+    for module in EXPECTED_MODULES:
+        assert module in names, f"{module}/check.sh keşfedilmedi"
+    assert {"root:secret-scan", "root:drift", "root:fixtures", "root:rpc-parity"} <= names
 
 
-@pytest.mark.parametrize("alias", ["M06T", "M06R", "m06t"])
-def test_old_tablet_slice_names_select_m06(alias):
-    out = run_check_all("--only", alias, "--list")
-    assert out.returncode == 0, out.stderr
-    assert {line.split()[0] for line in out.stdout.splitlines() if line.strip()} == {"M06"}
+@pytest.mark.parametrize("module", EXPECTED_MODULES)
+def test_real_check_sh_follows_contract(module):
+    path = REPO / module / "check.sh"
+    text = path.read_text(encoding="utf-8")
+    assert os.access(path, os.X_OK), f"{module}/check.sh çalıştırılabilir değil"
+    assert text.startswith("#!/usr/bin/env bash\n")
+    assert "set -euo pipefail" in text
+    assert "scripts/lib.sh" in text
+    # `! komut` set -e altında çıkışı tetiklemez; olumsuz denetim ogr_absent / ogr_no_file ile yazılmalı.
+    bare_negations = [ln for ln in text.splitlines() if ln.startswith("! ")]
+    assert not bare_negations, f"{module}/check.sh: çıplak '! komut' (set -e altında etkisiz): {bare_negations}"
 
 
-def test_live_steps_for_tablet_and_ders():
-    out = run_check_all("--list")
-    rows = [line.split() for line in out.stdout.splitlines()]
-    live = {(parts[0], parts[2]) for parts in rows if parts[1:2] == ["live"]}
-    assert {("M06", "m06_live"), ("M08", "m08_live")} <= live, live
-    for fn, pkg in (("m06_live", "tablet"), ("m08_live", "ders")):
-        body = normalize(function_body(fn))
-        assert f"live_only_passes python -m pytest $ROOT/pipelines/{pkg} -q -k live -rs" in body, body
-
-
-def test_finished_modules_in_readme_are_all_run():
-    text = (REPO / "README.md").read_text(encoding="utf-8")
-    m = re.search(r"\*\*Bitmiş[^\n]*\n(.*?)\n\*\*Ertelenmiş", text, re.S)
-    assert m, "README 'Nerede kaldık' bitmiş tablosu bulunamadı"
-    finished = set(re.findall(r"^\| (M\d+[A-Z]*) ", m.group(1), re.M))
-    finished = {"M13" if mod == "M13L" else mod for mod in finished}
-    assert "M07" in finished
-    listed = {mod for mod, _ in listed_steps()}
-    assert finished <= listed, f"README'de bitmiş ama check-all'da adımı olmayan modüller: {sorted(finished - listed)}"
-
-
-@pytest.mark.parametrize("module", sorted(MODULE_READMES))
-def test_module_readme_acceptance_commands_are_steps(module):
-    bodies = normalize("\n".join(function_body(fn) for mod, fn in listed_steps() if mod == module))
-    assert bodies, f"{module} için check-all adımı yok"
-    missing = []
-    for command in readme_acceptance_commands(MODULE_READMES[module]):
-        for segment in to_check_all_form(command).split(" && "):
-            segment = re.sub(r"^(\w+=\S+ )+", "", segment)  # ortam önekleri (OGRENMEN_DATABASE_URL=…) adımda ayrı
-            if segment.startswith("python -m pip install "):
-                # Kurulum adımı ortak tabanı da kurabilir; README'deki her paket yolu kurulmalı.
-                paths = [tok for tok in segment.split()[4:] if tok != "-e"]
-                missing += [f"pip install -e {p}" for p in paths if f"-e {p}" not in bodies]
-            elif segment not in bodies:
-                missing.append(segment)
-    assert not missing, f"{module} README kabul komutları check-all'da koşmuyor: {missing}"
-
-
-def test_m07_steps_keep_blueprint_assertions():
-    steps = {fn for mod, fn in listed_steps() if mod == "M07"}
-    assert len(steps) == 5, steps
-    body = "\n".join(function_body(fn) for fn in sorted(steps))
-    for needle in (
-        "len(r['source_message_ids'])>=1",
-        'grep -niE "depresif|tembel" "$W/kk-out/instructor_alerts.jsonl"',
-        'test -f "$W/kk-out/instructor_alerts.jsonl"',
-        'grep -E "Kapı: (AÇIK|KAPALI)" "$W/kk-gate/pilot_gate.md"',
-        'test -f "$W/kk-out/cost-report.md"',
-    ):
-        assert needle in body, needle
-
-
-def test_step_bodies_use_per_run_dir_not_fixed_tmp():
-    m = re.search(r"^# -+ adımlar$(.*?)^STEPS=\(", SCRIPT, re.S | re.M)
-    assert m, "check-all.sh adım bölgesi bulunamadı"
-    hits = [line.strip() for line in m.group(1).splitlines() if "/tmp/" in line and not line.lstrip().startswith("#")]
-    assert not hits, f"adım gövdesinde sabit /tmp yolu: {hits}"
+def test_lib_negative_helpers_fail_when_they_should(tmp_path):
+    target = write(tmp_path / "f.txt", "merhaba correct_option dünya\n")
+    script = f'set -euo pipefail; source "{LIB}"; '
+    assert subprocess.run(["bash", "-c", script + f'ogr_absent correct_option "{target}"'], check=False).returncode != 0
+    assert subprocess.run(["bash", "-c", script + f'ogr_absent yok_boyle "{target}"'], check=False).returncode == 0
+    assert subprocess.run(["bash", "-c", script + f'ogr_absent x "{tmp_path}/yok.txt"'], check=False).returncode != 0
+    assert subprocess.run(["bash", "-c", script + f'ogr_no_file "{target}"'], check=False).returncode != 0
+    assert subprocess.run(["bash", "-c", script + f'ogr_no_file "{tmp_path}/yok.txt"'], check=False).returncode == 0

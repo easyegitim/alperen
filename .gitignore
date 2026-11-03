@@ -1,24 +1,30 @@
+# Bağımlılıklar ve derleme çıktıları
 node_modules/
+.next/
+dist/
+out/
+coverage/
+*.tsbuildinfo
+.turbo/
+
+# Ortam dosyaları (sır içerir; yalnız .env.example izlenir)
+.env
+.env.*
+!.env.example
+.dev.vars
+*.local
+
+# Python
 __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-dist/
-out/
-.next/
-.wrangler/
-.dev.vars
-.env
-*.local
-apps/panel/public/ds/
-/tmp-*/
-# M13L — kök eklemeleri
 .venv/
 venv/
+
+# Diğer
 *.log
 .DS_Store
-coverage/
-.env.*
-!.env.example
+/tmp-*/

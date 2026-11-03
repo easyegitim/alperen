@@ -304,8 +304,8 @@ bekleme günü), bekleyen bir soruya bağlı `figures.review_status='pending'` (
 yenisi konmuş eski şekil sayılmaz), açık `generation_requests`. "… soru iki denemede doğrulamayı geçemedi" satırı
 yalnız `2 başarısız deneme` önekli notları sayar; diğer üretim notları (şekil düzeltme vb.) "… sorunun üretim notu
 var" satırına düşer. Özet
-`out/review_queue.json`; `--push` tek mesajlık bildirim gönderir (`Notifier`: gerçek kipte `TELEGRAM_OPS_BOT_TOKEN`
-+ `ADMIN_CHAT_ID`, yoksa/dry-run'da stdout). Metin Türkçe, en çok 4 satır, emoji ve ünlem yok, öğrenci kimliği yok.
+`out/review_queue.json`; `--push` tek mesajlık bildirim gönderir (`Notifier`: gerçek kipte stderr günlüğü,
+dry-run'da stdout). Metin Türkçe, en çok 4 satır, emoji ve ünlem yok, öğrenci kimliği yok.
 
 ## `notes ingest`
 

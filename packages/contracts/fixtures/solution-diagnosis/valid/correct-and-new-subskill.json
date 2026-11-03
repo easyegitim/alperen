@@ -1,0 +1,34 @@
+{
+  "question_text": "Bir sayının yüzde 20 fazlası 36 ise sayı kaçtır?",
+  "student_work_text": "x * 1,2 = 36\nx = 30",
+  "reference_solution_steps": [
+    "x * 1,2 = 36",
+    "x = 30"
+  ],
+  "student_steps": [
+    {
+      "no": 1,
+      "text": "x * 1,2 = 36",
+      "status": "ok"
+    },
+    {
+      "no": 2,
+      "text": "x = 30",
+      "status": "ok"
+    }
+  ],
+  "failing_step_no": null,
+  "verdict": "correct",
+  "error_cause": null,
+  "why_tr": "Çözümün doğru, yüzde artışını çarpanla yazman işi kısaltmış.",
+  "skill_ids": [],
+  "misconception_tags": [],
+  "proposed_subskill": {
+    "code": "tyt.mat.yuzde.artis-carpani",
+    "name": "Yüzde artış çarpanı",
+    "parent_code": "tyt.mat.yuzde",
+    "description": "Yüzde artış ve azalışı 1 ± p/100 çarpanıyla yazmak."
+  },
+  "style_hint": "tek adımlı yüzde problemi",
+  "confidence": 0.92
+}

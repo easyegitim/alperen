@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/exam-generation.json",
+  "title": "ExamGeneration",
+  "description": "Üretilen deneme/soru seti: sorular (items) ve doğrulanacak cevap anahtarı (keys) ayrı döner.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "items": {
+      "minItems": 1,
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "section": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "mcq",
+              "numeric"
+            ]
+          },
+          "stem": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2500
+          },
+          "options": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "enum": [
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+                  ]
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 600
+                }
+              },
+              "required": [
+                "key",
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "figure_svg": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Soru şekli satır içi SVG; yoksa null"
+          },
+          "skill_ids": {
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+            }
+          },
+          "style_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "description": "question_styles.id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "easy",
+              "medium",
+              "hard"
+            ]
+          }
+        },
+        "required": [
+          "no",
+          "section",
+          "kind",
+          "stem",
+          "options",
+          "figure_svg",
+          "skill_ids",
+          "style_id",
+          "difficulty"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "keys": {
+      "minItems": 1,
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "correct_option": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "MCQ ise doğru şık, değilse null"
+          },
+          "numeric_value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sayısal soru ise SymPy dizesi ('7/8', '2*sqrt(3)'), değilse null"
+          },
+          "canonical_expr": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "sympy.sympify edilebilir ifade ya da null"
+          },
+          "solution": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000,
+            "description": "Adım adım çözüm"
+          }
+        },
+        "required": [
+          "question_no",
+          "correct_option",
+          "numeric_value",
+          "canonical_expr",
+          "solution"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "title",
+    "items",
+    "keys"
+  ],
+  "additionalProperties": false
+}

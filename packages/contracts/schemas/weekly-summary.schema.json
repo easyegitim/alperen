@@ -2,45 +2,30 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ogrenmen.easy/schemas/weekly-summary.json",
   "title": "WeeklySummary",
-  "description": "Haftalık öğrenci özeti (Katman 3): üçüncü tekil, isimsiz; metrikler SQL/Python'dan, LLM yalnız metni yazar.",
-  "x-version": "1.0",
+  "description": "Haftalık özet: metin (3-6 cümle) ve SQL kaynaklı metrikler.",
+  "x-version": "2.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "student_ref",
-    "week_start",
-    "body",
-    "metrics",
-    "facts_used"
-  ],
   "properties": {
     "schema_version": {
+      "type": "string",
       "const": "1.0"
     },
     "student_ref": {
-      "$ref": "common.json#/$defs/studentRef"
+      "type": "string",
+      "pattern": "^s_[a-z2-7]{12}$",
+      "description": "students.public_ref; ad ve uuid asla"
     },
     "week_start": {
-      "$ref": "common.json#/$defs/date"
+      "type": "string",
+      "format": "date"
     },
     "body": {
       "type": "string",
       "maxLength": 600,
-      "description": "3–6 cümle, üçüncü tekil, isimsiz: ne çalıştı, nerede takıldı, ne söz verdi, moral"
+      "description": "3-6 cümle, üçüncü tekil, isimsiz"
     },
     "metrics": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "messages",
-        "questions_solved",
-        "accuracy",
-        "active_days",
-        "open_misconceptions",
-        "unanswered_questions",
-        "morale_trend"
-      ],
       "properties": {
         "messages": {
           "type": "integer"
@@ -49,12 +34,14 @@
           "type": "integer"
         },
         "accuracy": {
-          "oneOf": [
+          "anyOf": [
             {
-              "type": "null"
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
             },
             {
-              "$ref": "common.json#/$defs/probability"
+              "type": "null"
             }
           ]
         },
@@ -70,6 +57,7 @@
           "type": "integer"
         },
         "morale_trend": {
+          "type": "string",
           "enum": [
             "up",
             "flat",
@@ -81,14 +69,10 @@
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "skill_id",
-              "delta"
-            ],
             "properties": {
               "skill_id": {
-                "$ref": "common.json#/$defs/skillId"
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
               },
               "delta": {
                 "type": "number",
@@ -98,10 +82,25 @@
               "reliable": {
                 "type": "boolean"
               }
-            }
+            },
+            "required": [
+              "skill_id",
+              "delta"
+            ],
+            "additionalProperties": false
           }
         }
-      }
+      },
+      "required": [
+        "messages",
+        "questions_solved",
+        "accuracy",
+        "active_days",
+        "open_misconceptions",
+        "unanswered_questions",
+        "morale_trend"
+      ],
+      "additionalProperties": false
     },
     "facts_used": {
       "type": "array",
@@ -110,11 +109,21 @@
       }
     },
     "next_week_focus": {
-      "type": "array",
       "maxItems": 3,
+      "type": "array",
       "items": {
-        "$ref": "common.json#/$defs/skillId"
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
       }
     }
-  }
+  },
+  "required": [
+    "schema_version",
+    "student_ref",
+    "week_start",
+    "body",
+    "metrics",
+    "facts_used"
+  ],
+  "additionalProperties": false
 }
