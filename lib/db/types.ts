@@ -1,5 +1,5 @@
 /**
- * GEÇİCİ EL YAZIMI AYNA — migration 0010_v2_core.sql (+ 0011, 0012; Sprint 2: 0013_v2_plan_doctor, 0014_v2_tryon) sütun ve tabloları, `supabase gen types typescript`
+ * GEÇİCİ EL YAZIMI AYNA — migration 0010_v2_core.sql (+ 0011, 0012; Sprint 2: 0013_v2_plan_doctor, 0014_v2_tryon; Sprint 3: 0015_v2_faz6) sütun ve tabloları, `supabase gen types typescript`
  * biçiminde (Row / Insert / Update / Relationships; Functions Args / Returns). Bu dosya tam Database tipi DEĞİLDİR:
  * yalnız v2 sözleşmesi için sütun adlarını tip düzeyinde sabitler (CONTRACTS_V2.md §5). 0010 uygulandıktan sonra
  * `pnpm db:types` bu dosyayı üretilen tam tiple ÜZERİNE YAZAR; o zamana kadar yalnız tip olarak içe aktarılır
@@ -201,6 +201,25 @@ export type DatabaseV2Mirror = {
         };
         Relationships: [];
       };
+      /** 0015: affedici seri dondurma günleri (RLS: sahip select/insert/delete; ayda 1 trigger). */
+      routine_freezes: {
+        Row: {
+          user_id: string;
+          freeze_date: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          freeze_date: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          freeze_date?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       purchases: {
         Row: {
           id: string;
@@ -382,6 +401,11 @@ export type DatabaseV2Mirror = {
         Returns: string;
       };
       flag_tryon_broken: { Args: { p_user: string; p_event: string }; Returns: boolean };
+      /** 0015: ops.daily_tryon_quality (0014) — admin "Bozuk görünüyor" oranı; yalnız service role. */
+      ops_daily_tryon_quality: {
+        Args: { p_days?: number };
+        Returns: { day: string; mode: TryonMode; success: number; qc_failed: number; identity_drift: number; flagged_broken: number; broken_rate: number }[];
+      };
       deliver_doctor_recommendation: { Args: { p_id: string; p_user: string }; Returns: boolean };
     };
   };
