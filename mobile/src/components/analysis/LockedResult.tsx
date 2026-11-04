@@ -7,6 +7,7 @@ import { SUB_KEYS_V2 } from "@/lib/config/teaser";
 import type { ClientAnalysisV2 } from "@/lib/score/present";
 import { Text } from "@/mobile/src/components/ui/Text";
 import { usePaywall } from "@/mobile/src/features/paywall/PaywallSheet";
+import { ReferralBlock } from "@/mobile/src/features/paywall/ReferralBlock";
 import { scoped } from "@/mobile/src/lib/i18n";
 import { radius, spacing, useTheme } from "@/mobile/src/theme";
 import { LockedFirstSteps } from "./LockedFirstSteps";
@@ -37,6 +38,9 @@ export function LockedResult({ a, source }: { a: ClientAnalysisV2; source: Portr
   }, [a.id, source]);
 
   const prelim = a.faceShape?.override ? { primary: a.faceShape.override } : (a.faceShape?.prelim ?? null);
+  // Davet kilidi (KB Ç12; presentV2 referralUnlock): hak yokken yalnız genel skor değeri gelir; aralık/yüzdelik yok.
+  const overall = !a.overall.locked && a.overall.value ? a.overall.value.value : null;
+  const stageNote = a.stage === "queued" || a.stage === "running" || a.stage === "failed" ? t(`stage.${a.stage}`) : null;
 
   return (
     <View style={{ gap: spacing.md }}>
@@ -48,10 +52,15 @@ export function LockedResult({ a, source }: { a: ClientAnalysisV2; source: Portr
           <Text variant="small" style={{ fontWeight: "600", color: colors.foreground }}>{t("locked.deviceDone")}</Text> · {t("locked.unlockBody")}
         </Text>
       </View>
-      <LockedHero faceShape={prelim} source={source} onLocked={onLocked} />
+      {stageNote ? (
+        <Text variant="small" accessibilityLiveRegion="polite" style={{ borderWidth: 1, borderStyle: "dashed", borderColor: colors.border, borderRadius: radius.md, padding: spacing.sm }}>{stageNote}</Text>
+      ) : null}
+      <LockedHero faceShape={prelim} source={source} onLocked={onLocked} overall={overall} />
       <LockedSubscoreList keys={SUB_KEYS_V2} onLocked={onLocked} />
       <LockedFirstSteps onLocked={onLocked} />
       <LockedPlanPreview source={source} onTap={() => onLocked("plan")} />
+      {/* Faz 6 (KB Ç12): davet bloğu kilitli sonuçta da görünür (bayrak kapalıysa FEATURE_DISABLED → çizilmez); web ScoreViewV2 sırası. */}
+      <ReferralBlock />
       {a.device ? <LockedMeasurements ratios={a.device.ratios} /> : null}
       <Text variant="small" style={{ textAlign: "center" }}>{t("competitorsNote")}</Text>
     </View>

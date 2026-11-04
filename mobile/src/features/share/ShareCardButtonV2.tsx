@@ -10,6 +10,7 @@ import { OptionRow } from "@/mobile/src/components/ui/OptionRow";
 import { SwitchRow } from "@/mobile/src/components/ui/SwitchRow";
 import { Text } from "@/mobile/src/components/ui/Text";
 import { env } from "@/mobile/src/lib/env";
+import { deleteQuietly } from "@/mobile/src/native/images";
 import { scoped, t as tt } from "@/mobile/src/lib/i18n";
 import { radius, spacing, useTheme } from "@/mobile/src/theme";
 import type { ShareCardFormat } from "./layout";
@@ -37,7 +38,20 @@ export function ShareCardButtonV2({ score, strongest }: Props) {
 
   async function pickPhoto() {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.9 });
-    if (!res.canceled && res.assets[0]) setPhotoUri(res.assets[0].uri);
+    if (res.canceled || !res.assets[0]) return;
+    await deleteQuietly(photoUri); // önceki seçici kopyası
+    setPhotoUri(res.assets[0].uri);
+  }
+
+  /** Seçici kopyası (önbellek) yalnız kart çizimi için; kart üretilince ya da pencere kapanınca silinir. */
+  async function dropPhoto() {
+    await deleteQuietly(photoUri);
+    setPhotoUri(null);
+  }
+
+  async function close() {
+    setOpen(false);
+    await dropPhoto();
   }
 
   function buildSpec(): ShareCardSpec {
@@ -61,6 +75,7 @@ export function ShareCardButtonV2({ score, strongest }: Props) {
       }
       const b64 = renderShareSpecBase64(spec, photo);
       photo?.dispose();
+      await dropPhoto();
       const r = await shareBase64Jpeg(b64, tv1("shareTitle"));
       track("share_card_created", { withPhoto: Boolean(photo), kind: spec.kind });
       setOpen(false);
@@ -75,7 +90,7 @@ export function ShareCardButtonV2({ score, strongest }: Props) {
   return (
     <>
       <Button title={tv1("button")} variant="outline" onPress={() => setOpen(true)} />
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+      <Modal visible={open} transparent animationType="slide" onRequestClose={() => void close()}>
         <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" }}>
           <View style={{ backgroundColor: colors.background, padding: spacing.lg, gap: spacing.sm, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }}>
             <Text variant="heading" accessibilityRole="header">{t("title")}</Text>
@@ -87,7 +102,7 @@ export function ShareCardButtonV2({ score, strongest }: Props) {
             {withPhoto ? <Button title={photoUri ? tv1("changePhoto") : tv1("pickPhoto")} variant="outline" onPress={pickPhoto} /> : null}
             <Text variant="small">{t("deviceNote")}</Text>
             <Button title={t("create")} size="lg" busy={busy} disabled={withPhoto && !photoUri} onPress={create} />
-            <Button title={tt("common.back")} variant="ghost" onPress={() => setOpen(false)} />
+            <Button title={tt("common.back")} variant="ghost" onPress={() => void close()} />
           </View>
         </View>
       </Modal>

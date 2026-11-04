@@ -5,6 +5,7 @@ import type { GhostOutline } from "@/lib/face/ghostGuide";
 import type { Point } from "@/lib/face/types";
 import type { ViewKey } from "@/lib/face/views";
 import { File } from "expo-file-system";
+import { clearSessionSelfie } from "./sessionSelfie";
 
 export type PendingView = {
   view: ViewKey;
@@ -61,4 +62,15 @@ export function setLastGhost(g: GhostOutline | null): void {
 }
 export function getLastGhost(): GhostOutline | null {
   return lastGhost;
+}
+
+/**
+ * Tüm çekim durumu kullanıcıya bağlıdır ama modül düzeyinde tutulur: çıkışta, hesap silmede ve oturumdaki kullanıcı
+ * değiştiğinde (SessionProvider) bekleyen set, oturum selfie'si (dosyasıyla) ve hayalet çizgi düşürülür ki bir sonraki
+ * hesap öncekinin yüzünü /api/tryon'a göndermesin ya da kamerada görmesin.
+ */
+export async function clearCaptureState(): Promise<void> {
+  lastGhost = null;
+  clearSessionSelfie();
+  await clearPendingSet();
 }

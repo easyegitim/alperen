@@ -172,7 +172,10 @@ export function ViewCamera({ view, stepLabel, labels, optionalNote, takenViews =
         setIssue(t("errors.processing"));
         setStage("guide");
       } finally {
+        // Kaynak dosya işini bitirdi (analiz kopyası + hash alındı): kamera karesi ve expo-image-picker'ın önbellek
+        // kopyası (tam çözünürlük, galeri orijinali) silinir — sanal alanda yalnız analiz kopyası kalır.
         if (source === "camera") await deleteQuietly(src.uri);
+        if (opts.originalUri) await deleteQuietly(opts.originalUri);
       }
     },
     [analyze, resetLive, setReview, setStage, view.key],
@@ -296,6 +299,7 @@ export function ViewCamera({ view, stepLabel, labels, optionalNote, takenViews =
         // bu dosya atlanır
       } finally {
         await deleteQuietly(probeImage?.uri);
+        await deleteQuietly(a.uri); // seçici kopyası (tam çözünürlük) kalmaz
       }
     }
     track("capture_gallery_batch", { selected: assets.length, assigned });

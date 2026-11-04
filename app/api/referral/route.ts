@@ -44,6 +44,8 @@ export const POST = withGuard({ schema: ClaimInput, allowAnonymous: false }, asy
   const check = checkClaim({ referrerId: owner ? String(owner.id) : null, refereeId: user.id, alreadyReferred: Boolean(existing) });
   if (!check.ok) throw new ApiError("BAD_INPUT", check.reason);
   const { error } = await admin.from("referrals").insert({ code, referrer_id: String(owner!.id), referee_id: user.id });
+  // Eşzamanlı ikinci istek (çift dokunma / iki sekme): unique(referee_id) ihlali = zaten kayıtlı davet; veritabanı kaynaktır.
+  if (error?.code === "23505") throw new ApiError("BAD_INPUT", "already_claimed");
   if (error) throw new Error("davet kaydedilemedi");
   return new Response(null, { status: 204 });
 });

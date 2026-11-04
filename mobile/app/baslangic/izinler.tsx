@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Alert, ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { track } from "@/lib/analytics";
 import { OPTIONAL_ONBOARDING_CONSENTS, REQUIRED_ANALYSIS_CONSENTS, type ConsentState, type ConsentType } from "@/lib/consent";
-import { AGE_GATE_PATH, GENDER_PATH, SIGN_IN_PATH } from "@/lib/onboarding/gate";
+import { AGE_GATE_PATH, CAPTURE_PATH, GENDER_PATH, SIGN_IN_PATH } from "@/lib/onboarding/gate";
 import { Button } from "@/mobile/src/components/ui/Button";
 import { Card } from "@/mobile/src/components/ui/Card";
 import { Screen } from "@/mobile/src/components/ui/Screen";
@@ -28,7 +28,7 @@ type Loaded = { notice: LegalDocDto; consentVersion: string; cookieVersion: stri
 /**
  * KB §3.1 adım 4 (R2-C13, UYUM): aydınlatma metni (sona kadar kaydır, "Okudum") ve analiz için açık rıza AYRI metinle;
  * kısaltılamaz. Metin sürümleri 2026-11-04.1 (W1; /api/legal). v2: anket ödeme sonrasına taşındı → rızalar verilince
- * POST /api/onboarding/complete (sunucu 18+, rızalar ve cinsiyeti yeniden doğrular) → sekmeler. Oturum zorunlu.
+ * POST /api/onboarding/complete (sunucu 18+, rızalar ve cinsiyeti yeniden doğrular) → /tara (fotoğraflar). Oturum zorunlu.
  */
 export default function ConsentsScreen() {
   const { colors } = useTheme();
@@ -105,7 +105,8 @@ export default function ConsentsScreen() {
       }
       await aura.onboarding.complete();
       track("onboarding_step_completed", { step: "consents" });
-      router.replace("/(tabs)/analiz");
+      // KB §3.1: rızalar → fotoğraflar (web izinler sayfası nextPath=CAPTURE_PATH ile aynı).
+      router.replace(CAPTURE_PATH);
     } catch (e) {
       if (e instanceof ApiClientError && e.message === "presentation_missing") {
         router.push(GENDER_PATH);

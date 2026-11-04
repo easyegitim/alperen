@@ -29,7 +29,7 @@ describe("dinlenme günü", () => {
     const logs = days("2026-11-01", "2026-11-02", "2026-11-04", "2026-11-05"); // 3 Kasım eksik
     expect(computeStreak(logs, 2, "2026-11-05")).toBe(2);
     const r = computeForgivingStreak({ logs, activeItemCount: 2, today: "2026-11-05" });
-    expect(r).toEqual({ streak: 4, restDaysBridged: 1, freezesBridged: 0, today: "done" });
+    expect(r).toEqual({ streak: 4, restDaysBridged: 1, freezesBridged: 0, restUsedThisWeek: expect.any(Number), today: "done" });
   });
   it("aynı haftada ikinci eksik gün seriyi bitirir", () => {
     const logs = days("2026-11-02", "2026-11-05", "2026-11-07"); // W45: 3,4,6 eksik
@@ -40,12 +40,12 @@ describe("dinlenme günü", () => {
   it("farklı haftalardaki eksik günler ayrı hak kullanır", () => {
     const logs = days("2026-11-06", "2026-11-07", "2026-11-09", "2026-11-10"); // 8 (W45) eksik; 11 (W46) eksik, bugün 12 pending
     const r = computeForgivingStreak({ logs, activeItemCount: 2, today: "2026-11-12" });
-    expect(r).toEqual({ streak: 4, restDaysBridged: 2, freezesBridged: 0, today: "pending" });
+    expect(r).toEqual({ streak: 4, restDaysBridged: 2, freezesBridged: 0, restUsedThisWeek: expect.any(Number), today: "pending" });
   });
   it("bugün tamamlanmadıysa eksik sayılmaz; aktif adım yoksa 0; hiç yapılan gün yoksa köprü 0", () => {
     expect(computeForgivingStreak({ logs: days("2026-11-03"), activeItemCount: 2, today: "2026-11-04" }).streak).toBe(1);
     expect(computeForgivingStreak({ logs: days("2026-11-03"), activeItemCount: 0, today: "2026-11-04" }).streak).toBe(0);
-    expect(computeForgivingStreak({ logs: [], activeItemCount: 2, today: "2026-11-04" })).toEqual({ streak: 0, restDaysBridged: 0, freezesBridged: 0, today: "pending" });
+    expect(computeForgivingStreak({ logs: [], activeItemCount: 2, today: "2026-11-04" })).toEqual({ streak: 0, restDaysBridged: 0, freezesBridged: 0, restUsedThisWeek: 0, today: "pending" });
   });
   it("kalan dinlenme günü haftaya göre", () => {
     const logs = days("2026-11-02", "2026-11-04");
@@ -70,7 +70,7 @@ describe("dondurma", () => {
     const noFreeze = computeForgivingStreak({ logs, activeItemCount: 2, today: "2026-11-06" });
     expect(noFreeze.streak).toBe(2);
     const r = computeForgivingStreak({ logs, activeItemCount: 2, today: "2026-11-06", freezes: [{ date: "2026-11-05" }] });
-    expect(r).toEqual({ streak: 3, restDaysBridged: 1, freezesBridged: 1, today: "done" });
+    expect(r).toEqual({ streak: 3, restDaysBridged: 1, freezesBridged: 1, restUsedThisWeek: expect.any(Number), today: "done" });
   });
   it("gün durumu", () => {
     const base = { logs: days("2026-11-02"), activeItemCount: 2, today: "2026-11-04", freezes: [{ date: "2026-11-03" }] };

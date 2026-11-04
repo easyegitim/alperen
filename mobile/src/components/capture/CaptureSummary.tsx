@@ -8,8 +8,9 @@ import { Button } from "@/mobile/src/components/ui/Button";
 import { Card } from "@/mobile/src/components/ui/Card";
 import { SwitchRow } from "@/mobile/src/components/ui/SwitchRow";
 import { Text } from "@/mobile/src/components/ui/Text";
-import { addableViews, hasProfile, type CaptureSet } from "@/mobile/src/features/capture/views";
 import type { CaptureResult } from "@/mobile/src/features/capture/result";
+import { addableViews, hasProfile, type CaptureSet } from "@/mobile/src/features/capture/views";
+import { ReferralClaimForm } from "@/mobile/src/features/paywall/ReferralClaimForm";
 import { scoped, t } from "@/mobile/src/lib/i18n";
 import { radius, spacing, useTheme } from "@/mobile/src/theme";
 
@@ -132,7 +133,11 @@ export function CaptureSummary({ captures, geometry, resume, error, saveProgress
           <Ionicons name="shield-checkmark-outline" size={18} color={colors.brand} />
           <Text variant="small" style={{ flex: 1, color: colors.foreground }}>{tc("resumeNote")}</Text>
         </View>
-      ) : null}
+      ) : (
+        // Davet kodu (KB Ç12; S3.3.5): ilk cihaz analizinden ÖNCE girilir — sunucu daveti device_only gönderimde tamamlar.
+        // Web CaptureScreen ile aynı yer; bayrak kapalıysa (404) hiç çizilmez.
+        <ReferralClaimForm collapsible probe />
+      )}
       {errText ? (
         <Text accessibilityRole="alert" style={{ color: colors.destructive }}>
           {errText}

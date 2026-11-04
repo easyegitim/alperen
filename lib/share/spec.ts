@@ -77,7 +77,9 @@ export type ShareSpecIssue =
   | "title_too_long"
   | "line_too_long"
   | "barber_style_missing"
-  | "url_missing";
+  | "url_missing"
+  /** Zorunlu not ("Yapay zekâ tahmini; kişisel değerini ölçmez.") boş: etiketsiz kart çizilmez (drawTryonShare ile aynı kapı). */
+  | "disclaimer_missing";
 
 const inRange = (v: number) => Number.isFinite(v) && v >= 1 && v <= 10;
 
@@ -88,6 +90,7 @@ export function shareSpecIssues(spec: ShareCardSpec): ShareSpecIssue[] {
   if (withPhoto && spec.audience === "marketing") issues.push("photo_on_marketing_card");
   if (withPhoto && spec.kind === "barber") issues.push("photo_on_barber_card");
   if (!spec.url.trim()) issues.push("url_missing");
+  if (!spec.disclaimer.trim()) issues.push("disclaimer_missing");
   if (spec.kind === "score") {
     if (!inRange(spec.overall) || (spec.potential !== null && !inRange(spec.potential))) issues.push("score_out_of_range");
     if (spec.subs.length > SHARE_RULES.maxSubs) issues.push("too_many_subs");

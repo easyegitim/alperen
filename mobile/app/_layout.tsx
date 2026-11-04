@@ -2,12 +2,16 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AnalyticsProvider } from "@/mobile/src/features/analytics/AnalyticsProvider";
+import { sweepTransientFiles } from "@/mobile/src/features/capture/transientFiles";
 import { SessionProvider } from "@/mobile/src/features/session/SessionProvider";
 import { t } from "@/mobile/src/lib/i18n";
 import { initMonitoring, wrapRoot } from "@/mobile/src/lib/monitoring";
 import { useTheme } from "@/mobile/src/theme";
 
 initMonitoring();
+// Açılışta önceki oturumdan kalan geçici görseller (önbellek: selfie, bekleyen set kopyaları, galeri/manipulator çıktıları)
+// silinir; bellekte referans yoktur (SPEC-MOBILE M7). İlerleme fotoğrafları (belge dizini) dokunulmaz.
+sweepTransientFiles();
 
 function Root() {
   const { colors, scheme } = useTheme();

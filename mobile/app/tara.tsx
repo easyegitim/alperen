@@ -1,6 +1,7 @@
 import { File, Paths } from "expo-file-system";
-import { Stack, router, useLocalSearchParams } from "expo-router";
+import { Redirect, Stack, router, useLocalSearchParams, type Href } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { track } from "@/lib/analytics";
 import { DEVICE_STEP_MIN_MS, finishDeviceProgress, markDeviceStep, startDeviceProgress, type DeviceProgress } from "@/lib/face/deviceProgress";
 import { ghostOutlineFromLandmarks, type GhostOutline } from "@/lib/face/ghostGuide";
@@ -17,10 +18,12 @@ import { bindSessionSelfie, setSessionSelfie } from "@/mobile/src/features/captu
 import { uploadPendingSet } from "@/mobile/src/features/capture/upload";
 import { canStartDevice, isProfileView, nextStep, orderedViews, placeViews, removeView, stepIndex, type CaptureSet, type FlowStep } from "@/mobile/src/features/capture/views";
 import { useSession } from "@/mobile/src/features/session/SessionProvider";
+import { useGate } from "@/mobile/src/features/session/useGate";
 import { ApiClientError } from "@/mobile/src/lib/api";
 import { scoped } from "@/mobile/src/lib/i18n";
 import { addProgressPhoto, getLatestGhost } from "@/mobile/src/lib/progressStore";
 import { deleteQuietly } from "@/mobile/src/native/images";
+import { useTheme } from "@/mobile/src/theme";
 
 const tv = scoped("camera.views");
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -37,7 +40,7 @@ function newRequestId(): string {
 }
 
 /** Deneme (W7b /dene) için ön selfie'yi önbelleğe kopyalar; analiz gönderilmez. */
-async function cacheSessionSelfie(front: CaptureResult, analysisId?: string): Promise<number | null> {
+async function cacheSessionSelfie(front: CaptureResult, analysisId?: string): Promise<{ capturedAt: number; uri: string } | null> {
   const px = landmarksPx(front);
   if (!px) return null;
   try {
@@ -46,7 +49,7 @@ async function cacheSessionSelfie(front: CaptureResult, analysisId?: string): Pr
     await new File(front.image.uri).copy(dest);
     const capturedAt = Date.now();
     setSessionSelfie({ uri: dest.uri, width: front.image.width, height: front.image.height, landmarksPx: px, capturedAt, analysisId });
-    return capturedAt;
+    return { capturedAt, uri: dest.uri };
   } catch {
     return null;
   }
@@ -61,6 +64,9 @@ async function cacheSessionSelfie(front: CaptureResult, analysisId?: string): Pr
  */
 export default function CaptureScreen() {
   const { aura } = useSession();
+  const { colors } = useTheme();
+  // Web (app)/(gated) layout karşılığı (PLAN 1a: "Giriş olmadan /tara açılmaz"): oturum / 18+ / onboarding kapısı.
+  const gate = useGate();
   const { purpose, analysis: resumeParam } = useLocalSearchParams<{ purpose?: string; analysis?: string }>();
   const forTryon = purpose === "tryon";
   const resumeAnalysisId = typeof resumeParam === "string" && resumeParam.length > 0 ? resumeParam : null;
@@ -72,6 +78,8 @@ export default function CaptureScreen() {
   const [saveProgress, setSaveProgress] = useState(false);
   const capturesRef = useRef<CaptureSet<CaptureResult>>({});
   const requestIdRef = useRef(newRequestId());
+  /** Gönderim sırasında gösterilen ön kare: oturum selfie kopyası (kararlı yol; set dosyaları gönderim sonrası silinir). */
+  const [heroUri, setHeroUri] = useState<string | null>(null);
   // Hayalet kılavuz (S3.3.4): bu oturumdaki son ön çekim; yoksa ilerleme dizinindeki en yeni kayıt (yalnız cihazda).
   const [ghost, setGhost] = useState<GhostOutline | null>(() => getLastGhost());
   useEffect(() => {
@@ -160,17 +168,34 @@ export default function CaptureScreen() {
       const frontPx = landmarksPx(front);
       const outline = frontPx ? ghostOutlineFromLandmarks(frontPx, front.image.width, front.image.height, { mirrored: false, takenAt: Date.now() }) : null;
       if (outline) setLastGhost(outline);
-      const capturedAt = await cacheSessionSelfie(front);
+      const cached = await cacheSessionSelfie(front);
+      const capturedAt = cached?.capturedAt ?? null;
+      // Gönderim başarılı olunca set dosyaları (front.image.uri dahil) silinir: ilerleme kopyası ve bekleme ekranı
+      // kararlı oturum selfie kopyasını kullanır (web bellekteki bitmap'ten kaydeder; CaptureScreen.tsx karşılığı).
+      const frontStableUri = cached?.uri ?? front.image.uri;
+      setHeroUri(frontStableUri);
+      /** SPEC 11.2: yalnız cihazda (uygulama sanal alanı); sunucuya gitmez. Hayalet çizgi yalnız bu kayıtla saklanır (web ile aynı kural). */
+      const saveProgressPhoto = async (analysisId: string) => {
+        if (!saveProgress) return;
+        await addProgressPhoto(frontStableUri, { analysisId, ghost: outline }).catch(() => undefined);
+      };
+      /** Gönderim/istek başarısız: set dosyaları yeniden bu ekranın olur (ayrılışta silinir); bekleyen set düşürülür (çift sahiplik yok). */
+      const failBack = () => {
+        setPendingSet(null);
+        capturesRef.current = set;
+        setProgress(null);
+        setPhase("error");
+        setStep({ kind: "summary" });
+      };
 
       if (resumeAnalysisId) {
         // Ödeme sonrası çekime dönüş: satır zaten var; görseller bu analize gider, sonuç ekranı kart kart açar.
+        // İlerleme kopyası gönderimden ÖNCE alınır (başarıda set dosyaları silinir).
+        await saveProgressPhoto(resumeAnalysisId);
         const up = await uploadPendingSet(aura, resumeAnalysisId, { resume: true });
         if (!up.ok) {
           setError({ code: up.reason === "api" ? (up.code ?? "GENERIC") : "IMAGE_TOO_LARGE", retryAt: up.reason === "api" ? up.retryAt : undefined });
-          capturesRef.current = set;
-          setProgress(null);
-          setPhase("error");
-          setStep({ kind: "summary" });
+          failBack();
           return;
         }
         await tick("save");
@@ -189,14 +214,12 @@ export default function CaptureScreen() {
       if (!analysis) throw new Error("empty_response");
       bindPendingSet(analysis.id);
       if (capturedAt !== null) bindSessionSelfie(analysis.id, capturedAt);
-      // Hak zaten varsa (abonelik / bağlanmamış ödenmiş rapor) set bellekteyken hemen gider; hata sonucu engellemez.
+      // İlerleme kopyası + hayalet çizgi, set gönderilmeden ÖNCE (hak varsa gönderim set dosyalarını siler).
+      await saveProgressPhoto(analysis.id);
+      // Hak zaten varsa (abonelik / bağlanmamış ödenmiş rapor / davet kilidi) set bellekteyken hemen gider; hata sonucu engellemez.
       if (analysis.stage === "device_only") {
         const st = await aura.billing.status(analysis.id).catch(() => null);
         if (st?.analysisEntitled === true) await uploadPendingSet(aura, analysis.id);
-      }
-      if (saveProgress) {
-        // SPEC 11.2: yalnız cihazda (uygulama sanal alanı); sunucuya gitmez. Hayalet çizgi de yalnız bu kayıtla saklanır (web ile aynı kural).
-        await addProgressPhoto(front.image.uri, { analysisId: analysis.id, ghost: outline }).catch(() => undefined);
       }
       await tick("save");
       s = finishDeviceProgress(s);
@@ -210,13 +233,24 @@ export default function CaptureScreen() {
       const code = e instanceof ApiClientError ? e.code : "NETWORK";
       track("analysis_failed", { reason: code });
       setError({ code, retryAt: e instanceof ApiClientError ? e.retryAt : undefined });
-      // Set bellekte kaldı (captureSession); özet yeniden gönderebilsin diye geri alınır.
+      // Set dosyaları yeniden bu ekranın olur (özet yeniden gönderebilsin); bekleyen set düşürülür (çift sahiplik yok:
+      // ayrılışta silinen dosyalara captureSession referans tutmaz).
+      setPendingSet(null);
       capturesRef.current = set;
       setProgress(null);
       setPhase("error");
       setStep({ kind: "summary" });
     }
   }
+
+  if (!gate.ready) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
+        <ActivityIndicator color={colors.foreground} />
+      </View>
+    );
+  }
+  if (gate.redirect) return <Redirect href={gate.redirect as Href} />;
 
   const front = captures.front ?? null;
   const geometry = front?.geometry ?? null;
@@ -226,7 +260,7 @@ export default function CaptureScreen() {
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <Screen>
-          <DeviceProgressScreen state={progress} photoUri={front?.image.uri ?? null} viewsCount={Object.keys(captures).length} />
+          <DeviceProgressScreen state={progress} photoUri={heroUri ?? front?.image.uri ?? null} viewsCount={Object.keys(captures).length} />
         </Screen>
       </>
     );

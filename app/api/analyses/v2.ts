@@ -194,11 +194,17 @@ export async function promoteAndStart(a: PromoteArgs): Promise<Response> {
   let row = a.row;
   if (row.status === "completed") return Response.json(await presentV2(admin, userId, row, access));
   // Bağlanmamış satın alma: işten ve kotadan ÖNCE bu satıra bağlanır (tüketilir); bağlanamazsa (yarış, tekil indeks) iş yok.
+  // Davet kilidi (KB Ç12): satın alma yoksa ama 5 davet tamamlandıysa iş bağlama olmadan başlar; hak (entitled) açılmaz,
+  // presentV2 yalnız genel skoru verir. Satın alma da varsa önce o bağlanır (tam sonuç).
   if (!access.entitled) {
-    if (!canConsumePurchaseFor(access, row.status) || !access.unconsumedOneTimeId) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
-    const bound = await bindOneTimePurchase(admin, access.unconsumedOneTimeId, row.id);
-    if (!bound) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
-    access = { ...access, entitled: true, unconsumedOneTimeId: null };
+    if (!canConsumePurchaseFor(access, row.status)) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
+    if (access.unconsumedOneTimeId) {
+      const bound = await bindOneTimePurchase(admin, access.unconsumedOneTimeId, row.id);
+      if (!bound) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
+      access = { ...access, entitled: true, unconsumedOneTimeId: null };
+    } else if (!access.referralUnlock) {
+      throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
+    }
   }
   if (row.status === "device_only" || row.status === "queued") {
     const { data: promoted, error: promoteError } = await admin.rpc("promote_analysis", { p_user: userId, p_analysis_id: row.id, p_limit: a.quota.limit, p_since: a.quota.since });

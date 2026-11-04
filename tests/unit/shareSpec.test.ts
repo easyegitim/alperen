@@ -38,6 +38,12 @@ describe("kurallar", () => {
     expect(shareSpecIssues({ ...barber, barber: { styleName: " " } })).toContain("barber_style_missing");
     expect(shareSpecIssues({ ...score, url: "" })).toContain("url_missing");
   });
+  it("zorunlu not boşsa kart çizilmez (disclaimer_missing; etiketsiz kart yok)", () => {
+    expect(shareSpecIssues({ ...score, disclaimer: "" })).toContain("disclaimer_missing");
+    expect(shareSpecIssues({ ...strongest, disclaimer: "   " })).toContain("disclaimer_missing");
+    expect(shareSpecIssues({ ...barber, disclaimer: "" })).toContain("disclaimer_missing");
+    expect(shareSpecIssues(score)).not.toContain("disclaimer_missing");
+  });
 });
 
 describe("yardımcılar", () => {

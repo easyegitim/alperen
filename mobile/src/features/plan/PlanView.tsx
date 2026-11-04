@@ -44,6 +44,8 @@ export function PlanViewV2({ analysisId, initial, scrollRef }: Props) {
   const [tab, setTab] = useState<PlanArea | "all">("all");
   const positions = useRef<Record<string, number>>({});
   const jumpRef = useRef<string | null>(null);
+  /** Doktor katmanının dikey konumu (saç dökülmesi kartındaki "doktor katmanı" bağlantısı; web #section-doctor). */
+  const doctorY = useRef<number | null>(null);
 
   const generate = useCallback(
     async (regenerate = false) => {
@@ -171,8 +173,21 @@ export function PlanViewV2({ analysisId, initial, scrollRef }: Props) {
         {tab !== "all" && !(PLAN_AREAS as readonly string[]).includes(tab) ? null : tab !== "all" && !plan.steps.some((s) => s.area === tab) ? <Text variant="small">{t("emptyTab")}</Text> : null}
       </View>
 
-      {hairLoss ? <HairLossCard signal={hairLoss} doctorLayerEnabled={isMobileFeatureEnabled("doctorLayer") && data.view.doctor.state !== "off"} expertNetworkEnabled={expertNetworkEnabled} hasScalpStep={hasScalpStepIn(plan.steps)} /> : null}
-      <DoctorLayer doctor={data.view.doctor} expertNetworkEnabled={expertNetworkEnabled} analysisId={analysisId} />
+      {hairLoss ? (
+        <HairLossCard
+          signal={hairLoss}
+          doctorLayerEnabled={isMobileFeatureEnabled("doctorLayer") && data.view.doctor.state !== "off"}
+          expertNetworkEnabled={expertNetworkEnabled}
+          hasScalpStep={hasScalpStepIn(plan.steps)}
+          onDoctorPress={() => {
+            const y = doctorY.current;
+            if (y !== null) scrollRef?.current?.scrollTo({ y: Math.max(0, y - 16), animated: true });
+          }}
+        />
+      ) : null}
+      <View onLayout={(e) => void (doctorY.current = e.nativeEvent.layout.y)}>
+        <DoctorLayer doctor={data.view.doctor} expertNetworkEnabled={expertNetworkEnabled} analysisId={analysisId} />
+      </View>
 
       {glowUpEnabled ? (
         <Card>

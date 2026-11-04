@@ -17,6 +17,8 @@ export type ForgivingStreak = {
   restDaysBridged: number;
   /** Seride köprü olarak kullanılan dondurulmuş gün sayısı (bilgi). */
   freezesBridged: number;
+  /** Bugünün ISO haftasında zincir içinde harcanan dinlenme günü (restDaysLeftThisWeek aynı yürüyüşten türer). */
+  restUsedThisWeek: number;
   /** Bugünün durumu: pending = henüz tamamlanmadı (seri dünden geriye sayılır, bugün eksik sayılmaz). */
   today: DayStatus;
 };
@@ -83,21 +85,24 @@ export function computeForgivingStreak(input: { logs: readonly DayLog[]; activeI
   const { logs, activeItemCount, today } = input;
   const config = input.config ?? ROUTINE_FORGIVING;
   const frozen = new Set((input.freezes ?? []).map((f) => f.date));
-  if (activeItemCount <= 0 || !YMD.test(today)) return { streak: 0, restDaysBridged: 0, freezesBridged: 0, today: "pending" };
+  if (activeItemCount <= 0 || !YMD.test(today)) return { streak: 0, restDaysBridged: 0, freezesBridged: 0, restUsedThisWeek: 0, today: "pending" };
   const done = doneDays(logs, activeItemCount);
   const todayStatus: DayStatus = done.has(today) ? "done" : frozen.has(today) ? "frozen" : "pending";
+  const thisWeek = isoWeekKey(today);
   let day = todayStatus === "done" ? today : addDays(today, -1);
-  let streak = 0, restDaysBridged = 0, freezesBridged = 0, steps = 0;
+  let streak = 0, restDaysBridged = 0, freezesBridged = 0, restUsedThisWeek = 0, steps = 0;
   // Köprüler yalnız iki yapılan gün ARASINDA sayılır: zincirin başındaki (en eski yapılan günden önceki) köprüler atılır.
-  let pendingRest = 0, pendingFreeze = 0;
+  let pendingRest = 0, pendingFreeze = 0, pendingRestThisWeek = 0;
   const restUsed = new Map<string, number>();
   while (steps++ < 3650) {
     if (done.has(day)) {
       streak++;
       restDaysBridged += pendingRest;
       freezesBridged += pendingFreeze;
+      restUsedThisWeek += pendingRestThisWeek;
       pendingRest = 0;
       pendingFreeze = 0;
+      pendingRestThisWeek = 0;
     } else if (frozen.has(day)) {
       pendingFreeze++;
     } else {
@@ -106,24 +111,22 @@ export function computeForgivingStreak(input: { logs: readonly DayLog[]; activeI
       if (used >= config.restDaysPerWeek) break;
       restUsed.set(wk, used + 1);
       pendingRest++;
+      if (wk === thisWeek) pendingRestThisWeek++;
     }
     day = addDays(day, -1);
   }
-  return { streak, restDaysBridged, freezesBridged, today: todayStatus };
+  return { streak, restDaysBridged, freezesBridged, restUsedThisWeek, today: todayStatus };
 }
 
-/** Bu ISO haftasında (bugün dahil, bugün eksik sayılmaz) kalan dinlenme günü; arayüz "Bu hafta kalan dinlenme günü: n". */
+/**
+ * Bu ISO haftasında kalan dinlenme günü; arayüz "Bu hafta kalan dinlenme günü: n". computeForgivingStreak ile AYNI
+ * yürüyüşten türer: yalnız canlı zincir içinde köprü olarak harcanan günler sayılır. Zincir dışındaki eksik günler
+ * (rutin başlamadan önceki ya da zincir koptuktan sonraki) hakkı harcamaz — motor da onları affetmez/saymaz.
+ */
 export function restDaysLeftThisWeek(input: { logs: readonly DayLog[]; activeItemCount: number; today: string; freezes?: readonly FreezeRecord[]; config?: RoutineForgivingConfig }): number {
   const config = input.config ?? ROUTINE_FORGIVING;
   if (input.activeItemCount <= 0 || !YMD.test(input.today)) return config.restDaysPerWeek;
-  const done = doneDays(input.logs, input.activeItemCount);
-  const frozen = new Set((input.freezes ?? []).map((f) => f.date));
-  const wk = isoWeekKey(input.today);
-  let used = 0;
-  for (let day = addDays(input.today, -1); isoWeekKey(day) === wk; day = addDays(day, -1)) {
-    if (!done.has(day) && !frozen.has(day)) used++;
-  }
-  return Math.max(0, config.restDaysPerWeek - used);
+  return Math.max(0, config.restDaysPerWeek - computeForgivingStreak({ ...input, config }).restUsedThisWeek);
 }
 
 /** Bir günün durumu (takvim görünümü için). */

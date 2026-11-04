@@ -56,10 +56,13 @@ export const CONSUMABLE_STATUSES: ReadonlySet<string> = new Set(["device_only", 
 /**
  * Bu satır için iş başlatılabilir mi: hak var ya da bağlanacak satın alma var ve satır henüz tam analiz görmemiş
  * (device_only / queued / failed). Sunucu bağlamayı işten ÖNCE yapar; bağlanamazsa iş başlamaz.
+ * Davet kilidi (KB Ç12, "ödeme yoksa LLM yok" kuralının tek istisnası): 5 davet tamamlandıysa iş aynı satır
+ * durumlarında ödeme olmadan da başlar; sunum (presentV2) yine yalnız genel skor değerini açar, satır "hak var" olmaz.
  */
-export function canConsumePurchaseFor(access: Pick<AccessDetail, "entitled" | "unconsumedOneTimeId">, rowStatus: string): boolean {
+export function canConsumePurchaseFor(access: Pick<AccessDetail, "entitled" | "unconsumedOneTimeId"> & { referralUnlock?: boolean }, rowStatus: string): boolean {
   if (access.entitled) return true;
-  return access.unconsumedOneTimeId !== null && CONSUMABLE_STATUSES.has(rowStatus);
+  if (!CONSUMABLE_STATUSES.has(rowStatus)) return false;
+  return access.unconsumedOneTimeId !== null || access.referralUnlock === true;
 }
 
 /** 5 davet tamamlandı mı (yalnız FEATURE_REFERRAL_UNLOCK açıkken; cihaz doğrulaması AÇIK §11.15). */

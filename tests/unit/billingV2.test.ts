@@ -93,4 +93,13 @@ describe("canConsumePurchaseFor (bağlanmamış satın alma yalnız başlamamı�
     for (const st of ["completed", "running", "processing"]) expect(canConsumePurchaseFor({ entitled: false, unconsumedOneTimeId: "p1" }, st)).toBe(false);
     expect(canConsumePurchaseFor({ entitled: false, unconsumedOneTimeId: null }, "device_only")).toBe(false);
   });
+  it("davet kilidi (Ç12): 5 davet tamamlandıysa satın alma olmadan da device_only/queued/failed satırda iş başlar; completed/running açılmaz", () => {
+    for (const st of ["device_only", "queued", "failed"]) expect(canConsumePurchaseFor({ entitled: false, unconsumedOneTimeId: null, referralUnlock: true }, st)).toBe(true);
+    for (const st of ["completed", "running"]) expect(canConsumePurchaseFor({ entitled: false, unconsumedOneTimeId: null, referralUnlock: true }, st)).toBe(false);
+    expect(canConsumePurchaseFor({ entitled: false, unconsumedOneTimeId: null, referralUnlock: false }, "device_only")).toBe(false);
+    // decideAccess çıktısı doğrudan geçer: davet açık, satın alma yok
+    const d = decideAccess({ subscriptionActive: false, purchases: [], analysisId: "a1", referralsCompleted: 5, env: { FEATURE_REFERRAL_UNLOCK: "true" } });
+    expect(d.entitled).toBe(false);
+    expect(canConsumePurchaseFor(d, "device_only")).toBe(true);
+  });
 });

@@ -1,5 +1,6 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from "react";
+import { clearCaptureState } from "@/mobile/src/features/capture/captureSession";
 import { createApiClient, createAuraApi, type AuraApi } from "@/mobile/src/lib/api";
 import { isSupabaseConfigured } from "@/mobile/src/lib/env";
 import { getSupabase } from "@/mobile/src/lib/supabase";
@@ -27,13 +28,23 @@ export function SessionProvider({ children }: PropsWithChildren) {
     if (!isSupabaseConfigured) return;
     const supabase = getSupabase();
     let active = true;
+    // Çekim durumu (selfie, bekleyen set, hayalet çizgi) kullanıcıya aittir: oturumdaki kullanıcı değişirse ya da düşerse
+    // bellekten ve önbellekten silinir (bir sonraki hesap öncekinin yüzünü görmesin/göndermesin).
+    let lastUserId: string | null | undefined;
+    const onUser = (id: string | null) => {
+      if (lastUserId !== undefined && lastUserId !== id) void clearCaptureState();
+      lastUserId = id;
+    };
     void supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
+      onUser(data.session?.user.id ?? null);
       setSession(data.session);
       setLoading(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      if (active) setSession(s);
+      if (!active) return;
+      onUser(s?.user.id ?? null);
+      setSession(s);
     });
     return () => {
       active = false;
@@ -55,6 +66,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       api,
       aura: createAuraApi(api),
       signOut: async () => {
+        await clearCaptureState();
         if (isSupabaseConfigured) await getSupabase().auth.signOut();
         setSession(null);
       },

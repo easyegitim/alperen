@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, View } from "react-native";
 import { track } from "@/lib/analytics";
 import { TRYON_IMAGE_MAX_BYTES } from "@/lib/api/tryonInput";
@@ -62,6 +62,10 @@ export default function TryonTab() {
   const [sharing, setSharing] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appliedParamsRef = useRef<string | null>(null);
+  /** Selfie için /tara'ya gidildi; dönüşte bekleyen istek bir kez kendiliğinden çalışır (web TryonScreen.onCaptured). */
+  const awaitingSelfieRef = useRef<RunRequest | null>(null);
+  const [autoRun, setAutoRun] = useState<RunRequest | null>(null);
+  const autoRunDoneRef = useRef<RunRequest | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -80,6 +84,12 @@ export default function TryonTab() {
           if (!active) return;
           setCtx({ status, analysisId, planSteps: planStepsLite(view), recommended: [...new Set([...recommendedFromPlan(view), ...status.recommended])] });
           setUsed(status.quota?.used ?? 0);
+          // Çekimden dönüş: selfie artık bellekte → bekleyen istek kendiliğinden başlar (yalnız bir kez; aşağıdaki efekt).
+          const awaited = awaitingSelfieRef.current;
+          if (awaited && getSessionSelfie() && status.premium && status.hasConsent) {
+            awaitingSelfieRef.current = null;
+            setAutoRun(awaited);
+          }
           const key = `${params.preset ?? ""}|${params.mode ?? ""}`;
           if (appliedParamsRef.current !== key) {
             appliedParamsRef.current = key;
@@ -116,6 +126,7 @@ export default function TryonTab() {
     setPending(req);
     setError(null);
     if (!getSessionSelfie()) {
+      awaitingSelfieRef.current = req;
       router.push({ pathname: "/tara", params: { purpose: "tryon" } });
       return;
     }
@@ -192,6 +203,13 @@ export default function TryonTab() {
       if (timerRef.current) clearInterval(timerRef.current);
     }
   }
+
+  useEffect(() => {
+    if (!autoRun || !ctx || stage !== "gallery" || autoRunDoneRef.current === autoRun) return;
+    autoRunDoneRef.current = autoRun; // her istek yeni nesne: bir kez çalışır
+    void run(autoRun);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run bileşen kapsamındaki durumla her çağrıda taze; yalnız autoRun tetikler
+  }, [autoRun, ctx, stage]);
 
   async function share() {
     if (!result) return;

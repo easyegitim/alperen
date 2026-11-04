@@ -71,9 +71,10 @@ export function RoutineScreen({ userId, exerciseEligible }: { userId: string; ex
   const week = useMemo(() => recentDays({ logs, activeItemCount: dailyIds.length, today, freezes, config: FORGIVING, days: 7 }), [logs, dailyIds.length, today, freezes]);
   const freezeCheck = useMemo(() => canUseFreeze(freezes, today, today, FORGIVING), [freezes, today]);
 
-  // routine_rest_day: dinlenme günü köprü olarak gösterildiğinde, günde bir (yüksüz; sayı gitmez).
+  // routine_rest_day: seri bir dinlenme gününü köprülediğinde, günde bir (yüksüz; sayı gitmez). Takvim rozeti değil,
+  // motorun köprülediği gün esastır (mobil rutin.tsx ile aynı kapı).
   useEffect(() => {
-    if (!week.some((d) => d.status === "rest")) return;
+    if (forgiving.restDaysBridged <= 0) return;
     const key = `aura.routine.restDay.${today}`;
     try {
       if (window.sessionStorage.getItem(key) === "1") return;
@@ -82,7 +83,7 @@ export function RoutineScreen({ userId, exerciseEligible }: { userId: string; ex
       // depolama kapalıysa oturumda bir kez
     }
     track("routine_rest_day");
-  }, [week, today]);
+  }, [forgiving.restDaysBridged, today]);
 
   async function freezeToday() {
     if (!freezeCheck.ok) {

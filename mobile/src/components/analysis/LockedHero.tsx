@@ -10,18 +10,25 @@ import { LockedPortrait, type PortraitSource } from "./LockedPortrait";
 const t = scoped("analysis");
 const tg = scoped("geometry");
 const RING = 176;
+const fmtScore = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /**
  * Ödeme öncesi hero (KB §3.3: P#6, P#7, P#8, P#9): yuvarlak portre (noktalı) üstte; genel skor halkası herkeste aynı
  * süs yayı + kilit (skoru ele vermez); potansiyel kilitli; yüz şekli ön değerlendirmesi (cihaz sonucu) açık.
  */
-export function LockedHero({ faceShape, source, onLocked }: { faceShape: { primary: string; secondary?: string } | null; source: PortraitSource | null; onLocked: (tr: PaywallTrigger) => void }) {
+export function LockedHero({ faceShape, source, onLocked, overall = null }: { faceShape: { primary: string; secondary?: string } | null; source: PortraitSource | null; onLocked: (tr: PaywallTrigger) => void; /** Davet kilidiyle (KB Ç12) açılmış genel skor: yalnız sayı; aralık yok. */ overall?: number | null }) {
   const { colors } = useTheme();
   return (
     <Card>
       <View style={{ alignItems: "center", gap: spacing.md }}>
         <LockedPortrait source={source} />
         <Text variant="small" accessibilityRole="header" style={{ textTransform: "uppercase", letterSpacing: 1 }}>{t("overallTitle")}</Text>
+        {overall !== null ? (
+          <View accessibilityRole="text" accessibilityLabel={`${t("overallTitle")} ${fmtScore(overall)} ${t("hero.outOf")}`} style={{ width: RING, height: RING, borderRadius: RING / 2, borderWidth: 10, borderColor: colors.brand, alignItems: "center", justifyContent: "center" }}>
+            <Text variant="title" style={{ color: colors.foreground, fontSize: 48, lineHeight: 56, fontWeight: "700" }}>{fmtScore(overall)}</Text>
+            <Text variant="small">{t("hero.outOf")}</Text>
+          </View>
+        ) : (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t("locked.ringAria")}
@@ -33,6 +40,7 @@ export function LockedHero({ faceShape, source, onLocked }: { faceShape: { prima
           <Ionicons name="lock-closed" size={28} color={colors.mutedForeground} />
           <Text variant="title" style={{ color: colors.mutedForeground, fontSize: 40, lineHeight: 48 }}>●,●</Text>
         </Pressable>
+        )}
         <View style={{ alignItems: "center", gap: spacing.xs }}>
           <Pressable
             accessibilityRole="button"

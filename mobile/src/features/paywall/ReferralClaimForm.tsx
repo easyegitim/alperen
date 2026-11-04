@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { track } from "@/lib/analytics";
 import { claimErrorKey, type ClaimErrorKey } from "@/lib/referral/claim";
@@ -17,13 +17,39 @@ const t = scoped("referral.claim");
  * Davet kodu girişi (KB P#15/Ç12): POST /api/referral { code } → 204 "claim"dir; ayrı rota yok. Bayrak kapalıyken
  * FEATURE_DISABLED. Kod rastgeledir, kişisel veri taşımaz; analitiğe kod gitmez (yalnız ok).
  */
-export function ReferralClaimForm({ onDone }: { onDone?: () => void }) {
+type Props = {
+  onDone?: () => void;
+  /** Kapalı başlar ("Davet kodun var mı?" düğmesi), dokununca açılır (web collapsible). */
+  collapsible?: boolean;
+  /** Bayrak bilinmiyorsa GET /api/referral yoklanır; FEATURE_DISABLED (404) ise form hiç çizilmez (web ile aynı). */
+  probe?: boolean;
+};
+
+export function ReferralClaimForm({ onDone, collapsible = false, probe = false }: Props) {
   const { colors } = useTheme();
   const { aura } = useSession();
+  const [available, setAvailable] = useState<boolean | null>(probe ? null : true);
+  const [open, setOpen] = useState(!collapsible);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [state, setState] = useState<{ kind: "idle" } | { kind: "ok" } | { kind: "error"; key: ClaimErrorKey }>({ kind: "idle" });
   const normalized = normalizeReferralCode(code);
+
+  useEffect(() => {
+    if (!probe) return;
+    let active = true;
+    void aura.referral
+      .get()
+      .then((r) => {
+        if (active) setAvailable(Boolean(r && typeof r.code === "string"));
+      })
+      .catch(() => {
+        if (active) setAvailable(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [aura, probe]);
 
   async function submit() {
     if (!normalized) {
@@ -44,6 +70,8 @@ export function ReferralClaimForm({ onDone }: { onDone?: () => void }) {
     }
   }
 
+  if (available !== true) return null;
+  if (!open) return <Button title={t("title")} variant="ghost" onPress={() => setOpen(true)} />;
   if (state.kind === "ok") {
     return (
       <View style={{ padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.brandSoft }}>
@@ -60,7 +88,7 @@ export function ReferralClaimForm({ onDone }: { onDone?: () => void }) {
         <Text variant="small" accessibilityRole="alert" style={{ color: colors.destructive }}>{t(`errors.${state.key}`)}</Text>
       ) : null}
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        {onDone ? <Button title={t("skip")} variant="ghost" style={{ flex: 1 }} onPress={onDone} disabled={busy} /> : null}
+        {onDone || collapsible ? <Button title={t("skip")} variant="ghost" style={{ flex: 1 }} onPress={() => { setOpen(!collapsible); onDone?.(); }} disabled={busy} /> : null}
         <Button title={t("submit")} style={{ flex: 1 }} busy={busy} disabled={!normalized} onPress={() => void submit()} />
       </View>
     </View>

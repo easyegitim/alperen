@@ -17,7 +17,14 @@ export async function uploadPendingSet(aura: Pick<AuraApi, "analyses">, analysis
   if (!set) return { ok: false, reason: "no_set" };
   const encode = opts.encode ?? encodeView;
   const encoded: EncodedView[] = [];
-  for (const v of set.views) encoded.push(await encode(v.uri, v.landmarksPx, v.width, v.height, v.view, v.sourceHash));
+  try {
+    for (const v of set.views) encoded.push(await encode(v.uri, v.landmarksPx, v.width, v.height, v.view, v.sourceHash));
+  } catch {
+    // Geçici dosya yok ya da kodlama hatası (ör. ekran ayrılınca silinmiş set): fırlatmak yerine hata sonucu; set düşer.
+    await clearPendingSet();
+    track("analysis_failed", { reason: "GENERIC" });
+    return { ok: false, reason: "api", code: "GENERIC" };
+  }
   const built = buildRunBody(encoded);
   if (!built.ok) return { ok: false, reason: built.reason };
   track("full_analysis_submitted", { ...viewsLabel(built.views), hashed: built.body.sourceHashes !== undefined, resume: opts.resume === true });

@@ -1,13 +1,12 @@
-import { Stack, router, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getTeaserConfig } from "@/lib/config/teaser";
 import type { ClientAnalysis, ClientAnalysisV2 } from "@/lib/score/present";
 import { AnalysisProgress } from "@/mobile/src/components/analysis/AnalysisProgress";
 import { LockedResult } from "@/mobile/src/components/analysis/LockedResult";
 import { ResultV2View } from "@/mobile/src/components/analysis/result/ResultV2View";
+import { FailedCard, PendingUploadCard } from "@/mobile/src/components/analysis/result/StageCards";
 import { ScoreView } from "@/mobile/src/components/analysis/ScoreView";
-import { Button } from "@/mobile/src/components/ui/Button";
-import { Card } from "@/mobile/src/components/ui/Card";
 import { Screen } from "@/mobile/src/components/ui/Screen";
 import { Text } from "@/mobile/src/components/ui/Text";
 import { pendingSetFor } from "@/mobile/src/features/capture/captureSession";
@@ -108,17 +107,17 @@ export default function AnalysisScreen() {
         ) : null}
         {v2 && !entitled ? (
           <PaywallProvider teaserMode={teaserMode} analysisId={v2.id} presentation={loaded?.profile.presentation} ageBand={loaded?.profile.ageBand}>
-            {v2.stage === "failed" ? <Text variant="muted">{t("stage.failed")}</Text> : null}
             <LockedResult a={v2} source={boundSelfieFor(v2.id)} />
           </PaywallProvider>
         ) : null}
         {v2 && entitled ? (
           uploading ? (
             <AnalysisProgress done={false} />
-          ) : (v2.stage === "device_only" || v2.stage === "failed") && !hasPending ? (
-            <Card title={t("result.pending.title")} description={v2.stage === "failed" ? t("stage.failed") : t("result.pending.body")}>
-              <Button title={t("result.pending.cta")} size="lg" onPress={() => router.push({ pathname: "/tara", params: { analysis: v2.id } })} />
-            </Card>
+          ) : v2.stage === "failed" && !hasPending ? (
+            // Web FailedCard ile aynı: hata kodu (analysis.errors.<code>) + yeniden çekim ipucu; hak düşmedi.
+            <FailedCard failure={v2.failure} analysisId={v2.id} />
+          ) : v2.stage === "device_only" && !hasPending ? (
+            <PendingUploadCard analysisId={v2.id} />
           ) : (
             <ResultV2View initial={v2} onUpdate={(next) => setLoaded((l) => (l ? { ...l, a: next } : l))} />
           )

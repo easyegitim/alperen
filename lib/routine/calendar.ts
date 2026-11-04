@@ -25,6 +25,8 @@ function doneSet(logs: readonly DayLog[], activeItemCount: number): Set<string> 
 /**
  * Bugünden geriye `days` gün (en eski önce). Bugün tamamlanmadıysa "pending". Zincir kırıldıktan sonraki eksik günler
  * "missed"; zincir içinde haftalık dinlenme hakkıyla affedilenler "rest"; dondurulanlar "frozen".
+ * "rest" yalnız computeForgivingStreak'in köprülediği gündür: yürüyüşte daha eski bir "yapıldı" günü bulunmazsa (zincir
+ * yok ya da koptu) aday günler "missed" olur. Pencere dışına da bakılır ki pencerenin son günleri doğru etiketlensin.
  */
 export function recentDays(input: { logs: readonly DayLog[]; activeItemCount: number; today: string; freezes?: readonly FreezeRecord[]; config?: RoutineForgivingConfig; days?: number }): CalendarDay[] {
   const days = Math.max(1, Math.min(31, input.days ?? 7));
@@ -35,12 +37,16 @@ export function recentDays(input: { logs: readonly DayLog[]; activeItemCount: nu
   const frozen = new Set((input.freezes ?? []).map((f) => f.date));
   const out: CalendarDay[] = [];
   const restUsed = new Map<string, number>();
+  /** Henüz bir "yapıldı" günüyle doğrulanmamış dinlenme adayları (pencere içindeki dizinleri). */
+  let candidates: number[] = [];
   let chain = active;
   let day = input.today;
-  for (let i = 0; i < days; i++, day = addDays(day, -1)) {
+  for (let i = 0; i < 3650 && (i < days || (chain && candidates.length > 0)); i++, day = addDays(day, -1)) {
     let status: DayStatus;
-    if (done.has(day)) status = "done";
-    else if (frozen.has(day)) status = "frozen";
+    if (done.has(day)) {
+      status = "done";
+      candidates = [];
+    } else if (frozen.has(day)) status = "frozen";
     else if (day === input.today) status = "pending";
     else if (chain) {
       const wk = isoWeekKey(day);
@@ -48,13 +54,16 @@ export function recentDays(input: { logs: readonly DayLog[]; activeItemCount: nu
       if (used < config.restDaysPerWeek) {
         restUsed.set(wk, used + 1);
         status = "rest";
+        if (i < days) candidates.push(i);
       } else {
         chain = false;
         status = "missed";
       }
     } else status = "missed";
-    out.push({ date: day, status });
+    if (i < days) out.push({ date: day, status });
   }
+  // Zincir koptu ya da yürüyüş bitti: doğrulanmamış adaylar affedilmedi → "missed".
+  for (const idx of candidates) out[idx] = { date: out[idx].date, status: "missed" };
   return out.reverse();
 }
 

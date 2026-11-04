@@ -25,10 +25,15 @@ describe("affedici seri görünümü (PLAN Faz 6 [ÖNERİ]; CONTRACTS_V2 S3.3.2)
     expect(restDaysLeftThisWeek({ logs, activeItemCount: 2, today: "2026-11-04" })).toBe(0);
   });
   it("aynı haftada ikinci eksik gün zinciri koparır: sonrası 'missed'; aktif adım yoksa hepsi missed/pending", () => {
-    // 2026-11-06 Cuma; 11-05 yapıldı; 11-04 aynı haftanın dinlenme günü; 11-03 ikinci eksik → zincir kopar
+    // 2026-11-06 Cuma; 11-05 yapıldı; 11-04 dinlenme adayı ama daha eski yapılan gün yok (11-03 ikinci eksik → zincir
+    // kopar): motor 11-04'ü köprülemez (restDaysBridged 0) → takvimde de "missed" (rest yalnız zincir içinde affedilen gün)
     const logs = [...done("2026-11-05")];
     const days = recentDays({ logs, activeItemCount: 2, today: "2026-11-06", days: 4 });
-    expect(days.map((d) => d.status)).toEqual(["missed", "rest", "done", "pending"]);
+    expect(days.map((d) => d.status)).toEqual(["missed", "missed", "done", "pending"]);
+    expect(computeForgivingStreak({ logs, activeItemCount: 2, today: "2026-11-06" }).restDaysBridged).toBe(0);
+    // 11-03 de yapıldıysa 11-04 zincir içinde köprü → "rest"
+    const chained = recentDays({ logs: [...done("2026-11-05"), ...done("2026-11-03")], activeItemCount: 2, today: "2026-11-06", days: 4 });
+    expect(chained.map((d) => d.status)).toEqual(["done", "rest", "done", "pending"]);
     expect(recentDays({ logs: [], activeItemCount: 0, today: "2026-11-04", days: 2 }).map((d) => d.status)).toEqual(["missed", "pending"]);
     expect(recentDays({ logs: [], activeItemCount: 1, today: "bozuk" })).toEqual([]);
   });

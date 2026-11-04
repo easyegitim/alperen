@@ -210,4 +210,16 @@ describe("toClientAnalysisV2: davet kilidi (referralUnlock, Ç12)", () => {
   it("davet kilidi tamamlanmamış analizde skor açmaz", () => {
     expect(toClientAnalysisV2(deviceOnly, REF).overall).toEqual({ value: null, locked: true });
   });
+  it("davetle başlatılan iş (hak yok, running): her şey kilitli; completed olunca yalnız genel skor — hak (entitled) hiç açılmaz", () => {
+    const running = toClientAnalysisV2({ ...completed, status: "running", sections_ready: ["device", "overall"] }, REF);
+    expect(running.stage).toBe("running");
+    expect(running.overall).toEqual({ value: null, locked: true });
+    expect(running.subscores.skin).toEqual({ value: null, locked: true });
+    const done = toClientAnalysisV2(completed, REF);
+    expect(done.overall.locked).toBe(false);
+    expect(done.overall.value?.value).toBe(5.8);
+    expect(done.overall.value?.range).toBeNull();
+    expect(done.potential.locked).toBe(true);
+    expect(done.report.locked).toBe(true);
+  });
 });

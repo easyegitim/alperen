@@ -18,7 +18,7 @@ describe("recentDays (takvim şeridi)", () => {
     const days = recentDays({ logs, activeItemCount: 5, today, freezes: [{ date: "2026-11-01" }], config: CFG, days: 7 });
     expect(days.map((d) => `${d.date}:${d.status}`)).toEqual([
       "2026-10-29:missed",
-      "2026-10-30:rest",
+      "2026-10-30:missed",
       "2026-10-31:done",
       "2026-11-01:frozen",
       "2026-11-02:rest",
@@ -26,8 +26,20 @@ describe("recentDays (takvim şeridi)", () => {
       "2026-11-04:pending",
     ]);
     const s = computeForgivingStreak({ logs, activeItemCount: 5, today, freezes: [{ date: "2026-11-01" }], config: CFG });
-    // Sal + Cmt = 2 yapılan; Pzt dinlenme, Paz dondurma köprü; Cum (30 Eki, hafta 44) dinlenme hakkı var ama sonrasında yapılan gün yok → baştaki köprü sayılmaz
+    // Sal + Cmt = 2 yapılan; Pzt dinlenme, Paz dondurma köprü; Cum (30 Eki, hafta 44) dinlenme hakkı var ama sonrasında yapılan gün yok → baştaki köprü sayılmaz (takvimde de "missed")
     expect(s).toMatchObject({ streak: 2, restDaysBridged: 1, freezesBridged: 1, today: "pending" });
+  });
+  it("yeni rutin (hiç log yok): dün 'rest' değil 'missed' — dinlenme yalnız zincir içinde affedilen gündür", () => {
+    const days = recentDays({ logs: [], activeItemCount: 1, today: "2026-11-04", config: CFG });
+    expect(days.map((d) => d.status)).toEqual(["missed", "missed", "missed", "missed", "missed", "missed", "pending"]);
+    // Zincir var: Sal yapıldı, Pzt eksik, Paz yapıldı → Pzt köprü (rest); daha eski eksikler zincir kopunca missed
+    const chain = recentDays({ logs: doneDays(["2026-11-03", "2026-11-01"]), activeItemCount: 1, today: "2026-11-04", config: CFG, days: 5 });
+    expect(chain.map((d) => `${d.date}:${d.status}`)).toEqual(["2026-10-31:missed", "2026-11-01:done", "2026-11-02:rest", "2026-11-03:done", "2026-11-04:pending"]);
+    // Pencere sonundaki aday: pencere dışında yapılan gün varsa rest, yoksa missed
+    const tail = recentDays({ logs: doneDays(["2026-11-03", "2026-10-31"]), activeItemCount: 1, today: "2026-11-04", config: CFG, days: 3 });
+    expect(tail.map((d) => d.status)).toEqual(["rest", "done", "pending"]);
+    const tailBroken = recentDays({ logs: doneDays(["2026-11-03"]), activeItemCount: 1, today: "2026-11-04", config: CFG, days: 3 });
+    expect(tailBroken.map((d) => d.status)).toEqual(["missed", "done", "pending"]);
   });
   it("aktif adım yoksa bugün pending, gerisi missed; en eski önce; en fazla 31 gün", () => {
     const days = recentDays({ logs: [], activeItemCount: 0, today: "2026-11-04", days: 3 });
@@ -63,12 +75,25 @@ describe("hafta sınırı (ISO, Pazartesi başlangıç)", () => {
     const logs2 = doneDays(["2027-01-05", "2027-01-02", "2027-01-01"]);
     expect(computeForgivingStreak({ logs: logs2, activeItemCount: 5, today: "2027-01-06", config: CFG })).toMatchObject({ streak: 3, restDaysBridged: 2 });
   });
-  it("kalan dinlenme günü hafta başında tam, dinlenmeden sonra 0; Pazartesi günü yeni hak", () => {
+  it("kalan dinlenme günü hafta başında tam, zincir içinde dinlenmeden sonra 0; Pazartesi günü yeni hak", () => {
     const base = { activeItemCount: 5, config: CFG };
     expect(restDaysLeftThisWeek({ ...base, logs: [], today: "2026-11-02" })).toBe(1); // Pzt: geriye bu haftada gün yok
-    expect(restDaysLeftThisWeek({ ...base, logs: [], today: "2026-11-03" })).toBe(0); // Sal: Pzt eksik
+    // Sal, Pzt eksik ama hiç yapılan gün yok: zincir yok → motor Pzt'yi köprülemez, hak harcanmamıştır
+    expect(restDaysLeftThisWeek({ ...base, logs: [], today: "2026-11-03" })).toBe(1);
+    // Çar; Sal yapıldı, Pzt eksik, Paz (W44) yapıldı: Pzt zincir içinde köprü → bu haftanın hakkı harcandı
+    expect(restDaysLeftThisWeek({ ...base, logs: doneDays(["2026-11-03", "2026-11-01"]), today: "2026-11-04" })).toBe(0);
     expect(restDaysLeftThisWeek({ ...base, logs: doneDays(["2026-11-02"]), today: "2026-11-03" })).toBe(1);
     expect(restDaysLeftThisWeek({ ...base, logs: [], freezes: [{ date: "2026-11-02" }], today: "2026-11-03" })).toBe(1); // dondurma hakkı harcamaz
+  });
+  it("kalan hak motorla aynı: zincirden önceki eksik günler (rutin Çarşamba başladı) hakkı harcamaz", () => {
+    const base = { activeItemCount: 5, config: CFG };
+    // Rutin Çar 4 Kasım'da başladı; Çar+Per yapıldı; Cum bekliyor. Pzt+Sal zincir dışı → hak hâlâ 1.
+    const logs = doneDays(["2026-11-04", "2026-11-05"]);
+    expect(restDaysLeftThisWeek({ ...base, logs, today: "2026-11-06" })).toBe(1);
+    expect(computeForgivingStreak({ ...base, logs, today: "2026-11-06" })).toMatchObject({ streak: 2, restDaysBridged: 0, restUsedThisWeek: 0 });
+    // Cuma atlandı: Cumartesi motor Cuma'yı köprüler (seri 2 kalır) — kart Cuma günü "hak yok" dememeliydi.
+    expect(computeForgivingStreak({ ...base, logs, today: "2026-11-07" })).toMatchObject({ streak: 2, restDaysBridged: 1, restUsedThisWeek: 1 });
+    expect(restDaysLeftThisWeek({ ...base, logs, today: "2026-11-07" })).toBe(0);
   });
 });
 
