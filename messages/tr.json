@@ -1477,7 +1477,14 @@
       "downloaded": "Kart indirildi.",
       "error": "Kart oluşturulamadı.",
       "invalid": "Bu kart bu ayarlarla oluşturulamaz.",
-      "deviceNote": "Kart cihazında üretilir; sunucuya gitmez."
+      "deviceNote": "Kart cihazında üretilir; sunucuya gitmez.",
+      "labels": {
+        "overall": "Genel skor",
+        "potential": "Potansiyel"
+      },
+      "kindAria": "Kart türü",
+      "formatAria": "Kart biçimi",
+      "barberButton": "Berber kartını paylaş"
     }
   },
   "checkout": {
@@ -1894,6 +1901,15 @@
         "already_frozen": "Bu gün zaten donduruldu.",
         "future_date": "Gelecek bir gün dondurulamaz.",
         "bad_date": "Tarih okunamadı."
+      },
+      "weekAria": "Son 7 gün",
+      "dayAria": "{day}: {status}",
+      "days": {
+        "done": "Yapıldı",
+        "rest": "Dinlenme günü",
+        "frozen": "Donduruldu",
+        "missed": "Yapılmadı",
+        "pending": "Bugün, henüz tamamlanmadı"
       }
     }
   },
@@ -1932,7 +1948,8 @@
       "deltaLabel": "Önceki analize göre {delta}",
       "sincePrevious": "Önceki analize göre",
       "calibrationChanged": "Kalibrasyon sürümü değişti; bu iki analiz karşılaştırılmaz.",
-      "changeAria": "Skor değişimi: {label}"
+      "changeAria": "Skor değişimi: {label}",
+      "ownHistoryNote": "Kıyas yalnız kendi geçmişinle; başka kullanıcılarla sıralama yok."
     }
   },
   "experts": {
