@@ -7,6 +7,12 @@ const MOBILE_FLAG_ENV: Record<FlagKey, string | undefined> = {
   weekPass: process.env.EXPO_PUBLIC_FEATURE_WEEK_PASS,
   // Sağlayıcı adları hukuki onaya kadar kapalı (UI spec §5.3); mobilde gösterim parite sürümüyle gelir.
   providerNames: process.env.EXPO_PUBLIC_FEATURE_PROVIDER_NAMES,
+  // v2 bayrakları (CONTRACTS_V2.md §6): hepsi kapalı başlar; sunucu son sözü söyler.
+  under18: process.env.EXPO_PUBLIC_FEATURE_UNDER_18,
+  percentile: process.env.EXPO_PUBLIC_FEATURE_PERCENTILE,
+  doctorLayer: process.env.EXPO_PUBLIC_FEATURE_DOCTOR_LAYER,
+  referralUnlock: process.env.EXPO_PUBLIC_FEATURE_REFERRAL_UNLOCK,
+  yearlyPlan: process.env.EXPO_PUBLIC_FEATURE_YEARLY_PLAN,
 };
 
 export function isMobileFeatureEnabled(flag: FlagKey, overrides?: Partial<Record<FlagKey, string | undefined>>): boolean {
