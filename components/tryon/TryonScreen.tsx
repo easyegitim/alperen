@@ -34,6 +34,8 @@ type Props = {
   recommended: string[];
   quota: { used: number; limit: number; nextAt: string | null };
   initialPreset?: string;
+  /** Derin bağlantı (`/dene?mode=glow_up`): bayrakla kapalı mod istenirse tek stile düşer. */
+  initialMode?: TryonMode;
   presentation: "male" | "female" | "unspecified";
   /** Glow-up bağı: en son analiz (yoksa glow-up kapalı görünür). */
   analysisId: string | null;
@@ -54,11 +56,12 @@ const epochNow = () => Date.now();
  * (Claude kalite kontrolü sunucuda; geçmeyen görsel hiç gelmez, hak düşmez) → worker kompoziti (yüz orijinal piksellerle,
  * glow-up'ta doku kapısı) → gözlere hizalı önce/sonra → paylaş (etiket gömülü) / "Bozuk görünüyor".
  */
-export function TryonScreen({ consentVersion, hasConsent, recommended, quota, initialPreset, presentation, analysisId, planSteps, flags }: Props) {
+export function TryonScreen({ consentVersion, hasConsent, recommended, quota, initialPreset, initialMode, presentation, analysisId, planSteps, flags }: Props) {
   const t = useTranslations("tryon");
   const tc = useTranslations("common");
+  const modes = TRYON_MODES.filter((m) => (m === "combo" ? flags.combo : m === "glow_up" ? flags.glowUp : true));
   const [consent, setConsent] = useState(hasConsent);
-  const [mode, setMode] = useState<TryonMode>("style");
+  const [mode, setMode] = useState<TryonMode>(() => (initialMode && modes.includes(initialMode) ? initialMode : "style"));
   const [stage, setStage] = useState<Stage>("gallery");
   const [picked, setPicked] = useState<TryonPresets>(() => {
     const p = initialPreset ? getPreset(initialPreset) : undefined;
@@ -74,7 +77,6 @@ export function TryonScreen({ consentVersion, hasConsent, recommended, quota, in
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<number>(0);
   const [elapsed, setElapsed] = useState(0);
-  const modes = TRYON_MODES.filter((m) => (m === "combo" ? flags.combo : m === "glow_up" ? flags.glowUp : true));
 
   async function giveConsent() {
     try {

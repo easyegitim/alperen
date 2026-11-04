@@ -52,6 +52,17 @@ const HAIR: Record<string, HairSpec> = {
   sleek_straight_long: { sidesGuard: "makas", topLengthCm: 35, notes: "Düz kesim" },
   curly_defined: { sidesGuard: "makas", topLengthCm: 20, notes: "Kuru kesim; bukle tanımı" },
   high_ponytail: { sidesGuard: "makas", topLengthCm: 35, notes: "Uzunluk korunur" },
+  // Sprint 2 genişletmesi (PLAN 4e): uzman listesi + kadın 12→18.
+  amerikan_tirasi: { sidesGuard: "1 → 2", topLengthCm: 2, notes: "Üst düz ve kısa (flat top); ense temiz" },
+  asker_tirasi: { sidesGuard: "1", topLengthCm: 0.6, notes: "Her yer tek numara; ense temiz; kâkül yok" },
+  erkek_perma: { sidesGuard: "2 → 3", topLengthCm: 9, notes: "Üst orta uzunlukta perma; yanlar taper" },
+  seyrek_sac_dokulu_kisa: { sidesGuard: "2", topLengthCm: 4, notes: "Üstte kısa nokta kesim, öne doğru; mat bitiş; ayrım çizgisi yok" },
+  french_bob: { sidesGuard: "makas", topLengthCm: 14, notes: "Çene hizası küt bob; dolgun kâkül" },
+  a_line_bob: { sidesGuard: "makas", topLengthCm: 16, notes: "Arka kısa, öne doğru uzayan" },
+  layered_shoulder: { sidesGuard: "makas", topLengthCm: 25, notes: "Omuz boyu; yüz çevresinde yumuşak katlar" },
+  side_swept_bangs: { sidesGuard: "makas", topLengthCm: 22, notes: "Yana taranan uzun kâkül; orta boy katlar" },
+  half_up_bun: { sidesGuard: "makas", topLengthCm: 30, notes: "Uzunluk korunur; üst bölüm toplanır" },
+  low_bun_sleek: { sidesGuard: "makas", topLengthCm: 30, notes: "Uzunluk korunur; ortadan ayrım, ense topuzu" },
 };
 
 const BEARD: Record<string, BeardSpec> = {

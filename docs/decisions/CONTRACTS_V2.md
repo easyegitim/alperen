@@ -394,3 +394,25 @@ Her çıktıda görünür iz: fotoğraf (bölge "seen" + `viewsUsed` çipi) · y
 7. K7 kalanı (steroid, hormon, mewing) — dışarıda tutuldu (safety.ts değişmedi).
 8. Glow-up eşikleri (`GLOW_UP_GATE`) ve QC maliyet fizibilitesi (KB §11.14) — ilk kapı koşusunda ölçülür (ücretli, onay).
 9. `pnpm db:types` ancak 0013/0014 push sonrası (onay) — ayna geçici.
+
+### S2.14 Sprint 2 entegrasyon notları (F09, 4 Kasım 2026) — sözleşmeden sapmalar ve bağlantılar
+
+Birleştirme: `wt/faz5` → `wt/faz4` (`--no-ff`), çakışma yalnız `messages/tr.json` (anahtar düzeyinde çakışma yok, birleşim) ve `tests/unit/catalog.test.ts`. İki izin katalog genişletmeleri birbirine bağlandı: W4'ün 12 yeni cilt/bakım adımı ve 4 alışkanlığı `SKIN_STEP_EFFECTS`'e (glow-up istemi), W5'in 10 yeni saç preset'i `lib/coach/barber.ts` tablosuna eklendi.
+
+Uçtan uca bağ (SCORE_ENGINE=hybrid.v2): ödeme sonrası sonuç (`ResultV2View`, kart kart açılış korunur) → rapor kartı `ReportV3` (`report` bölümü) → "Plan" `/plan/[id]` → anket v2 yoksa `/plan/[id]/anket` → `POST /api/questionnaire` → `/plan/[id]` → `PlanView` ilk açılışta `POST /api/plan` → adım kartı "Dene" `/dene?preset=<id>` · "Berbere göster" (BarberCard) · "İyileşmiş halin" `/dene?mode=glow_up&analysis=<id>` → `TryonScreen` (`initialMode`, `initialPreset`) → `POST /api/tryon` (kalite kontrolü, `qc_failed` iade) → paylaş (etiket gömülü) / "Bozuk görünüyor". Doktor katmanı bayrak kapalıyken `state:"off"` → hiç çizilmez; ürün bağlantıları bayrak kapalıyken `{}`.
+
+| # | Sapma / karar | Not |
+|---|---|---|
+| 1 | Dosya adları: `lib/ai/prompts/report.v3.ts` + `lib/ai/reportSchema.v3.ts` (S2.0'daki `plan.v2.ts` / `planSchema.v2.ts` yerine); ek `lib/coach/{planStore,knowledgeSource}.ts` | `PLAN_SELECTION_PROMPT_VERSION = "plan.v2"` (`+fallback` belirlenimci yedekte) |
+| 2 | `content/types.ts`: `SkinStep.area?` (hair/beard/brows/style), `SkinStep.evidence?` (A/B/C), `Habit.area?`; `Preset.hidden?`, `Preset.tags?`; `Protect` = `MaskRegion` | Eklemeli; mobil derlemesi geçti |
+| 3 | Egzersiz katalog kayıtları `regions:["skin"]` | S2.1 kural 2: egzersiz yapısal bölgeye bağlanamaz |
+| 4 | `ApiErrorCode` += `TRYON_QC_FAILED` (422) | S2.6 yalnız metni adlandırıyordu |
+| 5 | Kalite kontrolü sağlayıcı hatası ya da `TRYON_QC=off` → görsel `qc:null` ("kontrol yapılmadı") ile döner, istemci sapma kontrolü tek kapı | Uyarı loglanır; kesinti davranışı sözleşmede yoktu |
+| 6 | `POST /api/tryon` yanıtı += `promptVersion` ("tryon.v2") | Eklemeli |
+| 7 | Sakal preset'leri `protect:"features_cheeks"`; 76 preset → `CatalogKnowledgeSource` 105 kayıt (S2.2 "89") | Test sayıyı türetir |
+| 8 | Plan yeniden üretimi: yalnız anket plandan yeniyse (`basisStale`) ya da `unlimited_quota`; aksi `QUOTA_EXCEEDED` | Ücretli yeniden üretim ürünü AÇIK (KB §11.1) |
+| 9 | `hairLossSignal` `PlanViewV2`'nin yanında (`{ view, hairLossSignal }`) | Sözleşme tipine girmedi |
+| 10 | `/dene` hakkı aboneliktir (`getPremiumStatus`); `one_time_report.grants.tryons = 0` (AÇIK §11.2) olduğundan tek seferlik rapor alan kullanıcı deneme ekranını kilitli görür | Kurucu deneme hakkını belirleyince `AccessV2` + ürün hakkıyla açılır |
+| 11 | `/dene` arama parametreleri: `preset` (tek stil), `mode` (`style|combo|glow_up`; bayrakla kapalıysa tek stile düşer), `analysis` (kullanıcının tamamlanmış analizi; değilse en son) | "Sana önerilen" = plan v2 adımlarının `tryonPresetId`'leri ∪ v1 rapor |
+| 12 | `ResultV2View` `flags?: { glowUp, expertNetwork }` (sunucu bayrakları → `ReportV3` bağlantıları) | Varsayılan `{ true, false }` |
+| 13 | `seeProfessional` cümlesi motorda rapor kapanışına ekleniyor (`closingWith`); `ReportV3.seeProfessional` prop'u kullanılmıyor | Çift gösterim olmasın diye |

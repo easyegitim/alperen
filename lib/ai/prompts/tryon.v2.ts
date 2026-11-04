@@ -31,10 +31,27 @@ export const SKIN_STEP_EFFECTS: Record<string, string> = {
   st_beard_oil: "softer, tidier, better-groomed beard hair",
   st_hair_conditioner: "shinier, healthier-looking hair",
   st_scalp_scrub_weekly: "a clean scalp and hairline with no visible flakes",
+  // Sprint 2 katalog genişletmesi (PLAN 4e): şekillendirme, tıraş tahrişi seti, kaş/burun-kulak, gözlük hijyeni.
+  st_styling_cream: "neatly styled hair with a soft, natural hold and no frizz",
+  st_matte_clay: "neatly styled hair with a matte finish and visible texture, no greasy shine",
+  st_sea_salt_spray: "hair with a little more natural volume and texture",
+  st_heat_protect: "smoother, healthier-looking hair with less frizz and fewer split ends",
+  st_shave_prep: "calm, smooth skin on the shaved areas with no razor irritation",
+  st_aftershave_balm: "calm skin on the shaved areas with less redness",
+  st_razor_hygiene: "clear skin on the shaved areas with no razor bumps or irritation",
+  st_beard_trim_weekly: "a neatly defined beard outline on the cheeks and neck",
+  st_brow_tidy: "tidy eyebrows with a clean natural outline, same thickness",
+  st_brow_brush: "neatly brushed eyebrows that keep their natural shape",
+  st_nose_ear_trim: "no visible nose or ear hair",
+  st_glasses_clean: "clean, clear glasses lenses and no marks on the skin where they rest",
   hb_water: "fresher, less puffy-looking skin",
   hb_sleep: "fresher, more rested-looking skin and under-eye area",
   hb_sun: "more even skin tone with less sun-related redness",
   hb_salt_alcohol: "less puffy, less red-looking skin",
+  hb_pillowcase: "clearer skin on the cheeks with fewer small blemishes",
+  hb_no_touch: "clearer skin with fewer small blemishes",
+  hb_lukewarm_shower: "well-hydrated skin and hair without dry, flaky patches",
+  hb_hair_wash_rhythm: "clean, fresh-looking hair that is neither greasy nor dry",
 };
 
 const COMMON_RULES = `Keep the same person, head pose, framing, camera angle, lighting, background and clothing.
