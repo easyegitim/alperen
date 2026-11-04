@@ -24,12 +24,14 @@ export function pickReturnAnalysis(candidate: unknown, candidateRow: CandidateRo
 }
 
 /** payment_events.payload'dan güvenle okunan alanlar (eski satırlarda analysisId yoktur). */
-export function readCheckoutPayload(raw: unknown): { userId?: string; plan?: string; analysisId?: string } {
+export function readCheckoutPayload(raw: unknown): { userId?: string; plan?: string; analysisId?: string; purchaseId?: string } {
   if (!raw || typeof raw !== "object") return {};
   const r = raw as Record<string, unknown>;
   return {
     userId: typeof r.userId === "string" && r.userId ? r.userId : undefined,
     plan: typeof r.plan === "string" && r.plan ? r.plan : undefined,
     analysisId: isUuid(r.analysisId) ? r.analysisId : undefined,
+    /** one_time_report (F14 v2): bekleyen purchases satırı; callback paid/failed yazar. */
+    purchaseId: isUuid(r.purchaseId) ? r.purchaseId : undefined,
   };
 }
