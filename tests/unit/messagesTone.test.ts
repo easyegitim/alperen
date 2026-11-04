@@ -5,7 +5,10 @@ import tr from "@/messages/tr.json";
 import { normalizeTr } from "@/lib/ai/safety";
 import { SUB_KEYS_V2 } from "@/lib/config/teaser";
 import { VIEW_KEYS } from "@/lib/face/views";
-import { CAPTURE_HINTS, LEVER_KEYS, MOD_EXPLAIN_KEYS, NOT_ASSESSED_REASONS, STRUCTURAL_EXPLAIN_KEYS } from "@/lib/score/contract";
+import { CAPTURE_HINTS, LEVER_KEYS, MOD_EXPLAIN_KEYS, NOT_ASSESSED_REASONS, REGION_KEYS, STRUCTURAL_EXPLAIN_KEYS } from "@/lib/score/contract";
+import { BASIS_CHIP_KEYS, DISCLAIMER_KEYS } from "@/lib/coach/planTypes";
+import { BODY_IMAGE_SCREEN_QUESTIONS, BUDGET_BANDS, EVIDENCE_LEVELS, GOAL_DIRECTIONS, ONE_TIME_BUDGET_BANDS, PLAN_AREAS, PLAN_PHASES, PLAN_TIERS } from "@/lib/config/plan";
+import { TRYON_MODES } from "@/lib/tryon/types";
 
 type Tree = { [k: string]: string | Tree };
 function isTree(v: unknown): v is Tree {
@@ -134,6 +137,12 @@ const WALKED = [
   "analysis.faceShapeV2",
   "analysis.stage",
   "paywall.v2",
+  // Sprint 2 (CONTRACTS_V2 Sprint 2): plan, rapor v2, anket v2, doktor katmanı, deneme v2
+  "plan.v2",
+  "report.v2",
+  "questionnaire.v2",
+  "doctor",
+  "tryon.v2",
 ];
 const walked = WALKED.flatMap(leaves);
 
@@ -202,6 +211,36 @@ describe("tr.json ton koruması (yeni ve değişen metinler)", () => {
     // "ücretsiz" sözü paywall'da yok (KB R2-Ö5); Yapısal/Geliştirilebilir rozetleri v2 ekranında kullanılmaz
     for (const [path, v] of leaves("paywall.v2")) expect(normalizeTr(v), path).not.toMatch(/ucretsiz|bedava/);
     expect(JSON.stringify(tr)).not.toContain("Yapay zekâ ile oluşturuldu");
+  });
+
+  it("Sprint 2: KB'nin karara bağladığı metinler birebir (KB §6.2, §7.3/5, §4.7, K11; CONTRACTS_V2 Sprint 2)", () => {
+    expect(at("plan.v2.evidence.many_studies")).toBe("Çok sayıda çalışmada denendi");
+    expect(at("plan.v2.evidence.limited_studies")).toBe("Sınırlı sayıda çalışma var");
+    expect(at("plan.v2.evidence.expert_opinion")).toBe("Uzman görüşüne dayanıyor");
+    expect(keysOf("plan.v2.evidence")).toEqual([...EVIDENCE_LEVELS].sort());
+    expect(at("plan.v2.basis.title")).toBe("Planın şunlara göre hazırlandı");
+    expect(at("plan.v2.disclaimers.notMedicalAdvice")).toBe("Tıbbi tavsiye değildir.");
+    expect(at("report.v2.notMedicalAdvice")).toBe("Tıbbi tavsiye değildir.");
+    expect(at("doctor.notMedicalAdvice")).toBe("Tıbbi tavsiye değildir.");
+    expect(at("plan.v2.disclaimers.cosmeticProcedures")).toBe(
+      "Hukuki sebeplerden dolayı tıbbi kozmetik operasyonlarının puana olacak etkisini belirtemiyoruz. Dilerseniz bu konuda uzmanımızla görüşebilirsiniz.",
+    );
+    expect(at("tryon.v2.flagBroken")).toBe("Bozuk görünüyor");
+    expect(at("tryon.v2.qc.failedTitle")).toBe("Bu fotoğrafla bu stil iyi sonuç vermedi");
+    expect(keysOf("plan.v2.phases")).toEqual([...PLAN_PHASES].sort());
+    expect(keysOf("plan.v2.tiers")).toEqual([...PLAN_TIERS].sort());
+    expect(keysOf("plan.v2.tabs")).toEqual([...PLAN_AREAS].sort());
+    expect(keysOf("plan.v2.basis.chip")).toEqual([...BASIS_CHIP_KEYS].sort());
+    expect(keysOf("plan.v2.disclaimers")).toEqual([...DISCLAIMER_KEYS].sort());
+    expect(keysOf("report.v2.regions")).toEqual([...REGION_KEYS].sort());
+    expect(keysOf("questionnaire.v2.options.goalDirection")).toEqual([...GOAL_DIRECTIONS].sort());
+    expect(keysOf("questionnaire.v2.options.budget")).toEqual([...BUDGET_BANDS].sort());
+    expect(keysOf("questionnaire.v2.options.oneTimeBudget")).toEqual([...ONE_TIME_BUDGET_BANDS].sort());
+    expect(keysOf("tryon.v2.modes")).toEqual([...TRYON_MODES].sort());
+    expect(keysOf("doctor.screen").filter((k) => /^q\d$/.test(k))).toEqual([...BODY_IMAGE_SCREEN_QUESTIONS]);
+    // Doktor metinlerinde ilaç adı, doz, marka yok; YZ açıklaması var (AUP)
+    for (const [path, v] of leaves("doctor")) expect(normalizeTr(v), path).not.toMatch(/\bmg\b|miligram|doz(?!,)|finasterid|minoksidil|botoks|dolgu/);
+    expect(normalizeTr(String(at("doctor.disclosure")))).toContain("yapay zeka");
   });
 
   it("e2e metinleri korunur (UI spec §8.4)", () => {

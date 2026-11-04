@@ -250,3 +250,147 @@ Korunan e2e metinleri: `camera.guide.open = "Kamerayı aç"`, `analysis.start = 
 4. Fiyatlar, teklif süresi, deneme hakları, e-posta ile giriş, yaw işareti: yer tutucu/varsayım; kurucu ve W1 doğrular.
 5. `0010` yalnız yerel; `pnpm db:types` push sonrası. `lib/db/types.ts` geçici aynadır (CLAUDE.md "tablo tipleri elle yazılmaz" kuralından bilinçli, geçici sapma; dosya üretilen tiple değiştirilecek).
 6. `0004 fail_stuck_jobs` 0010'da yeniden tanımlandı (queued/running 2 saat); SPEC 13.4 satırı buna göre okunmalı.
+
+---
+
+## Sprint 2 — Rapor/plan (Faz 4) ve Dene (Faz 5) sözleşmeleri (T1, 4 Kasım 2026)
+
+Kaynak önceliği aynı: KB > PLAN_V2 > bu belge > SPEC/CLAUDE.md. Sprint 1 sözleşmeleri (§0–§9) aynen geçerli; motor (`lib/score/engine/*`, `lib/ai/scoreSchema.v2.ts`, `lib/ai/prompts/score.v2.ts`) bu sprintte **donmuştur** — plan için eksik alan yalnız yeni isteğe bağlı adaptörle eklenir ve `contractDeviation` olarak raporlanır. Bu sprintte motor dosyasına dokunulmadı; eksik alan tespit edilmedi (plan girdileri `ReportV3.regions`, `SignalsV2.observations`, `improveFirst`, `faceShape` ve `device_result` ile karşılanıyor).
+
+### S2.0 Dosya sahipliği
+
+| İz | Yazar | Yalnız okur |
+|---|---|---|
+| **W4** rapor + plan (F09; PLAN 4a–4g) | `lib/coach/{plan,planBasisV2,generatePlan}.ts` (yeni), `lib/coach/knowledge.ts` (**retrieve sıralamasını iyileştirir; arayüz ve `MethodRecord` değişmez**), `lib/ai/prompts/plan.v2.ts`, `lib/ai/planSchema.v2.ts` (Claude seçim şeması, küçük/düz), `lib/doctor/*`, `app/api/{questionnaire,plan,doctor,links}/*`, `app/(app)/(gated)/plan/**`, `app/admin/doctor/**`, `components/report/*` (v3 iskeleti: mektup, 9 bölge, ölçüler, kapanış), `components/plan/*` (`PlanPhases`, `PriorityTable`, `StepCard`, `BarberCard`, `BasisChips`, `BodyImageScreen`), `components/onboarding/QuestionnaireWizardV2.tsx`, `AvatarPreview.tsx`, `content/methods/` (Sprint 3 TSV), `scripts/import-methods.ts`, `tr.json`: `plan.v2.*`, `report.v2.*`, `questionnaire.v2.*`, `doctor.*` **metin değerleri** (anahtar kümeleri sözleşme) | `lib/coach/planTypes.ts`, `lib/questionnaireV2.ts`, `lib/config/plan.ts`, `lib/score/contract.ts`, `lib/db/types.ts`, migration 0013 |
+| **W5** dene (F11; PLAN 5a–5f) | `lib/tryon/mask.ts` (`features_only`, `features_cheeks`, `hair_only`, `beard_only`; `Protect` birliğini `MaskRegion`'a genişletir), `lib/face/indices.ts` (kontur listeleri), `content/beard-presets.ts` (istemler: favori/yanak/boyun adıyla), `lib/ai/prompts/tryon.v2.ts`, `lib/ai/tryonQc.ts`, `lib/ai/tryonProvider.ts` (model `getTryonConfig().imageModel`), `lib/tryon/{composite,pixels,quota,glowUp}.ts`, `app/api/tryon/**` (v2 gövde, QC döngüsü, `flag` rotası), `components/tryon/*`, `scripts/tryon-gate.ts`, `tr.json`: `tryon.v2.*` metin değerleri | `lib/tryon/types.ts`, `lib/api/tryonInput.ts`, `lib/config/tryon.ts`, migration 0014 |
+| **T1 (bu)** | `lib/coach/{planTypes,knowledge}.ts` (iskelet), `lib/questionnaireV2.ts`, `lib/config/{plan,tryon,flags}.ts`, `lib/tryon/types.ts`, `lib/api/tryonInput.ts`, `lib/analytics.ts` (olay adları), `supabase/migrations/{0013_v2_plan_doctor,0014_v2_tryon}.sql`, `lib/db/types.ts` (ayna), `messages/tr.json` (ad alanları + KB metinleri), `.env.example`, bu bölüm | — |
+
+Paylaşılan dosyayı değiştirmek gerekirse: önce burada sözleşmeyi güncelle, sonra kodu; diğer izi bilgilendir. `mobile/` bu sprintte dokunulmaz; `lib/`, `content/`, `messages/` değişiklikleri mobil typecheck/lint/test'ten geçmek zorunda (T1'de geçti).
+
+### S2.1 Plan: `PlanV2` (`lib/coach/planTypes.ts`)
+
+```ts
+PLAN_PHASES   = ["weeks_0_4","months_1_3","months_3_6"]           // KB §6.1
+PLAN_TIERS    = ["diy","expert","doctor"]                           // Kendin yap · Uzman · Doktor
+PLAN_AREAS    = ["hair","beard","color","skin","brows","exercise","habit","style"]   // sekmeler
+EVIDENCE_LEVELS = ["many_studies","limited_studies","expert_opinion"]; EVIDENCE_FROM_GRADE = { A, B, C }   // KB §6.2 (A/B/C içeride)
+
+StepCard = { id (katalog/yöntem kimliği, kod doğrular), area, phase, tier, title (nötr ad), summary?,
+             observationRef: { region: RegionKey, observation? }, costTryRange: {min, max|null}, frequency: {per: once|day|week|month, times},
+             minutesPerDay, difficulty 1–3, impact 1–3, effort 1–3, evidence: {level, source?}, perceptionOnly?, tryonPresetId?, barberSpec?, linkIds? }
+PriorityRow = { stepId, impact, effort, score = impact/effort }   // buildPriorityTable: azalan; eşitlikte az emek önce
+BasisChip   = { key ∈ BASIS_CHIP_KEYS, value?, source: questionnaire|photo|device|profile }   // PLAN §3: her cevap ve fotoğraf gerçeği görünür
+PlanV2      = { version:"plan.v2", phases, steps[≤40], priorityTable, basisChips[≤30], layers:{diy,expert,doctor:[]}, exclusions, disclaimers[], meta }
+PlanViewV2  = { plan, doctor: { state: DoctorLayerState, steps: StepCard[], disclosure: true }, basisStale }   // sunucu okuma anında kurar
+```
+
+Kurallar (`planIssues`, şema `superRefine`; testler `tests/unit/planTypesV2.test.ts`):
+
+1. Plan **kodla** kurulur: Claude yalnız bilgi tabanından kimlik seçer ve gerekçe yazar; bilinmeyen kimlik düşer (`validateMethodIds`), `meta.droppedUnknownIds` sayar. `PlanV2` şeması Claude'a verilmez; W4'ün Claude seçim şeması küçük ve düz olur (≤ 24 isteğe bağlı alan, tüm alanlar zorunlu, min/max yok; sınırlar kodda).
+2. **Yapısal alt skorlar plan-nötr:** `STRUCTURAL_REGIONS = eyeArea|nose|cheeks|jawline` bölgesine bağlı adım yalnız `PERCEPTION_AREAS = hair|beard|brows|color|style` alanında ve `perceptionOnly:true` olur (KB §4.9 son iki satır: "bakımla değişmez; saç/sakal/kaş algıyı etkiler"). Cilt/egzersiz/alışkanlık yapısal bölgeye bağlanamaz. Skor, kazanç ve puan alanı `StepCard`'da yoktur.
+3. **Doktor katmanı plana yazılmaz:** `tier:"doctor"` adım `plan_v2` içinde olamaz; `layers.doctor` boş. Doktor adımları okuma anında `doctor_recommendations` (yalnız `physician_reviewed`/`delivered`) satırının `physician_items` alanından `PlanViewV2.doctor.steps`'e eklenir; `FEATURE_DOCTOR_LAYER=false` → `state:"off"`, 18 altı → `"under_18"`, tarama yok → `"screen_required"`, risk → `"screen_risk"`, taslak → `"pending_review"`.
+4. `basisChips`: boy, kilo, VKİ ve serbest not **asla** çip olmaz (eski kural aynen). `exclusions` her bilerek atlanan bölümü nedeniyle taşır (tr.json `plan.v2.exclusions.*`).
+5. `disclaimers` her planda `notMedicalAdvice` içerir; `cosmeticProcedures` metni KB §4.7 birebir (`plan.v2.disclaimers.cosmeticProcedures`).
+6. Saklama: `coach_reports.plan_v2 jsonb` + `plan_version='plan.v2'` + `report_version='report.v3'` (0013). Rapor metni (`ReportV3`) `coach_reports.report`'ta kalır. Yeniden üretim ücretli/haktan düşer (Ç10): `reportRegens` 0.
+7. Kanıt cümlesi (KB §6.2, onay bekliyor): `plan.v2.evidence.{many_studies,limited_studies,expert_opinion}` = "Çok sayıda çalışmada denendi / Sınırlı sayıda çalışma var / Uzman görüşüne dayanıyor"; yanında `evidence.source` bağlantısı.
+
+### S2.2 Bilgi tabanı: `KnowledgeSource` (`lib/coach/knowledge.ts`)
+
+```ts
+interface KnowledgeSource { name: "catalog"|"methods"; retrieve(q: KnowledgeQuery, limit ≤ 40): Promise<MethodRecord[]>; get(id); ids() }
+KnowledgeQuery = { observations: string[], areas: PlanArea[], regions?, goals, goalDirection?, constraints: KnowledgeConstraints }
+KnowledgeConstraints = { headCovering: boolean|null, presentation, jawHealth: none|issue, beardPreference: none|some, budgetBand, timeBand, under18, bodyFatAllowed, restrictionSignal, glasses, doctorLayer }
+MethodRecord = { id, area, title (nötr), summary, tier, evidence:{level, grade?, source?}, costBand: none|low|medium|high, costTryRange?, frequency, minutesPerDay, difficulty, impact, effort, tags[], regions[], contraindications[], flawIds[], tryonPresetId?, source:{kind: catalog|tsv, ref} }
+```
+
+- **İlk sürüm** `CatalogKnowledgeSource`: `content/*` (14 cilt adımı, 7 alışkanlık, 8 egzersiz, 60 stil) → 89 kayıt; `filterByConstraints` K8/K9/K10/Ç1/Ç17 kurallarını **kodla** uygular (model görmez); `relevanceScore` alan + bölge + gözlem/etiket kelime örtüşmesi + hedef + bütçe. W4 sıralamayı iyileştirebilir; arayüz ve kısıt kuralları değişmez. CLAUDE NOTU: katalog kayıtlarının kanıt/etki/emek/maliyet değerleri varsayılandır (yalnız SPF ve güneş koruması `many_studies`); TSV gelince gerçek değerler.
+- **TSV sözleşmesi (VARSAYIM; dosyalar gelmedi, KB §11/PLAN §4.1):** `TSV_METHOD_COLUMNS.required = id, area, title_tr, summary_tr, tier, evidence_grade (A|B|C), cost_band, frequency_per, frequency_times, minutes_per_day, difficulty, impact, effort`; `optional = source_url, cost_min_try, cost_max_try, tags, regions, contraindications, flaw_ids, tryon_preset_id, user_label_tr, notes_internal`; listeler `;` ile. Kusur dosyası `TSV_FLAW_COLUMNS.required = flaw_id, region, internal_name_tr, user_label_tr`. İçe aktarma (`scripts/import-methods.ts`, Sprint 3) başlık satırını eşleştirir, eksik zorunlu sütunda durur ve raporlar; `content/methods/*.json` = `MethodsFile { version:"methods.v1", importedAt, sourceFile, records }`. İç taksonomi adı (`internal_name_tr`) kullanıcıya gitmez; `user_label_tr` gider (KB §5 ÖNERİ).
+- Claude'a istemde yalnız `retrieve` sonucu (≤ 40 kayıt: id, title, summary, area, tier, evidence, cost, minutes) verilir; `tier:"doctor"` kayıtlar yalnız hekim kuyruğu taslağı için ayrı çağrıda (flag + 18+ + tarama "ok").
+
+### S2.3 Anket v2: `QuestionnaireV2` (`lib/questionnaireV2.ts`; KB §3.2/5–6, Ç17)
+
+`{ version:"q.v2", goals[], goalDirection: sharper_mature|softer_younger|as_is_groomed, budget: upto_1000|1000_2500|2500_5000|5000_plus, oneTimeBudget: none|upto_15000|15000_60000|60000_plus|unknown, minutesPerDay: 5|10|20|30, activity:{ sportDays: 0_1|2_3|4_plus, work: desk|standing }, hairLengthPref, beardLengthPref, skinType, jawHealth[], glasses:{detected, value}, headCovering:{detected, value}, body?:{heightCm, weightKg} }`
+
+- Skoru **değiştirmez** (KARAR R1-E4/R2-C13); sunum sorulmaz (`profiles.presentation`). Saklama `profiles.questionnaire_v2` + `questionnaire_v2_at` (0013); yazma yalnız `POST /api/questionnaire` (W4, Zod, service role) — authenticated grant verilmedi. Eski `profiles.questionnaire` ve `lib/questionnaire.ts` dokunulmadan kalır (eski ekranlar ve mobil).
+- Ç17: `glasses/headCovering.detected` = `SignalsV2.observations.{glassesDetected,headCoveringDetected}` ile dolu gelir; `value` kullanıcı cevabı. `resolvePhotoConfirm` = value ?? detected; `hairAdviceAllowedV2` yalnız çözüm `false` iken. Tahmin ve seçim yoksa saç önerisi yok (`exclusions.hair = head_covering_unknown`).
+- Bütçe tutarları KB taslağı, AÇIK (§11.3): `lib/config/plan.ts PLAN_CONFIG.placeholder = true`; `questionnaire.v2.hints.budgetPending` görünür. Süre bantları CLAUDE NOTU (5/10/20/30). Beden algısı taraması: 4 soru (`doctor.screen.q1–q4`), `BODY_IMAGE_SCREEN_RISK_YES_COUNT = 2` (CLAUDE NOTU; klinik ölçek değil); yalnız sonuç saklanır (`profiles.body_image_screen_result`), cevaplar saklanmaz.
+
+### S2.4 Doktor katmanı (KB Ç3/Ç5, PLAN 4f; AUP high-risk)
+
+- `FEATURE_DOCTOR_LAYER` varsayılan **false**. Açıkken bile akış: Claude taslağı (≤ 2 öğe `{ methodId, area, rationale, sources[] }`) → `doctor_recommendations(status='draft')` → admin hekim ekranı (`app/admin/doctor`, `ADMIN_EMAILS`) → `physician_reviewed` (`physician_id`, `reviewed_at`, `physician_items` zorunlu; DB check) → kullanıcı görünce `deliver_doctor_recommendation()` → `delivered`. **Tarayıcı politikası yok**; `draft`/`rejected` satır hiçbir API'den kullanıcıya gitmez. Taslağa düşen metin kullanıcı kanalındaki `safety.ts` filtresinden geçmez (ayrı kanal) ama doz, marka, eczane/satış linki içeremez; linkler yalnız `DOCTOR_LAYER.allowedLinkHosts` (TİTCK, DOI, PubMed, Cochrane, WHO) — kod doğrular.
+- Kullanıcıya her öneriyle `doctor.disclosure` ("yapay zekâ ile hazırlandı; hekim gözden geçirdi") ve `doctor.notMedicalAdvice`; 18 altına hiç (`under_18` → `state:"under_18"`); tarama "risk" → katman kapalı + `doctor.screen.risk*` + psikolog yönlendirmesi.
+- Hekim inceleme süreci (kim, nasıl, süre) ve gelir modeli AÇIK (KB §11.7): flag kapalı kalır.
+
+### S2.5 Yönlendirme ve ürün bağlantıları (KB Ç4, PLAN 4g)
+
+`product_links (id, ref_id, kind: product|expert|source, label, url https, merchant, is_ad=true, commercial_model: none|listing_fee, active)` — komisyon modeli **yok**; `product_link_clicks` yalnız service role (POST `/api/links/click`, W4); analitik olayına link kimliği gitmez. `FEATURE_PRODUCT_LINKS` varsayılan false: kapalıyken `StepCard.linkIds` arayüzde gösterilmez. Açıkken `plan.v2.links.adLabel = "Reklam"` zorunlu (K19). Reklamda hekim adı yok (K18). Uzman dizini `partners` tablosu (0001) ile, sponsorsuz.
+
+### S2.6 Dene v2: girdi, modlar, kalite kontrolü (`lib/api/tryonInput.ts`, `lib/tryon/types.ts`, `lib/config/tryon.ts`)
+
+```ts
+POST /api/tryon  (TryonInputV2Raw → normalizeTryonInput → TryonRequestV2)
+{ clientRequestId, analysisId?, mode?: style|combo|glow_up, presets?: {hair?, beard?, color?}, presetId? (ESKİ takma ad, bir sürüm), image (base64 JPEG ≤ 1,5 MB, bellek), mask?, planStepIds?[≤10], layers?: (hair|beard|skin)[] }
+```
+
+- `style`: tam bir preset (yuva = preset.kind). `combo`: saç + sakal zorunlu, renk isteğe bağlı (`TRYON_COMBO_MIN_PARTS = 2`); `mode` yoksa parçalardan çıkarılır. `glow_up`: `analysisId` zorunlu; `planStepIds`/`layers` yalnız bu modda; `layers` yoksa hepsi. Bilinmeyen/yuvaya uymayan preset `BAD_INPUT`. `presetId` ile `presets` birlikte gönderilemez. Eski `TryonInput` dışa aktarımı korunur (mobil M9); rota W5'te `TryonInputV2`'ye geçer.
+- Bayrak kapıları (rota, W5): `combo` → `FEATURE_TRYON_COMBO` (varsayılan açık), `glow_up` → `FEATURE_GLOW_UP` (varsayılan açık); kapalıysa `FEATURE_DISABLED`.
+- Maske (`MASK_REGIONS`): `below_brows | above_lip` (mevcut) + `features_only | features_cheeks | hair_only | beard_only` (W5 `mask.ts`). `maskRegionFor(mode, presets)`: glow_up → `features_only` (opaklık 0,8); sakal içeren her deneme → `features_cheeks` (yanak, favori, çene altı, bıyık modele kalır; R1-E10); yalnız saç/renk → `below_brows`. Drift politikası `composite.ts` aynen (sakal hacmi tek yönlü ≤ %15, diğer ≤ %3); kemik yapısı değişmez.
+- **Kalite kontrolü** (`QcVerdict`, R2-C10/3 KARAR): Claude'a sonuç + orijinal; küçük düz şema `{ identityKept, styleApplied, strayHairCleared, artifacts: none|minor|major, reasons: QC_REASONS[] }` (hepsi zorunlu, enum, min/max yok); `pass` **kodda** `qcPass()`. Geçmezse en çok `TRYON_QC_MAX_REGEN` (2) yeniden üretim; yine geçmezse `tryon_events.status='qc_failed'`, kullanıcıya `tryon.v2.qc.failedTitle` ("Bu fotoğrafla bu stil iyi sonuç vermedi"), görsel **gösterilmez**, kota **düşmez** (Ç10). `TRYON_QC=off` yalnız geliştirme. Model `TRYON_QC_MODEL` (claude-opus-5-5), efor `TRYON_QC_EFFORT` (low); W5 `claude-api` skill + `lib/ai/anthropic.ts` yardımcılarıyla yazar (thinking ilk blok, `stop_reason` kontrolü, `output_config.format json_schema`).
+- Görsel modeli: `getTryonConfig().imageModel` = `TRYON_IMAGE_MODEL` > `GEMINI_IMAGE_MODEL` > `gemini-3.1-flash-lite-image` (bugünkü). PLAN 5c `gemini-3.1-flash-image` önerir; sağlayıcı seçimi AÇIK (KB §11.6), yarıştırma yok — kullanılabilirlik uydurulmaz, kurucu env ile seçer.
+- Glow-up (Ç9): istem plana bağlı cilt değişimi (ton eşitliği, kızarıklık); ben/çil/iz/gözenek/yüz şekli/ten rengi/saç çizgisi/kimlik korunur; `GLOW_UP_GATE` (ÖNERİ, `placeholder:true`): doku oranı 0,55–1,6, ton kayması ≤ 6 L*, yüksek frekans geri yazımı 0,5 — eşikler ilk kapı koşusunda ölçülür. Doktor işlemleri gösterilmez; reklamda kullanılmaz (K17); yeniden üretim haktan düşer. Gözlere hizalı kaydırıcı; altında `appliedStepIds`.
+- Yanıt `TryonResultV2 = { eventId, mode, presets, image, mimeType, model, qc|null, regenCount, appliedStepIds, label }`; `label = common.aiGenerated` ("Aura ile oluşturuldu · YZ simülasyonu", K16) istemci görsele gömer; paylaş düğmesi (`lib/share/card.ts shareOrDownload`).
+- "Bozuk görünüyor" (R2-C10/5): `POST /api/tryon/[id]/flag` → `flag_tryon_broken(p_user, p_event)` (yalnız kendi `success` satırı; idempotent); oran `ops.daily_tryon_quality.broken_rate`.
+- Sürüm kapısı (`TRYON_RELEASE_GATE`): 30 rızalı yüz × 12 sakal = 360 görsel, ≥ %95; %90 altı stil `hidden` (W5 `scripts/tryon-gate.ts`, ücretli, onay).
+
+### S2.7 Kota: `reserve_tryon` v2 (migration 0014)
+
+`reserve_tryon(p_user, p_client_request_id, p_preset, p_model, p_limit, p_since, p_mode default 'style', p_presets jsonb default null, p_weight int default 1, p_analysis_id uuid default null)` — **eski 6 parametreli çağrı aynen çalışır**. Kota = kayan pencerede `sum(weight)` (`pending` + `success`); `failed`, `identity_drift`, `qc_failed` sayılmaz (iade). `used + p_weight > p_limit` → null. Ağırlıklar `getTryonConfig().weights` (hepsi 1, `weightsPlaceholder:true`; deneme kotası ve ek paket AÇIK, KB §11.2). `lib/tryon/quota.ts` W5'te `sum(weight)` ile güncellenir (bugün satır sayar). `p_preset` uyumluluk için saç > sakal > renk ilk dolu değer.
+
+### S2.8 Veritabanı (0013, 0014; yalnız dosya — canlı projeye push onay ister)
+
+**0013** `coach_reports (+plan_v2 jsonb, plan_version, report_version)`; `profiles (+questionnaire_v2 jsonb, questionnaire_v2_at, body_image_screen_result ok|risk, body_image_screened_at)` — authenticated yazamaz; `doctor_recommendations (id, user_id, analysis_id, report_id, status draft|physician_reviewed|delivered|rejected, ai_items ≤2, ai_model, ai_prompt_version, physician_items ≤2, physician_id, physician_notes, reviewed_at, delivered_at, created_at)` RLS açık, **politika yok**; check: reviewed/delivered yalnız hekim + zaman + physician_items ile; `deliver_doctor_recommendation(p_id, p_user)` yalnız physician_reviewed → delivered; `product_links` (aktif satır herkese okunur), `product_link_clicks` (politika yok); `ops.doctor_queue`.
+**0014** `tryon_events` status + `qc_failed`; `+mode, presets, weight 1–5, analysis_id, plan_step_ids, qc, regen_count 0–3, flagged_broken, flagged_at`; `reserve_tryon` v2; `flag_tryon_broken`; `ops.daily_tryon_quality`. Görsel/maske/landmark hiçbir sütunda yok.
+Doğrulama: scratch Postgres 16 (`/tmp/aura-pg-t1`, CI stub `scripts/ci/supabase-stub.sql`, pg_cron satırı sed ile atlanır — CI ile aynı) üzerinde 0001→0014 zinciri uygulandı; eski/yeni `reserve_tryon` çağrısı, ağırlık kotası, `qc_failed` iadesi, bozuk bayrağı, doktor kuyruğu teslim kuralları ve ≤ 2 öğe check'i geçti. `lib/db/types.ts` aynası güncellendi (`CoachReportsV2Columns`, `TryonEventsV2Columns`, `doctor_recommendations`, `product_links`, `product_link_clicks`, yeni RPC'ler); `pnpm db:types` push sonrası üzerine yazar.
+
+### S2.9 Bayraklar ve env (`lib/config/flags.ts`, `.env.example`)
+
+| Bayrak | Varsayılan | Not |
+|---|---|---|
+| `FEATURE_DOCTOR_LAYER` | false | hekim akışı AÇIK; kapalıyken taslak bile yazılmaz |
+| `FEATURE_PRODUCT_LINKS` | false | Ç4: ücret/komisyon kapalı; "Reklam" etiketi |
+| `FEATURE_GLOW_UP` | **true** | yalnız `"false"` kapatır (`DEFAULT_ON_FLAGS`) |
+| `FEATURE_TRYON_COMBO` | **true** | yalnız `"false"` kapatır |
+
+Env: `TRYON_IMAGE_MODEL`, `TRYON_QC` (on|off), `TRYON_QC_MODEL`, `TRYON_QC_EFFORT`, `TRYON_QC_MAX_REGEN` (0–3), `TRYON_WEIGHT_{STYLE,COMBO,GLOW_UP}` (1–5). Plan bantları env'de değil: bant adları sözleşme, tutarlar `questionnaire.v2.options.*` metninde (kurucu değiştirir).
+
+### S2.10 `messages/tr.json` ad alanları (anahtar kümeleri sözleşme; `tests/unit/messagesTone.test.ts` yürür)
+
+| Ad alanı | İz | Sabit anahtar kümeleri / KB metinleri |
+|---|---|---|
+| `plan.v2.*` | W4 | `phases` = PLAN_PHASES, `tiers` = PLAN_TIERS, `tabs` = PLAN_AREAS, `evidence` = EVIDENCE_LEVELS (**metin birebir**), `basis.title` = "Planın şunlara göre hazırlandı", `basis.chip` = BASIS_CHIP_KEYS, `disclaimers` = DISCLAIMER_KEYS (`notMedicalAdvice` = "Tıbbi tavsiye değildir.", `cosmeticProcedures` KB §4.7 birebir), `exclusions.*`, `step.*`, `barber.*`, `links.adLabel` = "Reklam" |
+| `report.v2.*` | W4 | `regions` = REGION_KEYS; `notMedicalAdvice`, `cosmeticNote`, `measures.*`, `structuralNote` |
+| `questionnaire.v2.*` | W4 | `options.goalDirection` = GOAL_DIRECTIONS (KB Ö7 metinleri birebir), `options.budget` = BUDGET_BANDS, `options.oneTimeBudget` = ONE_TIME_BUDGET_BANDS, `photoConfirm.*`, `hints.*` |
+| `doctor.*` | W4 | `disclosure` (YZ açıklaması, AUP), `screen.q1–q4`, `admin.*`; ilaç adı/doz/marka yok (test) |
+| `tryon.v2.*` | W5 | `modes` = TRYON_MODES, `qc.failedTitle` = "Bu fotoğrafla bu stil iyi sonuç vermedi", `flagBroken` = "Bozuk görünüyor", `glowUp.layers`, `combo.*` |
+
+Ton: BANNED listesi (çirkin, kötü, kusur, zayıf, problem, sorun, argo, "ortalama") bu ad alanlarında da geçerli; "incel" alt dizisi yüzünden **"incele-" kökü kullanılmaz** ("gözden geçir", "onay" kullanılır).
+
+### S2.11 Analitik (`lib/analytics.ts`)
+
+`SPRINT2_EVENTS = plan_viewed, plan_step_opened, questionnaire_v2_completed, tryon_combo_started, tryon_qc_failed, tryon_flagged_broken, glowup_viewed` — **yüksüz** (`undefined`): adım kimliği, bölge, mod, skor, fotoğraf, plan içeriği eklenmez. `tests/unit/paywallConfig.test.ts` listesi derleme zamanında tamdır.
+
+### S2.12 Kişiselleştirme kabul testi (PLAN §3) — W4/W5 kapanış şartı
+
+Her çıktıda görünür iz: fotoğraf (bölge "seen" + `viewsUsed` çipi) · yaş bandı/sunum çipi ve 18 altı kısıtları · cihaz oranları/yüz şekli (ölçüler + `faceShape` çipi; override dahil) · hedef yönü (stil seti) · bütçe/süre/aktivite/çene/boy-kilo (adım kartında ₺, dk/gün; egzersiz ve yağ oranı kuralları `exclusions`) · gözlük/başörtüsü (saç önerisi var/yok). Otomatik test + 360 px ekran görüntüsü (açık/koyu) ile.
+
+### S2.13 Açık maddeler ve kurucudan beklenenler
+
+1. Bütçe tutarları ve süre bantları (KB §11.3) — bant adları sabit, metin değişir.
+2. Deneme kotası, mod ağırlıkları, ek paket (KB §11.2) — `TRYON_WEIGHT_*`.
+3. Görsel sağlayıcı/model (KB §11.6) — `TRYON_IMAGE_MODEL`.
+4. Hekim inceleme akışı ve gelir modeli (KB §11.7) — flag kapalı; `ADMIN_EMAILS` hekim hesapları.
+5. Kanıt cümleleri ve BDD tarama soruları (KB §11.17; §6.4) — onay bekliyor.
+6. TSV dosyaları (867 yöntem / 660 kusur) — sütun sözleşmesi varsayım; gelince içe aktarma (Sprint 3).
+7. K7 kalanı (steroid, hormon, mewing) — dışarıda tutuldu (safety.ts değişmedi).
+8. Glow-up eşikleri (`GLOW_UP_GATE`) ve QC maliyet fizibilitesi (KB §11.14) — ilk kapı koşusunda ölçülür (ücretli, onay).
+9. `pnpm db:types` ancak 0013/0014 push sonrası (onay) — ayna geçici.
