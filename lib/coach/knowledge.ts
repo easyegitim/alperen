@@ -5,7 +5,7 @@ import { EXERCISES } from "@/content/exercises";
 import { HABITS } from "@/content/habits";
 import { HAIR_PRESETS } from "@/content/hair-presets";
 import { SKIN_STEPS } from "@/content/skin-steps";
-import { EVIDENCE_LEVELS, PLAN_AREAS, PLAN_TIERS, type BudgetBand, type GoalDirection, type PlanArea, type PlanTier, type TimeBand } from "@/lib/config/plan";
+import { EVIDENCE_FROM_GRADE, EVIDENCE_LEVELS, PLAN_AREAS, PLAN_TIERS, type BudgetBand, type GoalDirection, type PlanArea, type PlanTier, type TimeBand } from "@/lib/config/plan";
 import { normalizeTr } from "@/lib/ai/safety";
 import type { GOALS } from "@/lib/questionnaire";
 import { REGION_KEYS, type RegionKey } from "@/lib/score/contract";
@@ -131,18 +131,39 @@ export function filterByConstraints(records: readonly MethodRecord[], c: Knowled
 const budgetRank: Record<BudgetBand, number> = { upto_1000: 0, "1000_2500": 1, "2500_5000": 2, "5000_plus": 3 };
 const costRank: Record<CostBand, number> = { none: 0, low: 0, medium: 1, high: 2 };
 
-/** İlgi puanı (saf): alan eşleşmesi + bölge eşleşmesi + gözlem/etiket kelime örtüşmesi + hedef + bütçe uyumu. */
+/** Hedef yönü (KB Ö7) → stil etiketleri: "daha keskin ve olgun" kesim/sakal setine, "daha yumuşak ve genç" yumuşak dokuya yaklaşır. */
+const DIRECTION_TAGS: Record<GoalDirection, string[]> = {
+  sharper_mature: ["keskin", "belirgin", "kutu", "fade", "taper", "sert", "cizgi", "hat"],
+  softer_younger: ["yumusak", "dalgali", "hacim", "dogal", "hafif", "kakul", "sakalsiz"],
+  as_is_groomed: ["duzen", "bakim", "temiz", "tazele", "hafif"],
+};
+
+/**
+ * İlgi puanı (saf): alan eşleşmesi + bölge eşleşmesi + gözlem/etiket kelime örtüşmesi + hedef + hedef yönü + bütçe uyumu
+ * + süre uyumu. W4 (Sprint 2): yön etiketleri, süre payı ve bölge ağırlığı eklendi; arayüz değişmedi.
+ */
 export function relevanceScore(r: MethodRecord, q: KnowledgeQuery): number {
   let s = 0;
   if (q.areas.includes(r.area)) s += 3;
-  if (q.regions?.some((k) => r.regions.includes(k))) s += 2;
+  const regionHits = q.regions?.filter((k) => r.regions.includes(k)).length ?? 0;
+  if (regionHits > 0) s += 2 + Math.min(1, regionHits - 1) * 0.5;
   const words = new Set(q.observations.flatMap((o) => normalizeTr(o).split(/[^a-z0-9]+/).filter((w) => w.length > 3)));
-  for (const t of r.tags) if (words.has(normalizeTr(t))) s += 2;
+  let tagHits = 0;
+  for (const t of r.tags) if (words.has(normalizeTr(t))) tagHits += 1;
+  s += Math.min(3, tagHits) * 2;
   if (q.goals.includes("general")) s += 0.5;
   const goalArea: Partial<Record<(typeof GOALS)[number], PlanArea[]>> = { hair: ["hair", "color"], beard: ["beard"], skin: ["skin"], face_contours: ["exercise", "habit"], style: ["style", "hair", "beard"] };
   for (const g of q.goals) if (goalArea[g]?.includes(r.area)) s += 1.5;
+  if (q.goalDirection && (r.area === "hair" || r.area === "beard" || r.area === "color")) {
+    const dir = DIRECTION_TAGS[q.goalDirection];
+    const n = normalizeTr(`${r.title} ${r.summary} ${r.tags.join(" ")}`);
+    if (dir.some((d) => n.includes(d))) s += 1;
+  }
   if (costRank[r.costBand] <= budgetRank[q.constraints.budgetBand]) s += 1;
   else s -= 2;
+  // Günlük adımda süre payı: kullanıcının bandının yarısından azı önde (bütçe gibi; aşanlar zaten filtrelendi).
+  if (r.frequency.per === "day" && r.minutesPerDay <= q.constraints.timeBand / 2) s += 0.5;
+  if (r.evidence.level === "many_studies") s += 0.5;
   return s;
 }
 
@@ -166,18 +187,31 @@ export function validateMethodIds(ids: readonly string[], known: ReadonlySet<str
 
 const tr = (s: string) => normalizeTr(s).split(/[^a-z0-9]+/).filter((w) => w.length > 3);
 
+/** Katalog alanı → ilgili rapor bölgeleri (yapısal bölge yalnız algı/stil alanında; planTypes STRUCTURAL_REGIONS). */
+const AREA_REGIONS: Record<PlanArea, RegionKey[]> = {
+  hair: ["hair"],
+  beard: ["beard", "jawline"],
+  color: ["hair"],
+  skin: ["skin"],
+  brows: ["brows", "eyeArea"],
+  exercise: ["skin"],
+  habit: ["skin"],
+  style: ["eyeArea"],
+};
+
 function skinStepRecord(s: (typeof SKIN_STEPS)[number]): MethodRecord {
-  const isHair = s.id === "st_hair_conditioner" || s.id === "st_scalp_scrub_weekly";
-  const isBeard = s.id === "st_beard_oil";
-  const area: PlanArea = isHair ? "hair" : isBeard ? "beard" : "skin";
-  const regions: RegionKey[] = isHair ? ["hair"] : isBeard ? ["beard"] : s.id === "st_eye_area" ? ["eyeArea", "skin"] : s.id === "st_lip_balm" ? ["lipsSmile"] : ["skin"];
+  const area: PlanArea = s.area ?? "skin";
+  const regions: RegionKey[] = s.id === "st_eye_area" ? ["eyeArea", "skin"] : s.id === "st_lip_balm" ? ["lipsSmile"] : s.id === "st_nose_ear_trim" ? ["nose", "brows"] : AREA_REGIONS[area];
+  const contraindications: Contraindication[] =
+    area === "hair" ? ["head_covering", "head_covering_unknown"] : area === "beard" ? ["female_presentation", "no_beard_preference"] : s.id === "st_glasses_clean" ? [] : [];
+  const grade = s.evidence ?? "C";
   return {
     id: s.id,
     area,
     title: s.nameTr,
     summary: s.noteTr,
     tier: "diy",
-    evidence: { level: s.id === "st_spf" ? "many_studies" : "expert_opinion" },
+    evidence: { level: EVIDENCE_FROM_GRADE[grade], grade },
     costBand: s.budget,
     costTryRange: COST_BAND_TRY[s.budget],
     frequency: s.slot === "weekly" ? { per: "week", times: 1 } : { per: "day", times: 1 },
@@ -185,15 +219,16 @@ function skinStepRecord(s: (typeof SKIN_STEPS)[number]): MethodRecord {
     difficulty: 1,
     impact: s.id === "st_spf" ? 3 : 2,
     effort: 1,
-    tags: [...new Set([...tr(s.nameTr), ...tr(s.noteTr)])],
+    tags: [...new Set([...tr(s.nameTr), ...tr(s.noteTr), ...(s.id === "st_glasses_clean" ? ["gozluk"] : [])])],
     regions,
-    contraindications: isHair ? ["head_covering", "head_covering_unknown"] : isBeard ? ["female_presentation", "no_beard_preference"] : [],
+    contraindications,
     flawIds: [],
     source: { kind: "catalog", ref: `content/skin-steps.ts#${s.id}` },
   };
 }
 
 function habitRecord(h: (typeof HABITS)[number]): MethodRecord {
+  const hair = h.area === "hair";
   return {
     id: h.id,
     area: "habit",
@@ -209,9 +244,10 @@ function habitRecord(h: (typeof HABITS)[number]): MethodRecord {
     impact: 2,
     effort: h.weightRelated ? 2 : 1,
     tags: [...new Set([...tr(h.nameTr), ...tr(h.defaultTargetTr)])],
-    regions: ["skin", "cheeks"],
-    // K8/Ç1: kilo ile ilgili alışkanlıklar yalnız VKİ ≥ 25 ve 18+ (hb_strength hariç: her modda kalır, catalog.ts ile aynı)
-    contraindications: h.weightRelated && h.id !== "hb_strength" ? ["bmi_below_25", "under_18", "restriction_signal"] : [],
+    regions: hair ? ["hair"] : ["skin"],
+    // K8/Ç1: kilo ile ilgili alışkanlıklar yalnız VKİ ≥ 25 ve 18+ (hb_strength hariç: her modda kalır, catalog.ts ile aynı);
+    // K9: saç alışkanlığı başörtüsüyle plana girmez.
+    contraindications: h.weightRelated && h.id !== "hb_strength" ? ["bmi_below_25", "under_18", "restriction_signal"] : hair ? ["head_covering", "head_covering_unknown"] : [],
     flawIds: [],
     source: { kind: "catalog", ref: `content/habits.ts#${h.id}` },
   };
@@ -234,7 +270,8 @@ function exerciseRecord(e: (typeof EXERCISES)[number]): MethodRecord {
     impact: 1,
     effort: 1,
     tags: [...new Set([...tr(e.nameTr), ...tr(e.noteTr), e.kind])],
-    regions: e.kind === "jaw" || e.kind === "posture" ? ["jawline"] : ["cheeks", "skin"],
+    // Egzersiz yapısal bölgeye (çene, yanak) bağlanamaz (planTypes kural 2): gözlem bağı cilt/şişlik üzerinden kurulur.
+    regions: ["skin"],
     contraindications: ["jaw_health_issue"],
     flawIds: [],
     source: { kind: "catalog", ref: `content/exercises.ts#${e.id}` },
@@ -280,11 +317,12 @@ export function catalogMethodRecords(): MethodRecord[] {
 
 /** İlk sürüm bilgi tabanı: SPEC katalogları + etiket/anahtar kelime eşleşmesi. W4 retrieve sıralamasını iyileştirebilir. */
 export class CatalogKnowledgeSource implements KnowledgeSource {
-  readonly name = "catalog" as const;
+  readonly name: "catalog" | "methods";
   private readonly records: MethodRecord[];
   private readonly byId: Map<string, MethodRecord>;
 
-  constructor(records: readonly MethodRecord[] = catalogMethodRecords()) {
+  constructor(records: readonly MethodRecord[] = catalogMethodRecords(), name: "catalog" | "methods" = "catalog") {
+    this.name = name;
     this.records = [...records];
     this.byId = new Map(this.records.map((r) => [r.id, r]));
   }
@@ -304,6 +342,23 @@ export class CatalogKnowledgeSource implements KnowledgeSource {
 
   async ids(): Promise<ReadonlySet<string>> {
     return new Set(this.byId.keys());
+  }
+
+  /** Tüm kayıtlar (eşzamanlı; sabit veri ve testler için). */
+  allRecords(): readonly MethodRecord[] {
+    return this.records;
+  }
+}
+
+/**
+ * TSV'den içe aktarılmış yöntem kütüphanesi (content/methods/*.json; scripts/import-methods.ts). AYNI arayüz: Claude ve plan
+ * kurucu kaynağın hangisi olduğunu bilmez. Kayıtlar MethodsFile şemasından geçmemişse dosya atlanır (uydurma kayıt yok).
+ */
+export class MethodsKnowledgeSource extends CatalogKnowledgeSource {
+  constructor(files: readonly MethodsFile[], includeCatalog = true) {
+    const fromFiles = files.flatMap((f) => (MethodsFile.safeParse(f).success ? f.records : []));
+    const seen = new Set(fromFiles.map((r) => r.id));
+    super([...fromFiles, ...(includeCatalog ? catalogMethodRecords().filter((r) => !seen.has(r.id)) : [])], "methods");
   }
 }
 

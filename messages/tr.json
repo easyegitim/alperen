@@ -663,7 +663,20 @@
         }
       },
       "saved": "Cevapların kaydedildi.",
-      "error": "Cevaplar kaydedilemedi."
+      "error": "Cevaplar kaydedilemedi.",
+      "stepHints": {
+        "goals": "Birden fazla seçebilirsin.",
+        "direction": "Stil seçimi bu yöne göre süzülür; skoru etkilemez.",
+        "budget": "Adım kartlarındaki ₺ aralıkları bu banda göre seçilir.",
+        "time": "Günlük adımlar bu süreye sığacak şekilde seçilir.",
+        "activity": "Alışkanlık önerileri için.",
+        "hairBeard": "Avatar yalnız seçimi gösterir; yüzünü temsil etmez.",
+        "skin": "Cilt adımları cilt tipine göre seçilir.",
+        "jaw": "Egzersiz önerisi için.",
+        "photo": "Fotoğraftan tahmin edildi; onayla ya da değiştir.",
+        "body": "İsteğe bağlı; yalnız kural için kullanılır, planda görünmez."
+      },
+      "bodyFill": "Boy ve kilo gir"
     }
   },
   "camera": {
@@ -1623,7 +1636,12 @@
       "expertLink": "Uzmanımızla görüş",
       "confidence": "{n} açı kullanıldı",
       "seeProfessionalTitle": "Uzmana danış",
-      "uncertain": "Bu konuda emin değiliz."
+      "uncertain": "Bu konuda emin değiliz.",
+      "missing": "Rapor bu analizde üretilmedi.",
+      "planTitle": "Planın",
+      "planBody": "Fazlar, öncelik sırası ve adım kartları.",
+      "glowUpTitle": "İyileşmiş halin",
+      "glowUpBody": "Plan adımları uygulanmış hâlin; yüz şeklin ve kimliğin korunur."
     }
   },
   "feedback": {
@@ -1888,7 +1906,18 @@
       "NETWORK": "Bağlantı sorunu.",
       "GENERIC": "Bir sorun oluştu."
     },
-    "disabled": "Uzman Ağı şu an kapalı."
+    "disabled": "Uzman Ağı şu an kapalı.",
+    "directory": {
+      "title": "Uzmanlık dizini",
+      "intro": "Sponsorsuz liste; sıralama ve öne çıkarma yok. Uygulama hiçbir işlem önermez.",
+      "groups": {
+        "medical": "Hekim",
+        "grooming": "Bakım",
+        "wellbeing": "İyi oluş"
+      },
+      "noPartnerKind": "Bu alanda partner kaydı henüz yok; berber kartını yakınındaki bir uzmana gösterebilirsin.",
+      "note": "Ücret ve komisyon kapalıdır; reklamda hekim yer almaz. Tıbbi tavsiye değildir."
+    }
   },
   "deletion": {
     "title": "Silme talebin bekliyor",
@@ -2013,7 +2042,9 @@
         "source": "Kaynak",
         "tryIt": "Dene",
         "showBarber": "Berbere göster",
-        "perceptionNote": "Bu alan bakımla değişmez; saç, sakal ve kaş seçimleri algıyı etkiler."
+        "perceptionNote": "Bu alan bakımla değişmez; saç, sakal ve kaş seçimleri algıyı etkiler.",
+        "frequencyLabel": "Sıklık",
+        "minutesLabel": "Süre"
       },
       "evidence": {
         "many_studies": "Çok sayıda çalışmada denendi",
@@ -2104,7 +2135,38 @@
       },
       "glowUpCta": "İyileşmiş halini gör",
       "empty": "Henüz plan yok; önce analizin tamamlanmalı.",
-      "locked": "Plan, tam sonuçla birlikte açılır."
+      "locked": "Plan, tam sonuçla birlikte açılır.",
+      "generating": {
+        "title": "Planın hazırlanıyor",
+        "body": "Rapor bölgeleri, cevapların ve yüz şeklin katalogla eşleştiriliyor. Bu bir dakika sürebilir."
+      },
+      "errorTitle": "Plan hazırlanamadı",
+      "retry": "Tekrar dene",
+      "errors": {
+        "QUOTA_EXCEEDED": "Yeniden üretim ücretlidir ya da haktan düşer; cevapların değişmediyse mevcut plan geçerli.",
+        "PREMIUM_REQUIRED": "Plan, tam sonuçla birlikte açılır.",
+        "BAD_INPUT": "Önce kişiselleştirme sorularını tamamla.",
+        "NETWORK": "Bağlantı kurulamadı.",
+        "GENERIC": "Servis yanıt vermedi. Tekrar dene."
+      },
+      "allTab": "Tümü",
+      "phasesTitle": "Fazlar",
+      "layersTitle": "Katmanlar",
+      "stepCount": "{n} adım",
+      "emptyPhase": "Bu fazda adım yok.",
+      "emptyTab": "Bu alanda adım yok.",
+      "glowUpBody": "Plan adımları uygulanmış hâlini gör; yüz şeklin ve kimliğin korunur.",
+      "glowUpOpen": "Gör",
+      "hairLoss": {
+        "title": "Saç yoğunluğu hakkında bir not",
+        "bodyPossible": "Fotoğrafta saç yoğunluğunda bölgesel bir fark görülebiliyor; ışık ve açı bunu abartabilir.",
+        "bodyVisible": "Fotoğrafta saç çizgisi ya da tepe bölgesinde yoğunluk farkı görünüyor.",
+        "info": "Saç derisi sağlığı için düzenli temizlik ve nazik ürünler plana eklendi. Bu konuda karar muayenede hekimindir; dilersen uzmanımızla görüşebilirsin.",
+        "doctor": "Doktor katmanına git",
+        "expert": "Saç sağlığı uzmanı bul",
+        "notMedical": "Teşhis değildir; tıbbi tavsiye değildir."
+      },
+      "tabsAria": "Plan alanları"
     }
   },
   "doctor": {
@@ -2139,7 +2201,9 @@
       "okBody": "Doktor katmanı hekim onayından sonra burada görünecek.",
       "riskTitle": "Bu bölümü şimdilik kapalı tutuyoruz",
       "riskBody": "Cevapların, görünüşle ilgili düşüncelerin seni zorlayabileceğini gösteriyor. Bir uzmanla konuşmak iyi gelebilir; dilersen psikolog bağlantısını açabiliriz.",
-      "riskNote": "Bu bir teşhis değildir."
+      "riskNote": "Bu bir teşhis değildir.",
+      "submit": "Gönder",
+      "error": "Kaydedilemedi; tekrar dene."
     },
     "admin": {
       "queueTitle": "Hekim onay kuyruğu",
@@ -2153,7 +2217,10 @@
       "notes": "Hekim notu",
       "aiDraft": "Yapay zekâ taslağı",
       "finalItems": "Hekimin son hali",
-      "noDraft": "Kuyruk boş."
+      "noDraft": "Kuyruk boş.",
+      "rejectedByRule": "Kural nedeniyle kaydedilmedi",
+      "sources": "Kaynaklar",
+      "error": "İşlem yapılamadı."
     }
   }
 }

@@ -14,6 +14,8 @@ import { SCORE_V2_SYSTEM } from "./prompts/score.v2";
 import { ScoreOutputV2, normalizeScoreOutputV2 } from "./scoreSchema.v2";
 import { aiErrorSummary, isTransientAiError, withTransientRetry } from "./retry";
 import { COACH_REPORT_JSON_SCHEMA, CoachReport } from "./reportSchema";
+import { PlanSelectionOutput, normalizePlanSelection } from "./reportSchema.v3";
+import { PLAN_V3_SYSTEM } from "./prompts/report.v3";
 import { SCORE_OUTPUT_JSON_SCHEMA, ScoreOutput } from "./scoreSchema";
 
 // SPEC 14.3 / D18: Gemini varsayılan; arayüz üzerinden fal.ai/OpenAI takılabilir.
@@ -253,6 +255,92 @@ export class ClaudeReportProvider implements ReportProvider {
       fallbackServed: servedByFallback(res),
     };
   }
+}
+
+// ─── Plan seçimi v3 (PLAN 4e; CONTRACTS_V2 S2.1 kural 1): Claude bilgi tabanından kimlik seçer, plan kodda kurulur ──────
+// Küçük/düz şema (lib/ai/reportSchema.v3.ts); aynı SDK kalıbı (beta.messages.create, output_config json_schema, efor,
+// sunucu taraflı yedek). temperature/top_p/top_k, thinking, tool_choice ve ön doldurma yok (Opus 5.5). İstem ve çıktı
+// loglanmaz; fotoğraf hiç gitmez.
+
+/** Claude'a giden plan seçimi şeması (enum + required korunur; sınırlar normalizePlanSelection'da). */
+export const PLAN_SELECTION_JSON_SCHEMA = toAnthropicJsonSchema(PlanSelectionOutput);
+
+/** ~16 seçim × (kimlik + faz + bölge + bir cümle) ≈ 2–3k token + düşük efor düşünmesi. */
+export const PLAN_SELECTION_MAX_TOKENS = 8_000;
+
+export type PlanSelectionResult = {
+  /** Şemadan geçmiş, tekilleştirilmiş seçim; refusal/max_tokens/bozuk JSON'da null (çağıran belirlenimci yedeğe düşer). */
+  out: PlanSelectionOutput | null;
+  reason?: string;
+  usage: TokenUsage;
+  model: string;
+  estUsd: number;
+  fallbackServed: boolean;
+};
+
+export interface PlanSelectionProvider {
+  readonly model: string;
+  /** Hata fırlatmaz (yapılandırma hariç): başarısızlıkta out null ve reason dolu. */
+  selectPlan(userMessage: string, signal: AbortSignal, timeoutMs: number): Promise<PlanSelectionResult>;
+}
+
+export class ClaudePlanSelectionProvider implements PlanSelectionProvider {
+  readonly model: string;
+  private readonly env: AiEnv;
+  private readonly client?: Anthropic;
+
+  /** client yalnız testte verilir (gerçek SDK + sahte fetch); üretimde getAnthropic() tekili. */
+  constructor(opts: { env?: AiEnv; client?: Anthropic } = {}) {
+    this.env = opts.env ?? getAiEnv();
+    this.model = this.env.claudeCoachModel;
+    this.client = opts.client;
+  }
+
+  buildParams(userMessage: string): MessageCreateParamsNonStreaming {
+    const params: MessageCreateParamsNonStreaming = {
+      model: this.model,
+      max_tokens: PLAN_SELECTION_MAX_TOKENS,
+      system: [{ type: "text", text: PLAN_V3_SYSTEM, cache_control: { type: "ephemeral", ttl: this.env.cacheTtl } }],
+      messages: [{ role: "user", content: userMessage }],
+      output_config: { effort: this.env.claudeCoachEffort, format: { type: "json_schema", schema: PLAN_SELECTION_JSON_SCHEMA } },
+    };
+    if (this.env.claudeFallbacks === "default") {
+      params.betas = [SERVER_FALLBACK_BETA];
+      params.fallbacks = "default";
+    }
+    return params;
+  }
+
+  async selectPlan(userMessage: string, signal: AbortSignal, timeoutMs: number): Promise<PlanSelectionResult> {
+    const empty = (reason: string): PlanSelectionResult => ({ out: null, reason, usage: ZERO_USAGE, model: this.model, estUsd: 0, fallbackServed: false });
+    let res: BetaMessage;
+    try {
+      const anthropic = this.client ?? getAnthropic();
+      res = await anthropic.beta.messages.create(this.buildParams(userMessage), { signal, timeout: Math.max(1, timeoutMs) });
+    } catch (e) {
+      if (e instanceof ApiError) throw e; // ANTHROPIC_API_KEY yok (yapılandırma; sahte başarı yok)
+      console.warn(`[ai] plan claude hata: ${summarizeAnthropicError(e)}`);
+      return empty(classifyAnthropicError(e, signal));
+    }
+    const usageByModel = readUsageByModel(res);
+    const base = { usage: readUsage(res), model: res.model, estUsd: estUsdByModel(usageByModel), fallbackServed: servedByFallback(res) };
+    if (res.stop_reason === "refusal" || res.stop_reason === "max_tokens") {
+      console.warn(`[ai] plan claude ${res.stop_reason}${res.stop_reason === "refusal" ? ` ${res.stop_details?.category ?? "-"}` : ""}`);
+      return { ...base, out: null, reason: res.stop_reason };
+    }
+    const text = readJsonText(res).text;
+    if (!text) return { ...base, out: null, reason: "schema" };
+    try {
+      const parsed = PlanSelectionOutput.safeParse(JSON.parse(text));
+      return parsed.success ? { ...base, out: normalizePlanSelection(parsed.data) } : { ...base, out: null, reason: "schema" };
+    } catch {
+      return { ...base, out: null, reason: "schema" };
+    }
+  }
+}
+
+export function getPlanSelectionProvider(env: AiEnv = getAiEnv()): PlanSelectionProvider {
+  return new ClaudePlanSelectionProvider({ env });
 }
 
 /** AI_COACH_PROVIDER: claude | gemini (kod varsayılanı gemini). Tek değiştirme noktası. */

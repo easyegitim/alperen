@@ -13,7 +13,7 @@ import { FaceShapeCard } from "./FaceShapeCard";
 import { ImproveFirstV2Card } from "./ImproveFirstV2Card";
 import { MeasuresCard } from "./MeasuresCard";
 import { OverallCard } from "./OverallCard";
-import { ReportCard } from "./ReportCard";
+import { ReportV3 } from "@/components/report/ReportV3";
 import { FailedCard, PendingUploadCard, StageBanner } from "./StageCards";
 import { SubscoresCard, orderSubsV2, rowsFromAnalysis } from "./SubscoresCard";
 import { useAnalysisPoll } from "./useAnalysisPoll";
@@ -100,7 +100,8 @@ export function ResultV2View({ initial, instantReveal }: { initial: ClientAnalys
     improveFirst: { key: "improveFirst", node: <ImproveFirstV2Card items={improve} analysisId={a.id} /> },
     faceShape: { key: "faceShape", node: <FaceShapeCard faceShape={a.faceShape} detailedReady={a.stage === "completed" || ready.has("faceShape")} /> },
     device: { key: "device", node: <MeasuresCard device={a.device} measures={report?.measures ?? null} reportReady={a.stage === "completed" || ready.has("report")} /> },
-    report: { key: "report", node: <ReportCard report={report} /> },
+    // W4 (PLAN 4a): rapor v3 iskeleti — mektup, 9 bölge, açılır ölçüler, plan ve "iyileşmiş halin" kartları, kapanış.
+    report: { key: "report", node: <ReportV3 report={report} analysisId={a.id} viewsUsed={a.viewsUsed} /> },
     potential: null,
     explanations: null,
   };
