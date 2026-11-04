@@ -562,6 +562,121 @@
         "orthodontic": "Süren ortodontik tedavi",
         "none": "Hiçbiri"
       }
+    },
+    "v2": {
+      "title": "Planını kişiselleştir",
+      "intro": "Bu cevaplar skoru değiştirmez; yalnız planını şekillendirir.",
+      "progress": "{current} / {total}",
+      "next": "İleri",
+      "back": "Geri",
+      "finish": "Planı hazırla",
+      "skip": "Atla",
+      "steps": {
+        "goals": "Hedefler",
+        "direction": "Hedef yönü",
+        "budget": "Bütçe",
+        "time": "Süre",
+        "activity": "Aktivite",
+        "hairBeard": "Saç ve sakal",
+        "skin": "Cilt",
+        "jaw": "Çene sağlığı",
+        "photo": "Gözlük ve başörtüsü",
+        "body": "Boy ve kilo"
+      },
+      "fields": {
+        "goals": "Neye odaklanalım?",
+        "goalDirection": "Nasıl görünmek istersin?",
+        "budget": "Aylık bakım bütçen",
+        "oneTimeBudget": "Tek seferlik uzman ya da klinik bütçen",
+        "minutesPerDay": "Günde ayırabileceğin süre",
+        "sportDays": "Haftada kaç gün spor yapıyorsun?",
+        "work": "İşin nasıl?",
+        "hairLengthPref": "Saç uzunluğu tercihin",
+        "beardLengthPref": "Sakal uzunluğu tercihin",
+        "skinType": "Cilt tipin",
+        "jawHealth": "Çene sağlığı",
+        "glasses": "Gözlük",
+        "headCovering": "Başörtüsü",
+        "heightCm": "Boy (cm)",
+        "weightKg": "Kilo (kg)"
+      },
+      "hints": {
+        "budgetPending": "Bantlar taslaktır.",
+        "body": "İsteğe bağlı; yağ oranı önerisi için gerekli.",
+        "bodyUnder18": "18 yaş altında yağ oranı önerisi verilmez.",
+        "jaw": "Egzersiz önerisi yalnız \"hiçbiri\" seçilince eklenir.",
+        "headCovering": "Evetse saç önerisi verilmez.",
+        "photoPrefill": "Fotoğraftan tahmin edildi; onayla ya da değiştir.",
+        "photoUnknown": "Fotoğraftan anlaşılamadı; seçim yapmadan saç önerisi üretilmez.",
+        "avatar": "Avatar üzerinde gör"
+      },
+      "photoConfirm": {
+        "detectedYes": "Fotoğrafta görünüyor",
+        "detectedNo": "Fotoğrafta görünmüyor",
+        "confirm": "Doğru",
+        "change": "Değiştir",
+        "yes": "Evet",
+        "no": "Hayır"
+      },
+      "options": {
+        "goalDirection": {
+          "sharper_mature": "Daha keskin ve olgun",
+          "softer_younger": "Daha yumuşak ve genç",
+          "as_is_groomed": "Olduğum gibi, daha bakımlı"
+        },
+        "budget": {
+          "upto_1000": "₺1.000'e kadar",
+          "1000_2500": "₺1.000–2.500",
+          "2500_5000": "₺2.500–5.000",
+          "5000_plus": "₺5.000 üstü"
+        },
+        "oneTimeBudget": {
+          "none": "Şimdilik yok",
+          "upto_15000": "₺15.000'e kadar",
+          "15000_60000": "₺15.000–60.000",
+          "60000_plus": "₺60.000 üstü",
+          "unknown": "Henüz bilmiyorum"
+        },
+        "minutes": "{n} dakika",
+        "sportDays": {
+          "0_1": "Haftada 0–1 gün",
+          "2_3": "Haftada 2–3 gün",
+          "4_plus": "Haftada 4 gün ve üzeri"
+        },
+        "work": {
+          "desk": "Masa başı",
+          "standing": "Ayakta"
+        },
+        "hairLength": {
+          "short": "Kısa",
+          "medium": "Orta",
+          "long": "Uzun",
+          "keep": "Olduğu gibi"
+        },
+        "beardLength": {
+          "none": "Yok",
+          "stubble": "Kirli sakal",
+          "short": "Kısa",
+          "medium": "Orta",
+          "long": "Uzun",
+          "keep": "Olduğu gibi"
+        }
+      },
+      "saved": "Cevapların kaydedildi.",
+      "error": "Cevaplar kaydedilemedi.",
+      "stepHints": {
+        "goals": "Birden fazla seçebilirsin.",
+        "direction": "Stil seçimi bu yöne göre süzülür; skoru etkilemez.",
+        "budget": "Adım kartlarındaki ₺ aralıkları bu banda göre seçilir.",
+        "time": "Günlük adımlar bu süreye sığacak şekilde seçilir.",
+        "activity": "Alışkanlık önerileri için.",
+        "hairBeard": "Avatar yalnız seçimi gösterir; yüzünü temsil etmez.",
+        "skin": "Cilt adımları cilt tipine göre seçilir.",
+        "jaw": "Egzersiz önerisi için.",
+        "photo": "Fotoğraftan tahmin edildi; onayla ya da değiştir.",
+        "body": "İsteğe bağlı; yalnız kural için kullanılır, planda görünmez."
+      },
+      "bodyFill": "Boy ve kilo gir"
     }
   },
   "camera": {
@@ -1485,7 +1600,49 @@
         "beard": "Sakal tercihine göre sakal bölümü eklenmedi."
       }
     },
-    "jumpNav": "Plan bölümleri"
+    "jumpNav": "Plan bölümleri",
+    "v2": {
+      "letterTitle": "Açılış",
+      "regionsTitle": "Bölge bölge",
+      "regions": {
+        "brows": "Kaşlar",
+        "eyeArea": "Göz çevresi",
+        "nose": "Burun",
+        "lipsSmile": "Dudak ve gülüş",
+        "cheeks": "Elmacık ve yanak",
+        "jawline": "Çene hattı",
+        "skin": "Cilt",
+        "hair": "Saç",
+        "beard": "Sakal"
+      },
+      "strength": "Güçlü yan",
+      "seen": "Fotoğrafta görülen",
+      "improvements": "Fırsatlar",
+      "noChange": "Değişiklik gerekmez.",
+      "structuralNote": "Bu bölge bakımla değişmez; saç, sakal ve kaş seçimleri algıyı etkiler.",
+      "measures": {
+        "title": "Ölçüler",
+        "hint": "Kıyas yalnız dengeli aralıkla ve kendi geçmişinle.",
+        "balancedRange": "Dengeli aralık",
+        "yourValue": "Senin değerin",
+        "open": "Ölçüleri göster",
+        "close": "Ölçüleri gizle"
+      },
+      "planLink": "Plana git",
+      "glowUpLink": "İyileşmiş halin",
+      "closingTitle": "Kapanış",
+      "notMedicalAdvice": "Tıbbi tavsiye değildir.",
+      "cosmeticNote": "Hukuki sebeplerden dolayı tıbbi kozmetik operasyonlarının puana olacak etkisini belirtemiyoruz. Dilerseniz bu konuda uzmanımızla görüşebilirsiniz.",
+      "expertLink": "Uzmanımızla görüş",
+      "confidence": "{n} açı kullanıldı",
+      "seeProfessionalTitle": "Uzmana danış",
+      "uncertain": "Bu konuda emin değiliz.",
+      "missing": "Rapor bu analizde üretilmedi.",
+      "planTitle": "Planın",
+      "planBody": "Fazlar, öncelik sırası ve adım kartları.",
+      "glowUpTitle": "İyileşmiş halin",
+      "glowUpBody": "Plan adımları uygulanmış hâlin; yüz şeklin ve kimliğin korunur."
+    }
   },
   "feedback": {
     "helpful": "Faydalı mı?",
@@ -1504,7 +1661,7 @@
   "tryon": {
     "title": "Dene",
     "lockedTitle": "Sanal deneme premiumda",
-    "lockedBody": "60 saç, sakal ve renk stilini kendi fotoğrafında, yüzün değişmeden dene. Her 7 günde 10 deneme.",
+    "lockedBody": "76 saç, sakal ve renk stilini kendi fotoğrafında, yüzün değişmeden dene; saç + sakal kombini ve iyileşmiş halin tek görselde. Her 7 günde 10 deneme.",
     "goPremium": "Premium'a geç",
     "consent": {
       "title": "Sanal deneme için izin",
@@ -1557,13 +1714,98 @@
     "resultNote": "Görsel temsilidir; gerçek sonuç berber/kuaför uygulamasına bağlıdır. Yüzün orijinal piksellerinle korundu.",
     "lockedEyebrow": "Sanal deneme",
     "lockedPerks": {
-      "styles": "60 saç, sakal ve renk stili",
+      "styles": "76 saç, sakal ve renk stili; kombin ve iyileşmiş halin",
       "face": "Kendi fotoğrafında, yüzün değişmeden",
       "quota": "Her 7 günde 10 deneme"
     },
     "remainingLabel": "Kalan deneme",
     "retry": "Tekrar dene",
-    "sliderHint": "Kaydırarak karşılaştır"
+    "sliderHint": "Kaydırarak karşılaştır",
+    "v2": {
+      "modes": {
+        "style": "Tek stil",
+        "combo": "Kombin",
+        "glow_up": "İyileşmiş halin"
+      },
+      "combo": {
+        "title": "Saç + sakal (+ renk) tek görselde",
+        "hint": "Bir saç ve bir sakal stili seç; renk isteğe bağlı.",
+        "pickHair": "Saç seç",
+        "pickBeard": "Sakal seç",
+        "pickColor": "Renk seç (isteğe bağlı)",
+        "run": "Kombini dene",
+        "needBoth": "Kombin için saç ve sakal seçmelisin.",
+        "slot": {
+          "hair": "Saç",
+          "beard": "Sakal",
+          "color": "Renk"
+        },
+        "none": "Seçilmedi",
+        "clear": "Seçimi temizle",
+        "selected": "Seçildi"
+      },
+      "glowUp": {
+        "title": "İyileşmiş halin",
+        "intro": "Plan adımları uygulanmış hâlin; yüz şeklin, ten rengin, saç çizgin ve kimliğin korunur.",
+        "layers": {
+          "hair": "Yalnız saç",
+          "beard": "Yalnız sakal",
+          "skin": "Cilt bakımı",
+          "all": "Hepsi"
+        },
+        "applied": "Uygulanan plan adımları",
+        "skinNote": "Cilt değişimi plan adımlarına bağlıdır: ton eşitliği ve kızarıklık. Ben, çil, iz ve gözenekler korunur.",
+        "noDoctor": "Doktor katmanındaki işlemler görselde gösterilmez.",
+        "regenPaid": "Yeniden üretim haktan düşer.",
+        "sliderEyes": "Gözlere hizalı önce/sonra",
+        "run": "İyileşmiş halimi göster",
+        "notForAds": "Bu görsel reklamda kullanılmaz.",
+        "needsAnalysis": "İyileşmiş halin için önce bir analiz gerekir.",
+        "layersTitle": "Hangi adımlar uygulansın?",
+        "stepsTitle": "Uygulanacak adımlar",
+        "noLayer": "En az bir katman seç.",
+        "eyeLine": "Göz hizası",
+        "planRequired": "İyileşmiş halin plan adımlarından üretilir. Önce planını aç; adımlar hazır olunca burada görünür.",
+        "planOpen": "Planı aç"
+      },
+      "qc": {
+        "checking": "Sonuç kontrol ediliyor…",
+        "regen": "Yeniden deneniyor ({n}/{max})",
+        "failedTitle": "Bu fotoğrafla bu stil iyi sonuç vermedi",
+        "failedBody": "Hakkın düşmedi. Başka bir stil ya da fotoğrafla deneyebilirsin.",
+        "failedRetry": "Başka stil seç"
+      },
+      "flagBroken": "Bozuk görünüyor",
+      "flagBrokenThanks": "Teşekkürler, bildirimin alındı.",
+      "flagBrokenAria": "Bu sonucu bozuk olarak bildir",
+      "share": "Paylaş",
+      "aiLabelNote": "Her yapay zekâ görselinde \"Aura ile oluşturuldu · YZ simülasyonu\" yazar.",
+      "quotaWeight": "Bu deneme {n} hak kullanır.",
+      "comboOff": "Kombin deneme şu anda kapalı.",
+      "glowUpOff": "İyileşmiş halin şu anda kapalı.",
+      "faceKept": "Yüzün orijinal piksellerinle geri yazıldı; kemik yapısı değişmez.",
+      "modeHint": {
+        "style": "Bir saç, sakal ya da renk stili seç.",
+        "combo": "Saç ve sakalı (istersen rengi) tek görselde dene.",
+        "glow_up": "Plan adımları uygulanmış halini gör; yüzün ve kimliğin korunur."
+      },
+      "result": {
+        "tryAnother": "Başka stil dene",
+        "shared": "Paylaşıldı.",
+        "downloaded": "Görsel indirildi.",
+        "shareError": "Paylaşım görseli oluşturulamadı.",
+        "labelBurned": "Paylaşılan görsele etiket gömülür.",
+        "qcPassed": "Kalite kontrolünden geçti",
+        "qcRegen": "{n} kez yeniden üretildi"
+      },
+      "generatingCombo": "Kombin deneniyor…",
+      "generatingGlowUp": "İyileşmiş halin hazırlanıyor…",
+      "flagged": "Bildirildi",
+      "errors": {
+        "FEATURE_DISABLED": "Bu deneme türü şu anda kapalı.",
+        "BAD_INPUT": "Bu seçimle deneme yapılamadı; farklı bir seçim dene."
+      }
+    }
   },
   "routine": {
     "title": "Rutin",
@@ -1665,7 +1907,18 @@
       "NETWORK": "Bağlantı sorunu.",
       "GENERIC": "Bir sorun oluştu."
     },
-    "disabled": "Uzman Ağı şu an kapalı."
+    "disabled": "Uzman Ağı şu an kapalı.",
+    "directory": {
+      "title": "Uzmanlık dizini",
+      "intro": "Sponsorsuz liste; sıralama ve öne çıkarma yok. Uygulama hiçbir işlem önermez.",
+      "groups": {
+        "medical": "Hekim",
+        "grooming": "Bakım",
+        "wellbeing": "İyi oluş"
+      },
+      "noPartnerKind": "Bu alanda partner kaydı henüz yok; berber kartını yakınındaki bir uzmana gösterebilirsin.",
+      "note": "Ücret ve komisyon kapalıdır; reklamda hekim yer almaz. Tıbbi tavsiye değildir."
+    }
   },
   "deletion": {
     "title": "Silme talebin bekliyor",
@@ -1730,5 +1983,248 @@
     "versionTitle": "Sürüm",
     "version": "Yöntem: {engine} · kalibrasyon: {calibration}",
     "footerLink": "Skor nasıl hesaplanır?"
+  },
+  "plan": {
+    "v2": {
+      "title": "Planın",
+      "eyebrow": "Kişisel bakım planı",
+      "intro": "Fotoğraflarına, cevaplarına ve yüz şekline göre hazırlandı. Skoru değiştirmez; adım adım uygulanır.",
+      "phases": {
+        "weeks_0_4": "0–4 hafta",
+        "months_1_3": "1–3 ay",
+        "months_3_6": "3–6 ay"
+      },
+      "tiers": {
+        "diy": "Kendin yap",
+        "expert": "Uzman",
+        "doctor": "Doktor"
+      },
+      "tiersHint": {
+        "diy": "Evde, kendi başına",
+        "expert": "Berber, kuaför, estetisyen",
+        "doctor": "Hekim onaylı öneriler"
+      },
+      "tabs": {
+        "hair": "Saç",
+        "beard": "Sakal",
+        "color": "Saç rengi",
+        "skin": "Cilt",
+        "brows": "Kaşlar",
+        "exercise": "Egzersizler",
+        "habit": "Alışkanlıklar",
+        "style": "Stil"
+      },
+      "priority": {
+        "title": "Öncelik sırası",
+        "hint": "En üstte en az emekle en çok fark yaratan adım.",
+        "impact": "Etki",
+        "effort": "Emek"
+      },
+      "step": {
+        "observation": "Bağlı olduğu gözlem",
+        "cost": "Tahmini maliyet",
+        "costRange": "{min}–{max} ₺",
+        "costFrom": "{min} ₺ ve üzeri",
+        "costFree": "Ücretsiz",
+        "frequency": {
+          "once": "Tek sefer",
+          "day": "Günde {n} kez",
+          "week": "Haftada {n} kez",
+          "month": "Ayda {n} kez"
+        },
+        "minutes": "Günde {n} dk",
+        "difficulty": "Zorluk",
+        "level": {
+          "1": "Düşük",
+          "2": "Orta",
+          "3": "Yüksek"
+        },
+        "evidenceLabel": "Kanıt",
+        "source": "Kaynak",
+        "tryIt": "Dene",
+        "showBarber": "Berbere göster",
+        "perceptionNote": "Bu alan bakımla değişmez; saç, sakal ve kaş seçimleri algıyı etkiler.",
+        "frequencyLabel": "Sıklık",
+        "minutesLabel": "Süre",
+        "rationale": "Neden sende"
+      },
+      "evidence": {
+        "many_studies": "Çok sayıda çalışmada denendi",
+        "limited_studies": "Sınırlı sayıda çalışma var",
+        "expert_opinion": "Uzman görüşüne dayanıyor"
+      },
+      "basis": {
+        "title": "Planın şunlara göre hazırlandı",
+        "chip": {
+          "goal": "Hedef: {value}",
+          "goalDirection": "Yön: {value}",
+          "budget": "Aylık bütçe: {value}",
+          "oneTimeBudget": "Tek seferlik bütçe: {value}",
+          "minutes": "Günde {value} dakika",
+          "sportDays": "Spor: {value}",
+          "work": "İş: {value}",
+          "hairLength": "Saç uzunluğu: {value}",
+          "beardLength": "Sakal uzunluğu: {value}",
+          "skinType": "Cilt tipi: {value}",
+          "jawHealth": "Çene sağlığı cevabın: egzersiz eklenmedi",
+          "glasses": "Gözlük: {value}",
+          "headCovering": "Başörtüsü: {value}",
+          "faceShape": "Yüz şekli: {value}",
+          "ageBand": "Yaş bandı: {value}",
+          "presentation": "Sunum: {value}",
+          "photoFact": "Fotoğrafta: {value}",
+          "viewsUsed": "{value} açı kullanıldı"
+        },
+        "yes": "evet",
+        "no": "hayır",
+        "fromPhoto": "fotoğraftan",
+        "edit": "Cevaplarını değiştir",
+        "staleNote": "Cevapların bu plan hazırlandıktan sonra güncellendi. Yeni cevaplarla görmek için planı yeniden üretebilirsin; yeniden üretim ücretlidir ya da haktan düşer."
+      },
+      "exclusions": {
+        "hair": {
+          "head_covering": "Başörtüsü cevabına göre saç önerisi eklenmedi.",
+          "head_covering_unknown": "Başörtüsü seçimi yapılmadan saç önerisi üretilmez."
+        },
+        "beard": {
+          "presentation": "Sakal bölümü eklenmedi.",
+          "preference": "Sakal tercihine göre sakal bölümü eklenmedi."
+        },
+        "exercises": {
+          "jaw_health": "Çene sağlığıyla ilgili cevabın nedeniyle egzersiz eklenmedi."
+        },
+        "bodyFat": {
+          "no_body": "Boy ve kilo girilmediği için yağ oranı önerisi yok.",
+          "bmi_below_25": "Yağ oranı önerisi bu değerlerde gerekmez.",
+          "under_18": "Yağ oranı önerisi 18 yaş altına gösterilmez.",
+          "restriction_signal": "Beslenme hedeflerin için bir hekim veya diyetisyenle konuşmak faydalı olabilir."
+        },
+        "doctor": {
+          "flag_off": "Doktor katmanı şu anda kapalı.",
+          "under_18": "Doktor katmanı 18 yaş altına gösterilmez.",
+          "screen_required": "Doktor katmanı için önce kısa bir kontrol var.",
+          "screen_risk": "Doktor katmanı şimdilik kapalı; bir uzmanla konuşmak iyi gelebilir.",
+          "pending_review": "Doktor önerin hekim onayı bekliyor.",
+          "none": "Bu planda doktor önerisi yok."
+        }
+      },
+      "disclaimers": {
+        "notMedicalAdvice": "Tıbbi tavsiye değildir.",
+        "aiGenerated": "Bu plan yapay zekâ ile hazırlandı; öneriler katalogdan seçildi.",
+        "cosmeticProcedures": "Hukuki sebeplerden dolayı tıbbi kozmetik operasyonlarının puana olacak etkisini belirtemiyoruz. Dilerseniz bu konuda uzmanımızla görüşebilirsiniz.",
+        "changeTakesWeeks": "Değişim haftalar sürer; ışık ve açı skoru etkiler.",
+        "under18Limits": "18 yaş altına doktor katmanı, yağ oranı ve oruç önerileri gösterilmez.",
+        "deterministicFallback": "Bu planın seçimi yapay zekâdan alınamadı; adımlar kural tabanlı olarak katalogdan seçildi."
+      },
+      "barber": {
+        "title": "Berber kartı",
+        "sides": "Yanlar: {guard} numara",
+        "top": "Üst: {cm} cm",
+        "beardLine": "Sakal hattı: {line}",
+        "notes": "Not",
+        "share": "Berbere göster"
+      },
+      "links": {
+        "adLabel": "Reklam",
+        "open": "Bağlantıyı aç",
+        "expert": "Uzman bul",
+        "sourceOnly": "Yalnız bilimsel kaynak ve resmî kullanma talimatı bağlantısı verilir."
+      },
+      "regen": {
+        "cta": "Planı yeniden üret",
+        "note": "Yeniden üretim ücretlidir ya da haktan düşer.",
+        "busy": "Plan yeniden üretiliyor…"
+      },
+      "glowUpCta": "İyileşmiş halini gör",
+      "empty": "Henüz plan yok; önce analizin tamamlanmalı.",
+      "locked": "Plan, tam sonuçla birlikte açılır.",
+      "generating": {
+        "title": "Planın hazırlanıyor",
+        "body": "Rapor bölgeleri, cevapların ve yüz şeklin katalogla eşleştiriliyor. Bu bir dakika sürebilir."
+      },
+      "errorTitle": "Plan hazırlanamadı",
+      "retry": "Tekrar dene",
+      "errors": {
+        "QUOTA_EXCEEDED": "Yeniden üretim ücretlidir ya da haktan düşer; cevapların değişmediyse mevcut plan geçerli.",
+        "PREMIUM_REQUIRED": "Plan, tam sonuçla birlikte açılır.",
+        "BAD_INPUT": "Önce kişiselleştirme sorularını tamamla.",
+        "NETWORK": "Bağlantı kurulamadı.",
+        "GENERIC": "Servis yanıt vermedi. Tekrar dene."
+      },
+      "allTab": "Tümü",
+      "phasesTitle": "Fazlar",
+      "layersTitle": "Katmanlar",
+      "stepCount": "{n} adım",
+      "emptyPhase": "Bu fazda adım yok.",
+      "emptyTab": "Bu alanda adım yok.",
+      "glowUpBody": "Plan adımları uygulanmış hâlini gör; yüz şeklin ve kimliğin korunur.",
+      "glowUpOpen": "Gör",
+      "hairLoss": {
+        "title": "Saç yoğunluğu hakkında bir not",
+        "bodyPossible": "Fotoğrafta saç yoğunluğunda bölgesel bir fark görülebiliyor; ışık ve açı bunu abartabilir.",
+        "bodyVisible": "Fotoğrafta saç çizgisi ya da tepe bölgesinde yoğunluk farkı görünüyor.",
+        "info": "Saç derisi sağlığı için düzenli temizlik ve nazik ürünler plana eklendi. Bu konuda karar muayenede hekimindir; dilersen uzmanımızla görüşebilirsin.",
+        "doctor": "Doktor katmanına git",
+        "expert": "Saç sağlığı uzmanı bul",
+        "notMedical": "Teşhis değildir; tıbbi tavsiye değildir.",
+        "infoGeneral": "Saç derisi sağlığı için düzenli temizlik ve nazik ürünler iyi gelir. Bu konuda karar muayenede hekimindir; dilersen uzmanımızla görüşebilirsin."
+      },
+      "tabsAria": "Plan alanları",
+      "fallbackNote": "Yapay zekâ seçimi şu an alınamadı; adımlar hedeflerine ve kısıtlarına göre kural tabanlı seçildi. Daha sonra yeniden üretebilirsin."
+    }
+  },
+  "doctor": {
+    "title": "Doktor katmanı",
+    "eyebrow": "Hekim onaylı",
+    "disclosure": "Bu öneri yapay zekâ ile hazırlandı; sana ulaşmadan önce bir hekim gözden geçirdi ve gerekirse değiştirdi.",
+    "pending": "Önerin hekim onayı bekliyor; hazır olunca burada görünür.",
+    "off": "Doktor katmanı şu anda kapalı.",
+    "under18": "Bu bölüm 18 yaş altına gösterilmez.",
+    "none": "Bu planda doktor önerisi yok.",
+    "maxTwo": "En fazla iki öneri, her biri gerekçeli.",
+    "rationale": "Gerekçe",
+    "reviewedBy": "Onaylayan hekim",
+    "reviewedAt": "Onay tarihi: {date}",
+    "noDoseNote": "Doz, marka, eczane ya da satış bağlantısı verilmez; karar muayenede hekimindir.",
+    "links": {
+      "source": "Bilimsel kaynak",
+      "titck": "TİTCK kullanma talimatı"
+    },
+    "notMedicalAdvice": "Tıbbi tavsiye değildir.",
+    "talkToExpert": "Bir uzmanla konuş",
+    "screen": {
+      "title": "Kısa bir kontrol",
+      "intro": "Doktor katmanını göstermeden önce dört kısa soru. Cevapların saklanmaz; yalnız sonucu tutarız.",
+      "q1": "Görünüşünle ilgili düşünceler günde bir saatten fazla zamanını alıyor mu?",
+      "q2": "Bu düşünceler iş, okul ya da ilişkilerini zorlaştırıyor mu?",
+      "q3": "Görünüşün yüzünden kaçındığın ortamlar var mı?",
+      "q4": "Bu düşünceler yüzünden aynaya bakmaktan ya da fotoğraf çektirmekten uzak duruyor musun?",
+      "yes": "Evet",
+      "no": "Hayır",
+      "okTitle": "Teşekkürler",
+      "okBody": "Doktor katmanı hekim onayından sonra burada görünecek.",
+      "riskTitle": "Bu bölümü şimdilik kapalı tutuyoruz",
+      "riskBody": "Cevapların, görünüşle ilgili düşüncelerin seni zorlayabileceğini gösteriyor. Bir uzmanla konuşmak iyi gelebilir; dilersen psikolog bağlantısını açabiliriz.",
+      "riskNote": "Bu bir teşhis değildir.",
+      "submit": "Gönder",
+      "error": "Kaydedilemedi; tekrar dene."
+    },
+    "admin": {
+      "queueTitle": "Hekim onay kuyruğu",
+      "draft": "Taslak",
+      "physician_reviewed": "Hekim onayladı",
+      "delivered": "Kullanıcıya ulaştı",
+      "rejected": "Reddedildi",
+      "approve": "Onayla",
+      "edit": "Değiştirerek onayla",
+      "reject": "Reddet",
+      "notes": "Hekim notu",
+      "aiDraft": "Yapay zekâ taslağı",
+      "finalItems": "Hekimin son hali",
+      "noDraft": "Kuyruk boş.",
+      "rejectedByRule": "Kural nedeniyle kaydedilmedi",
+      "sources": "Kaynaklar",
+      "error": "İşlem yapılamadı."
+    }
   }
 }

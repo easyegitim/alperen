@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alignPointsFor, driftOk, driftPolicyFor, TRYON_LIMITS } from "@/lib/tryon/composite";
+import { alignPointsFor, driftOk, driftPolicyFor, driftPolicyForPresets, TRYON_LIMITS } from "@/lib/tryon/composite";
 import { ALIGN_POINTS, IDX } from "@/lib/face/indices";
 
 describe("deneme geometri sapması kuralı (SPEC 10.5)", () => {
@@ -31,5 +31,26 @@ describe("deneme geometri sapması kuralı (SPEC 10.5)", () => {
     expect(alignPointsFor("above_lip")).not.toContain(IDX.menton);
     expect(alignPointsFor("above_lip")).toHaveLength(ALIGN_POINTS.length - 1);
     expect(alignPointsFor("below_brows")).toEqual(ALIGN_POINTS);
+  });
+});
+
+describe("v2: kombin sapma kuralı ve hizalama noktaları (PLAN 5a/5b; Sprint 0 tek yönlü politika aynen)", () => {
+  it("driftPolicyForPresets: sakal yoksa simetrik; sakalsız stil küçülme, diğer sakal büyüme yönü", () => {
+    expect(driftPolicyForPresets({ hair: "buzz_cut" })).toBe("symmetric");
+    expect(driftPolicyForPresets({ hair: "buzz_cut", color: "jet_black" })).toBe("symmetric");
+    expect(driftPolicyForPresets({ hair: "buzz_cut", beard: "clean_shaven" })).toBe("beard_remove");
+    expect(driftPolicyForPresets({ beard: "van_dyke" })).toBe("beard_add");
+    expect(driftPolicyForPresets({})).toBe("symmetric");
+  });
+  it("alignPointsFor: sakal bölgesini modele bırakan maskelerde çene ucu (152) hizalamaya girmez", () => {
+    for (const p of ["above_lip", "features_cheeks", "beard_only"] as const) expect(alignPointsFor(p)).not.toContain(IDX.menton);
+    for (const p of ["below_brows", "features_only", "hair_only"] as const) expect(alignPointsFor(p)).toContain(IDX.menton);
+  });
+  it("alignPointsFor: glow_up features_only maskesiyle planda sakal varsa (beard_add/beard_remove) çene ucu yine dışarıda", () => {
+    expect(alignPointsFor("features_only", "beard_add")).not.toContain(IDX.menton);
+    expect(alignPointsFor("features_only", "beard_remove")).not.toContain(IDX.menton);
+    expect(alignPointsFor("below_brows", "beard_add")).toHaveLength(ALIGN_POINTS.length - 1);
+    expect(alignPointsFor("features_only", "symmetric")).toEqual(ALIGN_POINTS);
+    expect(alignPointsFor("features_only")).toEqual(ALIGN_POINTS);
   });
 });

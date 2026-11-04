@@ -1,6 +1,7 @@
 import type { Preset } from "./types";
 
-// SPEC 10.2: 30 erkek + 12 kadın saç stili. protect: below_brows (yüz ovali korunur, alın ve kenarlar modele bırakılır).
+// SPEC 10.2: 30 erkek + 12 kadın saç stili; PLAN 4e genişletme: uzman listesi (4 erkek) + kadın 12 → 18.
+// protect: below_brows (yüz ovali korunur, alın ve kenarlar modele bırakılır).
 const M = ["male"] as const;
 const F = ["female"] as const;
 
@@ -35,7 +36,12 @@ export const HAIR_PRESETS: Preset[] = [
   { id: "modern_mullet", kind: "hair", nameTr: "Modern mullet", suits: ["oval", "long", "diamond"], hairTypes: ["wavy", "curly", "straight"], presentation: [...M], prompt: "modern mullet, shorter textured front with longer layered back", protect: "below_brows" },
   { id: "wolf_cut", kind: "hair", nameTr: "Wolf cut (erkek)", suits: ["oval", "long", "heart"], hairTypes: ["wavy", "curly"], presentation: [...M], prompt: "shaggy wolf cut with heavy layers and wispy fringe", protect: "below_brows" },
   { id: "edgar_soft", kind: "hair", nameTr: "Yumuşak Edgar", suits: ["oval", "long", "heart"], hairTypes: ["straight", "wavy"], presentation: [...M], prompt: "soft Edgar cut: straight forward fringe with a blended taper, not harsh", protect: "below_brows" },
-  // Kadın (12)
+  // Uzman listesi (PLAN 4e; KB §5)
+  { id: "amerikan_tirasi", kind: "hair", nameTr: "Amerikan tıraşı", suits: ["oval", "square", "diamond", "long"], hairTypes: ["straight", "wavy"], presentation: [...M], prompt: "American crew cut with a short flat top, very short tapered sides and back, clean neckline", protect: "below_brows", noteTr: "Düzenli, az bakım", tags: ["expert", "low_maintenance"] },
+  { id: "asker_tirasi", kind: "hair", nameTr: "Asker tıraşı", suits: ["oval", "square", "diamond"], presentation: [...M], prompt: "military induction cut, uniformly very short all over with a clean neckline and no fringe", protect: "below_brows", noteTr: "Sıfır bakım; belirgin çene ile iyi", tags: ["expert", "low_maintenance"] },
+  { id: "erkek_perma", kind: "hair", nameTr: "Erkek perma", suits: ["oval", "long", "heart", "diamond"], hairTypes: ["straight", "wavy"], presentation: [...M], prompt: "men's perm: loose textured curls on a medium-length top with tapered sides, soft natural finish", protect: "below_brows", noteTr: "Düz saça hacim ve doku", tags: ["expert"] },
+  { id: "seyrek_sac_dokulu_kisa", kind: "hair", nameTr: "Seyrek saça dokulu kısa", suits: ["oval", "round", "square", "heart", "long", "diamond"], presentation: [...M], prompt: "short textured cut for thinning hair: short choppy texture on top styled forward, blended short sides, matte finish, no slicked-back or hard parting", protect: "below_brows", noteTr: "Seyrelmeyi yumuşatır", tags: ["expert", "low_maintenance"] },
+  // Kadın (18)
   { id: "long_layers", kind: "hair", nameTr: "Uzun katlı", suits: ["oval", "round", "square", "heart", "long", "diamond"], presentation: [...F], prompt: "long hair with face-framing layers and soft movement", protect: "below_brows", noteTr: "Her yüz şekline uyar" },
   { id: "curtain_bangs", kind: "hair", nameTr: "Perde kâkül", suits: ["long", "heart", "oval", "diamond"], hairTypes: ["straight", "wavy"], presentation: [...F], prompt: "curtain bangs parted in the middle with long layered hair", protect: "below_brows", noteTr: "Alnı yumuşatır" },
   { id: "bob_classic", kind: "hair", nameTr: "Klasik bob", suits: ["oval", "heart", "long"], hairTypes: ["straight", "wavy"], presentation: [...F], prompt: "classic chin-length bob, blunt ends, no bangs", protect: "below_brows" },
@@ -48,4 +54,11 @@ export const HAIR_PRESETS: Preset[] = [
   { id: "sleek_straight_long", kind: "hair", nameTr: "Düz ve parlak uzun", suits: ["oval", "round", "heart"], hairTypes: ["straight", "wavy"], presentation: [...F], prompt: "sleek straight long hair with a glossy finish", protect: "below_brows" },
   { id: "curly_defined", kind: "hair", nameTr: "Tanımlı bukleler", suits: ["oval", "long", "heart", "diamond"], hairTypes: ["curly", "coily"], presentation: [...F], prompt: "well-defined natural curls with shaped volume", protect: "below_brows" },
   { id: "high_ponytail", kind: "hair", nameTr: "Yüksek at kuyruğu", suits: ["oval", "round", "square", "heart"], presentation: [...F], prompt: "sleek high ponytail pulled back from the face", protect: "below_brows" },
+  // PLAN 4e genişletme (12 → 18)
+  { id: "french_bob", kind: "hair", nameTr: "Fransız bob", suits: ["oval", "heart", "long", "diamond"], hairTypes: ["straight", "wavy"], presentation: [...F], prompt: "French bob: jaw-length blunt bob with soft full bangs, slightly tousled", protect: "below_brows", noteTr: "Alnı yumuşatır" },
+  { id: "a_line_bob", kind: "hair", nameTr: "A kesim bob", suits: ["oval", "round", "square", "heart"], hairTypes: ["straight", "wavy"], presentation: [...F], prompt: "A-line bob, shorter at the back and gradually longer toward the front, sleek ends", protect: "below_brows", noteTr: "Yüzü uzatır" },
+  { id: "layered_shoulder", kind: "hair", nameTr: "Katlı omuz boyu", suits: ["oval", "round", "square", "heart", "long", "diamond"], presentation: [...F], prompt: "shoulder-length hair with soft face-framing layers and light volume", protect: "below_brows", noteTr: "Her yüz şekline uyar" },
+  { id: "side_swept_bangs", kind: "hair", nameTr: "Yana taranmış kâkül", suits: ["round", "square", "oval", "heart"], hairTypes: ["straight", "wavy"], presentation: [...F], prompt: "long side-swept bangs blending into medium-length layered hair", protect: "below_brows", noteTr: "Alnı daraltır" },
+  { id: "half_up_bun", kind: "hair", nameTr: "Yarım topuz", suits: ["oval", "long", "heart", "diamond"], presentation: [...F], prompt: "half-up bun: top section gathered into a small bun at the crown, the rest left down with natural texture", protect: "below_brows" },
+  { id: "low_bun_sleek", kind: "hair", nameTr: "Düşük sıkı topuz", suits: ["oval", "square", "heart", "diamond"], hairTypes: ["straight", "wavy"], presentation: [...F], prompt: "sleek low bun at the nape with hair smoothed back from the face, center part", protect: "below_brows", noteTr: "Yüz hatlarını öne çıkarır" },
 ];

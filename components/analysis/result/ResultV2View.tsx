@@ -13,7 +13,7 @@ import { FaceShapeCard } from "./FaceShapeCard";
 import { ImproveFirstV2Card } from "./ImproveFirstV2Card";
 import { MeasuresCard } from "./MeasuresCard";
 import { OverallCard } from "./OverallCard";
-import { ReportCard } from "./ReportCard";
+import { ReportV3 } from "@/components/report/ReportV3";
 import { FailedCard, PendingUploadCard, StageBanner } from "./StageCards";
 import { SubscoresCard, orderSubsV2, rowsFromAnalysis } from "./SubscoresCard";
 import { useAnalysisPoll } from "./useAnalysisPoll";
@@ -39,7 +39,10 @@ export function cardOrder(lowScore: boolean): SectionKey[] {
  * Ödeme sonrası sonuç (KB §3.2, §4.5–4.10, §5): kart kart açılış; GET /api/analyses/[id] yoklaması. Hak sunucuda;
  * burada yalnız sunucunun gönderdiği (kilit kurallarından geçmiş) ClientAnalysisV2 çizilir.
  */
-export function ResultV2View({ initial, instantReveal }: { initial: ClientAnalysisV2; /** Test/önizleme: sıra beklenmez. */ instantReveal?: boolean }) {
+type ResultFlags = { glowUp: boolean; expertNetwork: boolean };
+const DEFAULT_FLAGS: ResultFlags = { glowUp: true, expertNetwork: false };
+
+export function ResultV2View({ initial, instantReveal, flags = DEFAULT_FLAGS }: { initial: ClientAnalysisV2; /** Test/önizleme: sıra beklenmez. */ instantReveal?: boolean; /** Sunucu bayrakları (FEATURE_GLOW_UP, FEATURE_EXPERT_NETWORK); rapor kartındaki bağlantılar. */ flags?: ResultFlags }) {
   const t = useTranslations("analysis");
   const { a, pollError } = useAnalysisPoll(initial);
   // sessionStorage yalnız istemcide okunur; sunucu anlık görüntüsü false: sunucu HTML'i (bulanık iskelet) ile hidrasyon
@@ -100,7 +103,9 @@ export function ResultV2View({ initial, instantReveal }: { initial: ClientAnalys
     improveFirst: { key: "improveFirst", node: <ImproveFirstV2Card items={improve} analysisId={a.id} /> },
     faceShape: { key: "faceShape", node: <FaceShapeCard faceShape={a.faceShape} detailedReady={a.stage === "completed" || ready.has("faceShape")} /> },
     device: { key: "device", node: <MeasuresCard device={a.device} measures={report?.measures ?? null} reportReady={a.stage === "completed" || ready.has("report")} /> },
-    report: { key: "report", node: <ReportCard report={report} /> },
+    // W4 (PLAN 4a): rapor v3 iskeleti — mektup, 9 bölge, açılır ölçüler, plan ve "iyileşmiş halin" kartları, kapanış.
+    // Plan kartı /plan/[id]'ye gider (anket v2 yoksa önce /plan/[id]/anket); "iyileşmiş halin" /dene?mode=glow_up&analysis=[id].
+    report: { key: "report", node: <ReportV3 report={report} analysisId={a.id} viewsUsed={a.viewsUsed} glowUpEnabled={flags.glowUp} expertNetworkEnabled={flags.expertNetwork} /> },
     potential: null,
     explanations: null,
   };

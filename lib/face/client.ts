@@ -82,8 +82,8 @@ export class VisionClient {
   }
 
   /** c ve g worker'a devredilir ve orada kapatılır; başarıda kompozit bitmap geri devredilir. */
-  tryon(c: ImageBitmap, g: ImageBitmap, landmarksC: Point[], protect: Protect, policy: DriftPolicy): Promise<TryonWorkerResult> {
-    return this.send<TryonWorkerResult>({ type: "tryon", id: this.nextId(), c, g, landmarksC, protect, policy }, [c, g]);
+  tryon(c: ImageBitmap, g: ImageBitmap, landmarksC: Point[], protect: Protect, policy: DriftPolicy, glowUp = false): Promise<TryonWorkerResult> {
+    return this.send<TryonWorkerResult>({ type: "tryon", id: this.nextId(), c, g, landmarksC, protect, policy, glowUp }, [c, g]);
   }
 
   async terminate() {

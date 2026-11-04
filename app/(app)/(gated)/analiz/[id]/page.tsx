@@ -48,7 +48,7 @@ export default async function AnalysisPage({ params }: PageProps<"/analiz/[id]">
       <div className="mx-auto w-full max-w-lg px-4 py-6">
         <h1 className="sr-only">{t("pageTitle")}</h1>
         {proceed ? (
-          <ResultV2View initial={a} />
+          <ResultV2View initial={a} flags={{ glowUp: isFeatureEnabled("glowUp"), expertNetwork: isFeatureEnabled("expertNetwork") }} />
         ) : (
           <PaywallProvider teaserMode={teaser.mode} analysisId={a.id} presentation={presentation} ageBand={profile?.age_band ?? null}>
             <ScoreViewV2 a={a} />

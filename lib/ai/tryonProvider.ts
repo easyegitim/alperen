@@ -4,12 +4,26 @@ import { fal } from "@fal-ai/client";
 import { GoogleGenAI } from "@google/genai";
 import type { Preset } from "@/content/types";
 import { ApiError } from "@/lib/api/errors";
+import { getTryonConfig } from "@/lib/config/tryon";
+import type { TryonMode, TryonPresets } from "@/lib/tryon/types";
 import { aiErrorSummary, withTransientRetry } from "./retry";
 
 // SPEC 10.7 / 14.3: Gemini görsel varsayılan; TRYON_PROVIDER=fal ile maskeli inpainting (aynı arayüz).
+// Model: getTryonConfig().imageModel (TRYON_IMAGE_MODEL > GEMINI_IMAGE_MODEL > varsayılan; KB §11.6 sağlayıcı AÇIK, yarış yok).
 // Görsel yalnız çağrı süresince bellekte; loglanmaz, yazılmaz.
 
-export type TryonRequest = { imageBase64: string; maskBase64?: string; prompt: string; preset: Preset };
+export type TryonRequest = {
+  imageBase64: string;
+  maskBase64?: string;
+  prompt: string;
+  /** v1 tek stil (scripts/compare-tryon.ts, eski çağrı). */
+  preset?: Preset;
+  /** v2: mod ve parçalar (yalnız bilgi; istem prompt alanında hazır gelir). */
+  mode?: TryonMode;
+  presets?: TryonPresets;
+  /** Rota son tarihi: iptalde istek istemci tarafında kesilir (sağlayıcı yine faturalandırabilir); satır failed yazılır. */
+  signal?: AbortSignal;
+};
 export type TryonResult = { imageBase64: string; mimeType: string };
 
 export interface TryonProvider {
@@ -17,10 +31,12 @@ export interface TryonProvider {
   generateTryOn(req: TryonRequest): Promise<TryonResult>;
 }
 
-const TIMEOUT_MS = 50_000;
+/** Tek üretim çağrısı zaman aşımı; rota yeniden üretim bütçesini bundan türetir (app/api/tryon/route.ts). */
+export const TRYON_GENERATE_TIMEOUT_MS = 50_000;
+const TIMEOUT_MS = TRYON_GENERATE_TIMEOUT_MS;
 
 export class GeminiTryonProvider implements TryonProvider {
-  readonly model = process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-lite-image";
+  readonly model = getTryonConfig().imageModel;
 
   async generateTryOn(req: TryonRequest): Promise<TryonResult> {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -33,7 +49,7 @@ export class GeminiTryonProvider implements TryonProvider {
           ai.models.generateContent({
             model: this.model,
             contents: [{ role: "user", parts: [{ inlineData: { mimeType: "image/jpeg", data: req.imageBase64 } }, { text: req.prompt }] }],
-            config: { responseModalities: ["IMAGE"], httpOptions: { timeout: TIMEOUT_MS } },
+            config: { responseModalities: ["IMAGE"], httpOptions: { timeout: TIMEOUT_MS }, ...(req.signal ? { abortSignal: req.signal } : {}) },
           }),
         { retries: 1, baseDelayMs: 2_000, onRetry: (attempt, e) => console.warn(`[ai] deneme ${this.model} geçici hata, tekrar ${attempt}: ${aiErrorSummary(e)}`) },
       );

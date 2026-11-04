@@ -57,6 +57,14 @@ const EVENT_NAMES: Record<AnalyticsEventName, true> = {
   full_analysis_submitted: true,
   referral_code_viewed: true,
   referral_claimed: true,
+  // Sprint 2 (T1): yüksüz olaylar
+  plan_viewed: true,
+  plan_step_opened: true,
+  questionnaire_v2_completed: true,
+  tryon_combo_started: true,
+  tryon_qc_failed: true,
+  tryon_flagged_broken: true,
+  glowup_viewed: true,
 };
 
 describe("paywall yapılandırması (UI spec S4)", () => {

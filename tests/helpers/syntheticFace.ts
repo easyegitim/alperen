@@ -1,5 +1,5 @@
 // Sentetik 478 noktalık yüz (gerçek yüz değil). Yalnız SPEC 7.4 indeksleri anlamlıdır; kalanı elips üzerinde.
-import { IDX, LANDMARK_COUNT } from "@/lib/face/indices";
+import { FACE_OVAL, IDX, LANDMARK_COUNT, LEFT_BROW, LEFT_EYE, LIPS, NOSE, RIGHT_BROW, RIGHT_EYE } from "@/lib/face/indices";
 import type { Point } from "@/lib/face/types";
 
 export type SyntheticParams = {
@@ -75,3 +75,28 @@ export const SHAPE_PARAMS: Record<string, SyntheticParams> = {
   heart: { cheek: 100, length: 118, jaw: 72, forehead: 95 },
   diamond: { cheek: 100, length: 118, jaw: 70, forehead: 72 },
 };
+
+/**
+ * Kontur listelerini (göz, kaş, burun, dudak; lib/face/indices.ts) IDX çıpalarının çevresine küçük elipsler olarak
+ * yerleştirir; FACE_OVAL elips üzerine dizilir. Yalnız maske/glow-up testleri için (gerçek yüz değil).
+ */
+export function withContours(pts: Point[], p: SyntheticParams): Point[] {
+  const { cheek, length: L, cx = 500, cy = 500 } = p;
+  const L2 = pts.map((q) => ({ ...q }));
+  // phase: listenin ilk indeksi elipste hangi açıya düşer (FACE_OVAL: 10 tepede; RIGHT_EYE: 33 dış köşe = görüntüde sol).
+  const ellipse = (idx: readonly number[], ex: number, ey: number, rx: number, ry: number, phase: number, dir = 1) =>
+    idx.forEach((i, k) => {
+      const a = phase + dir * (k / idx.length) * Math.PI * 2;
+      L2[i] = { x: ex + rx * Math.cos(a), y: ey + ry * Math.sin(a), z: 0 };
+    });
+  ellipse(FACE_OVAL, cx, cy + L * 0.05, cheek * 0.55, L * 0.52, -Math.PI / 2);
+  const eyeY = cy - L * 0.1;
+  ellipse(RIGHT_EYE, cx - cheek * 0.2, eyeY, cheek * 0.1, L * 0.045, Math.PI, -1); // 33 solda (dış), 145 altta, 133 sağda (iç)
+  ellipse(LEFT_EYE, cx + cheek * 0.2, eyeY, cheek * 0.1, L * 0.045, 0); // 263 sağda (dış), 374 altta, 362 solda (iç)
+  ellipse(RIGHT_BROW, cx - cheek * 0.2, cy - L * 0.19, cheek * 0.13, L * 0.025, -Math.PI / 2);
+  ellipse(LEFT_BROW, cx + cheek * 0.2, cy - L * 0.19, cheek * 0.13, L * 0.025, -Math.PI / 2);
+  ellipse(NOSE, cx, cy - L * 0.02, cheek * 0.09, L * 0.15, -Math.PI / 2); // 168 tepede, 2 altta
+  ellipse(LIPS, cx, cy + L * 0.3, cheek * 0.18, L * 0.05, Math.PI); // 61 solda, 291 sağda
+  // Göz köşeleri, alt göz kapağı (145/374), burun kanatları (129/358) ve burun altı (2) elipslerden gelir (CHEEK_REF ile tutarlı).
+  return L2;
+}
