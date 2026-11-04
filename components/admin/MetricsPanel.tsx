@@ -2,23 +2,42 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { TRYON_BROKEN_RATE_ALERT_DEFAULT } from "@/lib/config/ops";
+import { formatRate, summarizeTryonQuality, type TryonQualityRow } from "@/lib/ops/tryonQuality";
+import { istanbulDate } from "@/lib/routine/streak";
+import { cn } from "@/lib/utils";
 
 type Activity = { day: string; analyses_completed: number; analyses_failed: number; reports: number; fallback_reports: number; tryons_success: number; tryons_identity_drift: number; tryons_failed: number };
 type Cost = { day: string; analysis_calls: number; reports: number; tryon_generations: number; est_cost_usd: number };
 type Sub = { plan: string; active_count: number; canceling_count: number };
 type Funnel = { profiles: number; adults: number; questionnaire_completed: number; analyzed_users: number; ever_checked_out: number; premium_now: number };
 type Reported = { id: string; target_type: string; target_id: string | null; reason: string | null; created_at: string };
-type Metrics = { days: number; dailyActivity: Activity[]; dailyAiCost: Cost[]; activeSubscriptions: Sub[]; funnel: Funnel | null; reportedContent: Reported[] };
+export type Metrics = {
+  days: number;
+  dailyActivity: Activity[];
+  dailyAiCost: Cost[];
+  activeSubscriptions: Sub[];
+  funnel: Funnel | null;
+  reportedContent: Reported[];
+  /** Faz 6 (S3.3.6): ops.daily_tryon_quality; RPC yoksa [] ve available=false. */
+  tryonQuality?: TryonQualityRow[];
+  tryonQualityAvailable?: boolean;
+  tryonBrokenRateAlert?: number;
+};
 
 const num = (n: number) => n.toLocaleString("tr-TR");
 const pct = (a: number, b: number) => (b > 0 ? `%${Math.round((a / b) * 100)}` : "–");
 
-/** F18 /admin: günlük sayılar, AI maliyeti, huni, abonelikler, bildirilen içerikler (0005_ops). Grafik değil tablo. */
-export function MetricsPanel() {
-  const [data, setData] = useState<Metrics | null>(null);
+/**
+ * F18 /admin: günlük sayılar, AI maliyeti, huni, abonelikler, bildirilen içerikler (0005_ops), Faz 6 deneme kalitesi
+ * ("Bozuk görünüyor" oranı; eşik üstü vurgulanır). Grafik değil tablo. `initial`: fikstür (ağ yok).
+ */
+export function MetricsPanel({ initial = null }: { initial?: Metrics | null }) {
+  const [data, setData] = useState<Metrics | null>(initial);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initial) return;
     let cancelled = false;
     void fetch("/api/admin/metrics?days=30", { credentials: "same-origin" })
       .then(async (r) => {
@@ -34,7 +53,7 @@ export function MetricsPanel() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initial]);
 
   if (error) return <p role="alert" className="text-sm text-destructive">{error}</p>;
   if (!data) return <p className="text-sm text-muted-foreground">Metrikler yükleniyor…</p>;
@@ -42,6 +61,9 @@ export function MetricsPanel() {
   const sum = (k: keyof Activity) => data.dailyActivity.reduce((s, d) => s + Number(d[k] ?? 0), 0);
   const totalCost = data.dailyAiCost.reduce((s, d) => s + Number(d.est_cost_usd ?? 0), 0);
   const f = data.funnel;
+  const quality = data.tryonQuality ?? [];
+  const alertAt = data.tryonBrokenRateAlert ?? TRYON_BROKEN_RATE_ALERT_DEFAULT;
+  const q7 = summarizeTryonQuality(quality, istanbulDate(), 7, alertAt);
 
   return (
     <div className="grid gap-4">
@@ -128,6 +150,53 @@ export function MetricsPanel() {
               })}
             </tbody>
           </table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Deneme kalitesi · &ldquo;Bozuk görünüyor&rdquo; oranı</CardTitle>
+          <CardDescription>Bildirilen bozuk / başarılı deneme (ops.daily_tryon_quality). Eşik {formatRate(alertAt)} üstü vurgulanır. Görsel yoktur.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {data.tryonQualityAvailable === false ? (
+            <p className="text-sm text-muted-foreground">Veri yok: ops_daily_tryon_quality RPC&apos;si bu ortamda uygulanmamış (migration 0015).</p>
+          ) : (
+            <>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+                <div>
+                  <dt className="text-muted-foreground">Son 7 gün oran</dt>
+                  <dd className={cn("font-semibold", q7.alert ? "text-warn" : "")} data-broken-rate-alert={q7.alert ? "1" : "0"}>
+                    {formatRate(q7.brokenRate)}
+                    {q7.alert ? " · eşik üstü" : ""}
+                  </dd>
+                </div>
+                <div><dt className="text-muted-foreground">Bozuk bildirimi</dt><dd className="font-medium">{num(q7.flaggedBroken)}</dd></div>
+                <div><dt className="text-muted-foreground">Başarılı</dt><dd className="font-medium">{num(q7.success)}</dd></div>
+                <div><dt className="text-muted-foreground">Kalite kontrolü kaldı / drift</dt><dd className="font-medium">{num(q7.qcFailed)} / {num(q7.identityDrift)}</dd></div>
+              </dl>
+              {quality.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Bu aralıkta deneme yok.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[520px] text-xs">
+                    <thead><tr className="text-left text-muted-foreground"><th className="py-1">Gün</th><th className="py-1">Mod</th><th className="py-1 text-right">Başarılı</th><th className="py-1 text-right">KK kaldı</th><th className="py-1 text-right">Drift</th><th className="py-1 text-right">Bozuk</th><th className="py-1 text-right">Oran</th></tr></thead>
+                    <tbody>
+                      {quality.map((r) => {
+                        const rate = Number(r.broken_rate);
+                        return (
+                          <tr key={`${r.day}-${r.mode}`} className="border-b last:border-0">
+                            <td className="py-1">{String(r.day).slice(0, 10)}</td><td className="py-1">{r.mode}</td><td className="py-1 text-right">{num(Number(r.success))}</td><td className="py-1 text-right">{num(Number(r.qc_failed))}</td><td className="py-1 text-right">{num(Number(r.identity_drift))}</td><td className="py-1 text-right">{num(Number(r.flagged_broken))}</td>
+                            <td className={cn("py-1 text-right", rate > alertAt ? "font-semibold text-warn" : "")}>{formatRate(Number.isFinite(rate) ? rate : null)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 

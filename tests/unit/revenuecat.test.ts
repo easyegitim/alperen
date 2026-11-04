@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isPremium } from "@/lib/billing/entitlement";
-import { isAuthorizedWebhook, mapSubscriber, planFromProductId, webhookAppUserId, webhookEventKey } from "@/lib/billing/revenuecat";
+import { isAuthorizedWebhook, mapSubscriber, oneTimePurchaseFromWebhook, planFromProductId, productFromStoreId, webhookAppUserId, webhookEventKey } from "@/lib/billing/revenuecat";
 
 const now = new Date("2026-10-13T12:00:00Z");
 
@@ -38,5 +38,24 @@ describe("RevenueCat eşlemesi (SPEC 15.4 / SPEC-MOBILE M6)", () => {
     expect(webhookAppUserId({ event: { original_app_user_id: "u0" } })).toBe("u0");
     expect(webhookAppUserId({})).toBeNull();
     expect(webhookEventKey({ event: { id: "evt_1" } })).toBe("revenuecat:evt_1");
+  });
+});
+
+describe("tek seferlik ürün (Faz 6, S3.3.7)", () => {
+  it("env ürün kimliği eşleşir; env varken başka kimlik null; env yokken sezgisel", () => {
+    const env = { REVENUECAT_PRODUCT_ONE_TIME_REPORT_ID: "aura_report_once", REVENUECAT_PRODUCT_ONE_TIME_REPORT_PROMO_ID: "aura_report_promo" };
+    expect(productFromStoreId("aura_report_once", env)).toBe("one_time_report");
+    expect(productFromStoreId("aura_report_promo", env)).toBe("one_time_report");
+    expect(productFromStoreId("aura_monthly", env)).toBeNull();
+    expect(productFromStoreId("com.aura.one_time_report", {})).toBe("one_time_report");
+    expect(productFromStoreId("aura_monthly", {})).toBeNull();
+    expect(productFromStoreId(null, {})).toBeNull();
+  });
+  it("NON_RENEWING_PURCHASE → purchases satırı (paid, analysis_id null); abonelik olayı ya da bilinmeyen ürün → null", () => {
+    const body = { event: { id: "evt1", type: "NON_RENEWING_PURCHASE", app_user_id: "user-1", product_id: "aura_report_once" } };
+    expect(oneTimePurchaseFromWebhook(body, { REVENUECAT_PRODUCT_ONE_TIME_REPORT_ID: "aura_report_once" })).toEqual({ user_id: "user-1", product: "one_time_report", provider: "revenuecat", status: "paid", analysis_id: null });
+    expect(oneTimePurchaseFromWebhook({ event: { type: "INITIAL_PURCHASE", app_user_id: "user-1", product_id: "aura_report_once" } }, {})).toBeNull();
+    expect(oneTimePurchaseFromWebhook({ event: { type: "NON_RENEWING_PURCHASE", app_user_id: "user-1", product_id: "aura_weekly" } }, {})).toBeNull();
+    expect(oneTimePurchaseFromWebhook({ event: { type: "NON_RENEWING_PURCHASE", product_id: "aura_report_once" } }, {})).toBeNull();
   });
 });

@@ -62,8 +62,41 @@ export function mapSubscriber(sub: RcSubscriber, now: Date = new Date()): RcMapp
   };
 }
 
+// ── Tek seferlik ürün (CONTRACTS_V2 S3.3.7; KB P#21): mağaza ürün kimliği → one_time_report ─────────────────────────
+// Ürün kimlikleri AÇIK (kurucu; S3.7): env REVENUECAT_PRODUCT_ONE_TIME_REPORT_ID ve …_PROMO_ID. Env yoksa sezgisel eşleme
+// ("one_time" / "report" / "rapor" geçen kimlik). Abonelik kimlikleri planFromProductId ile aynı kalır.
+export type OneTimeProductId = "one_time_report";
+
+export function productFromStoreId(productId: string | null | undefined, env: Record<string, string | undefined> = process.env): OneTimeProductId | null {
+  if (!productId) return null;
+  const configured = [env.REVENUECAT_PRODUCT_ONE_TIME_REPORT_ID, env.REVENUECAT_PRODUCT_ONE_TIME_REPORT_PROMO_ID].filter((v): v is string => Boolean(v?.trim()));
+  if (configured.some((id) => id.trim() === productId)) return "one_time_report";
+  if (configured.length > 0) return null;
+  const id = productId.toLowerCase();
+  return id.includes("one_time") || id.includes("onetime") || id.includes("report") || id.includes("rapor") ? "one_time_report" : null;
+}
+
 /** Webhook gövdesi (RevenueCat v1 webhook): yalnız kullanılan alanlar. */
-export type RcWebhook = { api_version?: string; event?: { id?: string; type?: string; app_user_id?: string; original_app_user_id?: string; environment?: string } };
+export type RcWebhook = {
+  api_version?: string;
+  event?: { id?: string; type?: string; app_user_id?: string; original_app_user_id?: string; environment?: string; product_id?: string; store?: string };
+};
+
+export type OneTimePurchaseInsert = { user_id: string; product: OneTimeProductId; provider: "revenuecat"; status: "paid"; analysis_id: null };
+
+/**
+ * NON_RENEWING_PURCHASE olayı tek seferlik rapor ürünüyse purchases satırı (analysis_id null: /api/analyses/[id]/run
+ * promoteAndStart bağlar). Tekrar koruması payment_events.event_key'dedir (webhook rotası önce onu yazar). İstemci
+ * sonucu hiçbir şey açmaz; yalnız bu webhook/sunucu doğrulaması yazar.
+ */
+export function oneTimePurchaseFromWebhook(body: RcWebhook, env: Record<string, string | undefined> = process.env): OneTimePurchaseInsert | null {
+  const e = body.event;
+  if (!e || e.type !== "NON_RENEWING_PURCHASE") return null;
+  const userId = webhookAppUserId(body);
+  const product = productFromStoreId(e.product_id, env);
+  if (!userId || !product) return null;
+  return { user_id: userId, product, provider: "revenuecat", status: "paid", analysis_id: null };
+}
 
 export function webhookAppUserId(body: RcWebhook): string | null {
   const e = body.event;
