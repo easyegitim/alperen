@@ -10,8 +10,11 @@
  * öneridir (arayüz sorar). Ret (`stop_reason: refusal`) kibar Türkçe iletiyle kapanır; kategori eğitmen yönlendirmesi
  * gerektiriyorsa (ya da koç turu `escalate_to_instructor` ile işaretlediyse) eğitmene not düşülür.
  */
-import { CHAT_COPY } from '@/lib/chat';
-import type { CallResult, CoachMode, Gateway, StreamEvent, ToolRunners } from '@ogrenmen/llm';
+import { CHAT_COPY, type DocRef } from '@/lib/chat';
+import { toolError, toolReply } from '@/server/documents/status';
+import type { RequestView } from '@/server/documents/types';
+import { appErrorCode, type RpcResult } from '@/server/practice/rpc';
+import type { CallResult, CoachMode, Gateway, RequestDocumentInput, StreamEvent, ToolRunners } from '@ogrenmen/llm';
 import {
   base64Size,
   buildHistory,
@@ -70,6 +73,15 @@ export interface TurnDeps {
   /** system[0] metni (packages/prompts `loadPrompt(route)`; rota moda göre). */
   product: (route: CoachRoute) => ProductPrompt | Promise<ProductPrompt>;
   now?: () => Date;
+  /**
+   * Koç aracı `request_document`: belge isteğini kullanıcının JWT'siyle açar (RPC `request_document`). `messageId`
+   * öğrencinin bu turdaki mesajıdır (aynı mesajla ikinci çağrı aynı isteği döner); yoksa araç kullanılamaz.
+   */
+  requestDocument?: (input: RequestDocumentInput, ctx: { messageId: number | null }) => Promise<RpcResult<RequestView>>;
+  /** Kayıtlı sohbet mesaj kimlikleri gerçek (veritabanı) mi; bellek deposunda değil. */
+  persistentIds?: boolean;
+  /** Her turda gateway çağrısından önce (yalnız sahte LLM'de betik sıraya koymak için). */
+  onTurn?: (info: { route: CoachRoute; text: string }) => void;
 }
 
 export interface TurnRequest {
@@ -89,6 +101,7 @@ export type ChatEvent =
   | { type: 'text'; text: string }
   | { type: 'tool'; name: string }
   | { type: 'restart' }
+  | ({ type: 'document' } & DocRef)
   | {
       type: 'done';
       messageId: number | null;
@@ -189,6 +202,8 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
   const { req, conversation, uploads, seed } = prepared;
   const student = req.student;
   const route = coachRouteFor(conversation.mode);
+  const documents: DocRef[] = [];
+  let userMessageId: number | null = null;
 
   // Geçmiş, yeni kullanıcı turundan önce okunur: kademeli pencerenin başından itibaren (bkz. history.ts).
   const content = userContent(req.text, uploads, seed);
@@ -198,9 +213,10 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
     const afterId = conversation.summaryUptoMessageId;
     total = await store.countMessages(conversation.id, afterId);
     stored = total > 0 ? await store.listMessages(conversation.id, { afterId, limit: total - steppedStart(total) }) : [];
-    const [userMessageId] = await store.appendMessages(conversation.id, [
+    const [firstId] = await store.appendMessages(conversation.id, [
       { role: 'user', content, uploadIds: uploads.map((u) => u.id) },
     ]);
+    userMessageId = firstId ?? null;
     emit({ type: 'start', conversationId: conversation.id, userMessageId: userMessageId ?? 0, mode: conversation.mode });
   } catch (err) {
     console.error('OGR-CHAT-009 kullanıcı turu kaydedilemedi', err);
@@ -227,6 +243,22 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
     let turnMeta: TurnMeta | null = null;
     const runners: ToolRunners = {
       ...store.toolRunners(student),
+      request_document: async (input) => {
+        if (!deps.requestDocument) return toolError(null);
+        const res = await deps.requestDocument(input, { messageId: deps.persistentIds === false ? null : userMessageId });
+        if (!res.ok) {
+          console.warn('OGR-CHAT-020 belge isteği açılamadı', res.code ?? appErrorCode(res.error));
+          return toolError(res.code);
+        }
+        // Aynı mesaj + aynı tür yeniden denenirse RPC aynı isteği döner (reused); farklı tür (not + deneme) ayrı istektir,
+        // iki kart açılır. Tek belge sınırı yoktur; bu kasıt (bkz. 0034 p_message_id).
+        const ref: DocRef = { requestId: res.data.request_id, kind: res.data.kind, title: res.data.document?.title ?? null };
+        if (!documents.some((d) => d.requestId === ref.requestId)) {
+          documents.push(ref);
+          emit({ type: 'document', ...ref });
+        }
+        return toolReply(res.data.kind, res.data.reused === true);
+      },
       record_turn_meta: (input) => {
         turnMeta = { ...input, mode_suggestion: input.mode_suggestion ?? null };
         return 'Tur kaydedildi.';
@@ -239,6 +271,7 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
       else if (ev.type === 'restart') emit({ type: 'restart' });
     };
 
+    deps.onTurn?.({ route, text: req.text });
     const result: CallResult<null> = await gateway.call(route, {
       system: { product: product.text, course: blocks.course, dossier: blocks.dossier },
       history,
@@ -267,6 +300,7 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
       turnMeta: meta,
       refusal: result.refusal ? { category: result.refusal.category } : null,
       escalated,
+      ...(documents.length > 0 ? { documents } : {}),
       route,
       model: result.model ?? null,
     };

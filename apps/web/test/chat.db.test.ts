@@ -176,7 +176,7 @@ describe.skipIf(!LIVE)('koç sohbeti × Postgres (JWT + koç RPC\'leri)', () => 
     expect(last.llm_call_id).not.toBeNull();
     expect(last.tool_calls.escalated).toBe(true);
     const call = await tmp.pool.query(`select route, student_ref, prompt_version, ref_table, ref_id from public.llm_calls where id = $1`, [last.llm_call_id]);
-    expect(call.rows[0]).toMatchObject({ route: 'coach_chat', student_ref: elifRef, prompt_version: 'v1', ref_table: 'conversations', ref_id: prepared.conversation.id });
+    expect(call.rows[0]).toMatchObject({ route: 'coach_chat', student_ref: elifRef, prompt_version: 'v2', ref_table: 'conversations', ref_id: prepared.conversation.id });
     expect(Number((await tmp.pool.query(`select count(*) from public.llm_calls where route = 'coach_chat'`)).rows[0]!.count)).toBe(2);
 
     const conv = await tmp.pool.query(`select mode, kind, course_id, last_message_at from public.conversations where id = $1`, [prepared.conversation.id]);

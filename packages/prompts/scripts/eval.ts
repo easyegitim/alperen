@@ -4,7 +4,7 @@
  *   OGRENMEN_LLM=fake bun scripts/eval.ts                 boru hattı + puanlayıcı (betik yanıtlarla; hepsi geçmeli)
  *   ANTHROPIC_API_KEY=… bun scripts/eval.ts               gerçek model (ücretli; vakalar sırayla)
  *
- *   --route <rota>      yalnız bu rota (solution_diagnosis | coach_chat)
+ *   --route <rota>      yalnız bu rota (solution_diagnosis | coach_chat | exam_page_items | notes_generation)
  *   --version <rota=vN> rota için prompt sürümü (birden çok verilebilir); yoksa en yüksek sürüm
  *   --out <dosya>       raporu JSON olarak yaz
  *   --min-score <0..1>  ortalama puan bunun altındaysa çıkış 1 (sahte kipte varsayılan 1, gerçek kipte 0)

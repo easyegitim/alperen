@@ -11,6 +11,75 @@
       "minLength": 1,
       "maxLength": 200
     },
+    "blueprint": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "sections": {
+              "minItems": 1,
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200
+                  }
+                },
+                "required": [
+                  "name",
+                  "count"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "difficulty": {
+              "type": "object",
+              "properties": {
+                "easy": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 200
+                },
+                "medium": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 200
+                },
+                "hard": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 200
+                }
+              },
+              "required": [
+                "easy",
+                "medium",
+                "hard"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "sections",
+            "difficulty"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "İstekteki bölüm ve zorluk dağılımı (sorular buna birebir uyar); alıştırma setinde null"
+    },
     "items": {
       "minItems": 1,
       "maxItems": 200,
@@ -78,7 +147,45 @@
                 "type": "null"
               }
             ],
-            "description": "Soru şekli satır içi SVG; yoksa null"
+            "description": "Soru şekli satır içi SVG (worker figure kodundan üretir); model figure verdiyse null"
+          },
+          "figure": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "matplotlib",
+                      "svg"
+                    ]
+                  },
+                  "figure_code": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 20000,
+                    "description": "kind=matplotlib: figure_<n>.svg yazan Python (matplotlib/numpy); kind=svg: SVG metni"
+                  },
+                  "alt": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 400,
+                    "description": "Şekli kelimelerle anlatır"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "figure_code",
+                  "alt"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kodla üretilen soru şekli; şekilsiz soruda null"
           },
           "skill_ids": {
             "minItems": 1,

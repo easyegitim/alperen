@@ -2,6 +2,13 @@
 
 export type ChatMode = 'hint' | 'explain' | 'solve';
 
+/** Koçun açtırdığı belge isteği (sohbette ince durum kartı). */
+export interface DocRef {
+  requestId: string;
+  kind: 'notes' | 'mock_exam' | 'question_set';
+  title: string | null;
+}
+
 /** Ekranda bir balon. */
 export interface DisplayMessage {
   id: string;
@@ -12,6 +19,8 @@ export interface DisplayMessage {
   escalated: boolean;
   /** Teşhisten açıldı (Koça sor). */
   seeded: boolean;
+  /** Bu yanıtta açılan belge istekleri (durum kartı). */
+  documents?: DocRef[];
 }
 
 /** Sayfanın istemciye verdiği başlangıç durumu. */

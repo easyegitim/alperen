@@ -10,6 +10,8 @@ export interface RenderPdfOptions {
   headerTitle?: string;
   /** Alt bilgi sol metni; varsayılan "Öğrenmen". */
   footerLabel?: string;
+  /** Alt bilgi ortası (ör. "Öğrenmen sana göre hazırladı · 3 Kasım 2026" rozeti); yoksa boş. */
+  footerBadge?: string;
   /** Sayfa numarası "Sayfa X / Y" (varsayılan açık). */
   pageNumbers?: boolean;
   /**
@@ -50,9 +52,10 @@ function headerHtml(title: string | undefined): string {
   return `<div style="width:100%;padding:0 ${PAGE.marginXMm}mm;font-family:Lexend,'Segoe UI',sans-serif;font-size:7.5pt;color:#4a5578;display:flex;justify-content:space-between"><span>${t}</span></div>`;
 }
 
-function footerHtml(label: string, pageNumbers: boolean): string {
+function footerHtml(label: string, pageNumbers: boolean, badge: string | undefined): string {
   const num = pageNumbers ? `<span>Sayfa <span class="pageNumber"></span> / <span class="totalPages"></span></span>` : '<span></span>';
-  return `<div style="width:100%;padding:0 ${PAGE.marginXMm}mm;font-family:Lexend,'Segoe UI',sans-serif;font-size:7.5pt;color:#4a5578;display:flex;justify-content:space-between"><span>${esc(label)}</span>${num}</div>`;
+  const mid = badge ? `<span style="padding:0.4mm 2.4mm;border-radius:3mm;background:#e3eafc;color:#00247c;-webkit-print-color-adjust:exact;print-color-adjust:exact">${esc(badge)}</span>` : '<span></span>';
+  return `<div style="width:100%;padding:0 ${PAGE.marginXMm}mm;font-family:Lexend,'Segoe UI',sans-serif;font-size:7.5pt;color:#4a5578;display:flex;justify-content:space-between;align-items:center"><span>${esc(label)}</span>${mid}${num}</div>`;
 }
 
 let active = 0;
@@ -101,6 +104,25 @@ export function isRequestAllowed(url: string, allowed: ReadonlySet<string>): boo
   return allowed.has(u.origin);
 }
 
+/**
+ * Sayfadan geniş ayrı satır formüllerini kapsayıcıya sığacak kadar küçültür (tarayıcı içinde çalışır; taşma/kırpma yok).
+ * Alt sınır 0,4: bundan geniş formül (olağandışı) kapsayıcıda kırpılır; üretim hattı bunu `figure`/çok satırlı formüle bölmelidir.
+ */
+export function fitWideMath(): void {
+  document.querySelectorAll<HTMLElement>('.math-display').forEach((box) => {
+    const avail = box.clientWidth;
+    const inner = box.querySelector<HTMLElement>('.katex-html');
+    const target = box.querySelector<HTMLElement>('.katex');
+    if (!inner || !target || avail <= 0) return;
+    const left = inner.getBoundingClientRect().left;
+    let w = 0;
+    inner.querySelectorAll('.base').forEach((b) => {
+      w = Math.max(w, b.getBoundingClientRect().right - left);
+    });
+    if (w > avail) target.style.setProperty('zoom', String(Math.max(0.4, (avail - 2) / w)));
+  });
+}
+
 async function renderPdfNow(html: string, options: RenderPdfOptions): Promise<Uint8Array> {
   const browser = await getBrowser();
   const context = await browser.newContext({ javaScriptEnabled: true, locale: 'tr-TR' });
@@ -119,6 +141,7 @@ async function renderPdfNow(html: string, options: RenderPdfOptions): Promise<Ui
     await page.emulateMedia({ media: 'print' });
     await page.setContent(html, { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    await page.evaluate(fitWideMath);
     const buf = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -127,7 +150,7 @@ async function renderPdfNow(html: string, options: RenderPdfOptions): Promise<Ui
       outline: true,
       displayHeaderFooter: true,
       headerTemplate: headerHtml(options.headerTitle),
-      footerTemplate: footerHtml(options.footerLabel ?? 'Öğrenmen', options.pageNumbers ?? true),
+      footerTemplate: footerHtml(options.footerLabel ?? 'Öğrenmen', options.pageNumbers ?? true, options.footerBadge),
     });
     return new Uint8Array(buf);
   } catch (err) {

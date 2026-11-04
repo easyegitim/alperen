@@ -64,6 +64,10 @@ ile (sunucu havuzu) çözer, bellek kipinde kaynak vermeden çağırır (kilit v
 | `conversation_summary` | v1 | analyst | Haiku · low | conversation-summary | — |
 | `suggestions_copy` | v1 | generator | Haiku · low | notification-copy | — |
 | `parent_chat` | v1 (iskelet) | parent_agent | Sonnet · low | — | get_child_summary, get_exam_sessions, get_mastery_overview, get_recent_activity, get_reports, request_report |
+| `notes_generation` | v1 | generator | Opus · high | document-ast | code_execution |
+| `exam_generation` | v1 | generator | Opus · high | exam-generation | code_execution |
+| `figure_check` | v1 | analyst | Haiku · low | figure-render-report | — |
+| `personalization_check` | v1 | analyst | Haiku · low | personalization-check | — |
 
 Deneme rotalarının kullanıcı turu metinleri `src/exam-input.ts`'teki kurucularla yazılır (prompt gövdeleri bu biçimi
 anlatır): `pageClassUserText`, `examPageItemsUserText`, `answerSheetUserText`, `inferredKeysUserText`,
@@ -72,6 +76,23 @@ anlatır): `pageClassUserText`, `examPageItemsUserText`, `answerSheetUserText`, 
 fikstürü bu satırdan (`uploadOrderMatch`) ve teşhiste `examContextMatch(no)` ile seçer. Kullanıcı verisi (deneme adı)
 etiket ve satır sonu temizlenerek yazılır; veri bloğu kapatılamaz. Görsel isteyen üç prompt (sayfa, kitapçık, optik)
 görsel okunamıyorsa `unreadable: true` yazmayı ve tahmin etmemeyi söyler.
+
+İçerik stüdyosu (P3) kullanıcı turları `src/content-input.ts`'tedir: `notesGenerationUserText` (`<note_request>` JSON:
+konu, hedef kazanımlar, sayfa, `self_check_count` (5), `include_mistakes`, `personalized` + `<patterns>`: öğrencinin
+gerçek örüntüleri {source: patterns.md | misconception | analysis, id, dates, skill_code, summary, count, example};
+kişiselleştirme = hatalar dahil ve en az bir örüntü; öğrenci isteği `<student_request>`), `examGenerationUserText`
+(`<exam_request>`: blueprint (bölüm sayıları + zorluk bantları, toplam ≤ 40), `section_skills`, şık sayısı, süre, tarzlar;
+`include_mistakes` ise `<patterns>`), `personalizationCheckUserText` (`<patterns>` + `<callouts>`), `figureCheckUserText`
+(`<figure_context>`: bağlam, alt, `expected` değerler, `hidden` = cevabı ele veren değerler; PNG'yi çağıran ekler).
+Hata kutularının `pattern_ref`'i yalnız `<patterns>` listesindeki kimlik ve tarihlerdir; worker `calloutReferenceIssues`
+(contracts) ile deterministik, `personalization_check` ile anlamca denetler.
+
+**Figür başlığı** (`src/figure-style.ts`): `FIGURE_DESIGN` (paper #f6f8fc, navy #051c60, vurgu #0030a2, muted #7a86a8,
+ızgara #d3dbea, Lexend, 6,4 inç = 640 px @100 dpi; modüller matplotlib/numpy/math; sympy yok: yerel üretici reddeder) ve `FIGURE_PREAMBLE` (Agg, rcParams,
+`svg.fonttype: none` → yazı belgede Lexend ile dizilir, sabit `svg.hashsalt` + tarihsiz meta → aynı kod aynı SVG;
+`save_figure(fig, n)` → `figure_<n>.svg`). Not ve deneme promptları başlığı birebir taşır (test); model kodu başlıksız
+yazar, worker `figureScript(code)` ile başlığı önüne ekleyip `python3 -I` ile çalıştırır. Prompt iki figür kipinde de
+aynıdır: kod çalıştırabiliyorsa (code_execution) kodu konteynerde dener, çalıştıramıyorsa yalnız yazar.
 
 Model, effort, şema ve araçlar geçidin rota tablosuyla (`packages/llm/src/routes.ts`) birebir aynı olmalıdır;
 `test/routes.test.ts` denetler.
@@ -118,6 +139,12 @@ claude-api `shared/prompt-audit.md` ile uyumlu; `src/lint.ts` derlemede ve testt
 
 ## Eval
 
+`eval/notes_generation/` 2 vaka (`ng-01-rasyonel-kisisel`: iki gerçek örüntü, kişisel kutu; `ng-02-uslu-genel`: örüntü
+yok, kişiselleştirilmemiş, kaynaksız genel uyarı). Puanlayıcı `scoreNotes`: kind/personalized, ilk blok level 1 başlık,
+hedeflerde kazanım kodu, tanım kutusu ve çözümlü örnek, hata kutuları `<patterns>` kimlik+tarihine başvurur (genel notta
+başvuru yok), kendini sına sayısı ve sırası, her soruda SymPy anahtarı, son blok cevap sayfası, koddan figür sayısı ve
+figür kodu kuralları (`figureCodeIssues`: izinli modüller, dosya/çalıştırma/rastgele yok, `save_figure(fig, n)`; SVG'de
+betik yok), ünlem/emoji. Gerçek kipte figür kipi `OGRENMEN_FIGURES` (varsayılan local: araçsız).
 `eval/solution_diagnosis/` 5 sentetik vaka (Türkçe el yazısı transkripsiyonu metin olarak: kavram, dikkatsizlik,
 okuma, doğru çözüm, süre), `eval/coach_chat/` 4 vaka (ipucu modunda cevap vermeme, mod önerisi, hocana sor, kayıt),
 `eval/exam_page_items/` 2 görselli vaka (`input.images`: `fixtures/exams/synthetic/booklet-p{1,2}.png`, gerçek kipte
@@ -144,7 +171,10 @@ ANTHROPIC_API_KEY=… bun run --cwd packages/prompts eval    # aynı komut gerç
 
 - `eval_judge` hakemi (Opus, Batch) için prompt ve `eval_runs` yazımı; aktivasyon kapısı (hakem puanı belirgin
   düşerse `prompt_versions.active` açılmaz). `scripts/eval.ts` şimdilik yalnız deterministik puan verir.
-- Diğer rotaların promptları (not/deneme üretimi, ders analizi, veli bildirimi…) sonraki fazlarda. Deneme rotaları
+- Diğer rotaların promptları (ders analizi, veli bildirimi, `style_question_gen`, `question_generation` — worker'da
+  geçici gömülü metin…) sonraki fazlarda. İçerik stüdyosu promptları (P3) gerçek modelle hiç koşmadı:
+  `ANTHROPIC_API_KEY=… bun run eval --route notes_generation` (ve `OGRENMEN_FIGURES=code_execution` ile) ilk anahtarla
+  denenmeli; `exam_generation`, `figure_check`, `personalization_check` için eval vakası henüz yok (sahte fikstürleri var). Deneme rotaları
   (P2) gerçek modelle hiç koşmadı: `ANTHROPIC_API_KEY=… bun run eval --route exam_page_items` ilk anahtarla denenmeli;
   `page_class`, `answer_sheet`, `inferred_keys`, `exam_report` için eval vakası henüz yok (sahte fikstürleri var).
 - Gerçek çözüm fotoğraflarıyla eval seti (kurucunun ~60 fotoğrafı) geldiğinde `eval/solution_diagnosis` görselli

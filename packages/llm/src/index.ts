@@ -12,6 +12,7 @@ export * from './pricing.js';
 export * from './ledger.js';
 export * from './refusal.js';
 export * from './tools.js';
+export * from './files.js';
 export * from './memory/pgMemory.js';
 export * from './dossier.js';
 export * from './gateway.js';

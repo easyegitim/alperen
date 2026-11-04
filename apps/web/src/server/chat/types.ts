@@ -6,6 +6,7 @@
  */
 import type { CoachMode, ToolRunners } from '@ogrenmen/llm';
 import type { MemoryStore } from '@ogrenmen/llm';
+import type { DocRef } from '@/lib/chat';
 
 export type { CoachMode };
 
@@ -54,6 +55,8 @@ export interface TurnRecord {
   turnMeta: TurnMeta | null;
   refusal: { category: string | null } | null;
   escalated: boolean;
+  /** Bu turda açılan belge istekleri (`request_document`); sohbet geçmişinde durum kartı olarak döner. */
+  documents?: DocRef[];
   route: string;
   model: string | null;
 }

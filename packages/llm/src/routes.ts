@@ -41,6 +41,7 @@ export type ToolName =
   | 'get_recent_activity'
   | 'get_exam_sessions'
   | 'request_report'
+  | 'request_document'
   | 'web_search'
   | 'web_fetch'
   | 'code_execution';
@@ -102,6 +103,7 @@ export const ROUTE_NAMES = [
   'notes_generation',
   'exam_generation',
   'figure_check',
+  'personalization_check',
   'exam_item_extract',
   'style_definition',
   'priority_plan',
@@ -126,7 +128,7 @@ const CHAT: CachePolicy = { ...SHARED, tail: true };
 const COURSE_ONLY: CachePolicy = { productTtl: '1h', courseTtl: '1h', dossierTtl: null, tail: false };
 const PRODUCT_ONLY: CachePolicy = { productTtl: '1h', courseTtl: null, dossierTtl: null, tail: false };
 
-const COACH_TOOLS = ['memory', 'search_evidence', 'get_mastery', 'get_recent_exams', 'record_turn_meta'] as const;
+const COACH_TOOLS = ['memory', 'search_evidence', 'get_mastery', 'get_recent_exams', 'record_turn_meta', 'request_document'] as const;
 /** Veli ajanı (PLAN-v2 §10): strict, salt okunur; dışlamalar RLS ile (tools.ts). */
 const PARENT_TOOLS = [
   'get_child_summary',
@@ -232,19 +234,30 @@ export const ROUTES = {
     model: MODELS.sonnet, effort: 'medium', thinking: 'adaptive', schema: 'proposal-review',
     tools: [], cache: COURSE_ONLY, mode: 'batch', maxTokens: 8000,
   }),
+  // İçerik stüdyosu (P3, PLAN-v2 §7). Figürler koddan: model figür kodunu (matplotlib/SVG) belge bloğuna yazar.
+  // OGRENMEN_FIGURES=code_execution → araç gönderilir, model kodu konteynerde çalıştırıp denetler; çıktı dosyaları
+  // (figure_<n>.svg) Files API ile indirilir (files.ts), konteyner iş boyunca `container` ile yeniden kullanılır.
+  // OGRENMEN_FIGURES=auto (varsayılan): gerçek anahtarla code_execution; sahte LLM'de ya da Files istemcisi yoksa local.
+  // local (açıkça seçilirse) → çağıran `disableTools: ['code_execution']` verir, worker aynı kodu yerel matplotlib ile
+  // çalıştırır. Prompt iki kipte de aynıdır (önbellek bozulmaz).
   notes_generation: route('notes_generation', {
-    purpose: 'Kişiye özel not üretimi (document-ast)',
+    purpose: 'Kişiye özel not üretimi (document-ast: kapak, hedefler, tanım/örnek/figür, kişisel hata kutusu, 5 kendini sına + cevaplar)',
     model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'document-ast',
     tools: ['code_execution'], cache: SHARED, mode: 'sync', stream: true, batchable: true, maxTokens: 64000,
   }),
   exam_generation: route('exam_generation', {
-    purpose: 'Deneme üretimi (40 soru)',
+    purpose: 'Deneme üretimi (exam-generation: ÖSYM benzeri, en çok 40 soru, bölüm/zorluk dağılımı, koddan figür, ayrı anahtar)',
     model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'exam-generation',
     tools: ['code_execution'], cache: SHARED, mode: 'sync', stream: true, batchable: true, maxTokens: 64000,
   }),
   figure_check: route('figure_check', {
-    purpose: 'Figür görsel kontrolü',
+    purpose: 'Figür görsel kontrolü (PNG + soru kökü/alt metin → figure-render-report)',
     model: MODELS.haiku, effort: 'low', thinking: 'off', schema: 'figure-render-report',
+    tools: [], cache: PRODUCT_ONLY, mode: 'sync', maxTokens: 4000,
+  }),
+  personalization_check: route('personalization_check', {
+    purpose: 'Kişiselleştirme denetimi (nottaki her hata kutusu gerçek bir örüntüye kimlik + tarihle başvuruyor mu)',
+    model: MODELS.haiku, effort: 'low', thinking: 'off', schema: 'personalization-check',
     tools: [], cache: PRODUCT_ONLY, mode: 'sync', maxTokens: 4000,
   }),
   exam_item_extract: route('exam_item_extract', {

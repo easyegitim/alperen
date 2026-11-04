@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button, ModeToggle, TutorMessage } from '@/ds';
-import { CHAT_COPY, type ChatBootstrap, type ChatMode, type DisplayMessage } from '@/lib/chat';
+import { CHAT_COPY, type ChatBootstrap, type ChatMode, type DisplayMessage, type DocRef } from '@/lib/chat';
 import mascot from '@ogrenmen/design-system/assets/Maskot/ogrenmen-maskot.webp';
 import { Attachment } from './Attachment';
 import { Composer, type PendingAttachment } from './Composer';
+import { RequestCard } from '@/components/documents/RequestCard';
 import { MessageBody } from './MessageBody';
 import { prepareImage } from './image';
 import { ChatRejected, sendChat, uploadAttachment, type ClientEvent } from './send';
@@ -29,6 +30,8 @@ interface Live {
   draft: string;
   /** Araç çağrısı sırasında kısa durum notu. */
   note: string | null;
+  /** Bu turda açılan belge istekleri (durum kartı yanıtla birlikte kalıcı olur). */
+  documents: DocRef[];
 }
 
 export interface CoachChatProps {
@@ -162,8 +165,9 @@ export function CoachChat({ initial, saveMode, fetchImpl }: CoachChatProps) {
     setText('');
     setAttachments([]);
     setItems((xs) => [...xs, studentItem]);
-    setLive({ draft: '', note: null });
+    setLive({ draft: '', note: null, documents: [] });
     let started = false;
+    const turnDocs: DocRef[] = [];
     // Tur hiç başlamadı: mesaj kaydedilmedi, taslak geri gelir.
     const rollback = () => {
       setItems((xs) => xs.filter((x) => x.id !== studentItem.id));
@@ -182,14 +186,18 @@ export function CoachChat({ initial, saveMode, fetchImpl }: CoachChatProps) {
           }
           break;
         case 'text':
-          setLive((l) => ({ draft: (l?.draft ?? '') + ev.text, note: l?.note ?? null }));
+          setLive((l) => ({ draft: (l?.draft ?? '') + ev.text, note: l?.note ?? null, documents: l?.documents ?? [] }));
           break;
         case 'tool':
           // Araçtan önceki kısa cümle durum notu olur; yanıt metni araç sonrası yeniden başlar.
-          setLive((l) => ({ draft: '', note: l?.draft.trim() || l?.note || null }));
+          setLive((l) => ({ draft: '', note: l?.draft.trim() || l?.note || null, documents: l?.documents ?? [] }));
           break;
         case 'restart':
-          setLive({ draft: '', note: null });
+          setLive((l) => ({ draft: '', note: null, documents: l?.documents ?? [] }));
+          break;
+        case 'document':
+          turnDocs.push({ requestId: ev.requestId, kind: ev.kind, title: ev.title });
+          setLive((l) => ({ draft: l?.draft ?? '', note: l?.note ?? null, documents: [...(l?.documents ?? []), { requestId: ev.requestId, kind: ev.kind, title: ev.title }] }));
           break;
         case 'done':
           setLive(null);
@@ -203,6 +211,7 @@ export function CoachChat({ initial, saveMode, fetchImpl }: CoachChatProps) {
               escalated: ev.escalated,
               seeded: false,
               modeSuggestion: ev.modeSuggestion,
+              ...(turnDocs.length > 0 ? { documents: turnDocs } : {}),
             },
           ]);
           break;
@@ -212,6 +221,13 @@ export function CoachChat({ initial, saveMode, fetchImpl }: CoachChatProps) {
             // Akış koptu ama sunucu turu bitirip kaydeder: hata yerine bekleme (sayfa aralıklı yenilenir, yanıt gelir).
             setWaiting(true);
             break;
+          }
+          // Belge zaten açıldıysa (istek veritabanında) kartlar tur kaydedilmese de sohbette kalır.
+          if (started && turnDocs.length > 0) {
+            setItems((xs) => [
+              ...xs,
+              { id: localId('t'), from: 'tutor', text: 'Belgeni açtım; Bugün’de görürsün. Yanıtımı tamamlayamadım, yeniden dene.', attachments: [], escalated: false, seeded: false, modeSuggestion: null, documents: turnDocs },
+            ]);
           }
           setError(ev.message);
           if (!started) rollback();
@@ -272,8 +288,8 @@ export function CoachChat({ initial, saveMode, fetchImpl }: CoachChatProps) {
               {m.seeded ? <span className="text-caption mt-1 block opacity-80">{CHAT_COPY.seedChip}</span> : null}
             </TutorMessage>
           ) : (
+            <Fragment key={m.id}>
             <TutorMessage
-              key={m.id}
               from="tutor"
               name="Öğrenmen" avatarSrc={MASCOT_SRC}
               className="max-w-[330px] sm:max-w-xl"
@@ -292,8 +308,13 @@ export function CoachChat({ initial, saveMode, fetchImpl }: CoachChatProps) {
             >
               <MessageBody text={m.text} />
             </TutorMessage>
+            {(m.documents ?? []).map((d) => (
+              <RequestCard key={d.requestId} doc={d} {...(fetchImpl ? { fetchImpl } : {})} />
+            ))}
+            </Fragment>
           ),
         )}
+
         {waiting && !live ? (
           <TutorMessage from="tutor" name="Öğrenmen" avatarSrc={MASCOT_SRC} typing className="max-w-[330px] sm:max-w-xl">
             <MessageBody text="" />
@@ -305,6 +326,9 @@ export function CoachChat({ initial, saveMode, fetchImpl }: CoachChatProps) {
             <TutorMessage from="tutor" name="Öğrenmen" avatarSrc={MASCOT_SRC} typing={live.draft === ''} className="max-w-[330px] sm:max-w-xl">
               <MessageBody text={live.draft} />
             </TutorMessage>
+            {live.documents.filter((d) => !items.some((m) => m.documents?.some((x) => x.requestId === d.requestId))).map((d) => (
+              <RequestCard key={d.requestId} doc={d} {...(fetchImpl ? { fetchImpl } : {})} />
+            ))}
           </div>
         ) : null}
         <div ref={endRef} />

@@ -271,3 +271,89 @@ describe('gömülü fontlar', () => {
     expect(html).not.toMatch(/url\((?!data:)[^)]*\.(woff2?|ttf)/);
   });
 });
+
+describe('not şablonu (mockup S09b)', () => {
+  const html = renderHtml(not, opts);
+  it('kapakta rozet ve hedef listesi; hedefler gövdede tekrarlanmaz', () => {
+    const cover = html.slice(html.indexOf('<header class="cover">'), html.indexOf('</header>'));
+    expect(cover).toContain('Öğrenmen sana göre hazırladı');
+    expect(cover).toContain('class="cover-goals"');
+    expect(text(cover)).toContain('Paydaları eşitleyerek toplama ve çıkarma yapmak');
+    const body = html.slice(html.indexOf('</header>'));
+    expect(body).not.toContain('Paydaları eşitleyerek');
+    expect(body).not.toContain('Bu notun sonunda neyi yapabileceksin');
+  });
+  it('hata kutusu kaynak satırı ve gözlem tarihi taşır; kaynaksız kutuda satır yok', () => {
+    expect(text(html)).toContain('Kaynak: örüntüler.md · 19 Ekim 2026');
+    expect(text(html).replace(/\s+/g, ' ')).toContain('Senin sık yaptığın hata · 19 Ekim 2026');
+    const bare = { ...not, blocks: not.blocks.map((b) => (b.type === 'common_mistake_callout' ? { ...b, pattern_ref: null } : b)) };
+    const h2 = renderHtml(bare, opts);
+    expect(h2).not.toContain('Kaynak:');
+    expect(text(h2).replace(/\s+/g, ' ')).toContain('Senin sık yaptığın hata · 3 Kasım 2026');
+  });
+  it('çözümlü örnek numaralı adımlar, tanım kutusu etiketli, kendini sına çalışma alanlı, kendi notun satırları', () => {
+    expect((html.match(/class="step-no"/g) ?? []).length).toBe(3);
+    expect(html).toContain('<p class="label">Tanım</p>');
+    expect((html.match(/class="workspace"/g) ?? []).length).toBe(5);
+    expect(html).toContain('Kendi notun');
+  });
+  it('hedefsiz notta kapak hedef bölümü çizmez', () => {
+    const noGoals = { ...not, blocks: not.blocks.filter((b) => b.type !== 'summary_box' || !/^hedef/i.test(b.title)) };
+    expect(renderHtml(noGoals, opts)).not.toContain('class="cover-goals"');
+  });
+});
+
+describe('SVG overflow ve KaTeX boyut sınırı', () => {
+  it('sanitizeSvg overflow özniteliğini atar', () => {
+    expect(sanitizeSvg('<svg viewBox="0 0 10 10" overflow="visible"><rect width="1" height="1"/></svg>')).not.toContain('overflow');
+  });
+  it('dev \\rule biçimde sınırlanır (maxSize)', () => {
+    const doc = { ...readFixture<Doc>('not.json'), blocks: [{ type: 'math_display', id: 'm', section_no: 1, latex: '\\rule{9999em}{9999em}' }] } as unknown as Doc;
+    expect(renderHtml(doc, opts)).not.toMatch(/width:\s*9999/);
+  });
+});
+
+describe('şekil kaynakları', () => {
+  const figDoc = (figure: Record<string, unknown>) =>
+    ({ ...not, blocks: [{ type: 'figure', id: 'f', section_no: 1, alt: 'Deneme şekli açıklaması', ...figure }] }) as unknown as Doc;
+  it('image_url: yalnız data png/jpeg/webp img olur; http, https, javascript ve svg+xml reddedilir', () => {
+    const data = 'data:image/png;base64,iVBORw0KGgo=';
+    expect(renderHtml(figDoc({ source: 'upload', image_url: data }), opts)).toContain(`<img src="${data}"`);
+    const bad = renderHtml(figDoc({ source: 'upload', image_url: 'http://evil.io/x.png' }), opts);
+    expect(bad).not.toContain('evil.io');
+    expect(bad).toContain('Şekil yüklenemedi');
+    expect(renderHtml(figDoc({ source: 'upload', image_url: 'javascript:alert(1)' }), opts)).toContain('Şekil yüklenemedi');
+    const https = renderHtml(figDoc({ source: 'upload', image_url: 'https://cdn.example.com/a.png?sig=1' }), opts);
+    expect(https).not.toContain('cdn.example.com');
+    expect(https).toContain('Şekil yüklenemedi');
+    expect(renderHtml(figDoc({ source: 'upload', image_url: 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' }), opts)).toContain('Şekil yüklenemedi');
+  });
+  it('figure_code çizilmez: SVG gelmediyse yedek kutu, kod metni çıktıda yok', () => {
+    const code = 'import matplotlib\nplt.plot([1,2,3])  # SECRETCODE-4471';
+    const out = renderHtml(figDoc({ source: 'svg', figure_code: code, kind: 'matplotlib' }), opts);
+    expect(out).not.toContain('SECRETCODE-4471');
+    expect(out).toContain('Şekil yüklenemedi');
+  });
+  it('figür çerçevesi kâğıt zeminlidir', () => {
+    expect(renderHtml(not, opts)).toMatch(/figure\.fig \{[^}]*background: var\(--og-paper\)/);
+  });
+});
+
+describe('deneme: anahtar sayfası ve kazanım haritası', () => {
+  it('anahtar verilince kazanım -> sorular tablosu (ad sözlüğü ya da koddan türetilen ad)', () => {
+    const html = renderHtml(deneme, { ...opts, answerKeys: deneme.keys, skillLabels: { 'tyt.geo.ucgen': 'Üçgenler' } });
+    const t = text(html);
+    expect(t).toContain('Kazanım haritası');
+    expect(t).toMatch(/Üçgenler\s+7, 10\s+2/);
+    expect(t).toMatch(/Rasyonel sayilar\s+1\s+1/);
+  });
+  it('anahtarsız çıktıda kazanım haritası da yoktur (kazanımlar anahtar sayfasının parçasıdır)', () => {
+    expect(text(renderHtml(deneme, opts))).not.toContain('Kazanım haritası');
+  });
+  it('soru numarası kutulu, kapakta ÖSYM benzeri yönergeler', () => {
+    const html = renderHtml(deneme, opts);
+    expect(html).toMatch(/\.q-no \{[^}]*background: var\(--og-navy\)/);
+    expect(text(html)).toContain('Bu kitapçıkta 10 soru vardır; süre 25 dakikadır.');
+    expect(text(html)).toContain('ÖSYM sınavı değildir');
+  });
+});

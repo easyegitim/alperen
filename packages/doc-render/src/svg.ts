@@ -40,7 +40,7 @@ const ATTRIBUTES = new Set(
     'aria-labelledby aria-describedby focusable offset stop-color stop-opacity gradientUnits gradientTransform spreadMethod fx fy ' +
     'clip-path clip-rule mask maskUnits maskContentUnits clipPathUnits patternUnits patternContentUnits patternTransform ' +
     'markerWidth markerHeight markerUnits refX refY orient vector-effect shape-rendering text-rendering display visibility ' +
-    'xml:space overflow'
+    'xml:space'
   ).split(/\s+/),
 );
 const ATTRIBUTE_BY_LOWER = new Map([...ATTRIBUTES].map((a) => [a.toLowerCase(), a]));

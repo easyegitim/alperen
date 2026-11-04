@@ -52,7 +52,7 @@ eskiyse `log.error('outbox aktarılamayan işler birikiyor')` yazılır (üretim
 
 | Süreç | İşler | Zamanlayıcı |
 | --- | --- | --- |
-| `worker` | `noop`, `llm.ping`, `memory.compact`, `dossier.render`, `push.send`, `weekly.summary`, `curriculum.*`, `suggestions.refresh`, `activity.completed`, `conversation.summarize`, `upload.intake`, `diagnosis.run`, `diagnosis.followup`, `exam.analyse`, `exam.report`, `practice.generate`, `practice.prewarm`, `outbox.drain` | evet |
+| `worker` | `noop`, `llm.ping`, `memory.compact`, `dossier.render`, `push.send`, `weekly.summary`, `curriculum.*`, `suggestions.refresh`, `activity.completed`, `conversation.summarize`, `upload.intake`, `diagnosis.run`, `diagnosis.followup`, `exam.analyse`, `exam.report`, `practice.generate`, `practice.prewarm`, `document.generate`, `outbox.drain` | evet |
 | `pdf` | `pdf.render` (Chromium kurulu imajda) | hayır |
 | `all` | hepsi (yerel geliştirme) | evet |
 
@@ -79,7 +79,8 @@ Seçim: `--process=pdf` bayrağı, yoksa `WORKER_PROCESS`, yoksa `all`.
 | `practice.prewarm` | `{ enrollment_id, skill_ids?, per_skill? (8), reason? }` | 2 | 2, üstel, 60 sn | ilk öneri için banka ısıtma (`curriculum.draft` bitişi, `suggestions.refresh`'in ilk `practice` kartı; yaprak kümesi başına saatte bir; ilk kartı ekleyen SQL `app.first_practice_suggestion` da atar: otopilotlu taslak kaydı ve eğitmen yayını `curriculum_publish`, `reason: curriculum_ready`) |
 | `exam.analyse` | `{ session_id, exam_id, enrollment_id?, student_id?, upload_ids[1..40] }` | 2 | 3, üstel, 30 sn (deneme 30 dk) | yüklenen okul denemesinin analizi (aşağıda "Deneme analizi") |
 | `exam.report` | `{ session_id }` | 2 | 3, üstel, 30 sn | `grade_exam_session` atar; yalnız uygulama içi oturum: `exam/produce-report.ts` (rapor → PDF → Storage → `register_generated_document` → done) + veli bildirimi; yüklenen oturumda `skipped: uploaded` (raporu `exam.analyse` üretir), bitmiş/notlanmamış oturumda biter |
-| `document.generate`, `memory.correction` | — | — | — | yalnız kuyruk (işleyici sonra); SQL RPC'leri iş ekler, iş bekler |
+| `document.generate` | `{ document_id? \| request_id?, kind?, student_id? }` (en az biri) | 2 | 2, üstel, 20 sn (deneme 30 dk) | `request_document` atar: not / deneme / soru seti üretimi + doğrulama merdiveni + PDF (aşağıda "İçerik stüdyosu"); son denemede belge ve istek `failed` + Türkçe neden |
+| `memory.correction` | — | — | — | yalnız kuyruk (işleyici sonra); SQL RPC'si iş ekler, iş bekler |
 | `outbox.drain` | `{ reason? }` | 1 | 0 | `secure.job_outbox` → pg-boss (yukarıda "Outbox aktarımı"); süreç 30 sn'de bir atar |
 | `curriculum.draft` | `{ curriculum_id, course_text, upload_ids[]?, course_id?, enrollment_id?, student_id?, target_exam?, course_kind?, requested_by? }` | 2 | 3, üstel, 60 sn | müfredat taslağı (aşağıda) |
 | `curriculum.merge` | `{ proposal_id }` | 1 | 3 | kabul edilen birleştirme: taslakta yerinde, yayındaysa yeni sürümde; yayın her zaman eğitmende |
@@ -94,6 +95,94 @@ asistan mesajı, koç sohbeti sahibinin `conversation_messages` sözleşmesiyle 
 güncellenmeli). Canlı testler: `diagnosis.live.test.ts` işleyicileri doğrudan çağırır; `upload.live.test.ts` zinciri gerçek
 pg-boss ile sınar (öğrenci JWT'si → `submit_upload` → `pgboss.job` → `upload.intake` → `diagnosis.run` → kart; ardından
 `suggestions.refresh` kartı korur; yeniden gönderim, alt küme, tür değişimi).
+
+## İçerik stüdyosu (`src/jobs/document-generate.ts`, `src/documents/`, `py/figure_render.py`)
+
+Not / deneme / soru seti üretimi (docs/PLAN-v2.md §2 Akış 5, §7; supabase 0034–0035). `request_document` belgeyi
+(`generated_documents` queued) ve isteği (`document_requests`) açıp `document.generate` atar; iş:
+
+1. **Kapsam** (`documents/context.ts`): belge + istek + müfredat; hedef yapraklar = istek kodları (üst düğüm → altındaki
+   yapraklar) → konu adı eşleşmesi → kaydın en zayıf iki yaprağı (deneme kapsamsızsa bütün yapraklar). Örüntüler
+   `student_patterns_for_prompt` (patterns.md satırları, açık yanılgılar, son hatalı teşhisler; ≤ 12, hedef yaprağınki
+   önce; DB kimliği `patterns.md#N` prompt/AST'de `patterns.md:N`). Koç sohbetindeki istek cümlesi veri olarak gider.
+   Not: `notesGenerationUserText` (uzunluk short 3 · medium 6 · long 10 sayfa, kendini sına 1–10). Deneme/soru seti:
+   `examGenerationUserText` (en çok 40 soru; bölümler yaprakların en üst atasına göre ≤ 6, sayılar orantılı; zorluk
+   easy/medium/hard/mixed bantları; LGS 4 şık, diğerleri 5).
+2. **Üretim**: sistem = ürün promptu + ders bloğu + dossier (`buildPromptSystem`; ders geneli belgede yalnız ders bloğu).
+   Rota `notes_generation` (document-ast) ya da `exam_generation` (exam-generation → `examToAst`: `q<no>` blokları,
+   bölümler blueprint'ten, denemede optik form + anahtar sayfası). Opus · high, akış; `turn.now`; defter
+   `ref = generated_documents/<id>`.
+3. **Figürler** (`OGRENMEN_FIGURES`, varsayılan `auto`): gerçek anahtarla `code_execution` → model kodu konteynerde
+   çalıştırır, `figure_<n>.svg` `collectOutputFiles` + `downloadFigureFiles` ile iner, konteyner aynı iş içindeki
+   yeniden üretimde `container` ile yeniden kullanılır. İnmeyen (ya da adı birden çok figürde geçen) figür yerelde
+   ÇALIŞTIRILMAZ: blok yeniden istenir, düzelmezse figürsüz. `local` (sahte LLM'de her zaman; gerçek anahtarla yalnız
+   açıkça `OGRENMEN_FIGURES=local`; araç gönderilmez, `disableTools`) → `python3 -I -c <py/figure_render.py>` OS
+   yalıtımında (`documents/sandbox.ts`): `setpriv --no-new-privs` (worker root ise nobody) → `unshare` kullanıcı + pid +
+   ağ + bağlama + ipc + uts ad alanı, yeni `/proc` (worker'ın `/proc/<pid>/environ`'u görünmez), ağ yok, `/home`
+   `/root` `/app` `/tmp` `/run` `/opt` … boş tmpfs ile örtülü (python ve kütüphaneleri hariç), iç kullanıcı ad alanında
+   yetkisiz kullanıcı (örtü kaldırılamaz), boş ortam, çalışma dizini 64 MB tmpfs; figür başına ayrı süreç, 10 sn duvar
+   saati + 9/10 sn CPU, 1,5 GB bellek, 8 MB dosya. Yalıtım kurulamazsa (kullanıcı ad alanı kapalı; ör. Docker'ın
+   varsayılan seccomp'u) model kodu çalışmaz; yalnız sahte LLM fikstürünün (güvenilir) kodu yalıtımsız koşar. Ek katman
+   AST denetimi: tam modül adı izin listesi (`math`, `numpy`, `matplotlib` ve çizim alt modülleri; sympy YOK: dizeyi
+   `eval` eder), `__`, `open`/`exec`/`getattr`…, `os`/`sys`/`animation`/`lib`/`DataSource`/`savefig`/`print_*`… yok,
+   `S`/`sympify`/`simplify`/`solve`/`Eq`… çağrılarına dize verilemez; kısıtlı yerleşikler; başlık `@ogrenmen/prompts`
+   `FIGURE_PREAMBLE` (`save_figure(fig, n)`). kind=svg kodun kendisidir. Hepsi `sanitizeSvg` → sharp 640 px PNG → boş
+   (tek renk) / boyut (≥ 100×40, ≤ 2400 yükseklik, SVG ≤ 60 000 karakter) → `figure_check` (Haiku; bağlam soru kökü ya
+   da çevre metin, `hidden` = kökte geçmeyen sayısal cevap). Çizim kod özetine, denetim SVG özetine göre iş içinde
+   önbelleklenir.
+4. **Doğrulama merdiveni** (`documents/ladder.ts`): schema (geçit loose şemayla doğruladı; birleştirme sonrası
+   `documentAst`) → sympy (`py/key_verify.py`; şık ve `canonical_expr` LaTeX'i `latexToPlain` ile `((a)/(b))`,
+   `sqrt`, `**` biçimine) → figures → duplicates (belge içi kök+şık; bankaya `llmContentHash` ya da aynı kök: yalnız
+   not `bank_matches`) → personalization (yalnız not: `calloutReferenceIssues` + `personalization_check` Haiku;
+   kişiselleştirilmemiş notta kişisel başvuru sorundur; kişisel notta hiç hata kutusu yoksa belge düzeyinde `@callout`
+   sorunu yeniden istenir ve gelen kutu öncül bloğunun ardına eklenir). Her tur bütün basamakları koşar; sorunlu bloklar
+   `document_block_regen_note` ile kaydedilir ve tek çağrıda yeniden istenir (geçmiş: ilk istek + önceki çıktı;
+   `<regen_blocks>` yalnız o bloklar ve nedenleri). Çıktı daraltılmıştır: şema `document-block-regen` (not: `blocks` +
+   `keys`) ya da `exam-block-regen` (deneme: `items` + `keys`), `maxTokens` 8000; gateway `schema` geçersiz kılmasıyla
+   (rotanın prompt'u ve önbelleği aynı kalır). Birleştirme blok kimliğiyle (not) ya da soru numarasıyla (deneme) yapılır,
+   öteki bloklar korunur; şemayı bozan birleştirme geri alınır. Yeniden üretim maliyeti `g.costUsd`'de bir kez sayılır
+   (`RegenOutcome.costUsd` 0). En çok `REGEN_MAX_ROUNDS` = 2 tur (blok başına sınır `documents_block_regen_max`; bu
+   iş çalıştırmasının deneme sayısıyla ölçülür, önceki iş denemelerinin kayıtları hakkı yemez). Hak bitince: hatalı soru
+   (anahtar, şekil, kopya) çıkar ve sorular/anahtarlar/optik form yeniden numaralanır; çizilemeyen figür bloğu çıkar
+   ("figürsüz + verification notu"); kaynaksız/uydurma hata kutusu çıkar; kişisel notta kutu kalmazsa
+   `meta.personalized = false`. Deneme/soru seti sorusuz kalırsa basamak `fail` → belge üretilemez. Anahtar doğrulayıcı
+   çalışmazsa (python/SymPy yok) sympy `skipped` ("doğrulayıcı çalışmadı", uyarı günlüğü) ve deneme/soru seti
+   `review_required` ile eğitmen incelemesine gider.
+   Anahtar güveni (`mock_exam_from_document` p_keys `confidence`): SymPy'nin `verified` dediği anahtar 1,0, öteki (çıkarım,
+   zaman aşımı, doğrulayıcı yok) 0,6; doğrulanmayan payı `INFERRED_REVIEW_SHARE` (%30) üstündeyse deneme/soru seti
+   `review_required` ile incelemeye gider.
+   **Sızıntı kuralı**: öğrenci `generated_documents.verification`'ı okuyabilir; bu yüzden saklanan nedenler (sympy
+   `details` yalnız `{no, status}`, `dropped`, `regen[].reason` "soru N anahtarı doğrulanamadı", figür nedeni yalnız
+   uyuşmazlık alanları) anahtar, doğru şık, `canonical_expr` ya da cevap değeri taşımaz; ayrıntı (`Issue.detail`)
+   yalnız modele giden `<regen_blocks>` isteğinde ve worker günlüğündedir.
+5. **Saklama**: `splitDocumentKeys` → `storedDocumentAst` (kodsuz, anahtarsız) → `register_generated_document`
+   (content) → deneme/soru setinde `mock_exam_from_document` (exams practice/generated + exam_questions, SVG şekil
+   `figure_svg` + anahtarlar `secure.exam_answer_keys`, source generated) → `renderDocumentPdf` (notta cevap sayfası
+   anahtarlarla ve kazanım haritası; denemede anahtar basılmaz) → Storage `documents/<notes|exams|question-sets>/
+   <öğrenci|course-<ders>>/<belge>.{html,pdf}` → register (yollar, maliyet farkı: `llm_calls` toplamı).
+6. **Yayın**: `document_set_status('ready', {verification, personalization, review_required})`. İncelemeli belge
+   (ders geneli, `spec.review`, `spec.audience = 'class'`) `review`a döner, eğitmene `document_review` bildirimi gider;
+   onay `review_document`'ta. Değilse yayın: Bugün `document_ready` kartı ("Rasyonel sayılar notun hazır" · PDF),
+   öğrenci bildirimi (+ `push.send`); veli P6.
+
+Durumlar: `generating` → `verifying` (schema yazılır) → `ready` | `review`. Hata: son denemede ya da kalıcı hatada
+(`DocumentFailure`, ret, yapılandırma) `document_set_status('failed', {error, verification?})` + AST silinir (kısmi
+belge saklanmaz; Storage'daki `<taban>.html/.pdf` de `StorageLike.remove` ile silinir); taslak sınav `failed`. Nedenler Türkçe ve tek cümle ("Sorular doğrulamadan geçmedi; belge
+hazırlanamadı.", "İstek içerik kurallarına takıldı; …", "Bugünkü üretim sınırına ulaşıldı; …"). Gerçek taşımada
+`check_spend('document.generate')`.
+
+`verification` jsonb (her basamak `{status: pass|fail|skipped, …}`, DB `at` ekler):
+
+```json
+{ "schema": {"status": "pass", "route": "notes_generation", "repaired": false, "rounds": 0},
+  "sympy": {"status": "pass", "checked": 3, "verified": 3, "inferred": 0, "dropped": [], "details": [{"no": 1, "status": "verified"}]},
+  "figures": {"status": "pass", "mode": "local", "count": 1, "rendered": [{"block_id": "b4", "via": "local", "width_px": 640, "height_px": 220, "bytes": 9000, "check": "match"}], "removed": []},
+  "duplicates": {"status": "pass", "checked": 3, "dropped": [], "bank_matches": []},
+  "personalization": {"status": "pass", "personalized": true, "callouts": 1, "model_check": "ok", "removed": []},
+  "regen": [{"block_id": "q2", "step": "sympy", "reason": "soru 2 anahtarı doğrulanamadı", "attempt": 1, "at": "…"}] }
+```
+
+`personalization` jsonb: `{personalized, include_my_mistakes, patterns_offered, callouts: [{block_id, source, id, date}], skills, weak_skills}`.
 
 ## Deneme analizi (`src/jobs/exam-analyse.ts`, `src/exam/`)
 
@@ -296,6 +385,7 @@ Tam liste ve açıklama: `.env.example`.
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | üçü birlikte |
 | `PDF_CHROMIUM_PATH`, `PDF_CONCURRENCY` | PDF (`pdf.render`); deneme raporu `@ogrenmen/doc-render` kendi Chromium'unu (`PLAYWRIGHT_BROWSERS_PATH`) açar |
 | `EXAM_AUTO_DIAGNOSIS_MAX` (10), `EXAM_KEYS_BATCH` (`1`: anahtar çıkarımı Batch) | deneme analizi |
+| `OGRENMEN_FIGURES` (`auto` \| `code_execution` \| `local`) | belge figürleri (varsayılan `auto`: gerçek anahtarla code_execution, sahte LLM'de yerel; `local` model kodunu OS yalıtımında worker'da çalıştırır) |
 
 ## Dağıtım
 
@@ -318,6 +408,8 @@ fly deploy -c apps/worker/fly.toml --dockerfile apps/worker/Dockerfile
 - `test/practice.test.ts`: soru bankası (şablon planı, LLM çıktısı eşlemesi, anahtar denetimi + yanlış anahtarlı fikstür maddesi atılır, şablon yolu, fake LLM yolu 8 soru < 5 sn, kalıcı hata → `generation_failed`, ön ısıtma; Python + SymPy varsa gerçek `py/template_fill.py`); `test/practice.live.test.ts`: geçici veritabanı + TYT anahtarları: yeni öğrencinin ilk Başla'sı teşhis sorularından, atanmış teşhiste şablon yolu (şekil Storage'a, < 10 sn), fake LLM yolu (< 5 sn, `llm_calls`), kalıcı hata, `practice.prewarm`
 - `test/exam.test.ts`: deneme hattının saf parçaları (aşama makinesi, kitapçık birleştirme, kazanım eşleme (yüksek güven: 8/10, belirsizler kazanımsız), yayıncı eşleşmesi içerik denetimi, anahtar sızıntısı kalıbı, sayı sınırlı özet neti, veli cümlesi, optik form ve çift işaret, anahtar denetimi, net = doğru − yanlış/4 → 5,5, rapor verisi + deterministik rapor `exam-report` sözleşmesine uyar, sharp alımı/eğrilik/EXIF/kırpım, deneme bağlamlı teşhis girdisi)
 - `test/exam.live.test.ts`: geçici veritabanı + gerçek pg-boss + sahte LLM + bellek içi Storage + gerçek doc-render PDF: öğrenci JWT'si → `submit_exam_upload` → `exam.analyse` → done < 60 sn (yerelde ~4 sn): 10 soru (5. soru iki sayfada, 3. soruda şekil kırpımı), kazanımlar, çıkarılmış anahtar, net 5,5, 8 gözlem + ustalık (kazanımsız 2 soru gözlemsiz), rapor PDF Storage'da, kart, veli bildirimi, `llm_calls`; öğrenci görünümünde anahtar yok; `exam_how_far` → deneme bağlamlı teşhis; karalama dağıtımı; uygulama içi aynı deneme → `exam.report`; yüklenen anahtar sayfası ve yayıncı eşleşmesi (çıkarım çağrılmaz; başka kişinin yüklemesi, varsayılan başlık, farklı kökler eşleşmez); okunamayan sayfalar → failed + kart; tek sayfanın bozuk çıktısı → done + `page_unreadable`; çıkarım reddi → done + `key_missing`; PDF → OGR-EXAM-104; `EXAM_KEYS_BATCH` (bitmeyen Batch → 120 sn sonra yeniden kuyruk, `plan`'dan süren ikinci koşu, 6 sa sonra senkron); telifli denemede `question_text` null
+- `test/document.test.ts`: içerik stüdyosu (exam → AST, blok çıkarma/yeniden numaralama, birleştirme, LaTeX → SymPy, kapsam bölümleri ve zorluk bantları; figür kipi seçimi; yerel matplotlib figürü + kum havuzu retleri (sympy `S('…')` kaçışı, `DataSource.open`, `matplotlib.animation`, `numpy.f2py`, `print_svg`) + sonsuz döngü/uyku ≤ 11 sn, bellek sınırı + yalıtımsız model kodu çalışmaz + boş/küçük SVG + figure_check uyuşmazlığı ve önbellek; OS yalıtımı (kullanıcı ad alanı varsa): kardeş sürecin ve worker'ın `environ`'u okunamaz, tek pid, ağ kapalı, `umount` olmaz, `/home` boş; merdiven: temiz not, SymPy uyuşmazlığında yalnız o soru yeniden istenir (saklanan verification'da anahtar ayrıntısı yok), hak bitince soru/kutu çıkar ve not kişisel sayılmaz, kutusuz kişisel not `@callout` ile istenir, doğrulayıcı çalışmazsa skipped + deneme incelemeye, çizilemeyen figür çıkar, code_execution'da inmeyen figür yerelde çalışmaz, Haiku kişiselleştirme bulgusu, sorusuz deneme fail; iş: ders geneli not → PDF + HTML Storage'da, durum geçişleri, incelemeye döner; code_execution yolu (Files'tan inen `figure_<n>.svg` → via code_execution, konteyner yeniden üretimde aynı, yerel çalışmaz, önceki iş denemelerinin regen kayıtları hakkı yemez); müfredatsız belge → failed + Türkçe neden + Storage dosyaları silinir)
+- `test/document.live.test.ts`: geçici veritabanı + gerçek pg-boss + sahte LLM + yerel matplotlib + gerçek PDF: öğrenci `request_document('notes')` → ready < 60 sn (yerelde ~5 sn; figür SVG, `patterns.md:2` / 19 Ekim kutusu, Storage'da PDF/HTML, "Rasyonel sayılar notun hazır" kartı, bildirim, `llm_calls`, Belgelerim); deneme → exams + 10 soru (8, 9 SVG şekilli) + anahtarlar secure'da, öğrenci oturumda anahtarsız görür, öğrenci JWT'siyle `verification::text`'te "doğru şık"/`canonical_expr`/anahtar değeri yok, "Denemen hazır"; eğitmen isteği → review + bildirim → onay → yayın; bozuk anahtarlı set → 2 yeniden üretim turu (4 regen kaydı) → failed + Türkçe neden, AST silinir
 - `test/startup-checks.test.ts`: başlangıç denetimleri (sahte veritabanı: ön denetim, rol yetkileri, kuyruk açma, enqueue_job sahibi + `auto`/`off` yetki, deneme bloğu, outbox; SQL göçlerinin attığı her ad `REQUIRED_QUEUES`'ta) ve `drainOutbox` (aynı işlem, kayıt noktası, kuyruksuz satır kalır)
 - `test/startup.live.test.ts`: geçici veritabanı + gerçek pg-boss: denetimler geçer (sahibe yetki verilir, deneme satırı kalmaz, `/healthz` 200); sahibin yetkisi alınınca SQL işi outbox'a düşer, `outbox.drain` aynı kimlikle aktarır, iş tamamlanır, zamanlayıcı çalışır; `WORKER_PGBOSS_GRANT=off` → `StartupCheckError` (78) + `/healthz` 503 `degraded`; pgboss'ta yetkisiz giriş rolüyle `src/index.ts` 78 ile çıkar
 - `test/boss.live.test.ts`: yerel Postgres'te geçici şema (`pgboss_t_*`, sonunda silinir); `OGRENMEN_LIVE=1` ile (`bun run test:live`)

@@ -9,6 +9,11 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type StartupCheckMode = 'strict' | 'warn' | 'off';
 /** `auto`: enqueue_job sahibinin pgboss yetkisi eksikse ve bağlantı rolü verebiliyorsa verir; `off`: yalnız denetler. */
 export type PgbossGrantMode = 'auto' | 'off';
+/**
+ * Belge figürleri: `auto` (varsayılan: gerçek anahtarla code_execution, sahte LLM'de yerel), `code_execution` (Anthropic
+ * konteyneri, Files API) ya da `local` (OS yalıtımında python3 -I matplotlib; yalnız açıkça istenirse).
+ */
+export type FiguresMode = 'auto' | 'code_execution' | 'local';
 
 export interface WorkerConfig {
   /** Çalışan süreç: `worker` (genel işler + zamanlayıcı), `pdf` (yalnız pdf.render), `all` (yerel geliştirme). */
@@ -39,6 +44,8 @@ export interface WorkerConfig {
   startupExitDelayMs: number;
   /** secure.job_outbox → pg-boss aktarım aralığı (ms; `outbox.drain`). 0: zamanlayıcı kapalı (iş elle atılabilir). */
   outboxDrainIntervalMs: number;
+  /** OGRENMEN_FIGURES (varsayılan auto). */
+  figures: FiguresMode;
 }
 
 type Env = Record<string, string | undefined>;
@@ -120,6 +127,7 @@ export function loadConfig(env: Env = process.env, argv: readonly string[] = pro
     pgbossGrant: oneOf(env, 'WORKER_PGBOSS_GRANT', ['auto', 'off'] as const, 'auto'),
     startupExitDelayMs: int(env, 'WORKER_STARTUP_EXIT_DELAY_MS', 2_000, 0, 60_000),
     outboxDrainIntervalMs: int(env, 'OUTBOX_DRAIN_INTERVAL_MS', 30_000, 0, 3_600_000),
+    figures: oneOf(env, 'OGRENMEN_FIGURES', ['auto', 'code_execution', 'local'] as const, 'auto'),
   };
 }
 
@@ -145,5 +153,6 @@ export function describeConfig(c: WorkerConfig): Record<string, unknown> {
     startupChecks: c.startupChecks,
     pgbossGrant: c.pgbossGrant,
     outboxDrainMs: c.outboxDrainIntervalMs,
+    figures: c.figures,
   };
 }

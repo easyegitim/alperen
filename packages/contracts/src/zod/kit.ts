@@ -128,6 +128,15 @@ function build(mode: Mode): Ctx {
   return ctx;
 }
 
+/**
+ * P3'te eklenen, null olabilen alan: strict kipte zorunlu (model null ya da değer yazar), loose kipte isteğe bağlı ve
+ * varsayılansız (eski veri ve elle kurulan nesneler alansız geçerli kalır; parse çıktısına alan eklenmez, böylece
+ * üretilmiş fikstürler kaymaz). TS tipinde isteğe bağlıdır; okuyan taraf `undefined` ile `null`'u aynı sayar.
+ */
+export function optionalAdded<T extends z.ZodType>(c: Ctx, schema: T): z.ZodOptional<T> {
+  return (c.isLoose ? schema.optional() : schema) as unknown as z.ZodOptional<T>;
+}
+
 export const strictCtx: Ctx = build('strict');
 export const looseCtx: Ctx = build('loose');
 

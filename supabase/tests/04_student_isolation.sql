@@ -71,8 +71,10 @@ begin
                    'OGR-AUTH-001%', 'upsert_memory_file başka öğrenciye yazamaz');
   perform t.raises(format($q$select public.render_dossier(%L, %L)$q$, t.u('B'), t.u('course')), 'OGR-AUTH-001%', 'render_dossier başka öğrenci');
   perform t.raises(format($q$select public.create_guardian_invite(%L)$q$, t.u('B')), 'OGR-AUTH-001%', 'başka öğrenci için veli daveti');
-  perform t.raises(format($q$select public.request_document('notes', %L, %L, 'x')$q$, t.u('B'), t.u('course')), 'OGR-AUTH-001%',
-                   'başka öğrenci için belge isteği');
+  perform t.raises(format($q$select public.request_document('notes', %L::jsonb)$q$, jsonb_build_object('student_id', t.u('B'), 'topic', 'x')),
+                   'OGR-AUTH-001%', 'başka öğrenci için belge isteği');
+  perform t.raises(format($q$select public.request_document('notes', %L::jsonb)$q$, jsonb_build_object('enrollment_id', t.u('EB'), 'topic', 'x')),
+                   'OGR-AUTH-001%', 'başka öğrencinin kaydıyla belge isteği');
   perform t.raises(format($q$select public.start_exam_session(gen_random_uuid(), %L)$q$, t.u('EB')), 'OGR-AUTH-001%',
                    'başka öğrencinin kaydıyla sınav başlatılamaz');
   -- başkasının özel sınavı kendi kaydıyla da başlatılamaz (oturum açıp soru metnini okuma yolu kapalı)

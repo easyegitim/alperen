@@ -367,6 +367,44 @@
                 "maxLength": 120,
                 "description": "Gerçek bir örüntüye başvuru: yanılgı etiketi ya da patterns.md girdisi"
               },
+              "pattern_ref": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "patterns.md",
+                          "misconception",
+                          "analysis"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120,
+                        "description": "pattern_id ile aynı: patterns.md örüntü kimliği, yanılgı etiketi ya da analiz kimliği"
+                      },
+                      "date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Örüntünün gözlendiği (son) gün"
+                      }
+                    },
+                    "required": [
+                      "source",
+                      "id",
+                      "date"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Kişisel kutunun kaynağı; kişiselleştirilmiş notta zorunlu, genel uyarıda null"
+              },
               "text": {
                 "type": "string",
                 "minLength": 1,
@@ -448,12 +486,26 @@
               "svg": {
                 "type": "string",
                 "maxLength": 60000,
-                "description": "source=svg ise satır içi SVG"
+                "description": "source=svg ise satır içi SVG; figure_code verilen figürde boş kalır (worker üretir)"
               },
               "upload_id": {
                 "type": "string",
                 "format": "uuid",
                 "description": "source=upload ise uploads.id"
+              },
+              "figure_code": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 20000,
+                "description": "Kodla figür: kind=matplotlib ise figure_<n>.svg yazan Python (yalnız matplotlib/numpy; math serbest), kind=svg ise SVG metni. source=svg, svg boş"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "matplotlib",
+                  "svg"
+                ],
+                "description": "figure_code dili; figure_code yoksa verilmez"
               },
               "alt": {
                 "type": "string",
@@ -594,12 +646,26 @@
                   "svg": {
                     "type": "string",
                     "maxLength": 60000,
-                    "description": "source=svg ise satır içi SVG"
+                    "description": "source=svg ise satır içi SVG; figure_code verilen figürde boş kalır (worker üretir)"
                   },
                   "upload_id": {
                     "type": "string",
                     "format": "uuid",
                     "description": "source=upload ise uploads.id"
+                  },
+                  "figure_code": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 20000,
+                    "description": "Kodla figür: kind=matplotlib ise figure_<n>.svg yazan Python (yalnız matplotlib/numpy; math serbest), kind=svg ise SVG metni. source=svg, svg boş"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "matplotlib",
+                      "svg"
+                    ],
+                    "description": "figure_code dili; figure_code yoksa verilmez"
                   },
                   "alt": {
                     "type": "string",

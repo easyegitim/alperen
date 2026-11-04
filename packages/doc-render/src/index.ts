@@ -1,4 +1,5 @@
 import { renderHtml, type RenderableDocument, type RenderHtmlOptions } from './html.js';
+import { trDate } from './format.js';
 import { renderPdf, type RenderPdfOptions } from './pdf.js';
 
 export { renderHtml, templateFor, type RenderableDocument, type RenderHtmlOptions, type TemplateName } from './html.js';
@@ -16,6 +17,8 @@ export async function renderDocumentPdf(
 ): Promise<{ html: string; pdf: Uint8Array }> {
   const { pdf: pdfOptions, ...htmlOptions } = options;
   const html = renderHtml(doc, { theme: 'print', ...htmlOptions });
-  const pdf = await renderPdf(html, { headerTitle: doc.title, ...pdfOptions });
+  // Not belgesinin alt bilgisinde kişisel hazırlama rozeti (mockup S09b); diğer belgeler sade kalır.
+  const footerBadge = doc.kind === 'notes' ? `Öğrenmen sana göre hazırladı · ${trDate(doc.meta.generated_on)}` : undefined;
+  const pdf = await renderPdf(html, { headerTitle: doc.title, ...(footerBadge ? { footerBadge } : {}), ...pdfOptions });
   return { html, pdf };
 }

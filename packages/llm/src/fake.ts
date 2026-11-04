@@ -17,6 +17,10 @@
  * (işaretler çıkarılarak) anahtarlanır; aynı önek tekrar gelirse `cache_read_input_tokens`, ilk kez gelirse
  * `cache_creation_input_tokens` yazılır (512 token altı önek önbelleğe girmez — gerçek API gibi).
  * Her istek `requests` dizisine kaydedilir; testler gövdeyi birebir denetler.
+ *
+ * code_execution: istekte araç varsa yanıt bir konteyner taşır (`container` verildiyse aynı kimlik, yoksa yeni
+ * `container_fake_N`). `FakeReply.codeExecution` sunucu aracı çağrısı + `bash_code_execution_tool_result` blokları ve
+ * çıktı dosyaları (`file_fake_N`) üretir; dosyalar `files` (Files API benzeri) ile indirilir.
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -38,6 +42,7 @@ import type {
   BetaMessageBatchIndividualResponse,
 } from '@anthropic-ai/sdk/resources/beta/messages/batches';
 import type { LlmStream, LlmTransport, RequestBody, TransportContext } from './client.js';
+import type { FilesClient } from './files.js';
 import { MIN_CACHEABLE_TOKENS } from './prompt.js';
 import { isRouteName, ROUTES } from './routes.js';
 
@@ -62,6 +67,13 @@ export interface FakeReply {
   model?: string;
   /** API hatası fırlat (ör. `new RateLimitError(...)`). */
   error?: Error;
+  /** Sunucu tarafı kod çalıştırma (code_execution): komut, çıktı ve üretilen dosyalar. */
+  codeExecution?: {
+    command?: string;
+    stdout?: string;
+    returnCode?: number;
+    files?: { filename: string; content: string; mimeType?: string }[];
+  };
 }
 
 export interface FakeRequestRecord {
@@ -176,6 +188,19 @@ export function sampleFromSchema(node: unknown, root: Record<string, unknown> = 
   }
 }
 
+/** Daraltılmış yeniden üretim şemaları: tam belge/deneme çıktısından yalnız blok/soru ve anahtar alanları. */
+const NARROW_SCHEMAS: { name: 'document-block-regen' | 'exam-block-regen'; base: 'document-ast' | 'exam-generation'; project: (full: Record<string, unknown>) => Record<string, unknown> }[] = [
+  { name: 'document-block-regen', base: 'document-ast', project: (f) => ({ blocks: f.blocks, keys: f.keys }) },
+  { name: 'exam-block-regen', base: 'exam-generation', project: (f) => ({ items: f.items, keys: f.keys }) },
+];
+
+function narrowSchemaOf(body: RequestBody): (typeof NARROW_SCHEMAS)[number] | null {
+  const format = (body.output_config as { format?: { schema?: unknown } } | undefined)?.format;
+  if (!format?.schema) return null;
+  const sent = JSON.stringify(format.schema);
+  return NARROW_SCHEMAS.find((n) => JSON.stringify(outputFormat(contractRegistry[n.name] as Contract).schema) === sent) ?? null;
+}
+
 export class FakeTransport implements LlmTransport {
   readonly kind = 'fake' as const;
   readonly requests: FakeRequestRecord[] = [];
@@ -184,6 +209,30 @@ export class FakeTransport implements LlmTransport {
   private readonly fixturesDir: string;
   private readonly cacheSim: boolean;
   private readonly batchStore = new Map<string, { route: string; requests: BatchCreateParams.Request[]; replies: BetaMessage[] }>();
+  private readonly fileStore = new Map<string, { filename: string; mimeType: string; bytes: Uint8Array }>();
+
+  /** Files API benzeri: code_execution çıktı dosyaları (files.ts `FilesClient`). */
+  readonly files: FilesClient = {
+    retrieveMetadata: async (id: string) => {
+      const f = this.fileStore.get(id);
+      if (!f) throw new Error(`sahte dosya yok: ${id}`);
+      return { id, filename: f.filename, mime_type: f.mimeType, size_bytes: f.bytes.byteLength };
+    },
+    download: async (id: string) => {
+      const f = this.fileStore.get(id);
+      if (!f) throw new Error(`sahte dosya yok: ${id}`);
+      const copy = f.bytes.slice();
+      return { arrayBuffer: async () => copy.buffer };
+    },
+    delete: async (id: string) => {
+      if (!this.fileStore.delete(id)) throw new Error(`sahte dosya yok: ${id}`);
+      return { id, type: 'file_deleted' };
+    },
+  };
+  /** Testler için: silinmemiş sahte dosya sayısı. */
+  get storedFileCount(): number {
+    return this.fileStore.size;
+  }
   private counter = 0;
 
   constructor(opts: FakeTransportOptions = {}) {
@@ -244,6 +293,12 @@ export class FakeTransport implements LlmTransport {
   }
 
   private defaultReply(route: string, body: RequestBody): FakeReply {
+    // Daraltılmış yeniden üretim şeması (gateway `schema` geçersiz kılması): tam rota çıktısının ilgili alanları.
+    const narrow = narrowSchemaOf(body);
+    if (narrow) {
+      const full = this.sampleFor(route, contractRegistry[narrow.base] as Contract, body) as Record<string, unknown>;
+      return { json: narrow.project(full) };
+    }
     const schemaName = isRouteName(route) ? ROUTES[route].schema : null;
     if (body.output_config?.format && schemaName && isSchemaName(schemaName)) {
       return { json: this.sampleFor(route, contractRegistry[schemaName] as Contract, body) };
@@ -310,6 +365,7 @@ export class FakeTransport implements LlmTransport {
     if (r.error) throw r.error;
     const content: BetaContentBlock[] = [];
     if (r.thinking !== undefined) content.push({ type: 'thinking', thinking: r.thinking, signature: `sig_${hash(r.thinking).slice(0, 12)}` });
+    if (r.codeExecution) content.push(...this.codeExecutionBlocks(r.codeExecution));
     const text = r.json !== undefined ? JSON.stringify(r.json) : r.text;
     if (text !== undefined && r.stopReason !== 'refusal') content.push({ type: 'text', text, citations: null });
     if (r.stopReason === 'refusal' && r.text !== undefined) content.push({ type: 'text', text: r.text, citations: null });
@@ -354,7 +410,7 @@ export class FakeTransport implements LlmTransport {
       role: 'assistant',
       model: r.model ?? body.model,
       content,
-      container: null,
+      container: this.containerFor(body),
       context_management: null,
       diagnostics: null,
       stop_details: stopDetails,
@@ -362,6 +418,33 @@ export class FakeTransport implements LlmTransport {
       stop_sequence: null,
       usage,
     };
+  }
+
+  /** İstekte code_execution varsa konteyner: verilen kimlik korunur, yoksa yenisi. */
+  private containerFor(body: RequestBody): BetaMessage['container'] {
+    const hasCode = (body.tools ?? []).some((t) => (t as { name?: string }).name === 'code_execution');
+    if (!hasCode) return null;
+    const given = typeof body.container === 'string' ? body.container : (body.container?.id ?? null);
+    return { id: given ?? `container_fake_${this.counter}`, expires_at: '2026-12-31T00:00:00Z', skills: null };
+  }
+
+  private codeExecutionBlocks(x: NonNullable<FakeReply['codeExecution']>): BetaContentBlock[] {
+    this.counter += 1;
+    const id = `srvtoolu_fake_${this.counter}`;
+    const outputs = (x.files ?? []).map((f) => {
+      this.counter += 1;
+      const fileId = `file_fake_${this.counter}`;
+      this.fileStore.set(fileId, { filename: f.filename, mimeType: f.mimeType ?? 'image/svg+xml', bytes: new TextEncoder().encode(f.content) });
+      return { type: 'bash_code_execution_output' as const, file_id: fileId };
+    });
+    return [
+      { type: 'server_tool_use', id, name: 'bash_code_execution', input: { command: x.command ?? 'python3 figure.py' }, caller: { type: 'direct' } } as unknown as BetaContentBlock,
+      {
+        type: 'bash_code_execution_tool_result',
+        tool_use_id: id,
+        content: { type: 'bash_code_execution_result', stdout: x.stdout ?? '', stderr: '', return_code: x.returnCode ?? 0, content: outputs },
+      },
+    ];
   }
 
   async create(body: RequestBody, ctx: TransportContext): Promise<BetaMessage> {
@@ -400,7 +483,7 @@ export class FakeTransport implements LlmTransport {
       });
       evs.push({
         type: 'message_delta',
-        delta: { stop_reason: message.stop_reason, stop_sequence: null, stop_details: message.stop_details, container: null },
+        delta: { stop_reason: message.stop_reason, stop_sequence: null, stop_details: message.stop_details, container: message.container },
         usage: { ...message.usage, output_tokens: message.usage.output_tokens },
         context_management: null,
       } as BetaRawMessageStreamEvent);

@@ -364,6 +364,44 @@
                 "maxLength": 120,
                 "description": "Gerçek bir örüntüye başvuru: yanılgı etiketi ya da patterns.md girdisi"
               },
+              "pattern_ref": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "patterns.md",
+                          "misconception",
+                          "analysis"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120,
+                        "description": "pattern_id ile aynı: patterns.md örüntü kimliği, yanılgı etiketi ya da analiz kimliği"
+                      },
+                      "date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Örüntünün gözlendiği (son) gün"
+                      }
+                    },
+                    "required": [
+                      "source",
+                      "id",
+                      "date"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Kişisel kutunun kaynağı; kişiselleştirilmiş notta zorunlu, genel uyarıda null"
+              },
               "text": {
                 "type": "string",
                 "minLength": 1,
@@ -444,7 +482,7 @@
               "svg": {
                 "type": "string",
                 "maxLength": 60000,
-                "description": "source=svg ise satır içi SVG"
+                "description": "source=svg ise satır içi SVG; figure_code verilen figürde boş kalır (worker üretir)"
               },
               "alt": {
                 "type": "string",

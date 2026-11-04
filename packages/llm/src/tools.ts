@@ -14,6 +14,7 @@
 import { betaZodTool } from '@anthropic-ai/sdk/helpers/beta/zod';
 import type { BetaRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
 import type {
+  BetaCodeExecutionTool20260120,
   BetaToolResultContentBlockParam,
   BetaToolUnion,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages';
@@ -77,7 +78,25 @@ export const requestReportInput = z.object({
   period: z.enum(['week', 'month', 'term']).describe('Rapor dönemi'),
 });
 
+/**
+ * Koç: öğrenci not / deneme / soru seti isterken çağrılır (Akış 5). Girdi RPC `request_document` kapsamına eşlenir
+ * (apps/web `src/server/documents/request.ts` toSpec); sınırlar veritabanında yine denetlenir (OGR-DOC-005).
+ */
+export const requestDocumentInput = z.object({
+  kind: z.enum(['notes', 'mock_exam', 'question_set']).describe('notes: konu notu; mock_exam: deneme; question_set: soru seti'),
+  topic: z.string().max(120).optional().describe('Konu, öğrencinin sözleriyle (ör. "rasyonel sayılar"). Not ve soru setinde topic ya da skill_ids gerekir'),
+  skill_ids: z.array(z.string()).max(12).optional().describe('Dossier / get_mastery ile bildiğin kazanım kodları; emin değilsen boş bırak ve topic yaz'),
+  length: z.enum(['short', 'medium', 'long']).optional().describe('Not uzunluğu; varsayılan medium'),
+  difficulty: z.enum(['easy', 'medium', 'hard', 'mixed']).optional().describe('Zorluk; varsayılan not için medium, soru için mixed'),
+  include_my_mistakes: z.boolean().optional().describe('Notta öğrencinin sık yaptığı hatalar kutu olarak girsin mi; varsayılan true'),
+  question_count: z.number().int().min(1).max(40).optional().describe('Soru sayısı: not 1-10 (kendini sına), soru seti 1-40, deneme 5-40 (en çok 40 soru hazırlanır; daha fazlası istenirse 40 yaz ve öğrenciye söyle)'),
+  duration_min: z.number().int().min(1).max(600).optional().describe('Yalnız deneme: süre (dakika)'),
+});
+
+export type RequestDocumentInput = z.infer<typeof requestDocumentInput>;
+
 export interface ToolInputs {
+  request_document: z.infer<typeof requestDocumentInput>;
   search_evidence: z.infer<typeof searchEvidenceInput>;
   get_mastery: z.infer<typeof getMasteryInput>;
   get_recent_exams: z.infer<typeof getRecentExamsInput>;
@@ -114,6 +133,14 @@ interface ClientToolSpec<K extends ClientToolName> {
 }
 
 const CLIENT_TOOLS: { [K in ClientToolName]: ClientToolSpec<K> } = {
+  request_document: {
+    description:
+      'Öğrenci bir konu notu, deneme ya da soru seti istediğinde ("rasyonel sayılar notu istiyorum", "40 soruluk deneme hazırla") ' +
+      'çağır: belgeyi arka planda hazırlatır, hazır olunca Bugün\'de kartı çıkar. Konu belirsizse önce tek soruyla sor; ' +
+      'öğrenci sadece konuyu anlatmak ya da bir soruyu çözmek istiyorsa çağırma. Çağırdıktan sonra tek cümleyle ' +
+      '"Hazırlıyorum, Bugün\'de görürsün" de; belgenin içeriğini kendin yazma.',
+    schema: requestDocumentInput,
+  },
   search_evidence: {
     description:
       'Öğrencinin geçmiş kanıtlarında (yüklemeler, çözüm analizleri, ders kayıtları, deneme yanıtları, sohbet) ' +
@@ -237,6 +264,8 @@ export interface BuildToolsOptions {
   stream?: boolean;
   /** Çağrı bağlamı (çalıştırıcılara geçer). */
   context: Omit<ToolCallContext, 'toolUseId'>;
+  /** Bu çağrıda gönderilmeyecek rota araçları (ör. yerel figür kipinde code_execution). */
+  disable?: readonly ToolName[];
 }
 
 function isHandlerOptions(m: MemoryToolHandlers | MemoryHandlerOptions): m is MemoryHandlerOptions {
@@ -256,7 +285,8 @@ function serverTool(name: ToolName, route: RouteConfig): BetaToolUnion {
     case 'web_fetch':
       return { type: 'web_fetch_20260209', name: 'web_fetch', ...(maxUses ? { max_uses: maxUses } : {}) };
     case 'code_execution':
-      return { type: 'code_execution_20260120', name: 'code_execution' };
+      // Konteyner (matplotlib, numpy, sympy hazır); çıktı dosyaları yanıtta file_id olarak döner (files.ts).
+      return { type: 'code_execution_20260120', name: 'code_execution' } satisfies BetaCodeExecutionTool20260120;
     default:
       throw new RouteConfigError(`sunucu aracı değil: ${name}`);
   }
@@ -272,7 +302,11 @@ function toDefinition(t: RunnableTool): BetaToolUnion {
 export function buildTools(route: RouteConfig, opts: BuildToolsOptions): BuiltTools {
   const runnables = new Map<string, RunnableTool>();
   const defs: BetaToolUnion[] = [];
+  for (const unknown of opts.disable ?? []) {
+    if (!route.tools.includes(unknown)) throw new RouteConfigError(`${route.name}: kapatılan araç rotada yok: ${unknown}`);
+  }
   for (const name of route.tools) {
+    if (opts.disable?.includes(name)) continue;
     if (SERVER_TOOLS.has(name)) {
       defs.push(serverTool(name, route));
       continue;

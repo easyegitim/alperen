@@ -50,14 +50,14 @@ insert into expected_columns values
     ('public.weekly_summaries', 'id student_id week_start body metrics facts_used model cost_usd created_at'),
     ('public.solution_analyses', 'id enrollment_id conversation_message_id exam_response_id upload_ids question_text student_work_text analysis verdict failing_step_no error_cause skill_ids misconception_tags style_id proposal_id model cost_usd embedding created_at'),
     ('public.exams', 'id course_id curriculum_id created_by kind source title publisher held_on is_copyrighted question_count sections generated_document_id status created_at duration_min answer_key_source'),
-    ('public.exam_questions', 'id exam_id no section kind stem_text options figure_upload_id skill_ids style_id difficulty question_id created_at page_upload_id bbox'),
+    ('public.exam_questions', 'id exam_id no section kind stem_text options figure_upload_id skill_ids style_id difficulty question_id created_at page_upload_id bbox figure_svg figure_alt'),
     ('secure.exam_answer_keys', 'exam_question_id correct_option numeric_value source confidence created_at'),
     ('public.exam_sessions', 'id exam_id enrollment_id mode started_at finished_at duration_sec status score report_document_id created_at progress upload_ids'),
     ('public.exam_responses', 'id session_id exam_question_id answer outcome time_spent_sec flagged work_upload_ids how_far_text solution_analysis_id created_at blank_reason'),
     ('public.exam_sources', 'id course_id year term instructor_alias upload_id storage_path uploaded_by status error created_at'),
     ('public.exam_items', 'id source_id item_no topic kind format trick difficulty points curriculum_id skill_id ocr_text embedding style_id created_at'),
     ('public.exam_priority_plans', 'id course_id period plan evidence_count status approved_by approved_at created_at'),
-    ('public.generated_documents', 'id student_id course_id kind title spec content html_path pdf_path status version personalization verification model cost_usd created_by created_at updated_at'),
+    ('public.generated_documents', 'id student_id course_id kind title spec content html_path pdf_path status version personalization verification model cost_usd created_by created_at updated_at review_required published_at reviewed_by reviewed_at review_note'),
     ('public.library_documents', 'id curriculum_id course_id upload_id title storage_path pages uploaded_by created_at'),
     ('public.library_chunks', 'id document_id page text embedding tsv created_at'),
     ('public.lessons', 'id enrollment_id course_id upload_id instructor_id held_at duration_min transcript_path frames_count student_visible auto_apply_threshold status created_at'),
@@ -79,7 +79,9 @@ insert into expected_columns values
     ('public.memory_corrections', 'id student_id path text status requested_by resolved_by resolution_note resolved_at created_at'),
     ('secure.server_keys', 'name secret rotated_at created_at'),
     ('secure.coach_turns', 'conversation_id token expires_at created_at'),
-    ('secure.job_outbox', 'id name data reason attempts last_error created_at retried_at');
+    ('secure.job_outbox', 'id name data reason attempts last_error created_at retried_at'),
+    -- P3 içerik stüdyosu (0034)
+    ('public.document_requests', 'id student_id enrollment_id course_id kind spec source conversation_message_id status generated_document_id error requested_by job_id created_at updated_at');
 
 do $$
 declare
@@ -98,7 +100,7 @@ begin
      and not exists (select 1 from expected_columns e where e.tbl = n.nspname || '.' || c.relname);
   perform t.ok(v_extra is null, 'listede olmayan tablo yok (fazla: ' || coalesce(v_extra, '-') || ')');
   select count(*) into v_n from expected_columns;
-  perform t.ok(v_n = 68, 'v2 tabanı 61 tablo + P1 ekleri 4 tablo + koç üretim yolu 2 tablo + iş outbox''ı 1 tablo (' || v_n || ')');
+  perform t.ok(v_n = 69, 'v2 tabanı 61 tablo + P1 ekleri 4 tablo + koç üretim yolu 2 tablo + iş outbox''ı 1 tablo + belge istekleri 1 tablo (' || v_n || ')');
   perform t.ok(to_regclass('public.staff') is null and to_regclass('public.messages') is null and to_regclass('public.consents') is null
                and to_regclass('public.tg_chats') is null and to_regclass('public.quota_usage') is null
                and to_regclass('public.diagnostic_tests') is null and to_regclass('public.legal_texts') is null
@@ -149,7 +151,10 @@ insert into expected_checks values
   ('public.llm_calls', 'effort', array['low', 'medium', 'high', 'xhigh', 'max']),
   ('public.suggestions', 'kind', array['practice', 'weekly_homework', 'lesson_review', 'gap_analysis', 'mini_exam', 'document_ready', 'upload_result']),
   ('public.practice_sets', 'status', array['needs_generation', 'in_progress', 'finished', 'abandoned']),
-  ('public.memory_corrections', 'status', array['open', 'applied', 'rejected']);
+  ('public.memory_corrections', 'status', array['open', 'applied', 'rejected']),
+  ('public.document_requests', 'kind', array['notes', 'mock_exam', 'question_set']),
+  ('public.document_requests', 'source', array['chat', 'suggestion', 'instructor']),
+  ('public.document_requests', 'status', array['queued', 'generating', 'verifying', 'review', 'ready', 'failed']);
 
 do $$
 declare

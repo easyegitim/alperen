@@ -26,7 +26,11 @@ COPY packages/pii/package.json packages/pii/package.json
 RUN bun install --frozen-lockfile --production --filter @ogrenmen/worker
 
 # Chromium ve sistem bağımlılıkları (yalnız pdf süreci kullanır; imaj tek). Şablon doldurucu (practice.generate:
-# py/template_fill.py, `python3 -I`) için SymPy + matplotlib (Debian paketleri; yoksa iş LLM yoluna düşer).
+# py/template_fill.py, `python3 -I`), anahtar doğrulayıcı (py/key_verify.py) ve belge figürleri (document.generate:
+# py/figure_render.py; sahte LLM ya da açıkça OGRENMEN_FIGURES=local) için SymPy + matplotlib + NumPy (Debian paketleri;
+# yoksa şablon yolu LLM'e, figür yeniden üretime/figürsüz belgeye düşer). Yerel figür kodu OS yalıtımında çalışır
+# (src/documents/sandbox.ts: util-linux setpriv + unshare, kullanıcı ad alanı); Fly makinesinde (Firecracker VM) açıktır,
+# Docker'ın varsayılan seccomp profili kapatır: o zaman model kodu yerelde çalışmaz (varsayılan code_execution etkilenmez).
 RUN node apps/worker/node_modules/playwright-core/cli.js install --with-deps chromium \
     && apt-get update && apt-get install -y --no-install-recommends python3-sympy python3-matplotlib python3-numpy \
     && rm -rf /var/lib/apt/lists/*

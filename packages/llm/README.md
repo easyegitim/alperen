@@ -68,8 +68,10 @@ yeniden gönderilir; Batch içinde onarım turu yapılmaz.
 
 | rota | model · effort · düşünme | şema | araçlar | kip |
 |---|---|---|---|---|
-| coach_chat | Sonnet · medium | — | memory, search_evidence, get_mastery, get_recent_exams, record_turn_meta | akış |
+| coach_chat | Sonnet · medium | — | memory, search_evidence, get_mastery, get_recent_exams, record_turn_meta, request_document | akış |
 | coach_deep | Opus · high | — | aynı | akış |
+
+`request_document` (P3, Koç'tan not/deneme isteği) rota araç listesinde kalıcıdır; `coach_chat`/`coach_deep` v2 metni aracı anlatır. Sürüm v1'e geri alınırsa araç yine rotada kalır, v1 metni ise onu anlatmaz (kilit v1 araç listesini tutar). `test/routes.test.ts` yalnız varsayılan sürümün araç listesini rotayla eşitler; geri alma kararında bu boşluk elle göz önünde tutulur.
 | solution_diagnosis | Opus · high | solution-diagnosis | — | senkron (+Batch) |
 | page_class | Haiku · low · kapalı | page-class | — | senkron |
 | exam_page_items | Sonnet · medium · kapalı | exam-page-items | — | senkron |
@@ -79,9 +81,10 @@ yeniden gönderilir; Batch içinde onarım turu yapılmaz.
 | curriculum_research | Opus · high | — (serbest metin, atıflı) | web_search, web_fetch (≤8) | akış |
 | curriculum_draft | Opus · high | curriculum-draft | — | akış |
 | proposal_review | Sonnet · medium | proposal-review | — | Batch |
-| notes_generation | Opus · high | document-ast | code_execution | akış (+Batch) |
-| exam_generation | Opus · high | exam-generation | code_execution | akış (+Batch) |
-| figure_check | Haiku · low · kapalı | figure-render-report | — | senkron |
+| notes_generation | Opus · high | document-ast | code_execution (yerel figür kipinde `disableTools`) | akış (+Batch); sahte kipte `fixtures/notes_generation/01-rasyonel.json` |
+| exam_generation | Opus · high | exam-generation | code_execution (aynı) | akış (+Batch); sahte kipte `fixtures/exam_generation/01-tyt10.json` |
+| figure_check | Haiku · low · kapalı | figure-render-report | — | senkron (PNG + `figureCheckUserText`) |
+| personalization_check | Haiku · low · kapalı | personalization-check | — | senkron (`personalizationCheckUserText`) |
 | exam_item_extract | Sonnet · medium · kapalı | exam-item | — | Batch |
 | style_definition | Sonnet · medium | style-definition | — | Batch |
 | priority_plan | Opus · medium | exam-priority-plan | — | akış |
@@ -115,6 +118,32 @@ false`, sayısal sınırlar açıklamaya), zod istemci tarafında yine doğrular
 Yapılandırılmış çıktı `@ogrenmen/contracts` `outputFormat(contract)` ile gider (SDK `zodOutputFormat` enum/const
 kısıtını düşürdüğü için), yanıt loose şemayla doğrulanır; geçersizse bir onarım turu, sonra `ParseError`.
 
+## İçerik stüdyosu: code_execution, konteyner, dosyalar (P3)
+
+Not ve deneme üretimi figürleri koddan çizer (PLAN-v2 §7): model figür bloğuna `figure_code` (matplotlib Python ya da
+SVG metni) + `kind` yazar; başlık (tasarım sabitleri, `save_figure(fig, n)` → `figure_<n>.svg`) `@ogrenmen/prompts`
+`FIGURE_PREAMBLE`'dadır. İki kip (worker `OGRENMEN_FIGURES`):
+
+- `code_execution` (gerçek anahtar): araç `{type:'code_execution_20260120', name:'code_execution'}` gider; model kodu
+  konteynerde çalıştırıp denetler. Yanıttaki `bash_code_execution_tool_result` blokları dosya kimliklerini taşır:
+  `collectOutputFiles(res.transcript)` (pause_turn dahil bütün turlar) → `downloadFigureFiles(gateway.transport.files!, refs)`
+  → `{ 'figure_1.svg': '<svg…' }`. Yalnız taban ad, yalnız `figure_<n>.svg`, dosya başına ≤ 2 MB; aynı ad birden çok
+  üretildiyse sonuncusu. İndirilmeyen figür yerel üretime düşer.
+- `local` (varsayılan; sahte kipte her zaman): `gateway.call(route, { …, disableTools: ['code_execution'] })` → araç ve
+  `container` gönderilmez, prompt metni aynıdır (önbellek bozulmaz); worker aynı kodu `python3 -I` + başlıkla çalıştırır.
+
+Konteyner yeniden kullanımı: `CallResult.container` son görülen konteyner kimliğidir; aynı iş içindeki sonraki çağrı
+(ör. tek bloğun yeniden üretimi) `container` ile verir. Çağrı içinde araç döngüsü, `pause_turn` sürdürmesi ve onarım
+turu yanıtın konteynerini kendiliğinden taşır. `container` yalnız code_execution gönderilen istekte gövdeye girer.
+Sahte taşıma: istekte code_execution varsa yanıt `container_fake_N` (ya da verilen kimlik) taşır; betik yanıtı
+`codeExecution: { files: [{ filename, content }] }` sunucu aracı + sonuç blokları üretir, dosyalar `fake.files` ile iner.
+
+Doğrulama merdiveni (worker): şema → SymPy anahtar (`canonical_expr`) → figür (çalıştır/indir → boş/boyut →
+`figure_check` Haiku, `hidden` = cevabı ele veren değerler) → kişiselleştirme (`calloutReferenceIssues` deterministik,
+sonra `personalization_check` Haiku) → hata olan yalnız o blok yeniden üretilir. Yardımcılar `@ogrenmen/contracts`:
+`documentFigureJobs`, `examFigureJobs`, `applyFigureRenders` (SVG yazar, kodu çıkarır; saklanan belge kodsuzdur),
+`calloutReferenceIssues`.
+
 ## Ortam
 
 | değişken | anlamı |
@@ -128,7 +157,7 @@ Test yardımcısı (`@ogrenmen/llm/testing`, yalnız testler): `createTempDataba
 veritabanı kurar (00_local_stub → göçler → seed'ler ogrenmen_owner rolüyle → TYT müfredatı), `drop()` siler;
 `seedStudents(pool)`. `test/*.db.test.ts` (`bun run test:db`, `OGRENMEN_LIVE=1`) ve apps/worker canlı testleri kullanır.
 
-Modüller: `routes.ts` · `client.ts` (taşıma, beta başlıkları) · `prompt.ts` (blok kurucular, kesme noktası denetimi) ·
+Modüller: `routes.ts` · `client.ts` (taşıma, beta başlıkları, `files`) · `files.ts` (code_execution çıktı dosyaları) · `prompt.ts` (blok kurucular, kesme noktası denetimi) ·
 `parse.ts` · `stream.ts` · `batch.ts` · `pricing.ts` · `ledger.ts` (`PgLedger`, `RpcLedger`, `InMemoryLedger`) ·
 `refusal.ts` · `tools.ts` (`betaZodTool`; çalıştırıcılar enjekte) · `memory/pgMemory.ts` · `dossier.ts` · `gateway.ts` · `fake.ts` ·
 `errors.ts`.

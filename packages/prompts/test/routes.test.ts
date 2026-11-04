@@ -2,6 +2,7 @@ import { isSchemaName } from '@ogrenmen/contracts';
 import { isRouteName, MODELS, ROUTES } from '@ogrenmen/llm';
 import { describe, expect, it } from 'vitest';
 import { allPrompts, PROMPT_MODELS } from '../src/index.js';
+import { PROMPT_DEFAULTS } from '../src/bundle.gen.js';
 
 describe('prompt meta ↔ geçit rota tablosu', () => {
   it('model listesi geçidinkiyle aynı', () => {
@@ -16,7 +17,9 @@ describe('prompt meta ↔ geçit rota tablosu', () => {
       expect(p.meta.model, id).toBe(r.model);
       expect(p.meta.effort, id).toBe(r.effort);
       expect(p.meta.schema, id).toBe(r.schema);
-      expect(p.meta.tools, id).toEqual([...r.tools].sort());
+      // Varsayılan sürümün araçları rotayla birebir; eski sürümler rotanın araç kümesinin alt kümesidir (yeni araç yeni sürümle gelir).
+      if (PROMPT_DEFAULTS[p.meta.route] === p.meta.version) expect(p.meta.tools, id).toEqual([...r.tools].sort());
+      else for (const t of p.meta.tools) expect(r.tools as readonly string[], id).toContain(t);
     }
   });
 

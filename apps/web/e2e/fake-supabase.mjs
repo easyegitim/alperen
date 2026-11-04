@@ -8,6 +8,7 @@ import { handleUploads, seedUploadTables } from './fake-uploads.mjs';
 import { handlePractice, seedPracticeTables } from './fake-practice.mjs';
 import { handleExam, seedExamTables } from './fake-exam.mjs';
 import { handleExamResult } from './fake-exam-result.mjs';
+import { handleDocuments } from './fake-documents.mjs';
 
 const tables = { ...seedTables(), ...seedUploadTables(), ...seedPracticeTables(), ...seedExamTables() };
 const requests = [];
@@ -133,6 +134,8 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
+  // Koç'tan belge isteği → hazırlanıyor → inceleme → Bugün kartı (request_document, document_request_view, review_document, list_my_documents)
+  if (await handleDocuments({ req, res, path, tables, send, readBody, userFromAuth })) return;
   // Okul denemesi → bekleme → sonuç → rapor eki (submit_exam_upload, exam_session_view, exam_how_far, list_my_documents)
   if (await handleExamResult({ req, res, path, tables, send, readBody, userFromAuth })) return;
   // Yükle → Teşhis eki (Storage nesneleri, submit_upload, worker benzetimi)

@@ -25,6 +25,35 @@ export const DIFFICULTY_BAND_VALUE = { easy: 0.3, medium: 0.55, hard: 0.8 } as c
 /** Tarz/soru sunuş biçimi (`question_styles.format`, `exam_items.format`); cevap türü (`kind`) değildir. */
 export const PRESENTATION_FORMATS = ['text', 'table', 'graph', 'geometry_figure', 'word_problem', 'other'] as const;
 
+/**
+ * Kodla üretilen figürün dili (document-ast `figure.kind`, exam-generation `items[].figure.kind`): `matplotlib` →
+ * `figure_code` Python'dır (yalnız matplotlib/numpy/math; `figure_<n>.svg` yazar), `svg` → `figure_code` elle yazılmış
+ * SVG metnidir (basit geometri). İkisinde de worker kodu çalıştırıp/temizleyip `svg`'yi doldurur.
+ */
+export const FIGURE_CODE_KINDS = ['matplotlib', 'svg'] as const;
+export type FigureCodeKind = (typeof FIGURE_CODE_KINDS)[number];
+/** Figür çıktı dosyasının adı: `figure_<n>.svg` (n 1'den başlar; code_execution konteynerinde ve yerel üretimde aynı). */
+export const FIGURE_FILE = /^figure_([1-9][0-9]{0,2})\.svg$/;
+export const figureFileName = (n: number): string => `figure_${n}.svg`;
+/**
+ * Koddaki figür dosya adı (yoksa null): önce `save_figure(<ad>, <n>)` çağrısının son eşleşmesi (promptların tek
+ * yolu), sonra düz `figure_<n>.svg` metni. Uzak (code_execution) kipte indirilen dosyayı figüre bağlamak için sıradan önce bu kullanılır.
+ */
+export function figureFileFromCode(code: string): string | null {
+  let last: string | null = null;
+  for (const m of code.matchAll(/save_figure\(\s*[A-Za-z_]\w*\s*,\s*([1-9]\d{0,2})\s*\)/g)) last = m[1] ?? null;
+  if (last) return figureFileName(Number(last));
+  const m = /figure_([1-9][0-9]{0,2})\.svg/.exec(code);
+  return m ? `figure_${m[1]}.svg` : null;
+}
+
+/**
+ * Kişisel hata kutusunun (`common_mistake_callout.pattern_ref`) kaynağı: `patterns.md` (öğrencinin hafıza dosyasındaki
+ * örüntü satırı), `misconception` (açık yanılgı kaydı, etiket kodu), `analysis` (tek bir teşhis/deneme analizi).
+ */
+export const PATTERN_SOURCES = ['patterns.md', 'misconception', 'analysis'] as const;
+export type PatternSource = (typeof PATTERN_SOURCES)[number];
+
 export const OPTION_KEYS_4 = ['A', 'B', 'C', 'D'] as const;
 export const OPTION_KEYS_5 = ['A', 'B', 'C', 'D', 'E'] as const;
 export const ERROR_CAUSES = ['concept', 'procedure', 'careless', 'reading', 'time'] as const;

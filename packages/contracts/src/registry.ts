@@ -5,6 +5,7 @@
 import type { Contract } from './zod/kit.js';
 import { answerKey } from './zod/answer-key.js';
 import { answerSheet } from './zod/answer-sheet.js';
+import { documentBlockRegen, examBlockRegen } from './zod/block-regen.js';
 import { conversationSummary } from './zod/conversation-summary.js';
 import { curriculum } from './zod/curriculum.js';
 import { curriculumDraft } from './zod/curriculum-draft.js';
@@ -23,6 +24,7 @@ import { memoryDelta } from './zod/memory-delta.js';
 import { memoryFact } from './zod/memory-fact.js';
 import { notificationCopy } from './zod/notification-copy.js';
 import { pageClass } from './zod/page-class.js';
+import { personalizationCheck } from './zod/personalization-check.js';
 import { proposalReview } from './zod/proposal-review.js';
 import { questionItem } from './zod/question-item.js';
 import { solutionDiagnosis } from './zod/solution-diagnosis.js';
@@ -39,7 +41,9 @@ export const contractRegistry = {
   'curriculum': curriculum,
   'curriculum-draft': curriculumDraft,
   'document-ast': documentAst,
+  'document-block-regen': documentBlockRegen,
   'eval-verdict': evalVerdict,
+  'exam-block-regen': examBlockRegen,
   'exam-generation': examGeneration,
   'exam-item': examItem,
   'exam-page-items': examPageItems,
@@ -53,6 +57,7 @@ export const contractRegistry = {
   'memory-fact': memoryFact,
   'notification-copy': notificationCopy,
   'page-class': pageClass,
+  'personalization-check': personalizationCheck,
   'proposal-review': proposalReview,
   'question-item': questionItem,
   'report-ast': reportAst,

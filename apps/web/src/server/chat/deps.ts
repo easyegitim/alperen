@@ -8,7 +8,10 @@
  * geçit istek başına kurulur (defter yazıcısı isteğin kullanıcısına bağlıdır).
  */
 import 'server-only';
-import { createTransport, Gateway, type LlmTransport } from '@ogrenmen/llm';
+import { createTransport, Gateway, type LlmTransport, type FakeTransport } from '@ogrenmen/llm';
+import { requestDocument } from '@/server/documents/request';
+import type { RpcClient } from '@/server/practice/rpc';
+import { fakeCoachScript } from './fake-script';
 import { loadPrompt, type VersionSources } from '@ogrenmen/prompts';
 import { MemoryChatStore } from './memory-store';
 import { COACH_KEY_ENV } from './server-token';
@@ -75,7 +78,15 @@ export async function chatDeps(user: CoachDbClient | null, env: Env = process.en
   if (kind === 'memory') {
     const store = new MemoryChatStore();
     s.memoryGateway ??= (async () => new Gateway({ transport: await transportOf(env), ledger: store.ledger() }))();
-    return { store, gateway: await s.memoryGateway, product: coachProduct };
+    const transport = await transportOf(env);
+    return {
+      store,
+      gateway: await s.memoryGateway,
+      product: coachProduct,
+      persistentIds: false,
+      ...(user ? { requestDocument: (input, ctx) => requestDocument(user as unknown as RpcClient, input, ctx.messageId) } : {}),
+      ...(transport.kind === 'fake' ? { onTurn: ({ route, text }) => fakeCoachScript(transport as FakeTransport, route, text) } : {}),
+    };
   }
   if (!user) throw new ChatError('unauthenticated', 401, 'Oturumun kapanmış. Yeniden giriş yap.');
   const store = new SupabaseChatStore(user, env[COACH_KEY_ENV]!);
@@ -85,7 +96,14 @@ export async function chatDeps(user: CoachDbClient | null, env: Env = process.en
     const loaded = loadPrompt(route, { sources: await promptSources(store, Date.now()) });
     return { text: loaded.text, version: loaded.meta.version };
   };
-  return { store, gateway, product };
+  const transport = await transportOf(env);
+  return {
+    store,
+    gateway,
+    product,
+    requestDocument: (input, ctx) => requestDocument(user as unknown as RpcClient, input, ctx.messageId),
+    ...(transport.kind === 'fake' ? { onTurn: ({ route, text }) => fakeCoachScript(transport as FakeTransport, route, text) } : {}),
+  };
 }
 
 function transportOf(env: Env): Promise<LlmTransport> {

@@ -31,3 +31,15 @@ doğruluk kaynağıdır; görseller `render.mjs` ile üretilir. Bu dizindeki den
 | `solution_diagnosis` | `10-deneme-soru-4`, `11-deneme-soru-9` | `<exam_context>` + `soru no: 4.` / `9.` | 4: $3^3=9$ (careless, üslü), 9: virgül kaydırma (procedure, ondalık) |
 
 Notlama (TYT, doğru − yanlış/4; çift işaret boş): doğru 1, 2, 3, 6, 8, 10; yanlış 4, 9; boş 5, 7 → net 5,5.
+
+### İçerik stüdyosu (P3)
+
+| rota | dosya | içerik |
+|---|---|---|
+| `notes_generation` | `01-rasyonel` | kişisel not (kind notes, personalized): 8 içerik bloğu (başlık, hedefler kutusu, tanım, matplotlib figür kodu `save_figure(fig, 1)`, çözümlü örnek, `patterns.md:2` / 19 Ekim'e başvuran hata kutusu, "Kendini sına" başlığı, cevap sayfası) + 3 soru, anahtarlar B A C (`canonical_expr` 7/8, 7/6, 7/30) |
+| `exam_generation` | `01-tyt10` | TYT 10 soru; blueprint Sayılar 5 · Problemler 3 · Cebir 2, kolay 3 · orta 5 · zor 2; 2 figür (8: matplotlib sütun grafiği, 9: elle SVG sayı doğrusu); anahtar B D A E C B D A C E |
+| `personalization_check` | `01-ok` | `{ok: true}` |
+| `figure_check` | `01-match` | `matches_stem: true` |
+
+Figür kodları `@ogrenmen/prompts` `FIGURE_PREAMBLE` ile yerel matplotlib'de çalışır ve bayt bayt aynı SVG üretir
+(`packages/prompts/test/content-input.test.ts`); anahtarlar SymPy ile tek doğru şıkka eşittir.

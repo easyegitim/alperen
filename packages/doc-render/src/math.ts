@@ -5,7 +5,7 @@ import { splitMath } from '@ogrenmen/design-system/math';
 export type MathOutput = 'htmlAndMathml' | 'html';
 
 export function texToHtml(tex: string, display: boolean, output: MathOutput): string {
-  return katex.renderToString(tex, { displayMode: display, output, throwOnError: false, strict: 'ignore', trust: false });
+  return katex.renderToString(tex, { displayMode: display, output, throwOnError: false, strict: 'ignore', trust: false, maxSize: 30, maxExpand: 200 });
 }
 
 export { splitMath };

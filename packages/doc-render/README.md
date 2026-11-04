@@ -32,25 +32,33 @@ await closeBrowser();                                                    // sür
 - `chartData?: Record<string, ChartData>`: `chart` bloklarının `data_ref` adına bağlı veri. Tür uyuşmazsa ya da veri yoksa grafik yerine "Bu grafik için veri yok." yazılır.
 - `answerKeys?: KeyRow[]`: **cevap anahtarı yalnız burada verilirse ve belgede `answer_key_page` bloğu varsa çizilir.** `ast.keys` hiçbir zaman okunmaz; öğrenci HTML/PDF'ine anahtar sızamaz (test: canary değer).
 - `resolveUploadUrl?: (uploadId) => string | undefined`: `figure.source='upload'` için imzalı adres; yoksa yedek kutu ("Şekil yüklenemedi: alt").
+- `skillLabels?: Record<string,string>`: kazanım kodu -> görünen ad (anahtar sayfasındaki "Kazanım haritası"); verilmeyen kod için son parçadan ad türetilir (`tyt.mat.temel.ucgen` -> "Ucgen"), bu yüzden üreten taraf müfredat adlarını geçmelidir.
 - `mathOutput?: 'htmlAndMathml' | 'html'` (varsayılan MathML'li, erişilebilir; MathML görünmez, PDF'e basılmaz).
 
-`RenderPdfOptions`: `headerTitle`, `footerLabel` (varsayılan "Öğrenmen"), `pageNumbers` (varsayılan açık), `allowOrigins` (varsayılan boş).
+`RenderPdfOptions`: `headerTitle`, `footerLabel` (varsayılan "Öğrenmen"), `footerBadge` (alt bilgi ortasında rozet; `renderDocumentPdf` notlarda "Öğrenmen sana göre hazırladı · tarih" verir), `pageNumbers` (varsayılan açık), `allowOrigins` (varsayılan boş).
+
+PDF çizilirken sayfadan geniş ayrı satır formülleri kapsayıcıya sığacak kadar küçültülür (`fitWideMath`, alt sınır 0,4).
 
 ## Bloklar
 
 heading, paragraph (satır içi `$...$`, `$$...$$`), math_display, definition_box, summary_box, worked_example,
 common_mistake_callout (kişisel; `meta.generated_on` tarihiyle, `data-pattern-id`), check_yourself (soru gövdede;
-**cevaplar belgenin son sayfasında** toplanır), figure (satır içi SVG | upload + alt), table (caption, thead tekrarlı,
+**cevaplar belgenin son sayfasında** toplanır), figure (satır içi SVG | `image_url` | upload + alt; `figure_code` çizilmez, worker üretip SVG'yi yazar), table (caption, thead tekrarlı,
 satır bölünmez), question (ÖSYM benzeri iki sütun, şıklar A-E, **anahtar gösterilmez**), answer_sheet (optik form),
-answer_key_page (yalnız izinli), page_break, chart. Dul/yetim: paragraf `orphans/widows: 3`, başlıklar sonrakiyle kalır,
+answer_key_page (yalnız izinli), page_break, chart. Sayfa sonu: soru, kutu, çözümlü örnek, şekil ve grafik bölünmez (`break-inside: avoid`); tablo satırı bölünmez, başlık her sayfada tekrarlanır. Dul/yetim: paragraf `orphans/widows: 3`, başlıklar sonrakiyle kalır,
 kutular/sorular/grafikler bölünmez.
+
+### Şekil kaynakları
+
+Öncelik: `svg` (temizlenir) -> `image_url` -> `upload_id` (`resolveUploadUrl`). `image_url` sözleşmede yoktur (sonradan eklenen
+alan olarak okunur): yalnız `data:image/(png|jpeg|webp);base64,...` geçer; dış adres yok. Hiçbiri çözülemezse "Şekil yüklenemedi: alt" kutusu çıkar.
 
 ## Şablonlar
 
 | Ad | `kind` | Yapı |
 |---|---|---|
-| `not` | notes | Kapak ("Öğrenmen sana göre hazırladı"), gövde, "Senin sık yaptığın hata" kutuları, kendini sına, son sayfada cevaplar |
-| `deneme` | mock_exam, question_set | Kapak (ders, soru sayısı, süre, ad/numara, kurallar), bölüm bantları, iki sütun sorular, optik form, isteğe bağlı anahtar sayfası |
+| `not` | notes | Kapak (rozet "Öğrenmen sana göre hazırladı", ders, tarih, **hedef listesi**: `Hedef...` başlıklı ilk `summary_box` ve hemen öncesindeki başlık kapağa taşınır), gövde (tanım kutusu etiketli, çözümlü örnekte numaralı adımlar, kâğıt zeminli şekil çerçevesi), "Senin sık yaptığın hata" kutusu (uyarı simgesi, `pattern_ref.date` tarihi, "Kaynak: örüntüler.md · tarih" satırı), kendini sına (çalışma alanlı), "Kendi notun" çizgileri, ayrı son sayfada cevaplar; alt bilgide rozet |
+| `deneme` | mock_exam, question_set | Kapak (ders, soru sayısı, süre, ad/numara, ÖSYM benzeri yönergeler: soru sayısı/süre, bölümler, optik form, "ÖSYM sınavı değildir"), bölüm bantları, iki sütun sorular (numara lacivert kutuda, şekil kâğıt zeminli çerçevede), optik form, **yalnız `answerKeys` verilirse** anahtar + "Kazanım haritası" (kazanım -> sorular, soru sayısı) sayfası |
 | `rapor` | report | Başlık, ilk paragraf **tek cümle özet** (`.lead`), bölüm net çubukları, kazanım ısı haritası, yanlış/boş tablosu (`table` bloğu), "Sonraki adım" kutusu (başlığı `Sonraki adım` ile başlayan `summary_box`) |
 
 ## Grafikler (`chart` bloğu, deterministik, yüzdesiz)
@@ -73,7 +81,7 @@ kontrasta göre seçilir; tablo/SVG her zaman erişilebilir (`role="img"`, `<tit
 `bash packages/doc-render/check.sh` (`OGRENMEN_QUICK=1`: PDF testlerinde yalnız deneme). Testler: HTML (KaTeX
 HTML+MathML, SVG, tablo, anahtar sızıntısı, rapor bantları, font gömme), Playwright PDF (sayfa sayısı, pdfjs metin
 çıkarımı, gömülü font adları, sayfa rasterlerinin `test/baselines/*.png` ile farklı-piksel oranı <= %0,4 toleransı).
-Baseline yenilemek: `UPDATE_BASELINES=1 bunx vitest run test/pdf.test.ts` (tasarım/ CSS bilerek değiştiyse; değişen
+Ek testler: not şablonu (kapak hedefleri, kaynak satırı, alt bilgi rozeti), `image_url`/`figure_code` kuralları, anahtar sızıntısı (PDF metni ve baytları), geniş formül sığdırma, 60 satırlık tablo kırılması, kutu bölünmemesi ve **12 sayfalık not < 6 sn** (ısınmış tarayıcı; yerelde ~2,6 sn). Baseline yenilemek: `UPDATE_BASELINES=1 bunx vitest run test/pdf.test.ts` (tasarım/ CSS bilerek değiştiyse; değişen
 PNG'ler gözle incelenmeli). Chromium yoksa (`PLAYWRIGHT_BROWSERS_PATH`) PDF testleri SKIP edilir.
 
 ## Bilinen sınırlar

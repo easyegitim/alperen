@@ -43,13 +43,32 @@ import {
   type TurnContext,
 } from './prompt.js';
 import { audienceForRoute, refusalOf, type RefusalInfo } from './refusal.js';
-import { familyOf, MIN_STRUCTURED_MAX_TOKENS, MODEL_MAX_OUTPUT, NON_STREAMING_MAX_TOKENS, ROUTES, type RouteConfig, type RouteName, type RouteSchema } from './routes.js';
+import {
+  familyOf,
+  MIN_STRUCTURED_MAX_TOKENS,
+  MODEL_MAX_OUTPUT,
+  NON_STREAMING_MAX_TOKENS,
+  ROUTES,
+  type RouteConfig,
+  type RouteName,
+  type RouteSchema,
+  type ToolName,
+} from './routes.js';
 import { consumeStream, type StreamListener } from './stream.js';
 import { buildTools, isClientToolName, type BuiltTools, type ToolRunners } from './tools.js';
 
 /** Rotanın doğrulanmış çıktı tipi (serbest metin rotalarında null). */
 export type RouteOutput<R extends RouteName> =
   RouteSchema<R> extends SchemaName ? z.output<(typeof contractRegistry)[RouteSchema<R>]['loose']> : null;
+
+/** Çağrının sözleşmesi: girdideki şema geçersiz kılması ya da rotanın kendi şeması (yapılandırılmamış rotada null). */
+function contractFor(r: RouteConfig, input: CallInput): Contract | null {
+  if (input.schema !== undefined && r.schema === null) {
+    throw new RouteConfigError(`${r.name}: serbest metin rotasında şema geçersiz kılınamaz`);
+  }
+  const name = input.schema ?? r.schema;
+  return name ? (contractRegistry[name] as Contract) : null;
+}
 
 export interface CallInput {
   /** system[0..2]: ürün, ders, dossier. */
@@ -79,6 +98,19 @@ export interface CallInput {
    * öğeyi yeniden göndermek için (senkron yolda pause_turn sürdürülür, onarım turu ve max_tokens yeniden denemesi var).
    */
   batchRetry?: boolean;
+  /**
+   * code_execution konteynerini yeniden kullan (önceki çağrının `CallResult.container`'ı; PLAN-v2 §7 "konteyner iş
+   * başına yeniden kullanılır"). Yalnız code_execution gönderilen istekte `container` olarak gider. Çağrı içindeki
+   * araç döngüsü, pause_turn sürdürmesi ve onarım turu yanıtın konteynerini kendiliğinden taşır.
+   */
+  container?: string | null;
+  /** Bu çağrıda gönderilmeyecek rota araçları (ör. OGRENMEN_FIGURES=local iken `['code_execution']`). */
+  disableTools?: readonly ToolName[];
+  /**
+   * Rotanın yapılandırılmış çıktı şemasının yerine geçen şema (yalnız yapılandırılmış çıktısı olan rotada): yeniden
+   * üretim gibi daraltılmış çıktılar (`document-block-regen`, `exam-block-regen`). Prompt ve önbellek rotanınki kalır.
+   */
+  schema?: SchemaName;
 }
 
 export interface ToolCallRecord {
@@ -106,6 +138,8 @@ export interface CallResult<T> {
   stopReason: string | null;
   toolCalls: ToolCallRecord[];
   repaired: boolean;
+  /** Son görülen code_execution konteyneri (sonraki çağrıda `container` ile yeniden kullanılır); yoksa null. */
+  container: string | null;
 }
 
 export interface BatchItem {
@@ -175,6 +209,20 @@ function assertNoCitations(route: string, messages: readonly BetaMessageParam[])
   }
 }
 
+interface CallAccumulator {
+  usage: TokenUsage;
+  cost: number;
+  ids: number[];
+  toolCalls: ToolCallRecord[];
+  container: string | null;
+}
+
+/** İstekte (ya da kurulan araçlarda) code_execution var mı: `container` yalnız o zaman gönderilir. */
+function hasCodeExecution(x: BuiltTools | RequestBody): boolean {
+  const defs = 'definitions' in x ? x.definitions : (x.tools ?? []);
+  return defs.some((t) => (t as { name?: string }).name === 'code_execution');
+}
+
 function toolUses(m: BetaMessage): BetaToolUseBlock[] {
   return m.content.filter((b): b is BetaToolUseBlock => b.type === 'tool_use');
 }
@@ -215,7 +263,7 @@ export class Gateway {
     if (turnMessage) messages.push(turnMessage);
 
     const thinking = thinkingFor(r);
-    const contract = r.schema ? (contractRegistry[r.schema] as Contract) : null;
+    const contract = contractFor(r, input);
     if (contract) assertNoCitations(route, messages);
     const body: RequestBody = {
       model: r.model,
@@ -226,6 +274,7 @@ export class Gateway {
       ...(thinking ? { thinking } : {}),
       output_config: { effort: r.effort, ...(contract ? { format: structuredFormat(contract) } : {}) },
       ...(r.cache.tail ? { cache_control: { type: 'ephemeral' as const } } : {}),
+      ...(input.container && hasCodeExecution(built) ? { container: input.container } : {}),
       // Batch öğesinin senkron yeniden gönderimi (batchRetry) de Opus/Sonnet'te sunucu yedeğini alır.
       ...(!batch && (r.fallbacks || (input.batchRetry && familyOf(r.model) !== 'haiku'))
         ? { fallbacks: 'default' as const, betas: [FALLBACK_BETA] }
@@ -243,6 +292,7 @@ export class Gateway {
     return buildTools(r, {
       runners: input.tools?.runners,
       memory: input.tools?.memory,
+      disable: input.disableTools,
       stream,
       context: { route: r.name, studentRef: input.studentRef ?? null, signal: input.signal },
     });
@@ -258,7 +308,7 @@ export class Gateway {
     assertStudentRef(input.studentRef);
     const built = this.tools(r, input, r.stream);
     const body = this.buildRequest(route, input, { tools: built });
-    const acc = { usage: ZERO_USAGE, cost: 0, ids: [] as number[], toolCalls: [] as ToolCallRecord[] };
+    const acc: CallAccumulator = { usage: ZERO_USAGE, cost: 0, ids: [], toolCalls: [], container: input.container ?? null };
     try {
       return await this.execute(route, input, built, body, acc);
     } catch (err) {
@@ -276,12 +326,12 @@ export class Gateway {
     input: CallInput,
     built: BuiltTools,
     body: RequestBody,
-    acc: { usage: TokenUsage; cost: number; ids: number[]; toolCalls: ToolCallRecord[] },
+    acc: CallAccumulator,
   ): Promise<CallResult<RouteOutput<R>>> {
     const r = ROUTES[route] as RouteConfig;
     const images = countImages(input.user);
     const ctx: TransportContext = { route, signal: input.signal };
-    const contract = r.schema ? (contractRegistry[r.schema] as Contract) : null;
+    const contract = contractFor(r, input);
 
     // Tek API isteği: akış ya da create; defter satırı yazar.
     const sendOne = async (req: RequestBody, kind: 'initial' | 'max_tokens_retry'): Promise<BetaMessage> => {
@@ -327,7 +377,9 @@ export class Gateway {
       for (let iter = 0; ; iter++) {
         if (iter >= r.maxIterations + 2) throw new ToolLoopError(`${route}: araç döngüsü ${iter} turda bitmedi`);
         const { message, body: sent } = await withMaxTokensRetry(sendOne, req, MODEL_MAX_OUTPUT);
-        req = sent;
+        // Konteyner yanıttan sonraki isteğe (araç sonucu, pause_turn, onarım turu) taşınır: dosyalar ve durum korunur.
+        if (message.container?.id) acc.container = message.container.id;
+        req = acc.container && hasCodeExecution(sent) ? { ...sent, container: acc.container } : sent;
         if (message.stop_reason === 'refusal') return { message, body: req };
         if (message.stop_reason === 'pause_turn') {
           // Sunucu aracı döngüsü durakladı: asistan içeriği aynen geri gönderilir, ek "devam" iletisi yok.
@@ -388,6 +440,7 @@ export class Gateway {
       stopReason: final.message.stop_reason,
       toolCalls: acc.toolCalls,
       repaired,
+      container: acc.container,
     };
   }
 

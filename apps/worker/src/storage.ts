@@ -5,6 +5,8 @@ export interface StorageLike {
   upload(bucket: string, path: string, body: Uint8Array | Buffer, contentType: string): Promise<void>;
   download(bucket: string, path: string): Promise<Buffer>;
   createSignedUrl(bucket: string, path: string, expiresInSec: number): Promise<string>;
+  /** Nesneleri siler (yoksa sessiz geçer). */
+  remove?(bucket: string, paths: string[]): Promise<void>;
 }
 
 export class StorageError extends Error {
@@ -34,6 +36,11 @@ export class SupabaseStorage implements StorageLike {
     const { data, error } = await this.client.storage.from(bucket).download(assertStoragePath(path));
     if (error || !data) throw new StorageError(`indirme başarısız (${bucket}/${path}): ${error?.message ?? 'boş yanıt'}`, error);
     return Buffer.from(await data.arrayBuffer());
+  }
+
+  async remove(bucket: string, paths: string[]): Promise<void> {
+    const { error } = await this.client.storage.from(bucket).remove(paths.map(assertStoragePath));
+    if (error) throw new StorageError(`silme başarısız (${bucket}): ${error.message}`, error);
   }
 
   async createSignedUrl(bucket: string, path: string, expiresInSec: number): Promise<string> {

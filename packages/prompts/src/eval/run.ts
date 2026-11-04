@@ -16,7 +16,7 @@ import {
 } from '@ogrenmen/llm';
 import { loadPrompt } from '../index.js';
 import { loadCourseContext, type EvalCase } from './cases.js';
-import { errorScore, scoreCoach, scoreDiagnosis, scoreExamPageItems, type CaseScore } from './score.js';
+import { errorScore, scoreCoach, scoreDiagnosis, scoreExamPageItems, scoreNotes, type CaseScore, type NotesOutput } from './score.js';
 
 /** Depo kökü (eval görselleri `fixtures/...` yoluyla verilir). */
 const REPO_ROOT = new URL('../../../../', import.meta.url);
@@ -123,6 +123,20 @@ async function runCase(c: EvalCase, opts: RunEvalOptions): Promise<CaseResult> {
         purpose: 'eval',
       });
       return { ...scoreExamPageItems(c, res.data), ...meta, model: res.model, costUsd: res.costUsd };
+    }
+    if (c.route === 'notes_generation') {
+      // Figür kipi: sahte kipte ve OGRENMEN_FIGURES=local'da araçsız (kod yazılır, çalıştırılmaz); gerçek yolda
+      // OGRENMEN_FIGURES=code_execution ile model kodu konteynerde çalıştırır.
+      const codeExecution = opts.mode === 'anthropic' && process.env.OGRENMEN_FIGURES === 'code_execution';
+      const res = await gateway.call('notes_generation', {
+        system,
+        user: userContent(c),
+        turn,
+        promptVersion: prompt.meta.version,
+        purpose: 'eval',
+        ...(codeExecution ? {} : { disableTools: ['code_execution'] as const }),
+      });
+      return { ...scoreNotes(c, res.data as unknown as NotesOutput), ...meta, model: res.model, costUsd: res.costUsd };
     }
     const results = c.input.tool_results ?? {};
     const turnMeta: Record<string, unknown>[] = [];

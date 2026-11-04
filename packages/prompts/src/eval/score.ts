@@ -2,7 +2,9 @@
  * Deterministik puanlayıcılar. Her vaka bir denetim listesi üretir; puan geçen denetimlerin oranıdır.
  * Hakem (eval_judge, Opus, Batch) ton ve açıklama kalitesini ayrıca puanlar; bu dosya yalnız ölçülebilir alanlara bakar.
  */
+import { calloutReferenceIssues, documentFigureJobs } from '@ogrenmen/contracts';
 import { stripMath } from '../lint.js';
+import { FIGURE_DESIGN } from '../figure-style.js';
 import type { EvalCase } from './cases.js';
 
 export interface Check {
@@ -195,6 +197,91 @@ export function scoreExamPageItems(c: Extract<EvalCase, { route: 'exam_page_item
     const stem = normalizeMath(byNo.get(s.no)?.stem_text ?? '');
     checks.push({ name: `soru ${s.no} kökü: ${s.text}`, pass: stem.includes(normalizeMath(s.text)) });
   }
+  return finish(c, checks);
+}
+
+/** Not üretimi çıktısı (document-ast; puanlayıcının baktığı alt küme). */
+export interface NotesOutput {
+  kind: string;
+  meta: { personalized: boolean };
+  sections: { no: number; title: string }[];
+  blocks: ({ type: string; id: string } & Record<string, unknown>)[];
+  keys: { question_no: number; correct_option: string | null; canonical_expr: string | null }[];
+}
+
+const FIGURE_MODULES: ReadonlySet<string> = new Set<string>(FIGURE_DESIGN.modules);
+
+/** Figür kodu kuralları: yalnız izinli modüller, dosya/ağ/süreç yok, save_figure(fig, n) ile biter; SVG'de betik yok. */
+export function figureCodeIssues(code: string, kind: string, n: number): string[] {
+  const out: string[] = [];
+  if (kind === 'svg') {
+    if (!code.trimStart().startsWith('<svg')) out.push('svg ile başlamıyor');
+    if (/<script|foreignObject|\bon[a-z]+\s*=|href\s*=\s*["']https?:/i.test(code)) out.push('betik ya da dış bağlantı');
+    return out;
+  }
+  for (const m of code.matchAll(/^\s*(?:import\s+([\w.]+)|from\s+([\w.]+)\s+import)/gm)) {
+    const mod = (m[1] ?? m[2] ?? '').split('.')[0] ?? '';
+    if (!FIGURE_MODULES.has(mod)) out.push(`izinsiz modül: ${mod}`);
+  }
+  if (/\bopen\s*\(|__import__|\beval\s*\(|\bexec\s*\(|np\.random|rcParams/.test(code)) out.push('dosya/çalıştırma/rastgele ya da başlığı değiştirme');
+  if (/\bsympy\b|\bmpmath\b/.test(code)) out.push('sympy kullanılmaz (yerel kum havuzu reddeder)');
+  if (/\bsavefig\b/.test(code)) out.push('savefig yerine save_figure(fig, n)');
+  if (!new RegExp(`save_figure\\(\\s*\\w+\\s*,\\s*${n}\\s*\\)`).test(code)) out.push(`save_figure(fig, ${n}) yok`);
+  return out;
+}
+
+function proseOf(blocks: NotesOutput['blocks']): string {
+  const texts: string[] = [];
+  const walk = (k: string, v: unknown) => {
+    if (['figure_code', 'svg', 'latex', 'id', 'type', 'pattern_id', 'kind', 'source'].includes(k)) return;
+    if (typeof v === 'string') texts.push(v);
+    else if (Array.isArray(v)) v.forEach((x) => walk('', x));
+    else if (v && typeof v === 'object') for (const [kk, vv] of Object.entries(v)) walk(kk, vv);
+  };
+  blocks.forEach((b) => walk('', b));
+  return texts.join('\n');
+}
+
+export function scoreNotes(c: Extract<EvalCase, { route: 'notes_generation' }>, out: NotesOutput): CaseScore {
+  const e = c.expected;
+  const blocks = out.blocks;
+  const questions = blocks.filter((b) => b.type === 'question') as ({ no: number; skill_ids: string[] } & NotesOutput['blocks'][number])[];
+  const callouts = blocks.filter((b) => b.type === 'common_mistake_callout');
+  const refIssues = calloutReferenceIssues(out as never, e.patterns);
+  const jobs = documentFigureJobs(out);
+  const figIssues = jobs.flatMap((j) => figureCodeIssues(j.code, j.kind, j.n).map((x) => `${j.block_id}: ${x}`));
+  const goals = blocks.find((b) => b.type === 'summary_box') as { bullets?: string[] } | undefined;
+  const first = blocks[0] as { type: string; level?: number } | undefined;
+  const nos = questions.map((q) => q.no);
+  const prose = proseOf(blocks);
+  const checks: Check[] = [
+    { name: 'kind notes', pass: out.kind === 'notes' },
+    { name: 'personalized', pass: out.meta.personalized === e.personalized, detail: String(out.meta.personalized) },
+    { name: 'ilk blok level 1 başlık', pass: first?.type === 'heading' && first.level === 1 },
+    {
+      name: 'hedefler 2-4 madde, ham kazanım kodu yok',
+      pass: (goals?.bullets?.length ?? 0) >= 2 && (goals?.bullets?.length ?? 0) <= 4 && !(goals?.bullets ?? []).some((b) => e.skills_any.some((s) => b.includes(s)) || /\btyt\.[a-z]+\./.test(b)),
+    },
+    { name: 'tanım kutusu', pass: blocks.some((b) => b.type === 'definition_box') },
+    { name: 'çözümlü örnek', pass: blocks.some((b) => b.type === 'worked_example') },
+    { name: 'hata kutuları gerçek örüntülere başvurur', pass: refIssues.length === 0, detail: JSON.stringify(refIssues) },
+    {
+      name: 'kaynaklı hata kutusu sayısı',
+      pass: callouts.filter((x) => x.pattern_ref).length >= e.min_callouts,
+      detail: String(callouts.length),
+    },
+    {
+      name: 'kendini sına soru sayısı ve sırası',
+      pass: questions.length === e.self_check_count && nos.every((n, i) => n === i + 1),
+      detail: nos.join(','),
+    },
+    { name: 'her sorunun SymPy anahtarı', pass: out.keys.length === questions.length && out.keys.every((k) => k.canonical_expr !== null) },
+    { name: 'sorular hedef kazanımı ölçer', pass: questions.length > 0 && questions.every((q) => q.skill_ids.some((s) => e.skills_any.includes(s))) },
+    { name: 'son blok cevap sayfası', pass: blocks.at(-1)?.type === 'answer_key_page' },
+    { name: 'koddan figür sayısı', pass: jobs.length >= e.min_figures, detail: String(jobs.length) },
+    { name: 'figür kodu kuralları', pass: figIssues.length === 0, detail: figIssues.join('; ') },
+    ...styleChecks(prose),
+  ];
   return finish(c, checks);
 }
 

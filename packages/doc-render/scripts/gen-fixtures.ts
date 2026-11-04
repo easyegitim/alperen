@@ -101,7 +101,7 @@ function not() {
       b('definition_box', 'd1', 2, { term: 'Rasyonel sayı', body: 'a ve b tam sayı, $b\\neq 0$ olmak üzere $\\dfrac{a}{b}$ biçiminde yazılabilen sayıdır.' }),
       b('math_display', 'm1', 2, { latex: '\\frac{a}{b}+\\frac{c}{d}=\\frac{a\\cdot d+b\\cdot c}{b\\cdot d}' }),
       b('figure', 'f1', 2, { source: 'svg', svg: numberLine, alt: 'Sıfırdan bire kadar dörde bölünmüş sayı doğrusu; 3/4 noktası işaretli' }),
-      b('common_mistake_callout', 'c1', 2, { pattern_id: 'rasyonel.pay-payda-ayri-toplama', text: 'Geçen denemede $\\dfrac{1}{2}+\\dfrac{1}{3}$ işlemini $\\dfrac{2}{5}$ bulmuştun: payları ve paydaları ayrı ayrı topladın. Önce paydaları eşitle, sonra yalnız payları topla.' }),
+      b('common_mistake_callout', 'c1', 2, { pattern_id: 'rasyonel.pay-payda-ayri-toplama', pattern_ref: { source: 'patterns.md', id: 'rasyonel.pay-payda-ayri-toplama', date: '2026-10-19' }, text: 'Geçen denemede $\\dfrac{1}{2}+\\dfrac{1}{3}$ işlemini $\\dfrac{2}{5}$ bulmuştun: payları ve paydaları ayrı ayrı topladın. Önce paydaları eşitle, sonra yalnız payları topla.' }),
       b('heading', 'h3', 3, { level: 1, text: 'Çözümlü örnekler' }),
       b('worked_example', 'w1', 3, {
         title: 'Toplama ve çıkarma bir arada',

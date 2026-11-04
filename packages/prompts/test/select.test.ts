@@ -38,7 +38,7 @@ describe('sürüm seçimi', () => {
 
   it('loadPrompt seçim bilgisini döndürür', () => {
     const p = loadPrompt('coach_chat', { sources: { pinned: { coach_chat: 'v99' } } });
-    expect(p.meta.version).toBe('v1');
+    expect(p.meta.version).toBe('v2');
     expect(p.selection.source).toBe('default');
     expect(p.selection.ignored).toEqual([{ source: 'pinned', version: 'v99' }]);
     expect(loadPrompt('coach_chat', { sources: { active: { coach_chat: 'v1' } } }).selection.source).toBe('active');

@@ -74,6 +74,34 @@ tek cümle sonuç ve belge PDF'i (`pdf.render`, `packages/doc-render`, Playwrigh
 `fixtures/exams/synthetic/` (gerçek yayıncı adı ya da logosu yok) `render.mjs` ile üretilir. Bu turda
 `bash scripts/check-all.sh --quick` 20/20 PASS (2026-11-04); canlı kip (`--live`) ve gerçek anahtar bu turda koşulmadı.
 
+**P3 İçerik stüdyosu** (`docs/PLAN-v2.md` §2 Akış 5, §5, §7; ayrıntı `docs/PLAN-v2-detail.md` §3, §4) çalışma
+ağacında yazıldı, commit edilmedi: not, deneme ve soru seti üretimi. Öğrenci Koç'tan "not iste" der (`/ogrenci/koc/belge-durum`
+ile sohbet durum kartı); `request_document` (supabase 0034) belgeyi ve isteği açar, `document.generate`
+(`apps/worker/src/jobs/document-generate.ts`, `src/documents/`) yürütür: kapsam (istek kodları ve müfredat), model çıktısı
+(`notes_generation` ya da `exam_generation`, Opus · high, akış), figürler (`OGRENMEN_FIGURES`: gerçek anahtarla
+`code_execution`, yoksa yerel `py/figure_render.py`, `python3 -I` yalıtımında; `figure_check` Haiku kapısı), doğrulama
+merdiveni (şema → SymPy `py/key_verify.py` → figür → kopya; düşen blok `document_block_regen` ile en çok 2 turda yeniden
+istenir), saklama (`register_generated_document`; anahtarlar `secure.*` içinde, öğrencinin AST'sinde yok), PDF
+(`renderDocumentPdf`, A4; notta cevap sayfası, denemede anahtar basılmaz), yayın (Bugün `document_ready` kartı; ders geneli
+belgeler `review` durumuna düşer ve eğitmen `/egitmen/icerik` ekranında onaylar). Belgelerim'de PDF görüntüleyici var.
+
+| P3 ile gelenler | Testler | Not |
+|---|---|---|
+| `apps/worker` (`document.generate`, `src/documents/`, `py/figure_render.py`) | `document.test.ts`, `document.live.test.ts` | sahte LLM ve yerel figürle; canlı kip gerçek anahtar ister |
+| `apps/web` (Koç belge isteği, durum kartı, `/egitmen/icerik`, Belgelerim görüntüleyici) | `documents-request`, `documents-ui`, `z-belge-koc.spec.ts` | Playwright E2E: `OGRENMEN_LIVE=1`'de koşar |
+| `packages/contracts` (`document-ast` figür kodu, `block-regen`, `personalization-check`) | `block-regen`, `figures` | yeni şemalar ve geçerli/geçersiz fixture'lar |
+| `packages/doc-render` (not/deneme şablonları, cevap sayfası, SVG temizliği) | PDF testleri | Chromium yoksa PDF testleri SKIP |
+| `packages/llm` (`notes_generation`, `exam_generation`, `figure_check`, `style_question_gen`) | sahte kip `fixtures/*` | canlı çağrılar anahtar ister (SKIP) |
+
+`bash scripts/check-all.sh --quick` 21 adımlık (6 kök + 15 modül) bir koşudur. `scripts/tests/test_check_all.py`
+`EXPECTED_MODULES` listesi diskteki 15 `check.sh` ile birebir; betik testleri (check-all, secret-scan) 48/48 geçti.
+Sonuç (yazım anı, tam koşu bitmeden): 6 kök adımı, `apps/web` ve `apps/worker` PASS; `content/tyt-matematik` pytest adımı bu turda bitmedi, kalan modüller koşulmadı. Tam `--quick` sonucu yeniden koşulmalı.
+
+**P3 kapsamında henüz kapanmayanlar:** PLAN §14 P3 geçiti (eğitmen incelemeli 10 not + 3 deneme, doğrulanmamış anahtar 0,
+tipografi kontrol listesi) gerçek modelle koşulmadı. `code_execution` figür yolu gerçek anahtarla denenmedi (konteyner,
+Files API ile çıktı indirme, container yeniden kullanımı); yerel figür yolu sahte kipte doğrulandı.
+Gerçek model çıktısının kalite, anahtar doğruluğu ve maliyet ölçümü ilk anahtarla yapılmalı.
+
 P1 uçtan uca yolculuk testi (`apps/web/e2e/p1-journey.spec.ts`, `OGRENMEN_LIVE=1`'de `apps/web/check.sh` koşar;
 elle: `OGRENMEN_LIVE=1 bun run --cwd apps/web test:journey`): geçici v2 veritabanı + Supabase uyumlu yerel köprü
 (`apps/web/e2e/journey/stack.ts`: Auth, PostgREST alt kümesi, Storage; RLS/RPC/Storage politikaları gerçek Postgres'te)
@@ -92,7 +120,7 @@ elle: `OGRENMEN_LIVE=1 bun run --cwd apps/web test:journey`): geçici v2 veritab
 | Modül | Durum | Not |
 |---|---|---|
 | kök (sır taraması, drift, fixtures, RPC paritesi, betik testleri, workflow lint) | yeşil | actionlint yerelde yoksa SKIP, CI'da koşar |
-| `supabase` (göçler 0001–0029: öneriler, alıştırma + soru üretimi, onboarding, hafıza düzeltme, dossier v2, müfredat kurucu, yükleme, koç RPC'leri, iş outbox'ı) | yeşil | canlı kipte gerçek pg-boss şemasıyla da denetlenir |
+| `supabase` (göçler 0001–0035: öneriler, alıştırma + soru üretimi, onboarding, hafıza düzeltme, dossier v2, müfredat kurucu, yükleme, koç RPC'leri, iş outbox'ı, belge istekleri ve üretim hattı 0034–0035) | yeşil | canlı kipte gerçek pg-boss şemasıyla da denetlenir |
 | `apps/web` (Bugün · Koç · Gelişim, onboarding, test/sonuç, yükle/teşhis, eğitmen müfredat editörü) | yeşil | Playwright: sahte Supabase takımı + P1 yolculuğu (gerçek Postgres) canlı kipte |
 | `apps/worker` (curriculum.draft, suggestions.refresh, practice.generate/prewarm, upload.intake, diagnosis.run, outbox.drain, sohbet özeti, öneri incelemesi) | yeşil | pg-boss, açılış denetimi ve iş zinciri testleri canlı kipte |
 | `packages/llm` (geçit, dossier derleyici, hafıza işleyicileri, fake) | yeşil | canlı Anthropic testi `ANTHROPIC_API_KEY` ister (SKIP) |
@@ -146,12 +174,11 @@ elle: `OGRENMEN_LIVE=1 bun run --cwd apps/web test:journey`): geçici v2 veritab
 - `fixtures/db/dev-seed.json` ve `fixtures/{kitap,panel,kulaklik}` hâlâ v1 verisini taşır; v2 tohum verisi ayrı iştir.
 - P2 deneme hattının canlı kipte (`OGRENMEN_LIVE=1`) ve sahte LLM dışında gerçek model çıktısıyla (sayfa sınıflama,
   anahtar, notlama) doğrulanması bekliyor; P2 yolculuk testi canlı Postgres üzerinde ayrıca koşulmalı.
-- Bugün'deki belge kartları yalnız P3 öncesi testlerde; belge kapsamı (P3) `document.generate` işiyle genişler
-  (`apps/worker` kayıt defterinde şimdilik bekleyen tanım).
 
-**Bir sonraki adım:** P2'nin `OGRENMEN_LIVE=1 bash scripts/check-all.sh --live` ile doğrulanması; ilk gerçek Anthropic
-anahtarıyla canlı geçit/prompt/soru üretimi denetimi ve barındırılan Supabase duman testi; sonra P3 (doğrulama servisi +
-belge PDF) ve P5 (dersler).
+**Bir sonraki adım:** P3'ün commit edilip `OGRENMEN_LIVE=1 bash scripts/check-all.sh --live` ile doğrulanması (P2 canlı
+kipi de bu turda koşulmadı); ilk gerçek Anthropic anahtarıyla not/deneme üretimi, figür yolu (`code_execution`), geçit ve
+soru üretimi denetimi, eğitmen incelemesi (10 not + 3 deneme) ve barındırılan Supabase duman testi; sonra P4 (tarz ve tahmin)
+ve P5 (dersler).
 Ekranlar mockup'lara (S01–S09b, S10/S10b, S12–S15) birebir uyar.
 
 ## Arşiv notu

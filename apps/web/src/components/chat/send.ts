@@ -1,4 +1,4 @@
-import { CHAT_COPY, type ChatMode } from '@/lib/chat';
+import { CHAT_COPY, type ChatMode, type DocRef } from '@/lib/chat';
 import { readSse } from './sse-client';
 
 export interface SendInput {
@@ -14,6 +14,7 @@ export type ClientEvent =
   | { type: 'text'; text: string }
   | { type: 'tool'; name: string }
   | { type: 'restart' }
+  | { type: 'document'; requestId: string; kind: DocRef['kind']; title: string | null }
   | { type: 'done'; messageId: number | null; text: string; refusal: boolean; escalated: boolean; modeSuggestion: ChatMode | null }
   | { type: 'error'; code: string; message: string };
 

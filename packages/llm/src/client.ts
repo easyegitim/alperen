@@ -13,6 +13,7 @@ import type {
   BetaRawMessageStreamEvent,
   MessageCreateParamsNonStreaming,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages';
+import type { FilesClient } from './files.js';
 import type {
   BatchCreateParams,
   BetaMessageBatch,
@@ -44,6 +45,8 @@ export interface LlmTransport {
     results(id: string): Promise<AsyncIterable<BetaMessageBatchIndividualResponse>>;
     cancel(id: string): Promise<BetaMessageBatch>;
   };
+  /** Files API (code_execution çıktı dosyalarını indirmek için; files.ts). Gerçek ve sahte taşımada vardır. */
+  readonly files?: FilesClient;
 }
 
 /** Gövdedeki `parse` gibi işlevleri ayıklar (yapılandırılmış çıktı biçimi). JSON'a giren her şey aynı kalır. */
@@ -79,6 +82,13 @@ export class AnthropicTransport implements LlmTransport {
     retrieve: (id: string) => this.client.beta.messages.batches.retrieve(id),
     results: async (id: string) => this.client.beta.messages.batches.results(id),
     cancel: (id: string) => this.client.beta.messages.batches.cancel(id),
+  };
+
+  // Files API GA: ek beta başlığı gerekmez.
+  readonly files: FilesClient = {
+    retrieveMetadata: (id: string) => this.client.files.retrieveMetadata(id),
+    download: (id: string) => this.client.files.download(id),
+    delete: (id: string) => this.client.files.delete(id),
   };
 }
 

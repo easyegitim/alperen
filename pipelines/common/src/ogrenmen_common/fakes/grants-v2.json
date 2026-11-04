@@ -173,6 +173,31 @@
         "delete": "*"
       }
     },
+    "public.document_requests": {
+      "columns": [
+        "conversation_message_id",
+        "course_id",
+        "created_at",
+        "enrollment_id",
+        "error",
+        "generated_document_id",
+        "id",
+        "job_id",
+        "kind",
+        "requested_by",
+        "source",
+        "spec",
+        "status",
+        "student_id",
+        "updated_at"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
     "public.enrollments": {
       "columns": [
         "course_id",
@@ -280,6 +305,8 @@
         "created_at",
         "difficulty",
         "exam_id",
+        "figure_alt",
+        "figure_svg",
         "figure_upload_id",
         "id",
         "kind",
@@ -434,6 +461,11 @@
         "model",
         "pdf_path",
         "personalization",
+        "published_at",
+        "review_note",
+        "review_required",
+        "reviewed_at",
+        "reviewed_by",
         "spec",
         "status",
         "student_id",

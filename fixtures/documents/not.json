@@ -85,6 +85,11 @@
       "id": "c1",
       "section_no": 2,
       "pattern_id": "rasyonel.pay-payda-ayri-toplama",
+      "pattern_ref": {
+        "source": "patterns.md",
+        "id": "rasyonel.pay-payda-ayri-toplama",
+        "date": "2026-10-19"
+      },
       "text": "Geçen denemede $\\dfrac{1}{2}+\\dfrac{1}{3}$ işlemini $\\dfrac{2}{5}$ bulmuştun: payları ve paydaları ayrı ayrı topladın. Önce paydaları eşitle, sonra yalnız payları topla."
     },
     {

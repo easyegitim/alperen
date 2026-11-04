@@ -3,9 +3,13 @@ import Link from 'next/link';
 import { ScreenHeader } from '@/components/shell';
 import { requireRole } from '@/server/auth';
 import { formatNet } from '@/server/progress/present';
+import { LibraryList } from '@/components/documents/Library';
+import { documentDb } from '@/server/documents/read';
+import { libraryRows } from '@/server/documents/present';
+import { listMyDocuments } from '@/server/documents/rpc';
 import { loadProgress } from '@/server/progress/read';
 import { WeeklyLine } from './grafik';
-import { DocumentList, Fold, Stat, TopicList } from './parcalar';
+import { Fold, Stat, TopicList } from './parcalar';
 
 export const metadata: Metadata = { title: 'Gelişim' };
 
@@ -17,6 +21,8 @@ const DOCUMENTS_INLINE = 5;
 export default async function GelisimSayfasi() {
   const { user, displayName } = await requireRole('student', 'admin');
   const p = await loadProgress(user.id);
+  const mine = await listMyDocuments(await documentDb());
+  const documents = mine.ok ? libraryRows(mine.data) : (p?.documents ?? []).map((d) => ({ ...d, word: 'Hazır' as const, open: true }));
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
       <ScreenHeader title="Gelişim" name={displayName} accountHref="/ogrenci/profil" size="sm" />
@@ -49,10 +55,10 @@ export default async function GelisimSayfasi() {
           )}
         </Fold>
         <Fold title="Belgelerim" testId="belgelerim">
-          {p && p.documents.length > 0 ? (
+          {documents.length > 0 ? (
             <>
-              <DocumentList documents={p.documents.slice(0, DOCUMENTS_INLINE)} />
-              {p.documents.length > DOCUMENTS_INLINE ? (
+              <LibraryList rows={documents.slice(0, DOCUMENTS_INLINE)} />
+              {documents.length > DOCUMENTS_INLINE ? (
                 <Link href="/ogrenci/gelisim/belgeler" className="text-label inline-flex min-h-11 items-center text-primary">
                   Tüm belgeler
                 </Link>

@@ -30,7 +30,12 @@ describe('iş kayıt defteri', () => {
   });
 
   it('işleyicisi olmayan SQL iş adları da kuyruk olarak kayıtlıdır', () => {
-    for (const n of ['document.generate', 'memory.correction']) expect(getJob(n)?.handler).toBeNull();
+    for (const n of ['memory.correction']) expect(getJob(n)?.handler).toBeNull();
+  });
+
+  it('içerik stüdyosu işi işleyicili (P3): document.generate', () => {
+    expect(getJob('document.generate')?.handler).not.toBeNull();
+    expect(getJob('document.generate')?.skeleton).toBeFalsy();
   });
 
   it('deneme işleri işleyicili (P2): exam.analyse, exam.report', () => {
@@ -95,6 +100,8 @@ describe('yapılandırma', () => {
     expect(getJob('exam.report')!.payload.safeParse({ session_id: id }).success).toBe(true);
     expect(getJob('document.generate')!.payload.safeParse({ document_id: id, kind: 'rapor' }).success).toBe(true);
     expect(getJob('document.generate')!.payload.safeParse({ document_id: 'x', kind: 'rapor' }).success).toBe(false);
+    expect(getJob('document.generate')!.payload.safeParse({ request_id: id }).success).toBe(true);
+    expect(getJob('document.generate')!.payload.safeParse({ kind: 'notes' }).success).toBe(false);
     expect(getJob('curriculum.merge')!.payload.safeParse({ proposal_id: id }).success).toBe(true);
     expect(getJob('curriculum.merge')!.payload.safeParse({}).success).toBe(false);
   });

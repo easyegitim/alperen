@@ -37,7 +37,7 @@ schemaRegistry['solution-diagnosis'];                    // ad -> loose zod; str
 
 Model çıktısı (`llmOutput`, strict kısıt testli): `solution-diagnosis`, `curriculum-draft`, `page-class`,
 `exam-page-items`, `answer-sheet`, `inferred-keys`, `exam-report`, `report-ast`, `document-ast`, `exam-generation`,
-`style-definition`, `exam-priority-plan` (sınıflandırma tek yerde: model çıktısı, Opus rotası; veri/DB listesinde değil), `proposal-review`, `style-question-generation`, `memory-delta`, `memory-compaction`, `conversation-summary`, `notification-copy`, `eval-verdict`,
+`style-definition`, `exam-priority-plan` (sınıflandırma tek yerde: model çıktısı, Opus rotası; veri/DB listesinde değil), `proposal-review`, `style-question-generation`, `memory-delta`, `memory-compaction`, `conversation-summary`, `notification-copy`, `eval-verdict`, `personalization-check`,
 `lesson-analysis` (v2: +`course_insights`), `exam-item` (v2), `memory-fact`, `transcript`, `figure-render-report`.
 
 Veri/DB sözleşmeleri (model çıktısı değil): `question-item`, `answer-key`, `weekly-summary`, `curriculum`.
@@ -73,6 +73,25 @@ Strict kipte `minItems: 1` (loose'ta en az 1 isteyen dizilerde) ile `uuid`/`date
 Tarza özel soru üretimi sözleşmesi `style-question-generation` adıyla kayıtlıdır (PLAN-v2 rota tablosundaki
 `question-generation`): v1 tablet zarfı (`{item, key}`) aynı adla legacy dosya olarak yaşadığı için ad çakışmasın diye
 ayrıldır. `style_id` zorunlu, 1-10 soru, soru/anahtar biçimi `exam-generation` ile ortaktır.
+
+İçerik stüdyosu ekleri (P3; strict kipte zorunlu, loose kipte isteğe bağlı ve varsayılansız — `optionalAdded`: eski
+veri, elle kurulan nesneler ve üretilmiş fikstürler değişmeden geçerli kalır):
+- `document-ast` figürü (blok ve soru şekli): `figure_code` + `kind` (`matplotlib` | `svg`). Model çıktısında
+  `source: 'svg'`, `svg` boş; ikisi birlikte verilir. `documentFigureJobs(doc)` kodlu figürleri sırayla listeler
+  (`n`, `file_name` = koddaki `figure_<n>.svg` ya da sıradan), `applyFigureRenders(doc, {blokId: svg})` SVG'yi yazar ve
+  kodu çıkarır (`missing` = SVG'si gelmeyen bloklar). `storedDocumentAst` kodlu figürü reddeder: kod `figures.code`'a
+  gider, öğrenci içeriğinde kalmaz.
+- `common_mistake_callout.pattern_ref` {source: `patterns.md` | `misconception` | `analysis`, id, date} | null;
+  `pattern_ref.id` = `pattern_id` (şema). Kişiselleştirilmiş notta her kutunun kaynaklı ve kaynağın öğrencinin gerçek
+  örüntüsü olması `calloutReferenceIssues(doc, known)` ile denetlenir (şema kuralı değil: eski belgeler).
+- `exam-generation`: `blueprint` {sections[{name, count}], difficulty{easy, medium, hard}} | null — verilirse sorular
+  bölüm ve zorluk sayılarına birebir uyar (loose kural); `items[].figure` {kind, figure_code, alt} | null — figür
+  verilen soruda `figure_svg` null (worker üretir); `examFigureJobs(exam)`. Ortak madde biçimi olduğundan
+  `style-question-generation` ve `question_generation` rotası da `figure` alanını taşır (alıştırma setinde null).
+- `personalization-check` (Haiku): {ok, offending_block_ids, findings[{block_id, problem: unknown_pattern |
+  date_mismatch | text_mismatch | generic, note}]}; ok ⇔ sorunlu blok yok, her sorunlu bloğun bir nedeni var.
+- Figür sabitleri (`common.ts`): `FIGURE_CODE_KINDS`, `FIGURE_FILE` (`figure_<n>.svg`), `figureFileName`,
+  `figureFileFromCode`, `PATTERN_SOURCES`.
 
 Plan listesine eklenenler (kısa gerekçe):
 - `report-ast` (veli/haftalık/konu/trend raporu) ve `memory-compaction` (gece hafıza sıkıştırma): PLAN-v2 rota tablosunda

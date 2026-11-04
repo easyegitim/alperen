@@ -1,5 +1,6 @@
 {
   "title": "Rasyonel sayılar mini deneme",
+  "blueprint": null,
   "items": [
     {
       "no": 1,
@@ -29,6 +30,7 @@
         }
       ],
       "figure_svg": null,
+      "figure": null,
       "skill_ids": [
         "tyt.mat.temel.rasyonel-sayilar"
       ],
@@ -42,6 +44,7 @@
       "stem": "x/2 + x/3 = 5 ise x kaçtır?",
       "options": [],
       "figure_svg": null,
+      "figure": null,
       "skill_ids": [
         "tyt.mat.denklemler.birinci-derece"
       ],

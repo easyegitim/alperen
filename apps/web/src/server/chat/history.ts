@@ -315,7 +315,7 @@ export function toDisplay(messages: readonly StoredMessage[]): DisplayMessage[] 
       const text = textOf(m.content, false);
       if (!text) continue;
       const rec: TurnRecord | null = m.toolCalls;
-      out.push({ id: `m${m.id}`, from: 'tutor', text, attachments: [], escalated: Boolean(rec?.escalated), seeded: false });
+      out.push({ id: `m${m.id}`, from: 'tutor', text, attachments: [], escalated: Boolean(rec?.escalated), seeded: false, ...(rec?.documents?.length ? { documents: rec.documents } : {}) });
     }
   }
   return out;

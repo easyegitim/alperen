@@ -8,6 +8,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PATTERN_SOURCES } from '@ogrenmen/contracts';
 import { z } from 'zod';
 
 export const EVAL_DIR = fileURLToPath(new URL('../../eval/', import.meta.url));
@@ -78,6 +79,21 @@ export const examPageItemsExpected = z.strictObject({
   unreadable: z.boolean(),
 });
 
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+/** Not üretimi: belge yapısı, kişiselleştirme (gerçek örüntü + tarih), kendini sına + anahtar, koddan figür. */
+export const notesExpected = z.strictObject({
+  personalized: z.boolean(),
+  /** Hata kutularının başvurabileceği gerçek örüntüler (girdideki `<patterns>` ile aynı). */
+  patterns: z.array(z.strictObject({ source: z.enum(PATTERN_SOURCES), id: z.string().min(1), dates: z.array(isoDate).min(1) })),
+  /** Kaynaklı (pattern_ref dolu) hata kutusu sayısının alt sınırı. */
+  min_callouts: z.number().int().min(0),
+  self_check_count: z.number().int().positive(),
+  /** Hedeflerde ve sorularda geçmesi gereken kazanım kodlarından en az biri. */
+  skills_any: z.array(z.string()).min(1),
+  min_figures: z.number().int().min(0),
+});
+
 const base = {
   id: z.string().regex(/^[a-z0-9-]+$/),
   title: z.string().min(3),
@@ -90,11 +106,12 @@ export const evalCaseSchema = z.discriminatedUnion('route', [
   z.strictObject({ ...base, route: z.literal('solution_diagnosis'), expected: diagnosisExpected }),
   z.strictObject({ ...base, route: z.literal('coach_chat'), expected: coachExpected }),
   z.strictObject({ ...base, route: z.literal('exam_page_items'), expected: examPageItemsExpected }),
+  z.strictObject({ ...base, route: z.literal('notes_generation'), expected: notesExpected }),
 ]);
 
 export type EvalCase = z.output<typeof evalCaseSchema>;
 export type EvalRoute = EvalCase['route'];
-export const EVAL_ROUTES: readonly EvalRoute[] = ['coach_chat', 'exam_page_items', 'solution_diagnosis'];
+export const EVAL_ROUTES: readonly EvalRoute[] = ['coach_chat', 'exam_page_items', 'notes_generation', 'solution_diagnosis'];
 
 /** Vakaları okur ve doğrular (dosya adına göre sıralı). `route` verilirse yalnız o rota. */
 export function loadEvalCases(opts: { dir?: string; route?: string } = {}): EvalCase[] {

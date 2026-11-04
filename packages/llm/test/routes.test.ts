@@ -25,8 +25,8 @@ function body(route: RouteName, opts: { batch?: boolean } = {}) {
 }
 
 describe('rota tablosu', () => {
-  it('görevdeki 26 rota + curriculum_research (müfredat iki adım) + suggestions_copy (Bugün kartları) + question_generation (alıştırma bankası) tanımlı', () => {
-    expect(ROUTE_NAMES).toHaveLength(29);
+  it('görevdeki 26 rota + curriculum_research (müfredat iki adım) + suggestions_copy (Bugün kartları) + question_generation (alıştırma bankası) + personalization_check (P3 doğrulama merdiveni) tanımlı', () => {
+    expect(ROUTE_NAMES).toHaveLength(30);
     for (const n of ROUTE_NAMES) expect(ROUTES[n].name).toBe(n);
   });
 
@@ -182,9 +182,9 @@ describe('istek gövdesi', () => {
     const b = body('coach_chat');
     const names = (b.tools ?? []).map((t) => (t as { name: string }).name);
     expect(names).toEqual([...names].sort());
-    expect(names).toEqual(['get_mastery', 'get_recent_exams', 'memory', 'record_turn_meta', 'search_evidence']);
+    expect(names).toEqual(['get_mastery', 'get_recent_exams', 'memory', 'record_turn_meta', 'request_document', 'search_evidence']);
     const custom = (b.tools ?? []).filter((t) => (t as { type?: string }).type === 'custom');
-    expect(custom.length).toBe(4);
+    expect(custom.length).toBe(5);
     for (const t of custom) expect((t as { eager_input_streaming?: boolean }).eager_input_streaming).toBe(true);
     const cd = body('curriculum_research').tools ?? [];
     expect(cd).toEqual([

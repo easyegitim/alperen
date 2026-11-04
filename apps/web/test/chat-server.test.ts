@@ -85,7 +85,7 @@ describe('koç turu: istek gövdesi', () => {
     expect(body.messages[body.messages.length - 2]).toEqual({ role: 'user', content: [{ type: 'text', text: 'Kesirlerde neredeyim?' }] });
     expect(body.cache_control).toEqual({ type: 'ephemeral' });
     const tools = (body.tools ?? []) as { name: string; type?: string }[];
-    expect(tools.map((t) => t.name)).toEqual(['get_mastery', 'get_recent_exams', 'memory', 'record_turn_meta', 'search_evidence']);
+    expect(tools.map((t) => t.name)).toEqual(['get_mastery', 'get_recent_exams', 'memory', 'record_turn_meta', 'request_document', 'search_evidence']);
     expect(tools.find((t) => t.name === 'memory')?.type).toBe('memory_20250818');
   });
 

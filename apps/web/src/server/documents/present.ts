@@ -1,4 +1,5 @@
 // Belgelerim / belge görüntüleyici saf yardımcıları (test/documents.test.ts).
+import { documentStatus, type StatusWord } from './status';
 import type { MyDocument } from './types';
 
 export const documentHref = (id: string): string => `/ogrenci/belge/${id}`;
@@ -7,6 +8,26 @@ export const guardianDocumentHref = (id: string): string => `/veli/rapor/${id}`;
 /** PDF'i hazır, görüntülenebilir belge. */
 export function isViewable(d: Pick<MyDocument, 'status' | 'pdf_path'>): boolean {
   return Boolean(d.pdf_path) && (d.status === 'rendered' || d.status === 'published');
+}
+
+export interface LibraryRow {
+  id: string;
+  title: string;
+  kind: MyDocument['kind'];
+  created_at: string;
+  word: Exclude<StatusWord, 'Hazırlanamadı'>;
+  /** Açılabilir (PDF hazır) mi. */
+  open: boolean;
+}
+
+/** Belgelerim: hazırlananlar dahil tüm satırlar (en yeni önce), her biri durum kelimesiyle; başarısızlar listelenmez. */
+export function libraryRows(docs: MyDocument[]): LibraryRow[] {
+  return docs
+    .filter((d) => d.kind !== 'answer_key')
+    .flatMap((d) => {
+      const word = documentStatus(d);
+      return word === 'Hazırlanamadı' ? [] : [{ id: d.id, title: d.title, kind: d.kind, created_at: d.created_at, word, open: isViewable(d) }];
+    });
 }
 
 /** Belgelerim satırları için: PDF'i hazır olanlar, en yeni önce (RPC sırası). */

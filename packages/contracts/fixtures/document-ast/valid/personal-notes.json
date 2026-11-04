@@ -88,6 +88,11 @@
       "id": "n7",
       "section_no": 2,
       "pattern_id": "rasyonel.payda-esitlemeden-toplama",
+      "pattern_ref": {
+        "source": "misconception",
+        "id": "rasyonel.payda-esitlemeden-toplama",
+        "date": "2026-11-03"
+      },
       "text": "3 Kasım'daki çözümünde paydaları eşitlemeden toplamıştın; önce paydayı eşitle."
     },
     {

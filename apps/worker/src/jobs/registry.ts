@@ -11,6 +11,7 @@ import { curriculumDraftJob } from './curriculum-draft.js';
 import { curriculumMergeJob, proposalsCollectJob, proposalsReviewJob } from './curriculum-proposals.js';
 import { diagnosisRunJob } from './diagnosis.js';
 import { diagnosisFollowupJob } from './diagnosisFollowup.js';
+import { documentGenerateJob } from './document-generate.js';
 import { dossierRenderJob } from './dossierRender.js';
 import { examAnalyseJob } from './exam-analyse.js';
 import { examReportJob } from './exam-report.js';
@@ -55,7 +56,8 @@ export const JOBS: readonly AnyJobDefinition[] = [
   // submit_exam_upload (0030) ve upload.intake school_exam atar; grade_exam_session exam.report atar
   examAnalyseJob,
   examReportJob,
-  pending('document.generate', 'Belge üretimi (P3): request_document RPC ekler.', z.object({ document_id: uuid, kind: z.string().min(1) })),
+  // request_document (0034) atar: not / deneme / soru seti üretimi + doğrulama merdiveni
+  documentGenerateJob,
   // start_practice (0021) bankada soru yoksa practice.generate atar; ön ısıtma curriculum.draft ve suggestions.refresh'ten
   practiceGenerateJob,
   practicePrewarmJob,

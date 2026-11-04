@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
 import { LinkButton } from '@/components/LinkButton';
 import type { ViewableDocument } from '@/server/documents/read';
+import { examIntroHref } from '@/server/exam/routes';
 import { DocumentViewer } from './DocumentViewer';
 
 /**
@@ -12,10 +13,15 @@ import { DocumentViewer } from './DocumentViewer';
 export function DocumentScreen({ doc, closeHref, backLabel }: { doc: ViewableDocument; closeHref: string; backLabel: string }) {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <div className="flex h-15 items-center">
+      <div className="flex h-15 items-center justify-between gap-3">
         <Link href={closeHref} aria-label="Kapat" className="inline-flex size-11 items-center justify-center rounded-full text-ink-muted hover:bg-surface-sunken hover:text-ink">
           <X aria-hidden="true" size={24} strokeWidth={1.75} />
         </Link>
+        {doc.examId && doc.src ? (
+          <LinkButton href={examIntroHref(doc.examId)} variant="primary" size="md">
+            Çöz
+          </LinkButton>
+        ) : null}
       </div>
       {doc.src ? (
         <DocumentViewer src={doc.src} title={doc.title} />
