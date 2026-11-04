@@ -163,6 +163,8 @@ export function CaptureScreen({ aiProviderName }: { aiProviderName: string }) {
     if (!front) return;
     setPhase("submitting");
     setError(null);
+    // Yükleme ekranı sayfanın başında: "Analizi başlat" en alttaydı.
+    window.scrollTo({ top: 0, behavior: "smooth" });
     let s = startDeviceProgress(Date.now());
     setProgress(s);
     const tick = async (st: Parameters<typeof markDeviceStep>[1]) => {

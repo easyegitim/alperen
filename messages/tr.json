@@ -1088,11 +1088,11 @@
     },
     "deviceProgress": {
       "title": "Telefonunda analiz ediliyor",
-      "landmarks": "478 yüz noktası çıkarıldı (telefonunda)",
-      "ratios": "Dört oran hesaplandı: göz açısı, çene genişliği, genişlik–yükseklik, üçte birler",
-      "faceShape": "Yüz şekli ön değerlendirmesi yapıldı",
-      "views": "{count} açı hazırlandı",
-      "save": "Cihaz sonucu hesabına kaydedildi",
+      "landmarks": "Yüz noktaları (478, telefonunda)",
+      "ratios": "Dört oran: göz açısı, çene genişliği, genişlik–yükseklik, üçte birler",
+      "faceShape": "Yüz şekli ön değerlendirmesi",
+      "views": "{count} açı hazır",
+      "save": "Cihaz sonucu hesabına kaydediliyor",
       "done": "Analizin tamamlandı",
       "doneSr": "tamamlandı",
       "hint": "Fotoğrafların bu adımda telefonundan çıkmaz."
