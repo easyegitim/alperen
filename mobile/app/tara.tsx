@@ -3,7 +3,7 @@ import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { DEVICE_STEP_MIN_MS, finishDeviceProgress, markDeviceStep, startDeviceProgress, type DeviceProgress } from "@/lib/face/deviceProgress";
-import { ghostOutlineFromLandmarks } from "@/lib/face/ghostGuide";
+import { ghostOutlineFromLandmarks, type GhostOutline } from "@/lib/face/ghostGuide";
 import type { GeometryResult } from "@/lib/face/types";
 import { VIEW_BY_KEY, type ViewKey } from "@/lib/face/views";
 import { CaptureSummary } from "@/mobile/src/components/capture/CaptureSummary";
@@ -19,7 +19,7 @@ import { canStartDevice, isProfileView, nextStep, orderedViews, placeViews, remo
 import { useSession } from "@/mobile/src/features/session/SessionProvider";
 import { ApiClientError } from "@/mobile/src/lib/api";
 import { scoped } from "@/mobile/src/lib/i18n";
-import { addProgressPhoto } from "@/mobile/src/lib/progressStore";
+import { addProgressPhoto, getLatestGhost } from "@/mobile/src/lib/progressStore";
 import { deleteQuietly } from "@/mobile/src/native/images";
 
 const tv = scoped("camera.views");
@@ -72,7 +72,23 @@ export default function CaptureScreen() {
   const [saveProgress, setSaveProgress] = useState(false);
   const capturesRef = useRef<CaptureSet<CaptureResult>>({});
   const requestIdRef = useRef(newRequestId());
-  const ghost = getLastGhost();
+  // Hayalet kılavuz (S3.3.4): bu oturumdaki son ön çekim; yoksa ilerleme dizinindeki en yeni kayıt (yalnız cihazda).
+  const [ghost, setGhost] = useState<GhostOutline | null>(() => getLastGhost());
+  useEffect(() => {
+    if (ghost || forTryon) return;
+    let active = true;
+    void getLatestGhost()
+      .then((g) => {
+        if (!active || !g) return;
+        setLastGhost(g);
+        setGhost(g);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- yalnız ilk açılışta okunur
+  }, []);
 
   const update = useCallback((next: CaptureSet<CaptureResult>) => {
     capturesRef.current = next;
@@ -142,7 +158,8 @@ export default function CaptureScreen() {
       await tick("views");
       const viewKeys = views.map((v) => v.view);
       const frontPx = landmarksPx(front);
-      if (frontPx) setLastGhost(ghostOutlineFromLandmarks(frontPx, front.image.width, front.image.height, { mirrored: false, takenAt: Date.now() }));
+      const outline = frontPx ? ghostOutlineFromLandmarks(frontPx, front.image.width, front.image.height, { mirrored: false, takenAt: Date.now() }) : null;
+      if (outline) setLastGhost(outline);
       const capturedAt = await cacheSessionSelfie(front);
 
       if (resumeAnalysisId) {
@@ -178,8 +195,8 @@ export default function CaptureScreen() {
         if (st?.analysisEntitled === true) await uploadPendingSet(aura, analysis.id);
       }
       if (saveProgress) {
-        // SPEC 11.2: yalnız cihazda (uygulama sanal alanı); sunucuya gitmez.
-        await addProgressPhoto(front.image.uri, analysis.id).catch(() => undefined);
+        // SPEC 11.2: yalnız cihazda (uygulama sanal alanı); sunucuya gitmez. Hayalet çizgi de yalnız bu kayıtla saklanır (web ile aynı kural).
+        await addProgressPhoto(front.image.uri, { analysisId: analysis.id, ghost: outline }).catch(() => undefined);
       }
       await tick("save");
       s = finishDeviceProgress(s);

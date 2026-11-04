@@ -16,7 +16,10 @@ import { LANDMARK_COUNT } from "@/lib/face/indices";
 import { VIEW_KEYS, checkViewSet, classifyView } from "@/lib/face/views";
 import { AGE_BANDS, isAdultByAgeBand } from "@/lib/onboarding/age";
 import { classifyChange } from "@/lib/progress/noise";
+import { latestChange } from "@/lib/progress/trend";
+import { claimErrorKey, referralRatio } from "@/lib/referral/claim";
 import { QUESTIONNAIRE_V2_VERSION, emptyQuestionnaireV2, hairAdviceAllowedV2 } from "@/lib/questionnaireV2";
+import { freezeStoreError, recentDays } from "@/lib/routine/calendar";
 import { computeForgivingStreak } from "@/lib/routine/forgiving";
 import { ANALYSIS_STAGES, REGION_KEYS, SECTION_KEYS } from "@/lib/score/contract";
 import { NOISE_BAND_CLIENT, stageOf } from "@/lib/score/present";
@@ -67,6 +70,11 @@ describe("paylaşılan v2 modülleri mobilden yüklenir (CONTRACTS_V2 Sprint 3 S
     expect(getRoutineForgiving({ EXPO_PUBLIC_ROUTINE_REST_DAYS_PER_WEEK: "2" }).restDaysPerWeek).toBe(2);
     const logs = ["2026-11-01", "2026-11-02", "2026-11-04"].flatMap((d) => [{ log_date: d, item_id: "a", done: true }]);
     expect(computeForgivingStreak({ logs, activeItemCount: 1, today: "2026-11-04" }).streak).toBe(3);
+    expect(recentDays({ logs, activeItemCount: 1, today: "2026-11-04", days: 4 }).map((d) => d.status)).toEqual(["done", "done", "rest", "done"]);
+    expect(freezeStoreError({ code: "PGRST205", message: "" })).toBe("unavailable");
+    expect(latestChange([{ id: "a", date: "2026-10-01", overall: 6.0, calibrationVersion: "h2" }, { id: "b", date: "2026-11-01", overall: 6.2, calibrationVersion: "h2" }])?.change?.kind).toBe("no_change");
+    expect(claimErrorKey("BAD_INPUT", "device_check_failed")).toBe("device");
+    expect(referralRatio(2, 5)).toBe(0.4);
     const landmarks = Array.from({ length: LANDMARK_COUNT }, (_, i) => ({ x: (i % 64) * 10, y: Math.floor(i / 64) * 60 }));
     const outline = ghostOutlineFromLandmarks(landmarks, 640, 480, { mirrored: true, takenAt: 1 });
     expect(outline?.oval).toHaveLength(36);
@@ -101,6 +109,9 @@ describe("M1 içe aktarma kuralı: Sprint 3 paylaşılan modülleri serbest, sun
     'import { canConsumePurchaseFor } from "@/lib/billing/entitlement";',
     'import { computeForgivingStreak } from "@/lib/routine/forgiving";',
     'import { classifyChange } from "@/lib/progress/noise";',
+    'import { latestChange } from "@/lib/progress/trend";',
+    'import { recentDays } from "@/lib/routine/calendar";',
+    'import { claimErrorKey } from "@/lib/referral/claim";',
     'import { ghostOutlineFromLandmarks } from "@/lib/face/ghostGuide";',
     'import { PlanV2 } from "@/lib/coach/planTypes";',
     'import { QuestionnaireV2Schema } from "@/lib/questionnaireV2";',

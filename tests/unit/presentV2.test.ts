@@ -181,6 +181,18 @@ describe("toClientAnalysisV2: ödeme sonrası (entitled)", () => {
   it("sunucu alanları (runs, set_key, signals'ın kendisi) hiçbir görünümde gitmez", () => {
     for (const access of [NONE, PAID, REF]) expect(JSON.stringify(toClientAnalysisV2(completed, access))).not.toMatch(/"runs"|set_key|"signals"|"abc"/);
   });
+  it("detections: gözlük/baş örtüsü yalnız açık sonuçta; başka gözlem alanı sızmaz (anket v2 ön dolumu, Ç17)", () => {
+    const observations = { glassesDetected: true, headCoveringDetected: false, hairLossSignal: "possible", skinSurface: "T bölgesinde parlama", seeProfessional: null };
+    const row = { ...completed, observations };
+    expect(toClientAnalysisV2(row, PAID).detections).toEqual({ glassesDetected: true, headCoveringDetected: false });
+    expect(JSON.stringify(toClientAnalysisV2(row, PAID).detections)).not.toMatch(/hairLoss|skinSurface|possible/);
+    expect(toClientAnalysisV2(row, NONE).detections).toBeNull();
+    expect(toClientAnalysisV2(row, REF).detections).toBeNull();
+    expect(toClientAnalysisV2({ ...row, status: "processing" }, PAID).detections).toBeNull();
+    expect(toClientAnalysisV2({ ...completed, observations: null }, PAID).detections).toBeNull();
+    expect(toClientAnalysisV2({ ...completed, observations: { glassesDetected: "yes" } }, PAID).detections).toBeNull();
+    expect(toClientAnalysisV2({ ...completed, observations: { headCoveringDetected: true } }, PAID).detections).toEqual({ glassesDetected: null, headCoveringDetected: true });
+  });
 });
 
 describe("toClientAnalysisV2: davet kilidi (referralUnlock, Ç12)", () => {

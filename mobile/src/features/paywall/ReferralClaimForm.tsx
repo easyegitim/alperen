@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { track } from "@/lib/analytics";
+import { claimErrorKey, type ClaimErrorKey } from "@/lib/referral/claim";
 import { normalizeReferralCode } from "@/lib/referral/code";
 import { Button } from "@/mobile/src/components/ui/Button";
 import { Input } from "@/mobile/src/components/ui/Input";
@@ -11,14 +12,6 @@ import { scoped } from "@/mobile/src/lib/i18n";
 import { radius, spacing, useTheme } from "@/mobile/src/theme";
 
 const t = scoped("referral.claim");
-const KNOWN = ["unknown_code", "self", "already_claimed", "device"] as const;
-
-/** Sunucu hata kodunu referral.claim.errors.* anahtarına çevirir (CONTRACTS_V2 S3.3.5). Saf; dışa aktarılır (test). */
-export function claimErrorKey(code: string, message: string): string {
-  if (code === "FEATURE_DISABLED") return "disabled";
-  if (code === "BAD_INPUT" && (KNOWN as readonly string[]).includes(message)) return message;
-  return "generic";
-}
 
 /**
  * Davet kodu girişi (KB P#15/Ç12): POST /api/referral { code } → 204 "claim"dir; ayrı rota yok. Bayrak kapalıyken
@@ -29,12 +22,12 @@ export function ReferralClaimForm({ onDone }: { onDone?: () => void }) {
   const { aura } = useSession();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [state, setState] = useState<{ kind: "idle" } | { kind: "ok" } | { kind: "error"; key: string }>({ kind: "idle" });
+  const [state, setState] = useState<{ kind: "idle" } | { kind: "ok" } | { kind: "error"; key: ClaimErrorKey }>({ kind: "idle" });
   const normalized = normalizeReferralCode(code);
 
   async function submit() {
     if (!normalized) {
-      setState({ kind: "error", key: "unknown_code" });
+      setState({ kind: "error", key: "format" });
       return;
     }
     setBusy(true);
