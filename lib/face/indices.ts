@@ -42,3 +42,20 @@ export const FACE_OVAL = [
 export const ALIGN_POINTS = [33, 263, 133, 362, 168, 1, 152] as const;
 
 export const LANDMARK_COUNT = 478;
+
+// ── Kontur listeleri (PLAN 5a; lib/tryon/mask.ts features_* maskeleri). MediaPipe FACEMESH_* bağlantılarının poligon
+// sırasına dizilmiş hâli; "sağ" kişinin sağı (görüntüde sol). Yanlış çıkan indeks /debug/landmarks'ta doğrulanıp düzeltilir.
+/** Kişinin sağ gözü (göz kapağı dış hattı), saat yönünde. */
+export const RIGHT_EYE = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246] as const;
+/** Kişinin sol gözü. */
+export const LEFT_EYE = [263, 249, 390, 373, 374, 380, 381, 382, 362, 398, 384, 385, 386, 387, 388, 466] as const;
+/** Kişinin sağ kaşı: üst hat (70→107) + alt hat geri (55→46). */
+export const RIGHT_BROW = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46] as const;
+/** Kişinin sol kaşı. */
+export const LEFT_BROW = [300, 293, 334, 296, 336, 285, 295, 282, 283, 276] as const;
+/** Burun: köprü kökü (168) → sol kanat → burun altı (2) → sağ kanat → köprü. */
+export const NOSE = [168, 351, 419, 456, 420, 360, 279, 358, 327, 326, 2, 97, 98, 129, 49, 131, 236, 196, 122] as const;
+/** Dudaklar (dış hat): alt dudak 61→291, üst dudak 291→61. */
+export const LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185] as const;
+/** Orta yanak poligonu için türetilmiş noktalar (lib/tryon/mask.ts midCheekPolygon): alt göz kapağı ve burun kanadı. */
+export const CHEEK_REF = { eyeBottomR: 145, eyeBottomL: 374, noseAlaR: 129, noseAlaL: 358 } as const;
