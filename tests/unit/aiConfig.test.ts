@@ -14,6 +14,9 @@ describe("getAiEnv", () => {
       claudeObserveEffort: "low",
       claudeCoachModel: "claude-opus-5-5",
       claudeCoachEffort: "low",
+      claudeScoreModel: "claude-opus-5-5",
+      claudeScoreEffort: "medium",
+      claudeAuditEffort: "low",
       claudeFallbacks: "default",
       cacheTtl: "1h",
       observeCalls: 3,
@@ -28,7 +31,8 @@ describe("getAiEnv", () => {
     expect(e.claudeFallbacks).toBe("off");
     expect(e.cacheTtl).toBe("5m");
     expect(e.observeCalls).toBe(5);
-    const bad = getAiEnv({ SCORE_ENGINE: "hybrid.v2", CLAUDE_OBSERVE_EFFORT: "max", OBSERVE_CALLS: "9", CLAUDE_OBSERVE_MODEL: "  ", CLAUDE_CACHE_TTL: "" });
+    expect(getAiEnv({ SCORE_ENGINE: "hybrid.v2", CLAUDE_SCORE_EFFORT: "high", CLAUDE_AUDIT_EFFORT: "medium" })).toMatchObject({ scoreEngine: "hybrid.v2", claudeScoreEffort: "high", claudeAuditEffort: "medium" });
+    const bad = getAiEnv({ SCORE_ENGINE: "hybrid.v3", CLAUDE_OBSERVE_EFFORT: "max", OBSERVE_CALLS: "9", CLAUDE_OBSERVE_MODEL: "  ", CLAUDE_CACHE_TTL: "" });
     expect(bad.scoreEngine).toBe("legacy");
     expect(bad.claudeObserveEffort).toBe("low");
     expect(bad.observeCalls).toBe(3);

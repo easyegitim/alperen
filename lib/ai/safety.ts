@@ -1,7 +1,18 @@
 // SPEC 9.9 güvenlik filtresi. Tüm AI metinleri Türkçe normalizasyonla taranır; alan bazlı izinler.
 import { MAX_DAILY_DEFICIT_KCAL } from "@/lib/coach/bodyRules";
 
-export type SafetyRule = "slur" | "medical_procedure" | "drugs" | "harmful_practice" | "diagnosis" | "calorie" | "specialty";
+export type SafetyRule =
+  | "slur"
+  | "medical_procedure"
+  | "drugs"
+  | "harmful_practice"
+  | "diagnosis"
+  | "calorie"
+  | "specialty"
+  // hybrid.v2 (PLAN_V2 3f; KB Ek B): yapısal eleştiri, kıyas/sıralama dili ve düz yazıda sayı.
+  | "structural_critique"
+  | "comparison"
+  | "score_in_text";
 
 export function normalizeTr(s: string): string {
   return s
@@ -19,15 +30,38 @@ export function normalizeTr(s: string): string {
     .replace(/û/g, "u");
 }
 
-const TERMS: Record<Exclude<SafetyRule, "calorie" | "specialty">, string[]> = {
+const TERMS: Record<Exclude<SafetyRule, "calorie" | "specialty" | "score_in_text">, string[]> = {
   slur: ["cirkin", "berbat", "igrenc", "kusurlu", "basarisiz yuz", "chad", "mog", "psl", "incel", "subhuman"],
   medical_procedure: ["ameliyat", "cerrahi", "rinoplasti", "botoks", "botox", "dolgu", "filler", "implant", "liposuction", "liposakşın", "bisektomi"],
   drugs: ["steroid", "testosteron", "hormon", "finasterid", "minoksidil", "minoxidil", "izotretinoin", "isotretinoin", "roakutan", "roaccutane", "retinoid", "sarm", "kreatin"],
   harmful_practice: ["mewing", "bonesmash", "ac kal", "ogun atla", "kus", "detoks cay", "termojenik"],
   diagnosis: ["rosacea", "rozasea", "egzama", "dermatit", "akne vulgaris", "sedef", "mantar"],
+  // Ek B 1–5: "kusur", "en büyük sorunun", "ince dudak / zayıf çene / basık burun", "çok düşük / ideal değil", kemik yapısı yorumu.
+  structural_critique: [
+    "kusur",
+    "en buyuk sorun",
+    "en buyuk problem",
+    "asimetrik",
+    "orantisiz",
+    "geri cene",
+    "zayif cene",
+    "kucuk cene",
+    "basik burun",
+    "egri burun",
+    "buyuk burun",
+    "ince dudak",
+    "kemik yapi",
+    "yamuk",
+    "cok dusuk",
+    "ideal degil",
+    "idealden uzak",
+  ],
+  // Ek B 6, 9; K4/K14: kıyas, sıralama, yüzdelik, etnik grup, kadınsılık-erkeksilik ekseni, hayat başarısı.
+  comparison: ["ortalamanin alt", "ortalamanin ust", "cogu insan", "diger insanlar", "kiyasla", "siralama", "yuzdelik", "unlu", "irk", "etnik", "kadinsi", "erkeksi", "maskulen", "feminen", "daha cok kazan"],
 };
 
-const WORD_BOUNDARY_TERMS = new Set(["mog", "psl", "kus", "sarm"]);
+/** Kelime sınırıyla aranan kısa terimler: "dolgu" (dolgun sakal değil), "kus" (kusur değil), "irk" (birkaç değil), "unlu". */
+const WORD_BOUNDARY_TERMS = new Set(["mog", "psl", "kus", "sarm", "dolgu", "irk", "unlu"]);
 
 export type Violation = { rule: SafetyRule; path: string; term: string };
 
@@ -108,4 +142,27 @@ export function stripViolations<T extends Record<string, unknown>>(report: T, vi
   return copy as T;
 }
 
-export const SAFETY_RULES: SafetyRule[] = ["slur", "medical_procedure", "drugs", "harmful_practice", "diagnosis", "calorie", "specialty"];
+export const SAFETY_RULES: SafetyRule[] = ["slur", "medical_procedure", "drugs", "harmful_practice", "diagnosis", "calorie", "specialty", "structural_critique", "comparison", "score_in_text"];
+
+// ---------------------------------------------------------------------------------------------------------------------
+// hybrid.v2 metin taraması (PLAN_V2 3f): denetim geçişinden sonra Claude kaynaklı her cümle buradan geçer; takılan cümle
+// şablona düşer (lib/score/engine/audit.ts). Eski scanReport (CoachReport) değişmedi.
+
+const DIGIT_RE = /\d/;
+
+/**
+ * Tek bir Claude cümlesini tarar. `allowMaybeDiagnosis`: yalnız seeProfessional metni ("… olabilir" kalıbı) hastalık adı
+ * taşıyabilir. Kalori sözcüğü her yerde ihlaldir (v2 raporunda beden/kilo metni yok). Düz yazıda rakam → score_in_text.
+ */
+export function scanTextV2(text: string, path: string, opts: { allowMaybeDiagnosis?: boolean } = {}): Violation[] {
+  const out: Violation[] = [];
+  for (const rule of ["slur", "medical_procedure", "drugs", "harmful_practice", "structural_critique", "comparison"] as const) {
+    for (const term of findTerms(text, TERMS[rule])) out.push({ rule, path, term });
+  }
+  for (const term of findTerms(text, TERMS.diagnosis)) {
+    if (!(opts.allowMaybeDiagnosis && hasMaybePattern(text))) out.push({ rule: "diagnosis", path, term });
+  }
+  if (/\b(kcal|kalori)\b/i.test(normalizeTr(text))) out.push({ rule: "calorie", path, term: "kalori" });
+  if (DIGIT_RE.test(text)) out.push({ rule: "score_in_text", path, term: text.match(/\d[\d.,]*/)?.[0] ?? "rakam" });
+  return out;
+}
