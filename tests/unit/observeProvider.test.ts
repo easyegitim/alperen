@@ -198,8 +198,22 @@ describe("toAnthropicJsonSchema", () => {
     const p = s.properties as Record<string, Json>;
     expect(p.n).toEqual({ type: "number" });
     expect(p.k.const).toBe("x");
-    expect(p.a).toEqual({ type: "array", items: { type: "string" }, minItems: 1 });
-    expect(p.b).toEqual({ type: "array", items: { type: "string" } });
+    // reused:"ref" aynı Zod örneğini $defs'e taşıyabilir; items çözümlenerek karşılaştırılır.
+    const defs = (s.$defs ?? {}) as Record<string, Json>;
+    const resolve = (n: Json): Json => (typeof n.$ref === "string" ? defs[n.$ref.replace("#/$defs/", "")] : n);
+    expect({ ...p.a, items: resolve(p.a.items as Json) }).toEqual({ type: "array", items: { type: "string" }, minItems: 1 });
+    expect({ ...p.b, items: resolve(p.b.items as Json) }).toEqual({ type: "array", items: { type: "string" } });
+  });
+  it("tekrar kullanılan nesne şeması $defs'e çıkar (gramer boyutu sınırı; 4 Kas canlı duman testi)", () => {
+    const Item = z.object({ score: z.number(), notes: z.array(z.string()) });
+    const s = toAnthropicJsonSchema(z.object({ a: Item, b: Item, c: Item }));
+    const p = s.properties as Record<string, Json>;
+    expect(typeof p.a.$ref).toBe("string");
+    expect(p.a.$ref).toBe(p.c.$ref);
+    const def = (s.$defs as Record<string, Json>)[String(p.a.$ref).replace("#/$defs/", "")];
+    expect(def.type).toBe("object");
+    expect(def.additionalProperties).toBe(false);
+    expect(def.required).toEqual(["score", "notes"]);
   });
   it("serbest anahtarlı nesne (record) erken hata verir", () => {
     expect(() => toAnthropicJsonSchema(z.object({ m: z.record(z.string(), z.string()) }))).toThrow(/serbest anahtarlı/);
