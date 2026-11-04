@@ -13,10 +13,12 @@ import { AUDIT_SYSTEM, buildAuditUserText, type AuditItem } from "./prompts/audi
 // loglanmaz (yalnız neden ve sayılar). Başarısızlıkta denetim atlanır ve safety.ts tek başına uygulanır: rapor asla
 // boş gitmez (lib/score/engine/audit.ts şablona düşürür).
 
+// Üst sınır yok: toAnthropicJsonSchema maxItems'ı atar, Claude kısıtlanmaz; sunucuda katı tavan tüm denetimi düşürürdü
+// (~120 metin gönderilirken 81. yeniden yazım). Bilinmeyen yol ve boş metin lib/score/engine/audit.ts'te elenir.
 export const AuditOutput = z.object({
-  rewrites: z.array(z.object({ path: z.string(), text: z.string() })).max(80),
+  rewrites: z.array(z.object({ path: z.string(), text: z.string() })),
   /** Kısa denetçi notları (loglanmaz; signals.audit içinde sayı olarak kalır). */
-  notes: z.array(z.string()).max(5),
+  notes: z.array(z.string()),
 });
 export type AuditOutput = z.infer<typeof AuditOutput>;
 

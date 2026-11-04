@@ -12,10 +12,11 @@ describe("decideAccess", () => {
   it("abonelik → entitled, tek seferlik tüketilmez", () => {
     expect(decideAccess({ subscriptionActive: true, purchases: [paid("p1", null)], analysisId: "a1", referralsCompleted: 0, env: {} })).toMatchObject({ entitled: true, subscriptionActive: true, unconsumedOneTimeId: null });
   });
-  it("bu analize bağlı ödenmiş rapor → entitled; başka analize bağlı rapor → değil; bağlanmamış → entitled + tüketilecek id", () => {
+  it("bu analize bağlı ödenmiş rapor → entitled; başka analize bağlı rapor → değil; bağlanmamış → entitled DEĞİL ama tüketilecek id", () => {
     expect(decideAccess({ subscriptionActive: false, purchases: [paid("p1", "a1")], analysisId: "a1", referralsCompleted: 0, env: {} }).entitled).toBe(true);
     expect(decideAccess({ subscriptionActive: false, purchases: [paid("p1", "a9")], analysisId: "a1", referralsCompleted: 0, env: {} }).entitled).toBe(false);
-    expect(decideAccess({ subscriptionActive: false, purchases: [paid("p1", "a9"), paid("p2", null)], analysisId: "a1", referralsCompleted: 0, env: {} })).toMatchObject({ entitled: true, unconsumedOneTimeId: "p2" });
+    // Bağlanmamış satın alma eski satırları açmaz (bir satın alma = bir rapor); yalnız bağlanacak kimlik olarak döner.
+    expect(decideAccess({ subscriptionActive: false, purchases: [paid("p1", "a9"), paid("p2", null)], analysisId: "a1", referralsCompleted: 0, env: {} })).toMatchObject({ entitled: false, unconsumedOneTimeId: "p2" });
     expect(decideAccess({ subscriptionActive: false, purchases: [paid("p1", null, "weekly")], analysisId: "a1", referralsCompleted: 0, env: {} }).entitled).toBe(false);
   });
   it("davet kilidi yalnız FEATURE_REFERRAL_UNLOCK=true ve ≥ 5 davetle; yüzdelik yalnız FEATURE_PERCENTILE=true", () => {

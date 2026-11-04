@@ -4,7 +4,7 @@ import type { ScoreOutputV2, SubAssessment } from "@/lib/ai/scoreSchema.v2";
 import { POTENTIAL_H2, SUB_WEIGHTS_H2 } from "@/lib/config/engine.h2.server";
 import { SUB_KEYS_V2, type SubKey } from "@/lib/config/teaser";
 import type { ExplanationV2, ImproveItemV2 } from "@/lib/score/contract";
-import { PLAN_STEP_BY_ID, isStepAllowed, isStructuralSub } from "./planSteps";
+import { ALL_STEPS_ELIGIBLE, PLAN_STEP_BY_ID, isStepAllowed, isStepEligible, isStructuralSub, type StepEligibility } from "./planSteps";
 import { TEMPLATES } from "./templates";
 
 // Alt skor açıklamaları (KB §4.9 beş satır), kazançlar, potansiyel (K2) ve "önce odaklan" (P#13). Saf.
@@ -29,29 +29,32 @@ function cleanLines(lines: readonly string[], max: number, limit: number): strin
   return lines.map((l) => truncate(l, limit)).filter((l) => l.length > 0).slice(0, max);
 }
 
-/** Alt skorun geçerli (kataloğa bağlı) yükseltme adımları; yapısalda kazanç 0. */
-export function validRaise(sub: SubKey, a: SubAssessment): { stepId: string; step: string; effect: string; gain: number }[] {
+/**
+ * Alt skorun geçerli (kataloğa bağlı ve bağlama uygun) yükseltme adımları; yapısalda kazanç 0. Claude istemdeki listeden
+ * bağımsız herhangi bir kimlik üretebilir; başörtüsü (beyan ya da tespit) ve sunum filtresi burada zorlanır.
+ */
+export function validRaise(sub: SubKey, a: SubAssessment, eligibility: StepEligibility = ALL_STEPS_ELIGIBLE): { stepId: string; step: string; effect: string; gain: number }[] {
   const seen = new Set<string>();
   const out: { stepId: string; step: string; effect: string; gain: number }[] = [];
   for (const r of a.raise) {
     if (seen.has(r.stepId) || !isStepAllowed(sub, r.stepId)) continue;
     seen.add(r.stepId);
     const step = PLAN_STEP_BY_ID.get(r.stepId);
-    if (!step) continue;
+    if (!step || !isStepEligible(step, eligibility)) continue;
     out.push({ stepId: r.stepId, step: truncate(step.nameTr, LIMITS.step), effect: truncate(r.effect, LIMITS.effect), gain: isStructuralSub(sub) ? 0 : Math.max(0, Math.min(1.5, r.gain)) });
     if (out.length === 3) break;
   }
   return out;
 }
 
-export type ExplainContext = { viewsUsed: number; lighting: ScoreOutputV2["photo"]["lighting"] };
+export type ExplainContext = { viewsUsed: number; lighting: ScoreOutputV2["photo"]["lighting"]; eligibility?: StepEligibility };
 
 /** Beş satır: neye baktık · ne tuttu · ne aşağı çekti · ne yapılırsa artar · güven notu. Boş satır şablonla dolar. */
 export function buildExplanation(sub: SubKey, a: SubAssessment, ctx: ExplainContext): ExplanationV2 {
   const lookedAt = cleanLines(a.lookedAt, 3, LIMITS.line);
   const held = cleanLines(a.held, 3, LIMITS.line);
   const lowered = cleanLines(a.lowered, 2, LIMITS.line);
-  const raise = validRaise(sub, a).map((r) => ({ step: r.step, effect: r.effect }));
+  const raise = validRaise(sub, a, ctx.eligibility).map((r) => ({ step: r.step, effect: r.effect }));
   return {
     lookedAt: lookedAt.length ? lookedAt : [TEMPLATES.lookedAt(sub)],
     held: held.length ? held : [TEMPLATES.held(sub)],
@@ -62,11 +65,11 @@ export function buildExplanation(sub: SubKey, a: SubAssessment, ctx: ExplainCont
 }
 
 /** Alt skor kazançları (ham puan, tavanlı); değerlendirilmeyen ve yapısal alt skorlarda 0. */
-export function subGains(out: ScoreOutputV2, excluded: ReadonlySet<SubKey>): Record<SubKey, number> {
+export function subGains(out: ScoreOutputV2, excluded: ReadonlySet<SubKey>, eligibility: StepEligibility = ALL_STEPS_ELIGIBLE): Record<SubKey, number> {
   return Object.fromEntries(
     SUB_KEYS_V2.map((k) => {
       if (excluded.has(k) || isStructuralSub(k)) return [k, 0];
-      const sum = validRaise(k, out.subscores[k]).reduce((s, r) => s + r.gain, 0);
+      const sum = validRaise(k, out.subscores[k], eligibility).reduce((s, r) => s + r.gain, 0);
       return [k, round2(Math.min(SUB_GAIN_CAP_H2, sum))];
     }),
   ) as Record<SubKey, number>;
@@ -99,12 +102,12 @@ export function computePotentialH2(args: { raw: Record<SubKey, number>; gains: R
  * "Önce odaklan" (P#13, en çok 3 satır): adım kazancı × ağırlık × kalibrasyon eğimi = genel skor katkısı.
  * Önce her alt skorun en iyi adayı (ekran sırasıyla), sonra kalan yerler kazanca göre; 0,05'in altı atılır.
  */
-export function improveFirstV2(out: ScoreOutputV2, weights: Record<SubKey, number>, excluded: ReadonlySet<SubKey>, slope: number): ImproveItemV2[] {
+export function improveFirstV2(out: ScoreOutputV2, weights: Record<SubKey, number>, excluded: ReadonlySet<SubKey>, slope: number, eligibility: StepEligibility = ALL_STEPS_ELIGIBLE): ImproveItemV2[] {
   type Cand = ImproveItemV2 & { exact: number };
   const cands: Cand[] = [];
   for (const k of SUB_KEYS_V2) {
     if (excluded.has(k) || isStructuralSub(k)) continue;
-    for (const r of validRaise(k, out.subscores[k])) {
+    for (const r of validRaise(k, out.subscores[k], eligibility)) {
       const exact = weights[k] * Math.min(r.gain, SUB_GAIN_CAP_H2) * slope;
       if (exact < IMPROVE_FIRST_H2.minGain) continue;
       cands.push({ sub: k, stepId: r.stepId, step: r.step, gain: Math.min(1.5, round1(exact)), exact });

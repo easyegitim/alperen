@@ -678,6 +678,7 @@
       "resumeNote": "Ödemen alındı. Bu fotoğraf seti tam analiz için gönderilir; telefonunda hesaplanan oranlar ve yüz şekli ön değerlendirmesi değişmez.",
       "resumeStart": "Fotoğrafları gönder",
       "leadV2": "Ön ve yan profil hazır. İstersen 45°, ikinci profil ya da saç çizgisi ekle; hepsi isteğe bağlı ve sonucu güçlendirir.",
+      "leadV2Profile": "Ön yüz hazır. Analiz için bir yan profil zorunlu; 45°, ikinci profil ve saç çizgisi isteğe bağlı.",
       "sendNoteV2": "Analizi başlatınca yalnız telefonunda hesaplanan oranlar gönderilir; fotoğrafların bu adımda telefonundan çıkmaz. Tam sonuç için fotoğrafların, rızanla, ödeme sonrası yapay zekâ modeline gider."
     },
     "trust": {
@@ -721,6 +722,8 @@
         "optionalNote": "İsteğe bağlı; saç önerileri için yararlı."
       },
       "profileRequiredNote": "Ön ve yan profil zorunlu; diğerleri isteğe bağlıdır.",
+      "requiredLabel": "Zorunlu",
+      "captureProfile": "Yan profil çek",
       "addOptional": "İsteğe bağlı açı ekle",
       "pickFromGallery": "Galeriden seç (birden çok)",
       "done": "Fotoğraflar hazır",
@@ -1374,8 +1377,10 @@
     "result": {
       "ok": {
         "title": "Ödemen alındı, sonucun açıldı",
-        "body": "Premium özelliklerin aktif. Son analizin kilitsiz; yeni çekim gerekmez.",
+        "body": "Premium özelliklerin aktif. Tamamlanmış analizin kilitsiz; yeni çekim gerekmez.",
+        "bodyCapture": "Premium özelliklerin aktif. Fotoğrafların Aura'da saklanmadığı için fotoğraf setini çekim ekranından yeniden gönder (çek ya da galeriden seç); telefonunda hesaplanan oranlar ve yüz şekli ön değerlendirmesi değişmez.",
         "cta": "Sonucumu gör",
+        "ctaCapture": "Fotoğrafları gönder",
         "ctaList": "Analizlerime git"
       },
       "failed": {
@@ -1390,7 +1395,8 @@
       "account": "Hesap",
       "okOneTime": {
         "title": "Ödemen alındı, sonucun hazırlanıyor",
-        "body": "Bu analizin tam sonucu kart kart açılacak; yeni çekim gerekmez."
+        "body": "Bu analizin tam sonucu kart kart açılacak; yeni çekim gerekmez.",
+        "bodyCapture": "Fotoğrafların Aura'da saklanmadığı için fotoğraf setini çekim ekranından yeniden gönder (çek ya da galeriden seç); sonra bu analizin tam sonucu kart kart açılır. Telefonunda hesaplanan oranlar ve yüz şekli ön değerlendirmesi değişmez."
       }
     },
     "secure": "Güvenli ödeme · iyzico",

@@ -63,11 +63,24 @@ const TERMS: Record<Exclude<SafetyRule, "calorie" | "specialty" | "score_in_text
 /** Kelime sınırıyla aranan kısa terimler: "dolgu" (dolgun sakal değil), "kus" (kusur değil), "irk" (birkaç değil), "unlu". */
 const WORD_BOUNDARY_TERMS = new Set(["mog", "psl", "kus", "sarm", "dolgu", "irk", "unlu"]);
 
+/**
+ * Özel desenler (normalize metin üzerinde): "kusur" kelime başında ama "kusursuz" (olumlu) değil; "çok düşük" yalnız
+ * puan/yapı bağlamında — ışık, kontrast, çözünürlük gibi çekim notları ("ışık çok düşük") güven notu olarak serbesttir.
+ */
+const TERM_PATTERNS: Partial<Record<string, RegExp>> = {
+  kusur: /(^|[^a-z0-9])kusur(?!suz)/,
+  "cok dusuk": /(?<!(?:isik|isiklandirma|aydinlatma|kontrast|cozunurluk|parlaklik|netlik|keskinlik)\s(?:seviyesi\s|duzeyi\s)?)cok dusuk/,
+};
+
 export type Violation = { rule: SafetyRule; path: string; term: string };
 
 function findTerms(text: string, terms: string[]): string[] {
   const n = normalizeTr(text);
-  return terms.filter((t) => (WORD_BOUNDARY_TERMS.has(t) ? new RegExp(`(^|[^a-z0-9])${t}([^a-z0-9]|$)`).test(n) : n.includes(t)));
+  return terms.filter((t) => {
+    const custom = TERM_PATTERNS[t];
+    if (custom) return custom.test(n);
+    return WORD_BOUNDARY_TERMS.has(t) ? new RegExp(`(^|[^a-z0-9])${t}([^a-z0-9]|$)`).test(n) : n.includes(t);
+  });
 }
 
 /** "… olabilir" kalıbı: yalnız seeProfessional.text içinde hastalık adı serbest (SPEC 9.6/9.9). */

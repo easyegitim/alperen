@@ -13,6 +13,7 @@ import { isFeatureEnabled } from "@/lib/config/flags";
 import { PLANS, SUBSCRIPTION_PLAN_IDS } from "@/lib/config/plans";
 import { createAdminClient } from "@/lib/db/admin";
 import { getLegalVersion } from "@/lib/legal/docs";
+import { isV2Row } from "@/app/api/analyses/v2";
 
 export const runtime = "nodejs";
 
@@ -52,12 +53,14 @@ export const POST = withGuard({ schema: Input, allowAnonymous: false, requireAdu
   if (!email) throw new ApiError("ANONYMOUS_NOT_ALLOWED", "E-posta gerekli.");
   const admin = createAdminClient();
 
-  // Tek seferlik rapor: analiz bu kullanıcıya ait olmalı; aynı analiz ikinci kez satılmaz.
+  // Tek seferlik rapor: analiz bu kullanıcıya ait ve hybrid.v2 satırı olmalı (eski legacy/hybrid.v1 satırını v1 sunumu
+  // satın almayla açmaz; müşteri ödeyip kilitli kalırdı); aynı analiz ikinci kez satılmaz.
   let oneTime: { analysisId: string; priceTry: number; promo: boolean } | null = null;
   if (input.plan === "one_time_report") {
     const analysisId = input.analysisId as string;
-    const { data: a } = await admin.from("analyses").select("id").eq("id", analysisId).eq("user_id", user.id).maybeSingle();
+    const { data: a } = await admin.from("analyses").select("id, status, engine_version").eq("id", analysisId).eq("user_id", user.id).maybeSingle();
     if (!a) throw new ApiError("BAD_INPUT", "Analiz bulunamadı.");
+    if (!isV2Row({ status: String(a.status), engine_version: typeof a.engine_version === "string" ? a.engine_version : null })) throw new ApiError("BAD_INPUT", "Bu analiz tek seferlik raporla açılamaz; yeni bir çekim yap.");
     if (await hasPaidOneTimeFor(admin, user.id, analysisId)) throw new ApiError("ALREADY_SUBSCRIBED", "Bu analizin tam sonucu zaten açık.");
     const offer = await loadOrStartOffer(admin, user.id);
     const { priceTry, promo } = effectivePriceTry("one_time_report", offer);

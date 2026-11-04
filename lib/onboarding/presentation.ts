@@ -24,5 +24,10 @@ function questionnairePresentation(q: unknown): unknown {
 }
 
 function pick(v: unknown): Presentation | null {
-  return typeof v === "string" && (PRESENTATIONS as readonly string[]).includes(v) ? (v as Presentation) : null;
+  return isPresentation(v) ? v : null;
+}
+
+/** Saf tip koruması: profiles.presentation değeri geçerli bir sunum mu? */
+export function isPresentation(v: unknown): v is Presentation {
+  return typeof v === "string" && (PRESENTATIONS as readonly string[]).includes(v);
 }

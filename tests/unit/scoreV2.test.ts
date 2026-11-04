@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api/errors";
 import { SUB_KEYS_V2 } from "@/lib/config/teaser";
 import { ClientSignalsV2, REGION_KEYS, ReportV3, type SectionKey } from "@/lib/score/contract";
+import { PLAN_STEP_BY_ID } from "@/lib/score/engine/planSteps";
 import { scoreV2, type ScoreV2Context } from "@/lib/score/engine/scoreV2";
 import type { SectionPatchV2 } from "@/lib/score/engine/typesV2";
 import { deviceResultFromGeometry, toClientAnalysisV2, type AnalysisRowV2 } from "@/lib/score/present";
@@ -122,6 +123,38 @@ describe("scoreV2: bölümler, sinyaller ve rapor", () => {
     const detected = scoreOutput({}, { headCoveringDetected: true });
     expect((await run([detected, detected, detected])).scored.subscores.hair).toBeNull();
   });
+  it("başörtüsü (beyan ya da tespit) → hiçbir açıklamada/öncelikte saç preset'i yok; kadın sunumunda sakal preset'i yok (kod filtresi, istem öneri)", async () => {
+    // Sabit veri: harmony.raise textured_crop (saç preset'i), jawline.raise stubble_light (sakal preset'i); Claude istem dışına çıkabilir.
+    const isHair = (step: string) => step === PLAN_STEP_BY_ID.get("textured_crop")!.nameTr;
+    const isBeard = (step: string) => step === PLAN_STEP_BY_ID.get("stubble_light")!.nameTr;
+    const declared = await run(undefined, { ...CTX, headCoveringDeclared: true });
+    for (const e of Object.values(declared.scored.signals.explanations)) for (const r of e.raise) expect(isHair(r.step), r.step).toBe(false);
+    expect(declared.scored.signals.improveFirst.some((i) => isHair(i.step))).toBe(false);
+    expect(declared.scored.signals.explanations.jawline?.raise.some((r) => isBeard(r.step))).toBe(true); // erkek: sakal serbest
+
+    const detected = scoreOutput({}, { headCoveringDetected: true });
+    const byDetect = await run([detected, detected, detected]);
+    for (const e of Object.values(byDetect.scored.signals.explanations)) for (const r of e.raise) expect(isHair(r.step), r.step).toBe(false);
+
+    const female = await run(undefined, { ...CTX, presentation: "female" });
+    for (const e of Object.values(female.scored.signals.explanations)) for (const r of e.raise) expect(isBeard(r.step), r.step).toBe(false);
+    expect(female.scored.signals.improveFirst.some((i) => isBeard(i.step))).toBe(false);
+    expect(female.scored.signals.explanations.harmony?.raise.some((r) => isHair(r.step))).toBe(true); // saç serbest
+  });
+  it("tek yüz görmeyen çalıştırma ortancaya ve metin seçimine girmez (çoğunluk tek yüz görüyorsa iş sürer)", async () => {
+    const bad = scoreOutput({ skin: 9.5 }, { photo: { faceCount: "multiple", viewsUsable: [], lighting: "even", retouch: "none", skinVisibility: "clear" }, report: { ...scoreOutput().report, letter: "KÖTÜ ÇALIŞTIRMA MEKTUBU" } });
+    const { scored, provider } = await run([scoreOutput({ skin: 6 }), scoreOutput({ skin: 6.2 }), bad]);
+    expect(provider.calls).toBe(3); // 9,5 yayılımı 4. çalıştırmayı tetiklemez: kötü çalıştırma dışarıda
+    expect(scored.signals.raw.skin).toBe(6.1);
+    expect(scored.signals.runs.ok).toBe(2);
+    expect(scored.report.letter).not.toContain("KÖTÜ");
+  });
+  it("boş gözlem satırı denetime girmez ve 'fallback' sayılmaz", async () => {
+    const empty = scoreOutput({}, { observations: { ...scoreOutput().observations, other: ["", "   ", "Çekim özeni orta."] } });
+    const { scored } = await run([empty, empty, empty]);
+    expect(scored.signals.observations.other).toEqual(["Çekim özeni orta."]);
+    expect(scored.signals.audit.fallbacks).toBe(0);
+  });
   it("satıra giden hiçbir şeyde görsel verisi veya landmark yok", async () => {
     const { scored } = await run();
     expect(JSON.stringify(scored)).not.toMatch(/AAAA|BBBB|landmarks|"x":/);
@@ -189,5 +222,20 @@ describe("scoreV2: hatalar (hak düşmez; rota failed yazar)", () => {
     const fatal = new FakeScoringV2([failRun("fatal", 1, { status: 400 })]);
     const e4 = await scoreV2({ images: IMAGES, geometry: GEO, context: ctx }, { provider: fatal, auditProvider: null, env: ENV }).catch((e: unknown) => e);
     expect((e4 as ApiError).code).toBe("AI_FAILED");
+  });
+  it("çalıştırmalardan SONRA fırlayan hata (bölüm yazımı) da ücretlendirilen kullanımı taşır", async () => {
+    const provider = new FakeScoringV2([okRun(scoreOutput())]);
+    const audit = new FakeAudit({ rewrites: [], notes: [] });
+    const e = await scoreV2({ images: IMAGES, geometry: GEO, context: CTX }, {
+      provider,
+      auditProvider: audit,
+      env: ENV,
+      onSection: (section) => {
+        if (section === "report") throw new Error("db down");
+      },
+    }).catch((err: unknown) => err);
+    expect(e).toBeInstanceOf(Error);
+    const usage = (e as { aiUsage?: { calls: number; attempts: number; input: number } }).aiUsage;
+    expect(usage).toMatchObject({ calls: 3, attempts: 4, input: 3 * 5000 }); // 3 çalıştırma + denetim
   });
 });

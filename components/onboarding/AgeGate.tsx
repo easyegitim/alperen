@@ -40,7 +40,16 @@ export function AgeGate({ under18Enabled, signedIn, initial, nextPath }: Props) 
     setBusy(true);
     try {
       writeDraft({ ageBand: band });
-      if (signedIn) await postJson("/api/onboarding/age", { ageBand: band });
+      if (signedIn) {
+        // FEATURE_UNDER_18 açıkken sunucu 18 altını kabul eder (is_adult=false) ama uygulama kapıları (requireAdult) bu
+        // sprintte kapalıdır: cinsiyet → giriş → izinler → yaş döngüsüne sokmak yerine "yakında" ekranı gösterilir.
+        const res = await postJson<{ isAdult?: boolean }>("/api/onboarding/age", { ageBand: band });
+        if (res?.isAdult === false) {
+          track("onboarding_step_completed", { step: "age_under18_soon" });
+          setSoon(true);
+          return;
+        }
+      }
       track("onboarding_step_completed", { step: "age" });
       router.push(nextPath);
     } catch (e) {

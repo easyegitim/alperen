@@ -7,7 +7,7 @@ import type { AnalysisInput, ImageItem } from "@/lib/api/analysesInput";
 import { decodeImages } from "@/lib/api/analysesInput";
 import { ApiError } from "@/lib/api/errors";
 import { isUnlimitedQuota } from "@/lib/api/quota";
-import { effectiveLimit } from "@/lib/billing/entitlement";
+import { canConsumePurchaseFor, effectiveLimit } from "@/lib/billing/entitlement";
 import type { AccessDetail } from "@/lib/billing/entitlement";
 import { bindOneTimePurchase, getAccessV2 } from "@/lib/billing/purchases";
 import { ENGINE_H2, SET_CACHE_SECRET_ENV } from "@/lib/config/engine.h2.server";
@@ -96,15 +96,29 @@ export function deviceColumns(geometry: GeometryResult, setKey: string | null) {
   };
 }
 
-/** Kota penceresi: abonelik → kayan pencere; tek seferlik → ödenmiş rapor sayısı kadar toplam analiz (device_only sayılmaz). */
+/** reserve_analysis / promote_analysis'in kotaya saydığı durumlar (0010). */
+const QUOTA_STATUSES = ["queued", "running", "processing", "completed"] as const;
+
+/**
+ * Kota penceresi: abonelik → kayan pencere; tek seferlik → ödenmiş rapor sayısı kadar YENİ analiz. SQL fonksiyonları
+ * kullanıcının tüm ücretli-yol satırlarını (eski ücretsiz v1, süresi dolmuş abonelik dönemi) saydığından, bir satın
+ * almaya bağlı olmayan satırlar limite eklenir: kalan hak = ödenmiş − bağlı (tüketilmiş) satın alma.
+ */
 export async function quotaWindow(admin: Admin, userId: string, subscriptionActive: boolean): Promise<{ limit: number; since: string; retryAfterDays: number | null }> {
   const unlimited = await isUnlimitedQuota(admin, userId);
   if (subscriptionActive) {
     const w = ENTITLEMENTS.premium;
     return { limit: effectiveLimit(w.analysesPerWindow, unlimited), since: new Date(Date.now() - w.windowDays * 86_400_000).toISOString(), retryAfterDays: w.windowDays };
   }
-  const { count } = await admin.from("purchases").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "paid").eq("product", "one_time_report");
-  return { limit: effectiveLimit(Math.max(1, count ?? 0), unlimited), since: "-infinity", retryAfterDays: null };
+  const { data: paidRows } = await admin.from("purchases").select("analysis_id").eq("user_id", userId).eq("status", "paid").eq("product", "one_time_report");
+  const paid = paidRows ?? [];
+  const boundIds = paid.map((p) => (p.analysis_id ? String(p.analysis_id) : null)).filter((id): id is string => id !== null);
+  const { count: usedTotal } = await admin.from("analyses").select("id", { count: "exact", head: true }).eq("user_id", userId).in("status", [...QUOTA_STATUSES]);
+  const { count: boundUsed } = boundIds.length
+    ? await admin.from("analyses").select("id", { count: "exact", head: true }).eq("user_id", userId).in("status", [...QUOTA_STATUSES]).in("id", boundIds)
+    : { count: 0 };
+  const unboundRows = Math.max(0, (usedTotal ?? 0) - (boundUsed ?? 0));
+  return { limit: effectiveLimit(Math.max(1, paid.length + unboundRows), unlimited), since: "-infinity", retryAfterDays: null };
 }
 
 export function toLabeled(images: readonly ImageItem[]): LabeledImage[] {
@@ -127,9 +141,8 @@ export type StartJobArgs = {
   access: AccessDetail;
 };
 
-/** İşi aynı çağrının içinde (after) başlatır: yanıt 202 döner, görseller bu invocation'ın belleğinde kalır. */
+/** İşi aynı çağrının içinde (after) başlatır: yanıt 202 döner, görseller bu invocation'ın belleğinde kalır. Hak çağıranda doğrulandı. */
 export async function startJob(a: StartJobArgs): Promise<void> {
-  if (a.access.unconsumedOneTimeId) await bindOneTimePurchase(a.admin, a.access.unconsumedOneTimeId, a.row.id);
   const profile = await loadProfile(a.admin, a.userId);
   const context = analysisContextV2(profile);
   const repo = createAnalysisRepo(a.admin);
@@ -146,7 +159,8 @@ export async function handleFull(admin: Admin, userId: string, input: AnalysisIn
   validateImages(input.images);
   const existing = await loadRowByRequest(admin, userId, input.clientRequestId);
   const access = await getAccessV2(admin, userId, existing?.id ?? null);
-  if (!access.entitled) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
+  // Hak: abonelik ya da bu satıra bağlı rapor; bağlanmamış satın alma yalnız yeni/başlamamış satıra bağlanarak (promoteAndStart).
+  if (!canConsumePurchaseFor(access, existing?.status ?? "queued")) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
   const q = await quotaWindow(admin, userId, access.subscriptionActive);
 
   const { data: reservedId, error: rpcError } = await admin.rpc("reserve_analysis", { p_user: userId, p_client_request_id: input.clientRequestId, p_limit: q.limit, p_since: q.since, p_status: "queued" });
@@ -175,9 +189,17 @@ export type PromoteArgs = {
  * POST /api/analyses/[id]/run (ödeme sonrası yeniden gönderim; görseller sunucuda yok).
  */
 export async function promoteAndStart(a: PromoteArgs): Promise<Response> {
-  const { admin, userId, access } = a;
+  const { admin, userId } = a;
+  let access = a.access;
   let row = a.row;
   if (row.status === "completed") return Response.json(await presentV2(admin, userId, row, access));
+  // Bağlanmamış satın alma: işten ve kotadan ÖNCE bu satıra bağlanır (tüketilir); bağlanamazsa (yarış, tekil indeks) iş yok.
+  if (!access.entitled) {
+    if (!canConsumePurchaseFor(access, row.status) || !access.unconsumedOneTimeId) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
+    const bound = await bindOneTimePurchase(admin, access.unconsumedOneTimeId, row.id);
+    if (!bound) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
+    access = { ...access, entitled: true, unconsumedOneTimeId: null };
+  }
   if (row.status === "device_only" || row.status === "queued") {
     const { data: promoted, error: promoteError } = await admin.rpc("promote_analysis", { p_user: userId, p_analysis_id: row.id, p_limit: a.quota.limit, p_since: a.quota.since });
     if (promoteError) throw new Error("promote_analysis failed");

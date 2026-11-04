@@ -6,6 +6,7 @@ import { getAiEnv } from "@/lib/config/ai.server";
 import { REQUIRED_ANALYSIS_CONSENTS } from "@/lib/consent";
 import { createAdminClient } from "@/lib/db/admin";
 import { FRONT_MAX_BYTES, TOTAL_IMAGE_MAX_BYTES, VIEW_BY_KEY, VIEW_KEYS, checkViewSet } from "@/lib/face/views";
+import { canConsumePurchaseFor } from "@/lib/billing/entitlement";
 import { getAccessV2 } from "@/lib/billing/purchases";
 import { JOB_STALE_MS, isJobStale } from "@/lib/score/engine/jobs";
 import { prepareScoringV2 } from "@/lib/score/service";
@@ -59,7 +60,8 @@ export const POST = withGuard({ schema: RunInput, requireAdult: true, requireCon
   const row = await loadRowById(admin, user.id, id);
   if (!row || !isV2Row(row) || !row.geometry) return notFound();
   const access = await getAccessV2(admin, user.id, row.id);
-  if (!access.entitled) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
+  // Bağlanmamış satın alma yalnız device_only/queued/failed satıra bağlanarak kullanılır (promoteAndStart bağlar).
+  if (!canConsumePurchaseFor(access, row.status)) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
   if (row.status === "completed") return Response.json(await presentV2(admin, user.id, row, access));
   if (row.status !== "device_only" && row.status !== "failed" && !isJobStale(row, Date.now(), JOB_STALE_MS)) return Response.json(await presentV2(admin, user.id, row, access), { status: 202 });
   const geometry = prepareScoringV2(row.geometry).geometry;

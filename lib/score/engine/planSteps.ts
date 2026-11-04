@@ -80,8 +80,18 @@ export function isStructuralSub(sub: SubKey): boolean {
   return STRUCTURAL.includes(sub);
 }
 
+/** Bağlama göre adım uygunluğu: başörtüsü/görünür saç yok → saç adımı yok (K9, CLAUDE.md); kadın sunumunda sakal preset'i yok. */
+export type StepEligibility = { hairAllowed: boolean; beardAllowed: boolean };
+export const ALL_STEPS_ELIGIBLE: StepEligibility = { hairAllowed: true, beardAllowed: true };
+
+/** İstem listesi ve kod doğrulaması (validRaise) aynı kuralı kullanır; istem yalnız öneridir, zorlayan kod filtresidir. */
+export function isStepEligible(step: PlanStepV2, opts: StepEligibility): boolean {
+  if (!opts.hairAllowed && (step.kind === "hair_preset" || step.subs[0] === "hair")) return false;
+  if (!opts.beardAllowed && step.kind === "beard_preset") return false;
+  return true;
+}
+
 /** İstem için kompakt liste: alt skor → "id — ad" satırları. */
-export function planStepsForPrompt(opts: { hairAllowed: boolean; beardAllowed: boolean }): Record<SubKey, string[]> {
-  const skip = (s: PlanStepV2) => (!opts.hairAllowed && (s.kind === "hair_preset" || s.subs[0] === "hair")) || (!opts.beardAllowed && s.kind === "beard_preset");
-  return Object.fromEntries(SUB_KEYS_V2.map((k) => [k, stepsForSub(k).filter((s) => !skip(s)).map((s) => `${s.id} — ${s.nameTr}`)])) as Record<SubKey, string[]>;
+export function planStepsForPrompt(opts: StepEligibility): Record<SubKey, string[]> {
+  return Object.fromEntries(SUB_KEYS_V2.map((k) => [k, stepsForSub(k).filter((s) => isStepEligible(s, opts)).map((s) => `${s.id} — ${s.nameTr}`)])) as Record<SubKey, string[]>;
 }

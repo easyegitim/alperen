@@ -41,8 +41,10 @@ export async function auditTexts(texts: readonly AuditText[], scores: Record<str
   let fallbacks = 0;
   const out = texts.map((t) => {
     const candidate = rewrites.get(t.path) ?? t.text;
+    // Boş aday güvenlik ihlali değildir: şablon kullanılır ama fallbacks sayılmaz (is_fallback yalnız gerçek filtrelemede).
+    if (!candidate.trim()) return { ...t, text: t.fallback };
     const v = scanTextV2(candidate, t.path, { allowMaybeDiagnosis: t.allowMaybeDiagnosis });
-    if (v.length === 0 && candidate.trim()) return { ...t, text: candidate };
+    if (v.length === 0) return { ...t, text: candidate };
     violations.push(...v);
     fallbacks++;
     return { ...t, text: t.fallback };

@@ -26,6 +26,18 @@ describe("scanTextV2 kuralları", () => {
     expect(rules("Çene hattı yan profilde yumuşak geçişli; sakal hattı netleştirir.")).toEqual([]);
     expect(rules("Dudak yüzeyi nemli ve düzenli.")).toEqual([]);
   });
+  it("'kusursuz' (olumlu) ihlal değil; 'kusur', 'kusurlu', 'kusurlar' yakalanır", () => {
+    expect(rules("Cilt dokusu neredeyse kusursuz görünüyor.")).toEqual([]);
+    expect(rules("Burnunda belirgin bir kusur var.")).toContain("structural_critique");
+    expect(rules("Kusurlar dikkat çekiyor.")).toContain("structural_critique");
+    expect(rules("Kusurlu bir yapı.")).toContain("slur");
+  });
+  it("'ışık çok düşük' çekim notu serbest; 'puanın çok düşük' / 'çene çok düşük' yakalanır", () => {
+    expect(rules("Işık çok düşük olduğu için güven orta.")).toEqual([]);
+    expect(rules("Kontrast çok düşük; ikinci açı yardımcı olur.")).toEqual([]);
+    expect(rules("Çene belirginliği çok düşük.")).toContain("structural_critique");
+    expect(rules("Bu alanda puanın çok düşük.")).toContain("structural_critique");
+  });
   it("kelime sınırı: 'birkaç' ırk sayılmaz; 'ırk' sayılır", () => {
     expect(rules("Birkaç hafta düzenli bakım yeter.")).toEqual([]);
     expect(rules("Irk özelliklerine göre…")).toContain("comparison");

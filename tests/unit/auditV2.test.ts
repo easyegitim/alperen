@@ -24,6 +24,13 @@ describe("auditTexts", () => {
     expect(r.summary.fallbacks).toBe(2);
     expect(r.summary.flags).toEqual(expect.arrayContaining(["structural_critique", "score_in_text"]));
   });
+  it("boş aday metin şablona düşer ama 'fallback' sayılmaz (is_fallback yalnız gerçek filtrelemede)", async () => {
+    const ac = new AbortController();
+    const r = await auditTexts([{ path: "observations.other[0]", text: "   ", fallback: "" }, { path: "letter", text: "", fallback: "ŞABLON" }], {}, null, { signal: ac.signal, timeoutMs: 1000 });
+    expect(r.texts.map((t) => t.text)).toEqual(["", "ŞABLON"]);
+    expect(r.summary.fallbacks).toBe(0);
+    expect(r.summary.flags).toEqual([]);
+  });
   it("yeniden yazım uygulanır (yalnız bilinen yol, boş olmayan); temiz yeniden yazım şablona düşmez", async () => {
     const p = new FakeAudit({
       rewrites: [

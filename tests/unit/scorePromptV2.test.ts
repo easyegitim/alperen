@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { SCORE_V2_PROMPT_VERSION, SCORE_V2_SYSTEM, buildScoreV2UserText } from "@/lib/ai/prompts/score.v2";
-import { ScoreOutputV2 } from "@/lib/ai/scoreSchema.v2";
+import { ScoreOutputV2, normalizeScoreOutputV2 } from "@/lib/ai/scoreSchema.v2";
 import { normalizeTr } from "@/lib/ai/safety";
 import { SUB_KEYS_V2 } from "@/lib/config/teaser";
+import { REGION_KEYS } from "@/lib/score/contract";
 import { planStepsForPrompt } from "@/lib/score/engine/planSteps";
 import { deviceResultFromGeometry } from "@/lib/score/present";
 import { GEO } from "../helpers/engineFixtures";
@@ -56,15 +57,35 @@ describe("buildScoreV2UserText", () => {
   });
 });
 
-describe("ScoreOutputV2 şeması", () => {
-  it("örnek çıktı geçer; puan 1–10 dışı, bilinmeyen bölge ya da fazla fırsat reddedilir", () => {
+describe("ScoreOutputV2 şeması + normalizeScoreOutputV2", () => {
+  it("örnek çıktı geçer; bilinmeyen bölge anahtarı (enum) reddedilir", () => {
     expect(ScoreOutputV2.safeParse(scoreOutput()).success).toBe(true);
-    const bad = scoreOutput();
-    bad.subscores.skin.score = 11;
-    expect(ScoreOutputV2.safeParse(bad).success).toBe(false);
-    const region = scoreOutput();
-    region.report.regions[0].improvements = ["a", "b", "c"];
-    expect(ScoreOutputV2.safeParse(region).success).toBe(false);
     expect(ScoreOutputV2.safeParse({ ...scoreOutput(), report: { ...scoreOutput().report, regions: [{ key: "forehead", strength: "", seen: "", improvements: [] }] } }).success).toBe(false);
+  });
+  it("taşmalar çalıştırmayı düşürmez: puan 1–10'a, kazanç 0–1,5'e kenetlenir; listeler tavana kırpılır; tekrar eden bölge ilkiyle kalır", () => {
+    const over = scoreOutput();
+    over.subscores.skin.score = 11;
+    over.subscores.hair.score = 0.2;
+    over.subscores.skin.raise = [...over.subscores.skin.raise, { stepId: "st_cleanser_gentle", effect: "x", gain: 2.5 }, { stepId: "st_cleanser_evening", effect: "y", gain: -1 }];
+    over.subscores.skin.lookedAt = ["a", "b", "c", "d"];
+    over.subscores.skin.lowered = ["a", "b", "c"];
+    over.observations.other = ["1", "2", "3", "4"];
+    over.report.regions = [...over.report.regions, { key: "skin", strength: "tekrar", seen: "tekrar", improvements: ["a", "b", "c"] }];
+    over.report.regions[0].improvements = ["a", "b", "c"];
+    over.photo.viewsUsable = ["front", "front", "profile_left"];
+    const parsed = ScoreOutputV2.safeParse(over);
+    expect(parsed.success).toBe(true);
+    const n = normalizeScoreOutputV2(parsed.data!);
+    expect(n.subscores.skin.score).toBe(10);
+    expect(n.subscores.hair.score).toBe(1);
+    expect(n.subscores.skin.raise).toHaveLength(3);
+    expect(n.subscores.skin.raise.map((r) => r.gain)).toEqual([0.5, 0.3, 1.5]);
+    expect(n.subscores.skin.lookedAt).toEqual(["a", "b", "c"]);
+    expect(n.subscores.skin.lowered).toEqual(["a", "b"]);
+    expect(n.observations.other).toEqual(["1", "2", "3"]);
+    expect(n.report.regions).toHaveLength(REGION_KEYS.length);
+    expect(n.report.regions.find((r) => r.key === "skin")?.strength).not.toBe("tekrar");
+    expect(n.report.regions[0].improvements).toEqual(["a", "b"]);
+    expect(n.photo.viewsUsable).toEqual(["front", "profile_left"]);
   });
 });

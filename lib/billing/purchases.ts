@@ -18,12 +18,22 @@ const MISSING_RELATION = new Set(["42P01", "PGRST205", "PGRST204", "42703"]);
 const missing = (e: { code?: string } | null | undefined) => Boolean(e?.code && MISSING_RELATION.has(e.code));
 
 export async function listPaidPurchases(admin: Admin, userId: string): Promise<PurchaseLike[]> {
-  const { data, error } = await admin.from("purchases").select("id, product, analysis_id, status").eq("user_id", userId).eq("status", "paid");
+  // 0012 (consumed_at) uygulanmamışsa eski sütun listesine düşer; tüketim o zaman yalnız analysis_id ile bilinir.
+  const query = (cols: string) => admin.from("purchases").select(cols).eq("user_id", userId).eq("status", "paid");
+  let res: { data: unknown; error: { code?: string } | null } = await query("id, product, analysis_id, status, consumed_at");
+  if (res.error && missing(res.error)) res = await query("id, product, analysis_id, status");
+  const { data, error } = res;
   if (error) {
     if (!missing(error)) console.warn(`[purchases] read failed: ${error.code ?? "?"}`);
     return [];
   }
-  return ((data as PurchaseLike[] | null) ?? []).map((p) => ({ id: String(p.id), product: String(p.product), analysis_id: p.analysis_id ? String(p.analysis_id) : null, status: String(p.status) }));
+  return ((data as PurchaseLike[] | null) ?? []).map((p) => ({
+    id: String(p.id),
+    product: String(p.product),
+    analysis_id: p.analysis_id ? String(p.analysis_id) : null,
+    status: String(p.status),
+    consumed_at: typeof p.consumed_at === "string" ? p.consumed_at : null,
+  }));
 }
 
 async function countCompletedReferrals(admin: Admin, userId: string): Promise<number> {
@@ -43,14 +53,28 @@ export async function getAccessV2(admin: Admin, userId: string, analysisId: stri
   return decideAccess({ subscriptionActive, purchases, analysisId, referralsCompleted, env });
 }
 
-/** Tek seferlik raporu bu analize bağlar (tekil indeks; yarışta ikinci bağlama hata verir ve yok sayılır). */
+/**
+ * Tek seferlik raporu bu analize bağlar ve tüketilmiş işaretler (consumed_at, 0012). Tekil indeks: yarışta ikinci bağlama
+ * hata verir ve false döner. Yalnız analysis_id null ve consumed_at boş satır bağlanır; etkilenen satır yoksa false.
+ */
 export async function bindOneTimePurchase(admin: Admin, purchaseId: string, analysisId: string): Promise<boolean> {
-  const { error } = await admin.from("purchases").update({ analysis_id: analysisId }).eq("id", purchaseId).is("analysis_id", null);
-  if (error) {
-    console.warn(`[purchases] bind failed: ${error.code ?? "?"}`);
+  const now = new Date().toISOString();
+  let res = await admin.from("purchases").update({ analysis_id: analysisId, consumed_at: now }).eq("id", purchaseId).is("analysis_id", null).is("consumed_at", null).select("id");
+  if (res.error && missing(res.error)) res = await admin.from("purchases").update({ analysis_id: analysisId }).eq("id", purchaseId).is("analysis_id", null).select("id");
+  if (res.error) {
+    console.warn(`[purchases] bind failed: ${res.error.code ?? "?"}`);
     return false;
   }
-  return true;
+  return Array.isArray(res.data) && res.data.length > 0;
+}
+
+/**
+ * Rıza geri alma / analiz silme öncesi: bağlı satın almalar tüketilmiş kalır (FK "set null" analysis_id'yi boşaltsa da).
+ * 0012 uygulanmamışsa sessizce geçer (sütun yok).
+ */
+export async function markBoundPurchasesConsumed(admin: Admin, userId: string): Promise<void> {
+  const { error } = await admin.from("purchases").update({ consumed_at: new Date().toISOString() }).eq("user_id", userId).not("analysis_id", "is", null).is("consumed_at", null);
+  if (error && !missing(error)) console.warn(`[purchases] consume mark failed: ${error.code ?? "?"}`);
 }
 
 /** Ödeme başlatılırken bekleyen satır; analiz bağı yalnız ödeme doğrulanınca yazılır (tekil indeks başarısız denemeyi kilitlemesin). */

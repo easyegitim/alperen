@@ -11,7 +11,7 @@ import { classifyAnthropicError, getAnthropic, readJsonText, readUsage, readUsag
 import type { ViewKey } from "@/lib/face/views";
 import { SERVER_FALLBACK_BETA, SampleError } from "./observeProvider";
 import { SCORE_V2_SYSTEM } from "./prompts/score.v2";
-import { ScoreOutputV2 } from "./scoreSchema.v2";
+import { ScoreOutputV2, normalizeScoreOutputV2 } from "./scoreSchema.v2";
 import { aiErrorSummary, isTransientAiError, withTransientRetry } from "./retry";
 import { COACH_REPORT_JSON_SCHEMA, CoachReport } from "./reportSchema";
 import { SCORE_OUTPUT_JSON_SCHEMA, ScoreOutput } from "./scoreSchema";
@@ -278,10 +278,14 @@ export interface ScoringProviderV2 {
   scoreOnce(images: readonly LabeledImage[], userText: string, signal: AbortSignal, timeoutMs: number): Promise<ScoreSampleV2>;
 }
 
-/** Düşünme + ~3–4k tokenlık Türkçe JSON (7 alt skor × 5 satır + 9 bölge). Aşılırsa stop_reason max_tokens → çalıştırma başarısız. */
-export const SCORE_V2_MAX_TOKENS = 10_000;
+/**
+ * Düşünme + ~3–4k tokenlık Türkçe JSON (7 alt skor × 5 satır + 9 bölge). Opus 5.5'te düşünme kapatılamaz ve aynı bütçeyi
+ * paylaşır; medium eforda altı görselle 10k aşılabiliyordu (stop_reason max_tokens → ücretli çalıştırma boşa). 16k:
+ * çağrıya açık timeout verildiğinden SDK'nın akışsız sınırı devreye girmez. Aşılırsa output_tokens loglanır (ayar için).
+ */
+export const SCORE_V2_MAX_TOKENS = 16_000;
 
-/** Claude'a giden cetvel şeması: sınırlar atılır, enum ve required korunur; sınırlar sunucuda (ScoreOutputV2.safeParse). */
+/** Claude'a giden cetvel şeması: enum ve required korunur; sayısal/dizi sınırları sunucuda normalizeScoreOutputV2 ile kenetlenir. */
 export const SCORE_V2_JSON_SCHEMA = toAnthropicJsonSchema(ScoreOutputV2);
 
 const VIEW_LABEL_EN: Record<ViewKey, string> = {
@@ -303,7 +307,7 @@ function parseScoreV2(text: string | null, meta: { usage: TokenUsage; usageByMod
   }
   const r = ScoreOutputV2.safeParse(json);
   if (!r.success) throw new SampleError("schema", { ...meta, detail: "safeParse" });
-  return r.data;
+  return normalizeScoreOutputV2(r.data);
 }
 
 export class ClaudeScoringProvider implements ScoringProviderV2 {
@@ -359,7 +363,10 @@ export class ClaudeScoringProvider implements ScoringProviderV2 {
     }
     const meta = { usage: readUsage(res), usageByModel: readUsageByModel(res), model: res.model };
     if (res.stop_reason === "refusal") throw new SampleError("refusal", { ...meta, category: res.stop_details?.category ?? null });
-    if (res.stop_reason === "max_tokens") throw new SampleError("max_tokens", meta);
+    if (res.stop_reason === "max_tokens") {
+      console.warn(`[ai] score claude max_tokens output=${meta.usage.output} limit=${this.maxTokens}`);
+      throw new SampleError("max_tokens", meta);
+    }
     const out = parseScoreV2(readJsonText(res).text, meta);
     return { out, model: res.model, fallbackServed: servedByFallback(res), usage: meta.usage, usageByModel: meta.usageByModel };
   }

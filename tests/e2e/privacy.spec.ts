@@ -5,13 +5,13 @@
  *
  * Gereksinimler (yoksa test hemen BAŞARISIZ olur; atlanmaz):
  *   PRIVACY_E2E=1                       → playwright.config.ts "privacy" projesini ekler
- *   Sunucu gerçek (yerel) Supabase ile çalışıyor (migration 0010 uygulanmış); NEXT_PUBLIC_SUPABASE_URL,
+ *   Sunucu gerçek (yerel) Supabase ile çalışıyor (migration 0010–0012 uygulanmış); NEXT_PUBLIC_SUPABASE_URL,
+ *   (Ödeme öncesi device_only yol SCORE_ENGINE'den bağımsızdır; POST /api/analyses 200 değilse test yanıtı açıkça raporlar.)
  *   NEXT_PUBLIC_SUPABASE_ANON_KEY ve SUPABASE_SERVICE_ROLE_KEY ortamda (test kullanıcısı için)
  *   PRIVACY_FACE_VIDEO=/sifreli/disk/face.y4m → Chrome sahte kamera kaynağı (rızalı yüz; depoya konmaz)
  */
-import { expect, test, type BrowserContext, type Request } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
-import { randomUUID } from "node:crypto";
+import { expect, test, type Request } from "@playwright/test";
+import { createTestUser, env } from "./helpers/testUser";
 
 type LockedJson = { value: unknown; locked: boolean };
 /** /api/analyses yanıtındaki ClientAnalysisV2'nin kilitle ilgili alanları (lib/score/present.ts). */
@@ -37,34 +37,6 @@ function hasImagePayload(req: Request): boolean {
   return body.includes("/9j/") || body.includes("data:image/");
 }
 
-const env = (k: string) => {
-  const v = process.env[k];
-  if (!v) throw new Error(`${k} gerekli — tests/e2e/privacy.spec.ts başlığına bak.`);
-  return v;
-};
-
-/** Test kullanıcısı: sahte e-posta, doğrulanmış; oturum çerezi tarayıcıya yazılır (sb-<ref>-auth-token, 3180'lik parçalar). */
-async function createTestUser(context: BrowserContext, baseURL: string) {
-  const url = env("NEXT_PUBLIC_SUPABASE_URL");
-  const admin = createClient(url, env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
-  const anon = createClient(url, env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), { auth: { persistSession: false } });
-  const email = `privacy-${randomUUID()}@example.test`;
-  const password = randomUUID();
-  const { data: created, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-  if (error || !created.user) throw new Error("test kullanıcısı açılamadı");
-  const { data: signed } = await anon.auth.signInWithPassword({ email, password });
-  if (!signed.session) throw new Error("test oturumu açılamadı");
-  const ref = new URL(url).hostname.split(".")[0];
-  const enc = "base64-" + Buffer.from(JSON.stringify(signed.session)).toString("base64url");
-  const name = `sb-${ref}-auth-token`;
-  const chunks: { name: string; value: string }[] = [];
-  if (enc.length <= 3180) chunks.push({ name, value: enc });
-  else for (let i = 0, n = 0; i < enc.length; i += 3180, n++) chunks.push({ name: `${name}.${n}`, value: enc.slice(i, i + 3180) });
-  const host = new URL(baseURL).hostname;
-  await context.addCookies(chunks.map((c) => ({ ...c, domain: host, path: "/", sameSite: "Lax" as const })));
-  return { id: created.user.id, cleanup: async () => void (await admin.auth.admin.deleteUser(created.user!.id)) };
-}
-
 test.describe("Gizlilik (tüm ağ trafiği)", () => {
   test.beforeAll(() => {
     for (const k of ["PRIVACY_E2E", "PRIVACY_FACE_VIDEO", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) {
@@ -73,13 +45,15 @@ test.describe("Gizlilik (tüm ağ trafiği)", () => {
   });
 
   test("ödeme öncesi akış: görsel gönderilmez; gövdede landmark yok; kilitli değerler yanıtta yok; görsel giderse yalnız izinli uçlara", async ({ page, context, baseURL }) => {
-    const user = await createTestUser(context, baseURL ?? "http://localhost:3000");
+    const user = await createTestUser(context, baseURL ?? "http://localhost:3000", "privacy");
     try {
       const requests: Request[] = [];
       page.on("request", (r) => requests.push(r));
       const analysisResponses: unknown[] = [];
       const analysisBodies: string[] = [];
+      const analysisFailures: string[] = [];
       page.on("response", async (res) => {
+        if (/\/api\/analyses(\/|$)/.test(new URL(res.url()).pathname) && !res.ok()) analysisFailures.push(`${res.status()} ${await res.text().catch(() => "")}`);
         if (/\/api\/analyses(\/|$)/.test(new URL(res.url()).pathname) && res.ok()) {
           const text = await res.text().catch(() => "");
           analysisBodies.push(text);
@@ -117,6 +91,8 @@ test.describe("Gizlilik (tüm ağ trafiği)", () => {
       await page.getByRole("button", { name: "Çek" }).click({ timeout: 30_000 });
       await page.getByRole("button", { name: "Bu fotoğrafı kullan" }).click({ timeout: 60_000 });
       await page.getByRole("button", { name: "Analizi başlat" }).click({ timeout: 30_000 });
+      await expect.poll(() => analysisResponses.length + analysisFailures.length, { timeout: 90_000 }).toBeGreaterThan(0);
+      expect(analysisFailures, `POST /api/analyses başarısız (ön koşul: sunucu + migration; gövde: ${analysisFailures[0] ?? ""})`).toEqual([]);
       await expect(page).toHaveURL(/\/analiz\/[0-9a-f-]{36}/, { timeout: 90_000 });
 
       // 3) Ödeme öncesi hiçbir isteğe görsel girmez; girerse yalnız izinli uçlara
@@ -169,12 +145,17 @@ test.describe("Gizlilik (tüm ağ trafiği)", () => {
       // Hiçbir hosta giden gövdede landmark dizisi yok
       for (const r of requests) expect(r.postData() ?? "", new URL(r.url()).host).not.toMatch(/"landmarks"/);
 
-      // 7) Supabase istemcisiyle analyses / coach_reports okunamıyor
-      const status = await page.evaluate(async ({ url, key }) => {
-        const res = await fetch(`${url}/rest/v1/analyses?select=id`, { headers: { apikey: key } });
-        return res.status;
-      }, { url: env("NEXT_PUBLIC_SUPABASE_URL"), key: env("NEXT_PUBLIC_SUPABASE_ANON_KEY") });
-      expect([401, 200]).toContain(status); // 200 ise RLS boş dizi döndürür; 401 anon key ile yetkisiz
+      // 7) Supabase istemcisiyle (anon key + kullanıcının kendi oturum JWT'si) analyses / coach_reports / analysis_sets
+      //    okunamıyor: tarayıcı politikası yok → 401 ya da boş dizi. purchases okunabilir ama skor taşımaz; yine de boş olmalı.
+      const supaUrl = env("NEXT_PUBLIC_SUPABASE_URL");
+      const anonKey = env("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+      for (const table of ["analyses", "coach_reports", "analysis_sets", "purchases"]) {
+        const res = await page.request.get(`${supaUrl}/rest/v1/${table}?select=*`, { headers: { apikey: anonKey, Authorization: `Bearer ${user.accessToken}` } });
+        const bodyText = await res.text();
+        expect([401, 200, 404], `${table} durum ${res.status()}`).toContain(res.status());
+        if (res.status() === 200) expect(JSON.parse(bodyText), `${table} RLS ile boş dizi dönmeli`).toEqual([]);
+        expect(bodyText).not.toMatch(/"overall"|"subscores"|"scores"|"report"/);
+      }
     } finally {
       await user.cleanup();
     }

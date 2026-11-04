@@ -190,7 +190,9 @@ export async function collectRuns(
   let extraRun: CollectedRuns["extraRun"] = "none";
   try {
     await Promise.all(Array.from({ length: opts.runs ?? cfg.runs }, () => slot()));
-    if (!fatal && samples.length >= 2 && needsExtraRun(samples.map(vectorOf), cfg.extraRunIfSpread)) {
+    // Yayılım yalnız tek yüz gören çalıştırmalar üzerinden (scoreV2 de yalnız onları ortancaya alır).
+    const usable = samples.filter((s) => s.out.photo.faceCount === "one");
+    if (!fatal && usable.length >= 2 && needsExtraRun(usable.map(vectorOf), cfg.extraRunIfSpread)) {
       if (samples.length >= cfg.maxRuns) extraRun = "skipped_max";
       else if (remaining() < rt.extraRunMinRemainingMs || attempts >= rt.maxAttempts) extraRun = "skipped_time";
       else {

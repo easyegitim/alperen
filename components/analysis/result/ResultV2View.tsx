@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { RevealSequence, type RevealCard } from "@/components/analysis/RevealSequence";
 import { FeedbackButtons } from "@/components/report/FeedbackButtons";
 import { ShareCardButton } from "@/components/share/ShareCardButton";
@@ -19,6 +19,7 @@ import { SubscoresCard, orderSubsV2, rowsFromAnalysis } from "./SubscoresCard";
 import { useAnalysisPoll } from "./useAnalysisPoll";
 
 const SEEN_KEY = (id: string) => `aura.revealed.v2.${id}`;
+const subscribeNoop = () => () => {};
 
 /** Bu sonuç bu sekmede daha önce tam açıldıysa sıra beklenmez (yalnız kimlik saklanır). */
 function seenBefore(id: string): boolean {
@@ -41,7 +42,16 @@ export function cardOrder(lowScore: boolean): SectionKey[] {
 export function ResultV2View({ initial, instantReveal }: { initial: ClientAnalysisV2; /** Test/önizleme: sıra beklenmez. */ instantReveal?: boolean }) {
   const t = useTranslations("analysis");
   const { a, pollError } = useAnalysisPoll(initial);
-  const [instant] = useState(() => instantReveal ?? (typeof window !== "undefined" && seenBefore(initial.id)));
+  // sessionStorage yalnız istemcide okunur; sunucu anlık görüntüsü false: sunucu HTML'i (bulanık iskelet) ile hidrasyon
+  // aynı kalır, daha önce görülmüş sonuçta React hidrasyon sonrası instant=true ile yeniden çizer (useBoundSelfie kalıbı).
+  // Değer ilk okumada dondurulur: bu ziyarette tamamlanınca yazılan anahtar, süren açılışı anında bitirmez.
+  const seenRef = useRef<boolean | null>(null);
+  const seenNow = useSyncExternalStore(
+    subscribeNoop,
+    () => (seenRef.current ??= seenBefore(initial.id)),
+    () => false,
+  );
+  const instant = instantReveal ?? seenNow;
   const viewedRef = useRef<string | null>(null);
 
   useEffect(() => {

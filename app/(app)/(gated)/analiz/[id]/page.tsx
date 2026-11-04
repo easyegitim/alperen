@@ -13,7 +13,9 @@ import { getTeaserConfig } from "@/lib/config/teaser";
 import { createAdminClient } from "@/lib/db/admin";
 import { createClient } from "@/lib/db/server";
 import { toClientAnalysis, type AnalysisRow } from "@/lib/score/present";
-import { isV2Row, loadRowById, presentV2 } from "@/app/api/analyses/v2";
+import { canConsumePurchaseFor } from "@/lib/billing/entitlement";
+import { isPresentation } from "@/lib/onboarding/presentation";
+import { isV2Row, loadProfile, loadRowById, presentV2 } from "@/app/api/analyses/v2";
 
 /** /analiz/[id]: sunucu kırpılmış görünümü üretir; kilitli değerler HTML'e ve istemciye girmez. */
 export default async function AnalysisPage({ params }: PageProps<"/analiz/[id]">) {
@@ -36,15 +38,19 @@ export default async function AnalysisPage({ params }: PageProps<"/analiz/[id]">
   // hybrid.v2 satırı (device_only/queued/running/completed/failed): hak (AccessV2, sunucuda purchases/subscriptions/referrals)
   // varsa kart kart açılan sonuç (W2 ResultV2View); yoksa kilitli ekran (W1 ScoreViewV2, KB §3.3). Rapor yalnız hak varken okunur.
   if (isV2Row(row)) {
-    const access = await getAccessV2(admin, user.id, row.id);
-    const a = await presentV2(admin, user.id, row, access);
+    const [access, profile] = await Promise.all([getAccessV2(admin, user.id, row.id), loadProfile(admin, user.id)]);
+    const a = await presentV2(admin, user.id, row, access, profile);
+    // Hak yoksa ama henüz başlamamış satıra bağlanacak ödenmiş rapor varsa: paywall değil, "fotoğraf setini gönder" kartı.
+    const proceed = canConsumePurchaseFor(access, row.status);
+    // Paywall illüstrasyonu kullanıcının beyan ettiği cinsiyet ve yaş bandını izler (KB P#17); skor girdisi değildir.
+    const presentation = isPresentation(profile?.presentation) ? profile.presentation : null;
     return (
       <div className="mx-auto w-full max-w-lg px-4 py-6">
         <h1 className="sr-only">{t("pageTitle")}</h1>
-        {access.entitled ? (
+        {proceed ? (
           <ResultV2View initial={a} />
         ) : (
-          <PaywallProvider teaserMode={teaser.mode} analysisId={a.id} weekPassEnabled={isFeatureEnabled("weekPass")}>
+          <PaywallProvider teaserMode={teaser.mode} analysisId={a.id} presentation={presentation} ageBand={profile?.age_band ?? null}>
             <ScoreViewV2 a={a} />
           </PaywallProvider>
         )}

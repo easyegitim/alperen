@@ -306,9 +306,11 @@ export function CaptureScreen({ aiProviderName, resumeAnalysisId = null }: { aiP
 
   // Özet: çekilen açılar, isteğe bağlı ekleme, yüz şekli ön değerlendirmesi, "Analizi başlat".
   const quality = front ? qualitySummary(front.quality.measures) : null;
-  const startDisabled = !front || !geometry || !hasProfile(captures) || error?.code === "QUOTA_EXCEEDED";
+  const profileMissing = !hasProfile(captures);
+  const startDisabled = !front || !geometry || profileMissing || error?.code === "QUOTA_EXCEEDED";
   const takenList = VIEWS.filter((v) => captures[v.key]);
   const addable = [...PROFILE_VIEWS, ...OPTIONAL_VIEWS].filter((v) => !captures[v]);
+  const isProfileView = (v: ViewKey) => (PROFILE_VIEWS as readonly ViewKey[]).includes(v);
 
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-6">
@@ -316,10 +318,20 @@ export function CaptureScreen({ aiProviderName, resumeAnalysisId = null }: { aiP
         <CardHeader>
           <p className="eyebrow">{t("eyebrowV2")}</p>
           <CardTitle className="text-2xl font-bold">{tv("done")}</CardTitle>
-          <CardDescription className="text-[13px]">{t("leadV2")}</CardDescription>
+          <CardDescription className="text-[13px]">{t(profileMissing ? "leadV2Profile" : "leadV2")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <GeometryOverlay source={source} variant="full" showLines={geometry !== null} />
+          {profileMissing ? (
+            // KB P#4: yan profil zorunlu; "Özete dön" ile atlanabildiğinden burada açıkça istenir ("Analizi başlat" bu olmadan pasif).
+            <div role="note" className="flex items-center gap-3 rounded-xl border border-dashed bg-muted/40 p-3 text-[13px]">
+              <TriangleAlert aria-hidden="true" className="size-4 shrink-0 text-warn" />
+              <span className="min-w-0 flex-1">{tv("profileRequiredNote")}</span>
+              <Button size="sm" onClick={() => setStep({ kind: "capture", view: "profile_left", required: true })}>
+                {tv("captureProfile")}
+              </Button>
+            </div>
+          ) : null}
           <ul className="grid grid-cols-3 gap-2" aria-label={tv("takenAria")}>
             {takenList.map((v) => {
               const c = captures[v.key]!;
@@ -366,7 +378,9 @@ export function CaptureScreen({ aiProviderName, resumeAnalysisId = null }: { aiP
                     className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-sm hover:bg-accent"
                   >
                     <span className="font-semibold">{tv(`${v}.name`)}</span>
-                    <span className="text-[11px] text-muted-foreground">{tv.has(`${v}.optionalNote`) ? tv(`${v}.optionalNote`) : tv("optionalLabel")}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {profileMissing && isProfileView(v) ? tv("requiredLabel") : tv.has(`${v}.optionalNote`) ? tv(`${v}.optionalNote`) : tv("optionalLabel")}
+                    </span>
                   </button>
                 </li>
               ))}

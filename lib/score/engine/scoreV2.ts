@@ -152,186 +152,210 @@ export async function scoreV2(input: ScoreV2Input, opts: ScoreV2Options = {}): P
     throw Object.assign(run.fatal.reason === "too_large" ? new ApiError("IMAGE_TOO_LARGE", "score_too_large") : new ApiError("AI_FAILED", "score_config_error"), { aiUsage: usage });
   }
   if (run.samples.length < 2) throw Object.assign(failureFromRuns(run.samples.length, run.reasons, 3), { aiUsage: usage });
-  const badFace = run.samples.filter((s) => s.out.photo.faceCount !== "one").length;
+  // Tek yüz görmeyen çalıştırma ortancaya, yayılıma ve metin seçimine girmez (hybrid.v1 aggregateScores "usable" ile aynı).
+  const usable = run.samples.filter((s) => s.out.photo.faceCount === "one");
+  const badFace = run.samples.length - usable.length;
   if (badFace * 2 >= run.samples.length) throw Object.assign(new ApiError("NO_FACE", "score_no_single_face"), { aiUsage: usage });
+  if (usable.length < 2) throw Object.assign(failureFromRuns(usable.length, run.reasons, 3), { aiUsage: usage });
 
-  // 2) Ortanca ve metin çalıştırması.
-  const vectors: RunVector[] = run.samples.map(vectorOf);
-  const cons = consensus(vectors);
-  const textRun: ScoreSampleV2 = run.samples[cons.nearest];
-  const out = textRun.out;
-  const headCoveringDetected = majority(run.samples.map((s) => s.out.headCoveringDetected), false);
-  const glassesDetected = majority(run.samples.map((s) => s.out.glassesDetected), false);
-  const hairExcluded = context.headCoveringDeclared || headCoveringDetected || out.notAssessed.some((n) => n.sub === "hair" && n.reason === "excluded");
-  const excluded = new Set<SubKey>(hairExcluded ? ["hair"] : []);
-  const notAssessed = [
-    ...(hairExcluded ? [{ sub: "hair" as const, reason: "excluded" as const }] : []),
-    ...out.notAssessed.filter((n) => !(n.sub === "hair" && hairExcluded) && n.reason === "not_visible").map((n) => ({ sub: n.sub, reason: n.reason })),
-  ];
-
-  // 3) Yapısal harman (claude | geometry | blend).
-  const beardOverJaw = out.observations.facialHair === "short_beard" || out.observations.facialHair === "full_beard";
-  const geometryStructural = structuralFromGeometry(geometry, { beardOverJaw });
-  const claudeStructural = Object.fromEntries(STRUCTURAL_SUBS_H2.map((s) => [s, round3(cons.median[s])])) as Record<StructuralSub, number>;
-  const structuralUsed = {} as Record<StructuralSub, typeof source>;
-  const raw = { ...cons.median } as Record<SubKey, number>;
-  for (const s of STRUCTURAL_SUBS_H2) {
-    const b = blendStructural(cons.median[s], geometryStructural[s], source);
-    raw[s] = b.value;
-    structuralUsed[s] = b.used;
-  }
-  const rawRounded = Object.fromEntries(SUB_KEYS_V2.map((k) => [k, round3(raw[k])])) as Record<SubKey, number>;
-
-  // 4) Ağırlık, genel, kalibrasyon, aralık, yüzdelik, potansiyel.
-  const weights = weightsH2({ hairExcluded });
-  const rawOverall = weightedOverall(raw, weights);
-  const overall = calibrateH2(rawOverall, cal);
-  const percentile = percentileH2(rawOverall);
-  const subscores = Object.fromEntries(SUB_KEYS_V2.map((k) => [k, excluded.has(k) ? null : calibrateH2(raw[k], cal)])) as Record<SubKey, number | null>;
-  const gains = subGains(out, excluded);
-  const { potential } = computePotentialH2({ raw, gains, weights, overall, calibrate: (r) => calibrateH2(r, cal) });
-  const scoreRange: ScoreRangesV2 = {
-    overall: rangeAround(overall, cal),
-    potential: rangeAround(potential, cal),
-    subscores: Object.fromEntries(SUB_KEYS_V2.filter((k) => subscores[k] !== null).map((k) => [k, rangeAround(subscores[k] as number, cal)])),
-  };
-  const slope = calibrationSlope(cal);
-
-  const servedModels = usage.servedModels;
-  const fallbackModel = servedModels.find((m) => m !== provider.model);
-  const model = run.samples.some((s) => s.fallbackServed) ? `${provider.model}+fallback:${fallbackModel ?? "unknown"}` : provider.model;
-  const baseSignals = (): Omit<SignalsV2, "explanations" | "improveFirst" | "faceShapeDetailed" | "audit" | "observations"> => ({
-    engine: "hybrid.v2",
-    v: 2,
-    provider: "claude",
-    model,
-    servedModels,
-    effort: ai.claudeScoreEffort,
-    promptVersion: SCORE_V2_PROMPT_VERSION,
-    calibration: { version: "h2", center: cal.center, sd: cal.sd },
-    structuralSource: source,
-    structuralUsed,
-    weights,
-    raw: rawRounded,
-    rawOverall: round2(rawOverall),
-    claudeStructural,
-    geometryStructural,
-    gains,
-    confidence: Object.fromEntries(SUB_KEYS_V2.map((k) => [k, out.subscores[k].confidence])) as SignalsV2["confidence"],
-    photo: out.photo,
-    notAssessed,
-    captureHints: [...(out.photo.lighting !== "even" ? (["lighting"] as const) : []), ...(out.photo.retouch !== "none" ? (["retouch"] as const) : []), ...(out.photo.skinVisibility !== "clear" ? (["skin_visibility"] as const) : [])],
-    viewsUsed: views,
-    runs: { requested: 3, ok: run.samples.length, failed: run.reasons.length, reasons: run.reasons, attempts: run.attempts, extraRun: run.extraRun, maxSpread: round3(cons.maxSpread), spread: Object.fromEntries(SUB_KEYS_V2.map((k) => [k, round3(cons.spread[k])])) as Record<SubKey, number>, textRun: cons.nearest },
-    cacheHit: false,
-    progressAt: new Date(now()).toISOString(),
-  });
-  const numericSignals: SignalsV2 = { ...baseSignals(), explanations: {}, improveFirst: [], faceShapeDetailed: null, audit: { audited: false, rewrites: 0, fallbacks: 0, flags: [] }, observations: observationsOf(out, glassesDetected, headCoveringDetected, null) };
-
-  await emit("overall", { overall, score_range: scoreRange, percentile, face_shape: geometry.faceShape.primary, signals: numericSignals });
-  await emit("subscores", { subscores, score_range: scoreRange, gains });
-  await emit("potential", { potential, score_range: scoreRange });
-
-  // 5) Metinler: açıklamalar, yüz şekli, rapor taslağı → denetim → güvenlik → şablon.
-  const explainCtx = { viewsUsed: views.length, lighting: out.photo.lighting };
-  const explanations: Partial<Record<SubKey, ExplanationV2>> = {};
-  for (const k of SUB_KEYS_V2) if (!excluded.has(k)) explanations[k] = buildExplanation(k, out.subscores[k], explainCtx);
-  const improveFirst = improveFirstV2(out, weights, excluded, slope);
-  const faceShapeRaw = reconcileFaceShape(geometry.faceShape, out.faceShapeOpinion);
-  const regions = draftRegions(out);
-  const seeProfessionalRaw = out.seeProfessional?.text.trim() || null;
-
-  const texts: AuditText[] = [];
-  texts.push({ path: "letter", text: truncate(out.report.letter, LIMITS.letter) || TEMPLATES.letter, fallback: TEMPLATES.letter });
-  texts.push({ path: "closing", text: truncate(out.report.closing, LIMITS.closing) || TEMPLATES.closing, fallback: TEMPLATES.closing });
-  for (const r of regions) {
-    texts.push({ path: `regions.${r.key}.strength`, text: r.strength, fallback: TEMPLATES.regionStrength(r.key) });
-    texts.push({ path: `regions.${r.key}.seen`, text: r.seen, fallback: TEMPLATES.regionSeen(r.key) });
-    r.improvements.forEach((imp, i) => texts.push({ path: `regions.${r.key}.improvements[${i}]`, text: imp, fallback: STRUCTURAL_REGIONS.includes(r.key) ? TEMPLATES.regionImprovementStructural : "" }));
-  }
-  for (const [k, e] of Object.entries(explanations) as [SubKey, ExplanationV2][]) {
-    e.lookedAt.forEach((t, i) => texts.push({ path: `explanations.${k}.lookedAt[${i}]`, text: t, fallback: i === 0 ? TEMPLATES.lookedAt(k) : "" }));
-    e.held.forEach((t, i) => texts.push({ path: `explanations.${k}.held[${i}]`, text: t, fallback: i === 0 ? TEMPLATES.held(k) : "" }));
-    e.lowered.forEach((t, i) => texts.push({ path: `explanations.${k}.lowered[${i}]`, text: t, fallback: "" }));
-    e.raise.forEach((r, i) => r.effect && texts.push({ path: `explanations.${k}.raise[${i}].effect`, text: r.effect, fallback: "" }));
-  }
-  if (faceShapeRaw.detailed) texts.push({ path: "faceShape.reason", text: faceShapeRaw.detailed.reason || TEMPLATES.faceShapeReason, fallback: TEMPLATES.faceShapeReason });
-  texts.push({ path: "observations.skinSurface", text: truncate(out.observations.skinSurface, LIMITS.skinSurface) || TEMPLATES.skinSurface, fallback: TEMPLATES.skinSurface });
-  out.observations.other.slice(0, 3).forEach((t, i) => texts.push({ path: `observations.other[${i}]`, text: truncate(t, LIMITS.line), fallback: "" }));
-  if (seeProfessionalRaw) texts.push({ path: "seeProfessional", text: truncate(seeProfessionalRaw, LIMITS.line), fallback: "", allowMaybeDiagnosis: true });
-
-  const scoresForAudit = Object.fromEntries(SUB_KEYS_V2.filter((k) => subscores[k] !== null).map((k) => [k, subscores[k] as number]));
-  const auditController = new AbortController();
-  const auditTimer = setTimeout(() => auditController.abort("deadline"), opts.auditTimeoutMs ?? AUDIT_TIMEOUT_MS);
-  let audited: Awaited<ReturnType<typeof auditTexts>>;
+  // Çalıştırmalar ücretlendi: bundan sonraki her hata (DB, denetim, açıklama) kullanımı taşımalı (ai_usage/ops maliyeti).
+  // Nesne tutucu: iç fonksiyonda atanır; TS akış daraltması let ile "never" verirdi.
+  const auditState: { summary: Awaited<ReturnType<typeof auditTexts>>["summary"] | null } = { summary: null };
   try {
-    audited = await auditTexts(texts, scoresForAudit, auditProvider, { signal: auditController.signal, timeoutMs: opts.auditTimeoutMs ?? AUDIT_TIMEOUT_MS });
-  } finally {
-    clearTimeout(auditTimer);
+    return await scoreFromRuns();
+  } catch (e) {
+    if (typeof e === "object" && e !== null && !("aiUsage" in e)) {
+      const byModel = new Map(run.usageByModel);
+      for (const m of auditState.summary?.usageByModel ?? []) byModel.set(m.model, addTokenUsage(byModel.get(m.model) ?? ZERO_USAGE, m.usage));
+      Object.assign(e, { aiUsage: summarizeUsage(run.samples.length, run.attempts + (auditState.summary?.model ? 1 : 0), byModel) });
+    }
+    throw e;
   }
-  const byPath = new Map(audited.texts.map((t) => [t.path, t.text]));
-  const pick = (path: string, fallback = "") => byPath.get(path) ?? fallback;
 
-  for (const [k, e] of Object.entries(explanations) as [SubKey, ExplanationV2][]) {
-    e.lookedAt = e.lookedAt.map((_, i) => pick(`explanations.${k}.lookedAt[${i}]`)).filter(Boolean);
-    e.held = e.held.map((_, i) => pick(`explanations.${k}.held[${i}]`)).filter(Boolean);
-    e.lowered = e.lowered.map((_, i) => pick(`explanations.${k}.lowered[${i}]`)).filter(Boolean);
-    e.raise = e.raise.map((r, i) => ({ step: r.step, effect: r.effect ? pick(`explanations.${k}.raise[${i}].effect`) : "" }));
-    if (!e.lookedAt.length) e.lookedAt = [TEMPLATES.lookedAt(k)];
-    if (!e.held.length) e.held = [TEMPLATES.held(k)];
+  async function scoreFromRuns(): Promise<ScoredV2> {
+    // 2) Ortanca ve metin çalıştırması.
+    const vectors: RunVector[] = usable.map(vectorOf);
+    const cons = consensus(vectors);
+    const textRun: ScoreSampleV2 = usable[cons.nearest];
+    const out = textRun.out;
+    const headCoveringDetected = majority(usable.map((s) => s.out.headCoveringDetected), false);
+    const glassesDetected = majority(usable.map((s) => s.out.glassesDetected), false);
+    const hairExcluded = context.headCoveringDeclared || headCoveringDetected || out.notAssessed.some((n) => n.sub === "hair" && n.reason === "excluded");
+    // Adım uygunluğu (istemdeki listeyle aynı kural; tespit edilen başörtüsü yalnız çalıştırmalardan sonra bilinir).
+    const eligibility = { hairAllowed: !hairExcluded, beardAllowed: context.presentation !== "female" };
+    const excluded = new Set<SubKey>(hairExcluded ? ["hair"] : []);
+    const notAssessed = [
+      ...(hairExcluded ? [{ sub: "hair" as const, reason: "excluded" as const }] : []),
+      ...out.notAssessed.filter((n) => !(n.sub === "hair" && hairExcluded) && n.reason === "not_visible").map((n) => ({ sub: n.sub, reason: n.reason })),
+    ];
+
+    // 3) Yapısal harman (claude | geometry | blend).
+    const beardOverJaw = out.observations.facialHair === "short_beard" || out.observations.facialHair === "full_beard";
+    const geometryStructural = structuralFromGeometry(geometry, { beardOverJaw });
+    const claudeStructural = Object.fromEntries(STRUCTURAL_SUBS_H2.map((s) => [s, round3(cons.median[s])])) as Record<StructuralSub, number>;
+    const structuralUsed = {} as Record<StructuralSub, typeof source>;
+    const raw = { ...cons.median } as Record<SubKey, number>;
+    for (const s of STRUCTURAL_SUBS_H2) {
+      const b = blendStructural(cons.median[s], geometryStructural[s], source);
+      raw[s] = b.value;
+      structuralUsed[s] = b.used;
+    }
+    const rawRounded = Object.fromEntries(SUB_KEYS_V2.map((k) => [k, round3(raw[k])])) as Record<SubKey, number>;
+
+    // 4) Ağırlık, genel, kalibrasyon, aralık, yüzdelik, potansiyel.
+    const weights = weightsH2({ hairExcluded });
+    const rawOverall = weightedOverall(raw, weights);
+    const overall = calibrateH2(rawOverall, cal);
+    const percentile = percentileH2(rawOverall);
+    const subscores = Object.fromEntries(SUB_KEYS_V2.map((k) => [k, excluded.has(k) ? null : calibrateH2(raw[k], cal)])) as Record<SubKey, number | null>;
+    const gains = subGains(out, excluded, eligibility);
+    const { potential } = computePotentialH2({ raw, gains, weights, overall, calibrate: (r) => calibrateH2(r, cal) });
+    const scoreRange: ScoreRangesV2 = {
+      overall: rangeAround(overall, cal),
+      potential: rangeAround(potential, cal),
+      subscores: Object.fromEntries(SUB_KEYS_V2.filter((k) => subscores[k] !== null).map((k) => [k, rangeAround(subscores[k] as number, cal)])),
+    };
+    const slope = calibrationSlope(cal);
+
+    const servedModels = usage.servedModels;
+    const fallbackModel = servedModels.find((m) => m !== provider.model);
+    const model = run.samples.some((s) => s.fallbackServed) ? `${provider.model}+fallback:${fallbackModel ?? "unknown"}` : provider.model;
+    const baseSignals = (): Omit<SignalsV2, "explanations" | "improveFirst" | "faceShapeDetailed" | "audit" | "observations"> => ({
+      engine: "hybrid.v2",
+      v: 2,
+      provider: "claude",
+      model,
+      servedModels,
+      effort: ai.claudeScoreEffort,
+      promptVersion: SCORE_V2_PROMPT_VERSION,
+      calibration: { version: "h2", center: cal.center, sd: cal.sd },
+      structuralSource: source,
+      structuralUsed,
+      weights,
+      raw: rawRounded,
+      rawOverall: round2(rawOverall),
+      claudeStructural,
+      geometryStructural,
+      gains,
+      confidence: Object.fromEntries(SUB_KEYS_V2.map((k) => [k, out.subscores[k].confidence])) as SignalsV2["confidence"],
+      photo: out.photo,
+      notAssessed,
+      captureHints: [...(out.photo.lighting !== "even" ? (["lighting"] as const) : []), ...(out.photo.retouch !== "none" ? (["retouch"] as const) : []), ...(out.photo.skinVisibility !== "clear" ? (["skin_visibility"] as const) : [])],
+      viewsUsed: views,
+      runs: { requested: 3, ok: usable.length, failed: run.reasons.length, reasons: run.reasons, attempts: run.attempts, extraRun: run.extraRun, maxSpread: round3(cons.maxSpread), spread: Object.fromEntries(SUB_KEYS_V2.map((k) => [k, round3(cons.spread[k])])) as Record<SubKey, number>, textRun: cons.nearest },
+      cacheHit: false,
+      progressAt: new Date(now()).toISOString(),
+    });
+    const numericSignals: SignalsV2 = { ...baseSignals(), explanations: {}, improveFirst: [], faceShapeDetailed: null, audit: { audited: false, rewrites: 0, fallbacks: 0, flags: [] }, observations: observationsOf(out, glassesDetected, headCoveringDetected, null) };
+
+    await emit("overall", { overall, score_range: scoreRange, percentile, face_shape: geometry.faceShape.primary, signals: numericSignals });
+    await emit("subscores", { subscores, score_range: scoreRange, gains });
+    await emit("potential", { potential, score_range: scoreRange });
+
+    // 5) Metinler: açıklamalar, yüz şekli, rapor taslağı → denetim → güvenlik → şablon.
+    const explainCtx = { viewsUsed: views.length, lighting: out.photo.lighting, eligibility };
+    const explanations: Partial<Record<SubKey, ExplanationV2>> = {};
+    for (const k of SUB_KEYS_V2) if (!excluded.has(k)) explanations[k] = buildExplanation(k, out.subscores[k], explainCtx);
+    const improveFirst = improveFirstV2(out, weights, excluded, slope, eligibility);
+    const faceShapeRaw = reconcileFaceShape(geometry.faceShape, out.faceShapeOpinion);
+    const regions = draftRegions(out);
+    const seeProfessionalRaw = out.seeProfessional?.text.trim() || null;
+
+    const texts: AuditText[] = [];
+    texts.push({ path: "letter", text: truncate(out.report.letter, LIMITS.letter) || TEMPLATES.letter, fallback: TEMPLATES.letter });
+    texts.push({ path: "closing", text: truncate(out.report.closing, LIMITS.closing) || TEMPLATES.closing, fallback: TEMPLATES.closing });
+    for (const r of regions) {
+      texts.push({ path: `regions.${r.key}.strength`, text: r.strength, fallback: TEMPLATES.regionStrength(r.key) });
+      texts.push({ path: `regions.${r.key}.seen`, text: r.seen, fallback: TEMPLATES.regionSeen(r.key) });
+      r.improvements.forEach((imp, i) => texts.push({ path: `regions.${r.key}.improvements[${i}]`, text: imp, fallback: STRUCTURAL_REGIONS.includes(r.key) ? TEMPLATES.regionImprovementStructural : "" }));
+    }
+    for (const [k, e] of Object.entries(explanations) as [SubKey, ExplanationV2][]) {
+      e.lookedAt.forEach((t, i) => texts.push({ path: `explanations.${k}.lookedAt[${i}]`, text: t, fallback: i === 0 ? TEMPLATES.lookedAt(k) : "" }));
+      e.held.forEach((t, i) => texts.push({ path: `explanations.${k}.held[${i}]`, text: t, fallback: i === 0 ? TEMPLATES.held(k) : "" }));
+      e.lowered.forEach((t, i) => texts.push({ path: `explanations.${k}.lowered[${i}]`, text: t, fallback: "" }));
+      e.raise.forEach((r, i) => r.effect && texts.push({ path: `explanations.${k}.raise[${i}].effect`, text: r.effect, fallback: "" }));
+    }
+    if (faceShapeRaw.detailed) texts.push({ path: "faceShape.reason", text: faceShapeRaw.detailed.reason || TEMPLATES.faceShapeReason, fallback: TEMPLATES.faceShapeReason });
+    texts.push({ path: "observations.skinSurface", text: truncate(out.observations.skinSurface, LIMITS.skinSurface) || TEMPLATES.skinSurface, fallback: TEMPLATES.skinSurface });
+    // Boş satır denetime girmez (boş aday "fallback" sayılmasın); indeks kırpılmış listeye göredir.
+    const otherLines = out.observations.other.map((t) => truncate(t, LIMITS.line)).filter(Boolean).slice(0, 3);
+    otherLines.forEach((t, i) => texts.push({ path: `observations.other[${i}]`, text: t, fallback: "" }));
+    if (seeProfessionalRaw) texts.push({ path: "seeProfessional", text: truncate(seeProfessionalRaw, LIMITS.line), fallback: "", allowMaybeDiagnosis: true });
+
+    const scoresForAudit = Object.fromEntries(SUB_KEYS_V2.filter((k) => subscores[k] !== null).map((k) => [k, subscores[k] as number]));
+    const auditController = new AbortController();
+    const auditTimer = setTimeout(() => auditController.abort("deadline"), opts.auditTimeoutMs ?? AUDIT_TIMEOUT_MS);
+    let audited: Awaited<ReturnType<typeof auditTexts>>;
+    try {
+      audited = await auditTexts(texts, scoresForAudit, auditProvider, { signal: auditController.signal, timeoutMs: opts.auditTimeoutMs ?? AUDIT_TIMEOUT_MS });
+    } finally {
+      clearTimeout(auditTimer);
+    }
+    auditState.summary = audited.summary;
+    const byPath = new Map(audited.texts.map((t) => [t.path, t.text]));
+    const pick = (path: string, fallback = "") => byPath.get(path) ?? fallback;
+
+    for (const [k, e] of Object.entries(explanations) as [SubKey, ExplanationV2][]) {
+      e.lookedAt = e.lookedAt.map((_, i) => pick(`explanations.${k}.lookedAt[${i}]`)).filter(Boolean);
+      e.held = e.held.map((_, i) => pick(`explanations.${k}.held[${i}]`)).filter(Boolean);
+      e.lowered = e.lowered.map((_, i) => pick(`explanations.${k}.lowered[${i}]`)).filter(Boolean);
+      e.raise = e.raise.map((r, i) => ({ step: r.step, effect: r.effect ? pick(`explanations.${k}.raise[${i}].effect`) : "" }));
+      if (!e.lookedAt.length) e.lookedAt = [TEMPLATES.lookedAt(k)];
+      if (!e.held.length) e.held = [TEMPLATES.held(k)];
+    }
+    const faceShapeDetailed = faceShapeRaw.detailed ? { ...faceShapeRaw.detailed, reason: pick("faceShape.reason", TEMPLATES.faceShapeReason) } : null;
+    const seeProfessional = seeProfessionalRaw ? pick("seeProfessional") || null : null;
+    const observations = observationsOf(out, glassesDetected, headCoveringDetected, seeProfessional, pick("observations.skinSurface", TEMPLATES.skinSurface));
+    observations.other = otherLines.map((_, i) => pick(`observations.other[${i}]`)).filter(Boolean);
+    const report: ReportV3 = {
+      version: "report.v3",
+      letter: pick("letter", TEMPLATES.letter),
+      regions: regions.map((r) => ({
+        key: r.key,
+        strength: pick(`regions.${r.key}.strength`, TEMPLATES.regionStrength(r.key)),
+        seen: pick(`regions.${r.key}.seen`, TEMPLATES.regionSeen(r.key)),
+        improvements: r.improvements.map((_, i) => pick(`regions.${r.key}.improvements[${i}]`)).filter(Boolean),
+      })),
+      measures: measuresFromGeometry(geometry),
+      closing: closingWith(pick("closing", TEMPLATES.closing), seeProfessional),
+    };
+
+    const totalUsageByModel = new Map(run.usageByModel);
+    for (const m of audited.summary.usageByModel) totalUsageByModel.set(m.model, addTokenUsage(totalUsageByModel.get(m.model) ?? ZERO_USAGE, m.usage));
+    const aiUsage = summarizeUsage(run.samples.length, run.attempts + (audited.summary.model ? 1 : 0), totalUsageByModel);
+    const signals: SignalsV2 = {
+      ...baseSignals(),
+      explanations,
+      improveFirst,
+      faceShapeDetailed,
+      observations,
+      audit: { audited: audited.summary.audited, ...(audited.summary.reason ? { reason: audited.summary.reason } : {}), rewrites: audited.summary.rewrites, fallbacks: audited.summary.fallbacks, flags: audited.summary.flags },
+    };
+
+    await emit("faceShape", { signals: { ...signals, explanations: {}, improveFirst: [] } });
+    await emit("explanations", { signals: { ...signals, improveFirst: [] } });
+    await emit("improveFirst", { signals, observations });
+    await emit("report", { report });
+
+    return {
+      overall,
+      potential,
+      subscores,
+      scoreRange,
+      percentile,
+      faceShape: geometry.faceShape.primary,
+      gains,
+      observations,
+      signals,
+      runs: vectors.map((v) => SUB_KEYS_V2.map((k) => v[k])),
+      report,
+      model,
+      promptVersion: SCORE_V2_PROMPT_VERSION,
+      calibrationVersion: ENGINE_H2.calibrationVersion,
+      engineVersion: ENGINE_H2.version,
+      aiUsage,
+    };
   }
-  const faceShapeDetailed = faceShapeRaw.detailed ? { ...faceShapeRaw.detailed, reason: pick("faceShape.reason", TEMPLATES.faceShapeReason) } : null;
-  const seeProfessional = seeProfessionalRaw ? pick("seeProfessional") || null : null;
-  const observations = observationsOf(out, glassesDetected, headCoveringDetected, seeProfessional, pick("observations.skinSurface", TEMPLATES.skinSurface));
-  observations.other = out.observations.other.slice(0, 3).map((_, i) => pick(`observations.other[${i}]`)).filter(Boolean);
-  const report: ReportV3 = {
-    version: "report.v3",
-    letter: pick("letter", TEMPLATES.letter),
-    regions: regions.map((r) => ({
-      key: r.key,
-      strength: pick(`regions.${r.key}.strength`, TEMPLATES.regionStrength(r.key)),
-      seen: pick(`regions.${r.key}.seen`, TEMPLATES.regionSeen(r.key)),
-      improvements: r.improvements.map((_, i) => pick(`regions.${r.key}.improvements[${i}]`)).filter(Boolean),
-    })),
-    measures: measuresFromGeometry(geometry),
-    closing: closingWith(pick("closing", TEMPLATES.closing), seeProfessional),
-  };
-
-  const totalUsageByModel = new Map(run.usageByModel);
-  for (const m of audited.summary.usageByModel) totalUsageByModel.set(m.model, addTokenUsage(totalUsageByModel.get(m.model) ?? ZERO_USAGE, m.usage));
-  const aiUsage = summarizeUsage(run.samples.length, run.attempts + (audited.summary.model ? 1 : 0), totalUsageByModel);
-  const signals: SignalsV2 = {
-    ...baseSignals(),
-    explanations,
-    improveFirst,
-    faceShapeDetailed,
-    observations,
-    audit: { audited: audited.summary.audited, ...(audited.summary.reason ? { reason: audited.summary.reason } : {}), rewrites: audited.summary.rewrites, fallbacks: audited.summary.fallbacks, flags: audited.summary.flags },
-  };
-
-  await emit("faceShape", { signals: { ...signals, explanations: {}, improveFirst: [] } });
-  await emit("explanations", { signals: { ...signals, improveFirst: [] } });
-  await emit("improveFirst", { signals, observations });
-  await emit("report", { report });
-
-  return {
-    overall,
-    potential,
-    subscores,
-    scoreRange,
-    percentile,
-    faceShape: geometry.faceShape.primary,
-    gains,
-    observations,
-    signals,
-    runs: vectors.map((v) => SUB_KEYS_V2.map((k) => v[k])),
-    report,
-    model,
-    promptVersion: SCORE_V2_PROMPT_VERSION,
-    calibrationVersion: ENGINE_H2.calibrationVersion,
-    engineVersion: ENGINE_H2.version,
-    aiUsage,
-  };
 }
 
 function observationsOf(out: ScoreOutputV2, glassesDetected: boolean, headCoveringDetected: boolean, seeProfessional: string | null, skinSurface?: string): ObservationsV2 {

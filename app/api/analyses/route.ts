@@ -21,15 +21,15 @@ export const maxDuration = 300;
 
 /**
  * SPEC 14 / CONTRACTS_V2 §2: POST /api/analyses.
- *  - SCORE_ENGINE=hybrid.v2: device_only → cihaz alanları (kota yok, LLM yok, 200); full → hak + kota + arka plan işi (202).
- *  - legacy / hybrid.v1: eski tek selfie yolu aynen (eşzamanlı skorlama, ClientAnalysis v1).
+ *  - mode device_only (v2 çekim ekranının tek yolu): cihaz alanları (kota yok, LLM yok, 200) — motordan BAĞIMSIZ; ödeme
+ *    öncesi akış SCORE_ENGINE ne olursa olsun çalışır (aksi hâlde "Analizi başlat" legacy varsayılanında hep hata veriyordu).
+ *  - mode full: SCORE_ENGINE=hybrid.v2 → hak + kota + arka plan işi (202); legacy / hybrid.v1 → eski tek selfie yolu
+ *    (eşzamanlı skorlama, ClientAnalysis v1; v2 gövdesi açık hata alır).
  * Sıra: oturum → Zod → 18+ → 3 rıza → motor → iş. Görsel bellekte işlenir, AI sağlayıcısına iletilir, hiçbir yere yazılmaz.
  */
 export const POST = withGuard({ schema: AnalysisInputSchema, requireAdult: true, requireConsents: REQUIRED_ANALYSIS_CONSENTS }, async (ctx) => {
-  if (getAiEnv().scoreEngine === "hybrid.v2") {
-    const admin = createAdminClient();
-    return ctx.input.mode === "device_only" ? handleDeviceOnly(admin, ctx.user.id, ctx.input) : handleFull(admin, ctx.user.id, ctx.input);
-  }
+  if (ctx.input.mode === "device_only") return handleDeviceOnly(createAdminClient(), ctx.user.id, ctx.input);
+  if (getAiEnv().scoreEngine === "hybrid.v2") return handleFull(createAdminClient(), ctx.user.id, ctx.input);
   return postLegacy(ctx);
 });
 

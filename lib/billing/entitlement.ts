@@ -19,7 +19,14 @@ export function effectiveLimit(base: number, unlimited: boolean): number {
 // ─── v2 haklar (CONTRACTS_V2 §2.3 "Hak kaynakları", §3.4; KB Ç12) ───────────────────────────────────────────────────
 
 /** purchases satırının karar için gereken kısmı (lib/db/types.ts DatabaseV2Mirror purchases). */
-export type PurchaseLike = { id: string; product: ProductId | string; analysis_id: string | null; status: string };
+export type PurchaseLike = {
+  id: string;
+  product: ProductId | string;
+  analysis_id: string | null;
+  status: string;
+  /** Tüketildiği an (migration 0012). analysis_id FK "set null" olduğundan analiz silinse de dolu kalır; dolu → yeniden kullanılmaz. */
+  consumed_at?: string | null;
+};
 
 export type AccessDetail = AccessV2 & {
   /** Aktif abonelik (kota kayan pencereyle); false ise hak tek seferlik rapordan gelir. */
@@ -29,17 +36,30 @@ export type AccessDetail = AccessV2 & {
 };
 
 const paidOneTime = (purchases: readonly PurchaseLike[]) => purchases.filter((p) => p.status === "paid" && p.product === "one_time_report");
+/** Henüz hiçbir analize bağlanmamış ve tüketilmemiş ödenmiş rapor (bağlama başarısız olmuş nadir durum; sunucu bir sonraki işe bağlar). */
+const isUnconsumed = (p: PurchaseLike) => p.analysis_id === null && !p.consumed_at;
 
 /**
- * Bu analiz için hak var mı? Aktif abonelik, bu analize bağlı ödenmiş tek seferlik rapor ya da henüz bağlanmamış
- * ödenmiş tek seferlik rapor (ilk ödeme sonrası analiz; sunucu bağlar). analysisId null → yalnız abonelik ve
- * bağlanmamış satın alma sayılır.
+ * Bu analiz için hak var mı? YALNIZ aktif abonelik ya da bu analize bağlı ödenmiş tek seferlik rapor (CONTRACTS_V2 §2.3).
+ * Bağlanmamış satın alma tek başına hiçbir satırı AÇMAZ; yalnız yeni bir işi başlatırken (bağlanırken) kullanılır
+ * (canConsumePurchaseFor). Aksi hâlde tek bir bağlanmamış satın alma kullanıcının tüm eski satırlarını açıyordu.
  */
 export function isEntitledForAnalysis(state: { subscriptionActive: boolean; purchases: readonly PurchaseLike[] }, analysisId: string | null): boolean {
   if (state.subscriptionActive) return true;
-  const paid = paidOneTime(state.purchases);
-  if (analysisId && paid.some((p) => p.analysis_id === analysisId)) return true;
-  return paid.some((p) => p.analysis_id === null);
+  if (!analysisId) return false;
+  return paidOneTime(state.purchases).some((p) => p.analysis_id === analysisId);
+}
+
+/** Satırın durumu; bağlanmamış satın alma yalnız henüz tam analizi yapılmamış satırlara bağlanabilir. */
+export const CONSUMABLE_STATUSES: ReadonlySet<string> = new Set(["device_only", "queued", "failed"]);
+
+/**
+ * Bu satır için iş başlatılabilir mi: hak var ya da bağlanacak satın alma var ve satır henüz tam analiz görmemiş
+ * (device_only / queued / failed). Sunucu bağlamayı işten ÖNCE yapar; bağlanamazsa iş başlamaz.
+ */
+export function canConsumePurchaseFor(access: Pick<AccessDetail, "entitled" | "unconsumedOneTimeId">, rowStatus: string): boolean {
+  if (access.entitled) return true;
+  return access.unconsumedOneTimeId !== null && CONSUMABLE_STATUSES.has(rowStatus);
 }
 
 /** 5 davet tamamlandı mı (yalnız FEATURE_REFERRAL_UNLOCK açıkken; cihaz doğrulaması AÇIK §11.15). */
@@ -58,7 +78,7 @@ export function decideAccess(args: {
   const env = args.env ?? process.env;
   const paid = paidOneTime(args.purchases);
   const bound = args.analysisId ? paid.find((p) => p.analysis_id === args.analysisId) : undefined;
-  const unconsumed = paid.find((p) => p.analysis_id === null);
+  const unconsumed = paid.find(isUnconsumed);
   return {
     entitled: isEntitledForAnalysis({ subscriptionActive: args.subscriptionActive, purchases: args.purchases }, args.analysisId),
     referralUnlock: referralUnlocked(args.referralsCompleted, env),

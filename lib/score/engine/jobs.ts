@@ -67,7 +67,7 @@ export async function runAnalysisJob(args: JobArgs): Promise<JobResult> {
 
     // Set önbelleği (Ç11): aynı set → saklı sonuç, model çağrısı yok.
     if (setKey) {
-      const hit = await repo.lookupSet(setKey, iso());
+      const hit = await repo.lookupSet(setKey, args.userId, iso());
       const cached = hit ? readCachedScores(hit.scores) : null;
       if (hit && cached) {
         await repo.updateAnalysis(analysisId, {

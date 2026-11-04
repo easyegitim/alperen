@@ -128,9 +128,9 @@ export class FakeRepo implements AnalysisRepo {
   async insertReport(row: ReportRow): Promise<void> {
     this.reports.push(structuredClone(row));
   }
-  async lookupSet(setKey: string, nowIso: string): Promise<CachedSetRow | null> {
+  async lookupSet(setKey: string, userId: string, nowIso: string): Promise<CachedSetRow | null> {
     const r = this.sets.get(setKey);
-    return r && r.expires_at > nowIso ? r : null;
+    return r && r.user_id === userId && r.expires_at > nowIso ? r : null;
   }
   async storeSet(row: Pick<CachedSetRow, "set_key" | "user_id" | "scores" | "model" | "prompt_version" | "calibration_version">): Promise<void> {
     if (!this.sets.has(row.set_key)) this.sets.set(row.set_key, { ...structuredClone(row), created_at: "2026-11-04T10:00:00.000Z", expires_at: "2027-11-04T10:00:00.000Z" });

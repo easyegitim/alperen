@@ -9,10 +9,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
-type Props = { status: "ok" | "failed" | "pending"; analysisId?: string; /** Tek seferlik rapor (F14 v2): hak analize bağlı, abonelik yok. */ product?: "one_time_report" };
+type Props = {
+  status: "ok" | "failed" | "pending";
+  analysisId?: string;
+  /** Tek seferlik rapor (F14 v2): hak analize bağlı, abonelik yok. */
+  product?: "one_time_report";
+  /** Satır henüz tam analiz görmedi (device_only/failed): fotoğraf seti çekim ekranından yeniden gönderilir. */
+  needsCapture?: boolean;
+};
 
-/** /premium/sonuc: başarılı/başarısız; callback gecikmesinde durum birkaç kez sorgulanır (SPEC 4.2). Tek seferlik raporda hak analiz bazında sorgulanır. */
-export function PaymentResult({ status: initial, analysisId, product }: Props) {
+/**
+ * /premium/sonuc: başarılı/başarısız; callback gecikmesinde durum birkaç kez sorgulanır (SPEC 4.2). Tek seferlik raporda
+ * hak analiz bazında sorgulanır. needsCapture: CTA doğrudan /tara?analysis=… ve metin "set yeniden gönderilir".
+ */
+export function PaymentResult({ status: initial, analysisId, product, needsCapture = false }: Props) {
   const t = useTranslations("checkout.result");
   const tc = useTranslations("checkout");
   const tp = useTranslations("pricing");
@@ -72,15 +82,15 @@ export function PaymentResult({ status: initial, analysisId, product }: Props) {
         <div role="status" aria-live="polite" className="space-y-1.5">
           <h1 className="text-xl font-bold tracking-tight">{status === "ok" && oneTime ? t("okOneTime.title") : t(`${status}.title`)}</h1>
           <p className="text-[13px] text-muted-foreground">
-            {status === "ok" && oneTime ? t("okOneTime.body") : t(`${status}.body`)}
+            {status === "ok" ? t(oneTime ? (needsCapture ? "okOneTime.bodyCapture" : "okOneTime.body") : needsCapture ? "ok.bodyCapture" : "ok.body") : t(`${status}.body`)}
             {planName ? ` (${planName})` : ""}
           </p>
         </div>
         <div className="mt-2 grid w-full gap-2">
           {status === "ok" ? (
             <Button asChild size="lg">
-              <Link href={analysisId ? `/analiz/${analysisId}` : "/analiz"}>
-                {analysisId ? t("ok.cta") : t("ok.ctaList")}
+              <Link href={analysisId ? (needsCapture ? `/tara?analysis=${encodeURIComponent(analysisId)}` : `/analiz/${analysisId}`) : "/analiz"}>
+                {analysisId ? (needsCapture ? t("ok.ctaCapture") : t("ok.cta")) : t("ok.ctaList")}
                 <ArrowRight aria-hidden="true" />
               </Link>
             </Button>

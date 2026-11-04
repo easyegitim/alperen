@@ -3,7 +3,7 @@
 import { BadgeCheck, Check, CreditCard, Lock, ReceiptText, RefreshCw, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { LinkAccount } from "@/components/auth/LinkAccount";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import type { OfferResponse } from "@/lib/billing/offer";
 import { PLANS, formatTry, type ProductId } from "@/lib/config/plans";
 import { cn } from "@/lib/utils";
 import { OfferCountdown } from "@/components/paywall/OfferCountdown";
-import type { ProductView } from "@/components/paywall/PaywallSheet";
+import { productViews, type ProductView } from "@/components/paywall/PaywallSheet";
 import { PlanBody, PlanCheck, PlanRibbon, planCardClass } from "@/components/billing/PlanOption";
 
 type PlanChoice = ProductId | "week_pass";
@@ -33,11 +33,16 @@ type Props = {
 };
 
 /** SPEC 15.2 / KB §3.4: ürün → hesap bağlama (anonimse) → fatura formu + 2 onay → iyzico formu. Kart bilgisi iyzico formunda girilir. */
-export function CheckoutFlow({ isAnonymous, products, initialProduct, weekPassEnabled, alreadyPremium, analysisId, offer }: Props) {
+export function CheckoutFlow({ isAnonymous, products: initialProducts, initialProduct, weekPassEnabled, alreadyPremium, analysisId, offer }: Props) {
   const t = useTranslations("checkout");
   const tv = useTranslations("paywall.v2");
   const [plan, setPlan] = useState<PlanChoice>(initialProduct);
   const [skewMs] = useState(() => (offer ? new Date(offer.serverNow).getTime() - Date.now() : 0));
+  // Sayaç 0'a inince tanıtım fiyatı ekrandan düşer: kartlar ve "Devam · ₺" düğmesi sunucunun o an tahsil edeceği normal
+  // fiyatı gösterir (KB P#18: gösterilen fiyat gerçek fiyattır; checkout fiyatı gönderim anında yeniden hesaplar).
+  const [offerEnded, setOfferEnded] = useState(false);
+  const onOfferEnded = useCallback(() => setOfferEnded(true), []);
+  const products = offerEnded && offer ? productViews(offer, false) : initialProducts;
   const selected = products.find((p) => p.id === plan);
   const amount: number | null = plan === "week_pass" ? PLANS.week_pass.priceTry : (selected?.priceTry ?? null);
   const [linked, setLinked] = useState(!isAnonymous);
@@ -129,7 +134,7 @@ export function CheckoutFlow({ isAnonymous, products, initialProduct, weekPassEn
       <Stepper current={current} />
       <section aria-labelledby="plan-h" className="space-y-2.5">
         <h2 id="plan-h" className="eyebrow">{t("chooseProduct")}</h2>
-        {offer ? <OfferCountdown offer={offer} skewMs={skewMs} /> : null}
+        {offer ? <OfferCountdown offer={offer} skewMs={skewMs} onEnded={onOfferEnded} /> : null}
         <div className="grid gap-2.5">
           {products.map((p) => (
             <PlanButton

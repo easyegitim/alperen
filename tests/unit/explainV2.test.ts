@@ -52,6 +52,19 @@ describe("buildExplanation", () => {
     const many = validRaise("skin", assessment(5.5, { raise: ["st_spf", "st_cleanser_gentle", "st_moisturizer_light", "st_exfoliant_weekly"].map((id) => ({ stepId: id, effect: "e", gain: 0.4 })) }));
     expect(many).toHaveLength(3);
   });
+  it("uygunluk filtresi: saç yasakken saç preset'i ve saç adımı düşer; sakal yasakken sakal preset'i düşer (istemle aynı kural)", () => {
+    const hairRaise = assessment(5.5, { raise: [{ stepId: "textured_crop", effect: "a", gain: 0 }, { stepId: "lv_brow_tidy", effect: "b", gain: 0 }] }, "harmony");
+    expect(validRaise("harmony", hairRaise).map((r) => r.stepId)).toEqual(["textured_crop", "lv_brow_tidy"]);
+    expect(validRaise("harmony", hairRaise, { hairAllowed: false, beardAllowed: true }).map((r) => r.stepId)).toEqual(["lv_brow_tidy"]);
+    const beardRaise = assessment(5.5, { raise: [{ stepId: "stubble_light", effect: "a", gain: 0 }, { stepId: "lv_beard_lineup", effect: "b", gain: 0 }] }, "jawline");
+    expect(validRaise("jawline", beardRaise, { hairAllowed: true, beardAllowed: false }).map((r) => r.stepId)).toEqual(["lv_beard_lineup"]);
+    const hairStep = assessment(5.5, { raise: [{ stepId: "st_hair_conditioner", effect: "a", gain: 0.4 }] }, "hair");
+    expect(validRaise("hair", hairStep, { hairAllowed: false, beardAllowed: true })).toEqual([]);
+    expect(buildExplanation("harmony", hairRaise, { viewsUsed: 2, lighting: "even", eligibility: { hairAllowed: false, beardAllowed: true } }).raise.map((r) => r.step)).not.toContain(expect.stringMatching(/kesim/i));
+    const out = scoreOutput();
+    expect(improveFirstV2(out, weightsH2({ hairExcluded: true }), new Set(["hair"]), 1, { hairAllowed: false, beardAllowed: false }).some((i) => /sakal|kesim/i.test(i.step))).toBe(false);
+    expect(subGains(out, new Set(), { hairAllowed: false, beardAllowed: true }).hair).toBe(0);
+  });
 });
 
 describe("kazanç, ağırlık ve potansiyel", () => {

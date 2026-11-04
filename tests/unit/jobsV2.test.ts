@@ -13,8 +13,8 @@ const H = ["a".repeat(64), "b".repeat(64)];
 const CTX = { ageBand: null, presentation: "unspecified" as const, headCoveringDeclared: false, faceShapeOverride: null };
 const ENV = { ANTHROPIC_API_KEY: "test", SET_CACHE_SECRET: "gizli" };
 
-function job(repo: FakeRepo, provider: FakeScoringV2, env: Record<string, string> = ENV, hashes: string[] | null = H) {
-  return runAnalysisJob({ repo, analysisId: "a1", userId: "u1", images: IMAGES, sourceHashes: hashes, geometry: GEO, context: CTX, env, engine: { provider, auditProvider: null } });
+function job(repo: FakeRepo, provider: FakeScoringV2, env: Record<string, string> = ENV, hashes: string[] | null = H, userId = "u1") {
+  return runAnalysisJob({ repo, analysisId: "a1", userId, images: IMAGES, sourceHashes: hashes, geometry: GEO, context: CTX, env, engine: { provider, auditProvider: null } });
 }
 
 describe("runAnalysisJob", () => {
@@ -56,6 +56,15 @@ describe("runAnalysisJob", () => {
     expect((row.signals as { cacheHit: boolean }).cacheHit).toBe(true);
     expect(repo2.reports[0].report).toEqual(repo.reports[0].report);
     expect(row.ai_usage).toMatchObject({ calls: 0, estUsd: 0 });
+  });
+  it("başka kullanıcının aynı set anahtarı isabet sayılmaz: skor ve rapor kopyalanmaz, model çağrılır", async () => {
+    const repo = new FakeRepo();
+    await job(repo, new FakeScoringV2([okRun(scoreOutput({ skin: 6.1 }))]));
+    const provider = new FakeScoringV2([okRun(scoreOutput({ skin: 7.7 }))]);
+    const r = await job(repo, provider, ENV, H, "user-B");
+    expect(r).toEqual({ status: "completed", cacheHit: false });
+    expect(provider.calls).toBe(3);
+    expect(repo.row().subscores).toMatchObject({ skin: 7.7 });
   });
   it("önbellek ıskası: farklı set, secret yok ya da süresi dolmuş satır → model çağrılır", async () => {
     const repo = new FakeRepo();

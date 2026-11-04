@@ -155,6 +155,7 @@ export type DatabaseV2Mirror = {
           provider: string;
           status: "pending" | "paid" | "refunded" | "failed";
           created_at: string;
+          consumed_at: string | null;
         };
         Insert: {
           id?: string;
@@ -164,6 +165,7 @@ export type DatabaseV2Mirror = {
           provider: string;
           status: "pending" | "paid" | "refunded" | "failed";
           created_at?: string;
+          consumed_at?: string | null;
         };
         Update: {
           id?: string;
@@ -173,6 +175,7 @@ export type DatabaseV2Mirror = {
           provider?: string;
           status?: "pending" | "paid" | "refunded" | "failed";
           created_at?: string;
+          consumed_at?: string | null;
         };
         Relationships: [
           {

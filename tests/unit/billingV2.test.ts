@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideAccess, isEntitledForAnalysis, referralUnlocked, type PurchaseLike } from "@/lib/billing/entitlement";
+import { canConsumePurchaseFor, decideAccess, isEntitledForAnalysis, referralUnlocked, type PurchaseLike } from "@/lib/billing/entitlement";
 import { effectivePriceTry, formatRemaining, getOfferProducts, newOfferRow, offerState } from "@/lib/billing/offer";
 
 const paid = (over: Partial<PurchaseLike> = {}): PurchaseLike => ({ id: "p1", product: "one_time_report", analysis_id: null, status: "paid", ...over });
@@ -14,9 +14,16 @@ describe("isEntitledForAnalysis (CONTRACTS_V2 §2.3 hak kaynakları)", () => {
     expect(isEntitledForAnalysis({ subscriptionActive: false, purchases: [paid({ analysis_id: "a1" })] }, "a1")).toBe(true);
     expect(isEntitledForAnalysis({ subscriptionActive: false, purchases: [paid({ analysis_id: "a9" })] }, "a1")).toBe(false);
   });
-  it("henüz bağlanmamış ödenmiş satın alma açar (sunucu bağlar); pending/failed/refunded açmaz", () => {
-    expect(isEntitledForAnalysis({ subscriptionActive: false, purchases: [paid()] }, "a1")).toBe(true);
+  it("bağlanmamış ödenmiş satın alma hiçbir satırı AÇMAZ (yalnız yeni işte bağlanır); pending/failed/refunded de açmaz", () => {
+    expect(isEntitledForAnalysis({ subscriptionActive: false, purchases: [paid()] }, "a1")).toBe(false);
+    expect(isEntitledForAnalysis({ subscriptionActive: false, purchases: [paid()] }, null)).toBe(false);
     for (const status of ["pending", "failed", "refunded"]) expect(isEntitledForAnalysis({ subscriptionActive: false, purchases: [paid({ status })] }, "a1")).toBe(false);
+  });
+  it("tüketilmiş (consumed_at dolu) satın alma analiz silinip analysis_id null olsa da yeniden bağlanmaz", () => {
+    const consumed = paid({ analysis_id: null, consumed_at: "2026-11-04T10:00:00.000Z" });
+    expect(isEntitledForAnalysis({ subscriptionActive: false, purchases: [consumed] }, "a1")).toBe(false);
+    expect(decideAccess({ subscriptionActive: false, purchases: [consumed], analysisId: "a1", referralsCompleted: 0, env: OFF }).unconsumedOneTimeId).toBeNull();
+    expect(decideAccess({ subscriptionActive: false, purchases: [consumed, paid({ id: "p2" })], analysisId: "a1", referralsCompleted: 0, env: OFF }).unconsumedOneTimeId).toBe("p2");
   });
   it("abonelik ürünü purchases'ta olsa da tek başına açmaz (abonelik durumu subscriptions satırından gelir)", () => {
     expect(isEntitledForAnalysis({ subscriptionActive: false, purchases: [paid({ product: "weekly" })] }, "a1")).toBe(false);
@@ -24,9 +31,9 @@ describe("isEntitledForAnalysis (CONTRACTS_V2 §2.3 hak kaynakları)", () => {
 });
 
 describe("decideAccess", () => {
-  it("bağlanacak satın alma yalnız abonelik yokken ve analiz bağlı değilken", () => {
+  it("bağlanacak satın alma yalnız abonelik yokken ve analiz bağlı değilken; tek başına hak vermez", () => {
     const d = decideAccess({ subscriptionActive: false, purchases: [paid()], analysisId: "a1", referralsCompleted: 0, env: OFF });
-    expect(d).toEqual({ entitled: true, referralUnlock: false, percentile: false, subscriptionActive: false, unconsumedOneTimeId: "p1" });
+    expect(d).toEqual({ entitled: false, referralUnlock: false, percentile: false, subscriptionActive: false, unconsumedOneTimeId: "p1" });
     expect(decideAccess({ subscriptionActive: true, purchases: [paid()], analysisId: "a1", referralsCompleted: 0, env: OFF }).unconsumedOneTimeId).toBeNull();
     expect(decideAccess({ subscriptionActive: false, purchases: [paid({ analysis_id: "a1" }), paid({ id: "p2" })], analysisId: "a1", referralsCompleted: 0, env: OFF }).unconsumedOneTimeId).toBeNull();
   });
@@ -76,5 +83,14 @@ describe("süreli teklif (KB P#18): sunucu saati, sıfırlanmaz, bitince normal 
     expect(formatRemaining(23 * 3_600_000 + 59 * 60_000 + 59_000)).toBe("23:59:59");
     expect(formatRemaining(2 * 86_400_000 + 5_000)).toBe("2g 00:00:05");
     expect(formatRemaining(-5)).toBe("00:00:00");
+  });
+});
+
+describe("canConsumePurchaseFor (bağlanmamış satın alma yalnız başlamamış satıra)", () => {
+  it("hak varsa her durum; bağlanacak satın alma yalnız device_only/queued/failed; completed/running satır açılmaz", () => {
+    expect(canConsumePurchaseFor({ entitled: true, unconsumedOneTimeId: null }, "completed")).toBe(true);
+    for (const st of ["device_only", "queued", "failed"]) expect(canConsumePurchaseFor({ entitled: false, unconsumedOneTimeId: "p1" }, st)).toBe(true);
+    for (const st of ["completed", "running", "processing"]) expect(canConsumePurchaseFor({ entitled: false, unconsumedOneTimeId: "p1" }, st)).toBe(false);
+    expect(canConsumePurchaseFor({ entitled: false, unconsumedOneTimeId: null }, "device_only")).toBe(false);
   });
 });

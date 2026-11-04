@@ -16,6 +16,8 @@ import { QuestionnaireSchema } from "@/lib/questionnaire";
 import { toClientAnalysis, type AnalysisRow } from "@/lib/score/present";
 import { selectAnalysisRows } from "@/lib/score/rowColumns";
 import type { ImproveItem } from "@/lib/score/contract";
+import { isPresentation } from "@/lib/onboarding/presentation";
+import { loadProfile } from "@/app/api/analyses/v2";
 
 /** /plan/[analysisId]: koç raporu (premium) ve dayandığı anket cevapları (UI spec §7). Rapor yoksa istemci ilk açılışta üretir. */
 export default async function PlanPage({ params }: PageProps<"/plan/[analysisId]">) {
@@ -35,6 +37,8 @@ export default async function PlanPage({ params }: PageProps<"/plan/[analysisId]
     getPremiumStatus(supabase, user.id),
     supabase.from("profiles").select("questionnaire, updated_at").eq("id", user.id).maybeSingle(),
   ]);
+  // Paywall illüstrasyonu kullanıcının beyan ettiği cinsiyet ve yaş bandını izler (KB P#17); skor girdisi değildir.
+  const paywallProfile = premium ? null : await loadProfile(admin, user.id);
   // Beden ve serbest not yalnız sunucu kurallarında kullanılır; buradan yalnız çip ve atlama bilgisi türetilir.
   const q = QuestionnaireSchema.safeParse(profile.data?.questionnaire);
   const skipped = q.success ? planSkips(q.data) : {};
@@ -44,7 +48,12 @@ export default async function PlanPage({ params }: PageProps<"/plan/[analysisId]
     return (
       <div className="mx-auto w-full max-w-lg space-y-5 px-4 py-6">
         <PageTitle eyebrow={t("eyebrow")} title={t("title")} />
-        <PaywallProvider teaserMode={teaser.mode} analysisId={analysisId} weekPassEnabled={isFeatureEnabled("weekPass")}>
+        <PaywallProvider
+          teaserMode={teaser.mode}
+          analysisId={analysisId}
+          presentation={isPresentation(paywallProfile?.presentation) ? paywallProfile.presentation : null}
+          ageBand={paywallProfile?.age_band ?? null}
+        >
           <PlanLocked skipped={skipped} />
         </PaywallProvider>
       </div>
