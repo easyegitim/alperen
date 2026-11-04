@@ -13,6 +13,10 @@ const MOBILE_FLAG_ENV: Record<FlagKey, string | undefined> = {
   doctorLayer: process.env.EXPO_PUBLIC_FEATURE_DOCTOR_LAYER,
   referralUnlock: process.env.EXPO_PUBLIC_FEATURE_REFERRAL_UNLOCK,
   yearlyPlan: process.env.EXPO_PUBLIC_FEATURE_YEARLY_PLAN,
+  // Sprint 2 (CONTRACTS_V2.md Sprint 2): glowUp ve tryonCombo açık başlar (yalnız "false" kapatır); productLinks kapalı.
+  productLinks: process.env.EXPO_PUBLIC_FEATURE_PRODUCT_LINKS,
+  glowUp: process.env.EXPO_PUBLIC_FEATURE_GLOW_UP,
+  tryonCombo: process.env.EXPO_PUBLIC_FEATURE_TRYON_COMBO,
 };
 
 export function isMobileFeatureEnabled(flag: FlagKey, overrides?: Partial<Record<FlagKey, string | undefined>>): boolean {

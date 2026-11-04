@@ -58,7 +58,18 @@ export type AnalyticsEvents = {
   capture_manual_used: { issue: string };
   improve_first_clicked: { position: 1 | 2 | 3 };
   plan_basis_edit_clicked: undefined;
+  // Sprint 2 (CONTRACTS_V2 Sprint 2): YALNIZ olay adı, yük yok — adım kimliği, bölge, skor, mod, fotoğraf, plan içeriği eklenmez.
+  plan_viewed: undefined;
+  plan_step_opened: undefined;
+  questionnaire_v2_completed: undefined;
+  tryon_combo_started: undefined;
+  tryon_qc_failed: undefined;
+  tryon_flagged_broken: undefined;
+  glowup_viewed: undefined;
 };
+
+/** Sprint 2 olayları (yüksüz); testler ve mobil eşitlik bu listeyi kullanır. */
+export const SPRINT2_EVENTS = ["plan_viewed", "plan_step_opened", "questionnaire_v2_completed", "tryon_combo_started", "tryon_qc_failed", "tryon_flagged_broken", "glowup_viewed"] as const satisfies readonly AnalyticsEventName[];
 
 export type AnalyticsEventName = keyof AnalyticsEvents;
 
