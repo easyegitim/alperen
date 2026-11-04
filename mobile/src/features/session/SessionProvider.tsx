@@ -1,6 +1,6 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from "react";
-import { createApiClient } from "@/mobile/src/lib/api";
+import { createApiClient, createAuraApi, type AuraApi } from "@/mobile/src/lib/api";
 import { isSupabaseConfigured } from "@/mobile/src/lib/env";
 import { getSupabase } from "@/mobile/src/lib/supabase";
 
@@ -10,6 +10,8 @@ type SessionState = {
   user: User | null;
   configured: boolean;
   api: ReturnType<typeof createApiClient>;
+  /** Tipli v2 uç noktaları (CONTRACTS_V2 Sprint 3 S3.2); aynı token kaynağı. */
+  aura: AuraApi;
   signOut: () => Promise<void>;
 };
 
@@ -51,6 +53,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       user: session?.user ?? null,
       configured: isSupabaseConfigured,
       api,
+      aura: createAuraApi(api),
       signOut: async () => {
         if (isSupabaseConfigured) await getSupabase().auth.signOut();
         setSession(null);

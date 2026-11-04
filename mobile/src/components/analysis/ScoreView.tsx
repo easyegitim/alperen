@@ -102,7 +102,7 @@ export function ScoreView({ a, premium }: { a: ClientAnalysis; premium: boolean 
     <Card title={t("planTitle")} description={t("planBody")}>
       {premium ? (
         <View style={{ gap: spacing.sm }}>
-          <Button title={t("seePlan")} onPress={() => router.push({ pathname: "/plan/[analysisId]", params: { analysisId: a.id } })} />
+          <Button title={t("seePlan")} onPress={() => router.push({ pathname: "/plan/[id]", params: { id: a.id } })} />
           <Button title={t("tryStyles")} variant="outline" onPress={() => router.push("/(tabs)/dene")} />
         </View>
       ) : (

@@ -53,7 +53,7 @@ export default function PlanTab() {
   return (
     <Screen>
       <Card title={t("title")}>
-        <Button title={scoped("analysis")("seePlan")} onPress={() => router.push({ pathname: "/plan/[analysisId]", params: { analysisId: state.latest! } })} />
+        <Button title={scoped("analysis")("seePlan")} onPress={() => router.push({ pathname: "/plan/[id]", params: { id: state.latest! } })} />
       </Card>
     </Screen>
   );
