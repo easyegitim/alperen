@@ -1477,7 +1477,14 @@
       "downloaded": "Kart indirildi.",
       "error": "Kart oluşturulamadı.",
       "invalid": "Bu kart bu ayarlarla oluşturulamaz.",
-      "deviceNote": "Kart cihazında üretilir; sunucuya gitmez."
+      "deviceNote": "Kart cihazında üretilir; sunucuya gitmez.",
+      "labels": {
+        "overall": "Genel skor",
+        "potential": "Potansiyel"
+      },
+      "kindAria": "Kart türü",
+      "formatAria": "Kart biçimi",
+      "barberButton": "Berber kartını paylaş"
     }
   },
   "checkout": {
