@@ -837,7 +837,12 @@
       "planPreviewTitle": "Sana özel plan",
       "faceShapePrelim": "Ön değerlendirme",
       "deviceDone": "Analizin tamamlandı",
-      "unlockBody": "Genel skorun, potansiyelin, alt skorların, açıklamalar ve raporun ödemeyle açılır."
+      "unlockBody": "Genel skorun, potansiyelin, alt skorların, açıklamalar ve raporun ödemeyle açılır.",
+      "tag": "Kilitli",
+      "open": "Açık",
+      "subscoresNote": "Yedi alt skorun adları açık; değerler ve açıklamalar ödemeyle açılır. Çubuklar herkeste aynıdır, skorunu göstermez.",
+      "planPreviewBody": "Saç, sakal ve bakım adımları fotoğrafına göre seçilir; önizlemeler ödemeyle netleşir.",
+      "planPreviewAria": "Bulanık plan önizlemeleri (kilitli)"
     },
     "statusProcessing": "Analiz işleniyor…",
     "statusFailed": "Bu analiz tamamlanamadı; hakkın düşmedi. Yeni bir çekim yapabilirsin.",
@@ -945,7 +950,8 @@
         "eyeAxis": "Göz köşelerinden geçen eksen.",
         "spacing": "İki göz bebeği arasındaki mesafe.",
         "widths": "Elmacık ve çene genişliklerinin birbirine oranı."
-      }
+      },
+      "portraitAria": "Fotoğrafının üzerinde yüz noktaları (yalnız bu cihazda)"
     },
     "explain": {
       "itemStatus": "{item}: {status}",

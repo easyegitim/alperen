@@ -130,6 +130,7 @@ const WALKED = [
   "analysis.noChange",
   "analysis.explain5",
   "analysis.locked",
+  "analysis.overlay.portraitAria",
   "analysis.faceShapeV2",
   "analysis.stage",
   "paywall.v2",

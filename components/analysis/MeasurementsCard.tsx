@@ -4,7 +4,9 @@ import { Ruler } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { LockedSection } from "@/components/analysis/LockedSection";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { PaywallTrigger } from "@/lib/config/paywall";
+import type { DeviceResult } from "@/lib/score/contract";
 import type { ClientAnalysis } from "@/lib/score/present";
 
 const pct = (v: number | null) => (v === null ? "–" : `%${Math.round(v * 100)}`);
@@ -64,5 +66,41 @@ export function MeasurementsCard({ a, onLocked }: { a: ClientAnalysis; onLocked:
         <p className="text-sm text-muted-foreground">–</p>
       )}
     </LockedSection>
+  );
+}
+
+// ─── v2: cihaz oranları, herkese açık (KB P#12; cihaz değerleri tek kaynak) ─────────────────────────────────────────
+
+/** Ödeme öncesi dört oran açık; altında KB P§1 notu: "Bu oranlar yalnız tarif eder; iyi ya da kötü anlamı taşımaz…" */
+export function DeviceMeasurementsCard({ ratios }: { ratios: DeviceResult["ratios"] }) {
+  const t = useTranslations("analysis");
+  const tg = useTranslations("geometry");
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="flex items-center gap-2.5 text-lg font-semibold tracking-tight">
+          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand" aria-hidden="true">
+            <Ruler className="size-4" />
+          </span>
+          <span className="flex-1">{t("ratiosTitle")}</span>
+          <span className="inline-flex h-6 items-center rounded-full bg-success/12 px-2.5 text-[11px] font-semibold text-success">{t("locked.open")}</span>
+        </h2>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <dl className="grid grid-cols-2 gap-2">
+          <Tile label={tg("canthalTilt")}>
+            <span className="text-sm">{ratios.canthalTiltDeg > 2 ? tg("tilt.positive") : ratios.canthalTiltDeg < -2 ? tg("tilt.negative") : tg("tilt.neutral")}</span>
+          </Tile>
+          <Tile label={tg("thirds")}>
+            <span className="text-sm whitespace-nowrap">
+              {pct(ratios.thirds.upper)} / {pct(ratios.thirds.middle)} / {pct(ratios.thirds.lower)}
+            </span>
+          </Tile>
+          <Tile label={tg("fwhr")}>{ratio(ratios.fwhr)}</Tile>
+          <Tile label={tg("jawRatio")}>{ratio(ratios.jawRatio)}</Tile>
+        </dl>
+        <p className="text-[11px] leading-relaxed text-muted-foreground">{t("locked.ratiosNote")}</p>
+      </CardContent>
+    </Card>
   );
 }

@@ -7,9 +7,11 @@ import { effectiveLimit } from "@/lib/billing/entitlement";
 import { ENTITLEMENTS } from "@/lib/config/plans";
 import { getTeaserConfig } from "@/lib/config/teaser";
 import { REQUIRED_ANALYSIS_CONSENTS } from "@/lib/consent";
+import { isFeatureEnabled } from "@/lib/config/flags";
 import { createAdminClient } from "@/lib/db/admin";
-import { toClientAnalysis, toClientSummary, type AnalysisRow } from "@/lib/score/present";
-import { selectAnalysisRows } from "@/lib/score/rowColumns";
+import { checkServerCapture, withServerFaceShape } from "@/lib/score/engine/captureGate";
+import { deviceResultFromGeometry, toClientAnalysis, toClientAnalysisV2, toClientSummary, type AnalysisRow, type AnalysisRowV2 } from "@/lib/score/present";
+import { selectAnalysisRows, selectAnalysisRowsV2 } from "@/lib/score/rowColumns";
 import { analysisContextFromQuestionnaire, prepareScoring, scoreAnalysis, type AiUsage } from "@/lib/score/service";
 
 export const runtime = "nodejs";
@@ -25,6 +27,11 @@ export const maxDuration = 60;
 export const POST = withGuard(
   { schema: AnalysisInputSchema, requireAdult: true, requireConsents: REQUIRED_ANALYSIS_CONSENTS },
   async ({ user, supabase, input }) => {
+    // W1 (CONTRACTS_V2 §2.3/1): ödeme öncesi cihaz analizi — görsel yok, LLM yok, kota sayılmaz. Satır status device_only,
+    // device_result geometriden (tek kaynak), sections_ready ["device"]. Set anahtarı (HMAC, W3 lib/score/setKey.ts) burada
+    // yazılmaz; ödeme sonrası full gönderimde W3 hesaplar. Yanıt: kilitli ClientAnalysisV2.
+    if (input.mode === "device_only") return deviceOnly(user.id, input.clientRequestId, input.geometry);
+
     // v2 gövdesi (images[]/mode) şemada kabul edilir (CONTRACTS_V2 §2); motor ve arka plan işi Faz 3'te (F07) bağlanır.
     // O zamana kadar yalnız eski tek selfie yolu çalışır; v2 isteği açık hata alır (sahte başarı yok).
     const front = input.images.find((i) => i.view === "front");
@@ -121,6 +128,45 @@ export const POST = withGuard(
     }
   },
 );
+
+async function deviceOnly(userId: string, clientRequestId: string, geometryIn: AnalysisRow["geometry"] & object): Promise<Response> {
+  const gate = checkServerCapture(geometryIn);
+  if (!gate.ok) throw new ApiError("NO_FACE", "Fotoğrafta tek bir yüz bulunamadı; yeniden çek.");
+  const geometry = withServerFaceShape(geometryIn, gate.faceShape);
+  const admin = createAdminClient();
+  const { data: reservedId, error: rpcError } = await admin.rpc("reserve_analysis", {
+    p_user: userId,
+    p_client_request_id: clientRequestId,
+    p_limit: 0, // device_only kota saymaz ve kotaya takılmaz (0010); limit önemsiz
+    p_since: "-infinity",
+    p_status: "device_only",
+  });
+  if (rpcError || !reservedId) throw new Error("reserve_analysis failed");
+
+  // Idempotency: aynı clientRequestId ile satır zaten ilerlediyse (ödeme sonrası queued/completed) olduğu gibi döner.
+  const { data: existingRaw } = await selectAnalysisRowsV2((cols) => admin.from("analyses").select(cols).eq("id", reservedId).single());
+  const existing = existingRaw as AnalysisRowV2 | null;
+  if (existing && existing.status !== "device_only") return Response.json(toClientAnalysisV2(existing, NO_ACCESS));
+
+  const update = {
+    geometry,
+    face_shape: geometry.faceShape.primary,
+    device_result: deviceResultFromGeometry(geometry),
+    sections_ready: ["device"],
+    engine_version: "hybrid.v2",
+  };
+  const { data: row, error } = await selectAnalysisRowsV2((cols) => admin.from("analyses").update(update).eq("id", reservedId).select(cols).single());
+  if (error || !row) throw new Error("analysis update failed");
+
+  // Davet kilidi (KB Ç12, FEATURE_REFERRAL_UNLOCK): davet edilen fotoğraf yolladı → referrals.photo_submitted_at (bir kez).
+  if (isFeatureEnabled("referralUnlock")) {
+    await admin.from("referrals").update({ photo_submitted_at: new Date().toISOString() }).eq("referee_id", userId).is("photo_submitted_at", null);
+  }
+  return Response.json(toClientAnalysisV2(row as AnalysisRowV2, NO_ACCESS));
+}
+
+/** Ödeme öncesi yanıt: hak yok (W2 AccessV2 gelene kadar da hiçbir skor açılmaz). */
+const NO_ACCESS = { entitled: false, referralUnlock: false, percentile: false } as const;
 
 /** GET /api/analyses → ClientAnalysisSummary[] (ücretsizde skorlar null). */
 export const GET = withGuard({}, async ({ user, supabase }) => {

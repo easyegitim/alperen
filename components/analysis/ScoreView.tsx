@@ -1,16 +1,17 @@
 "use client";
 
-import { Scissors, Sparkles } from "lucide-react";
+import { Check, Scissors, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CaptureHintsCard } from "@/components/analysis/CaptureHintsCard";
 import { ImproveFirstCard } from "@/components/analysis/ImproveFirstCard";
+import { LockedPlanPreview } from "@/components/analysis/LockedPlanPreview";
 import { LockedSection } from "@/components/analysis/LockedSection";
-import { MeasurementsCard } from "@/components/analysis/MeasurementsCard";
+import { DeviceMeasurementsCard, MeasurementsCard } from "@/components/analysis/MeasurementsCard";
 import { MethodDisclosure } from "@/components/analysis/MethodDisclosure";
-import { REVEAL_COUNT_MS, REVEAL_LINES_MS, ScoreHero } from "@/components/analysis/ScoreHero";
-import { SubscoreList, type SubRow } from "@/components/analysis/SubscoreList";
+import { REVEAL_COUNT_MS, REVEAL_LINES_MS, ScoreHero, ScoreHeroLocked } from "@/components/analysis/ScoreHero";
+import { LockedSubscoreList, SubscoreList, type SubRow } from "@/components/analysis/SubscoreList";
 import { useBoundSelfie } from "@/components/analysis/useBoundSelfie";
 import { usePaywall } from "@/components/paywall/PaywallSheet";
 import { FeedbackButtons } from "@/components/report/FeedbackButtons";
@@ -19,11 +20,11 @@ import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
 import type { PaywallTrigger } from "@/lib/config/paywall";
 import { RESULT_FOCUS_BELOW } from "@/lib/config/scoring";
-import { SUB_KEYS, type SubKey } from "@/lib/config/teaser";
+import { SUB_KEYS, SUB_KEYS_V2, type SubKey } from "@/lib/config/teaser";
 import { notMeasuredLayers } from "@/lib/face/overlay";
 import type { EngineName, ExplainItem } from "@/lib/score/contract";
 import { observationFor } from "@/lib/score/observationText";
-import type { ClientAnalysis } from "@/lib/score/present";
+import type { ClientAnalysis, ClientAnalysisV2 } from "@/lib/score/present";
 
 const REVEAL_KEY = (id: string) => `aura.revealed.${id}`;
 
@@ -184,6 +185,49 @@ export function ScoreView({ a, premium, currentEngine }: { a: ClientAnalysis; pr
       <p className="sr-only" role="status" aria-live="polite">
         {announce}
       </p>
+    </div>
+  );
+}
+
+// ─── v2 kilitli sonuç ekranı (KB §3.3; PLAN 1f) ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Ödeme öncesi (stage device_only) ve hak yokken tamamlanmış analiz: sunucudan hiçbir skor gelmez (null + locked).
+ * Sıra: portre + aynı halka/kilit → alt skor adları (aynı bulanık çubuk, rozet yok) → ilk adımlar (3 bulanık satır) →
+ * sana özel plan (cihazda bulanık önizlemeler) → oranlar (açık, KB notu) → yöntem.
+ */
+export function ScoreViewV2({ a }: { a: ClientAnalysisV2 }) {
+  const t = useTranslations("analysis");
+  const { open } = usePaywall();
+  const onLocked = (trigger: PaywallTrigger) => open(trigger);
+  const source = useBoundSelfie(a.id);
+  const viewedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (viewedRef.current === a.id) return;
+    viewedRef.current = a.id;
+    track("result_viewed", { tier: "free", overlay: source ? "photo" : "schematic", legacy: false });
+  }, [a.id, source]);
+
+  const prelim = a.faceShape?.override ? { primary: a.faceShape.override } : (a.faceShape?.prelim ?? null);
+
+  return (
+    <div className="space-y-3">
+      <p className="flex items-center gap-2 rounded-xl border bg-muted/40 px-3.5 py-2.5 text-[13px]">
+        <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full bg-success text-white">
+          <Check className="size-3.5" strokeWidth={3} />
+        </span>
+        <span>
+          <span className="font-semibold">{t("locked.deviceDone")}</span> · {t("locked.unlockBody")}
+        </span>
+      </p>
+      <ScoreHeroLocked faceShape={prelim} source={source} onLocked={onLocked} />
+      <LockedSubscoreList keys={SUB_KEYS_V2} onLocked={onLocked} />
+      <ImproveFirstCard v={{ value: null, locked: true }} analysisId={a.id} onLocked={onLocked} />
+      <LockedPlanPreview source={source} onTap={() => onLocked("plan")} />
+      {a.device ? <DeviceMeasurementsCard ratios={a.device.ratios} /> : null}
+      <p className="text-center text-[11px] text-muted-foreground">{t("competitorsNote")}</p>
+      <MethodDisclosure hybrid />
     </div>
   );
 }

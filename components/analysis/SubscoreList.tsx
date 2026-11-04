@@ -166,3 +166,37 @@ export function SubscoreList({
     </Card>
   );
 }
+
+// ─── v2 kilitli liste (KB P#10, P#11): adlar açık, skorlar bulanık, herkeste aynı çubuk; rozet YOK ──────────────────
+
+/** Ödeme öncesi 7 alt skor: her satırda aynı süs çubuğu (gerçek değerden türemez), "Yapısal/Geliştirilebilir" etiketi yok. */
+export function LockedSubscoreList({ keys, onLocked }: { keys: readonly SubKey[]; onLocked: (t: PaywallTrigger) => void }) {
+  const t = useTranslations("analysis");
+  return (
+    <Card>
+      <CardHeader className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold tracking-tight">{t("subscoresTitle")}</h2>
+        <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-semibold text-brand">
+          <Lock className="size-3" aria-hidden="true" />
+          {t("locked.tag")}
+        </span>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y divide-border">
+          {keys.map((k) => (
+            <li key={k} className="py-3.5 first:pt-0 last:pb-0">
+              <div className="flex min-h-11 items-center justify-between gap-3">
+                <span className="text-[15px] font-semibold">{t(`sub.${k}`)}</span>
+                <LockedValue v={{ value: null, locked: true }} onTap={() => onLocked(`sub_${k}`)} aria={t("locked.subBarAria")} />
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-track" role="presentation">
+                <div className="h-full rounded-full bg-brand-gradient opacity-35 blur-[2px]" style={{ width: LOCKED_BAR_WIDTH }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{t("locked.subscoresNote")}</p>
+      </CardContent>
+    </Card>
+  );
+}
