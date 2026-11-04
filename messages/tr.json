@@ -1643,7 +1643,7 @@
   "tryon": {
     "title": "Dene",
     "lockedTitle": "Sanal deneme premiumda",
-    "lockedBody": "60 saç, sakal ve renk stilini kendi fotoğrafında, yüzün değişmeden dene. Her 7 günde 10 deneme.",
+    "lockedBody": "76 saç, sakal ve renk stilini kendi fotoğrafında, yüzün değişmeden dene; saç + sakal kombini ve iyileşmiş halin tek görselde. Her 7 günde 10 deneme.",
     "goPremium": "Premium'a geç",
     "consent": {
       "title": "Sanal deneme için izin",
@@ -1696,7 +1696,7 @@
     "resultNote": "Görsel temsilidir; gerçek sonuç berber/kuaför uygulamasına bağlıdır. Yüzün orijinal piksellerinle korundu.",
     "lockedEyebrow": "Sanal deneme",
     "lockedPerks": {
-      "styles": "60 saç, sakal ve renk stili",
+      "styles": "76 saç, sakal ve renk stili; kombin ve iyileşmiş halin",
       "face": "Kendi fotoğrafında, yüzün değişmeden",
       "quota": "Her 7 günde 10 deneme"
     },
@@ -1716,7 +1716,15 @@
         "pickBeard": "Sakal seç",
         "pickColor": "Renk seç (isteğe bağlı)",
         "run": "Kombini dene",
-        "needBoth": "Kombin için saç ve sakal seçmelisin."
+        "needBoth": "Kombin için saç ve sakal seçmelisin.",
+        "slot": {
+          "hair": "Saç",
+          "beard": "Sakal",
+          "color": "Renk"
+        },
+        "none": "Seçilmedi",
+        "clear": "Seçimi temizle",
+        "selected": "Seçildi"
       },
       "glowUp": {
         "title": "İyileşmiş halin",
@@ -1733,13 +1741,20 @@
         "regenPaid": "Yeniden üretim haktan düşer.",
         "sliderEyes": "Gözlere hizalı önce/sonra",
         "run": "İyileşmiş halimi göster",
-        "notForAds": "Bu görsel reklamda kullanılmaz."
+        "notForAds": "Bu görsel reklamda kullanılmaz.",
+        "needsAnalysis": "İyileşmiş halin için önce bir analiz gerekir.",
+        "fromCatalog": "Planın henüz hazır değil; adımlar katalogdan seçilir.",
+        "layersTitle": "Hangi adımlar uygulansın?",
+        "stepsTitle": "Uygulanacak adımlar",
+        "noLayer": "En az bir katman seç.",
+        "eyeLine": "Göz hizası"
       },
       "qc": {
         "checking": "Sonuç kontrol ediliyor…",
         "regen": "Yeniden deneniyor ({n}/{max})",
         "failedTitle": "Bu fotoğrafla bu stil iyi sonuç vermedi",
-        "failedBody": "Hakkın düşmedi. Başka bir stil ya da fotoğrafla deneyebilirsin."
+        "failedBody": "Hakkın düşmedi. Başka bir stil ya da fotoğrafla deneyebilirsin.",
+        "failedRetry": "Başka stil seç"
       },
       "flagBroken": "Bozuk görünüyor",
       "flagBrokenThanks": "Teşekkürler, bildirimin alındı.",
@@ -1749,7 +1764,28 @@
       "quotaWeight": "Bu deneme {n} hak kullanır.",
       "comboOff": "Kombin deneme şu anda kapalı.",
       "glowUpOff": "İyileşmiş halin şu anda kapalı.",
-      "faceKept": "Yüzün orijinal piksellerinle geri yazıldı; kemik yapısı değişmez."
+      "faceKept": "Yüzün orijinal piksellerinle geri yazıldı; kemik yapısı değişmez.",
+      "modeHint": {
+        "style": "Bir saç, sakal ya da renk stili seç.",
+        "combo": "Saç ve sakalı (istersen rengi) tek görselde dene.",
+        "glow_up": "Plan adımları uygulanmış halini gör; yüzün ve kimliğin korunur."
+      },
+      "result": {
+        "tryAnother": "Başka stil dene",
+        "shared": "Paylaşıldı.",
+        "downloaded": "Görsel indirildi.",
+        "shareError": "Paylaşım görseli oluşturulamadı.",
+        "labelBurned": "Paylaşılan görsele etiket gömülür.",
+        "qcPassed": "Kalite kontrolünden geçti",
+        "qcRegen": "{n} kez yeniden üretildi"
+      },
+      "generatingCombo": "Kombin deneniyor…",
+      "generatingGlowUp": "İyileşmiş halin hazırlanıyor…",
+      "flagged": "Bildirildi",
+      "errors": {
+        "FEATURE_DISABLED": "Bu deneme türü şu anda kapalı.",
+        "BAD_INPUT": "Bu seçimle deneme yapılamadı; farklı bir seçim dene."
+      }
     }
   },
   "routine": {
