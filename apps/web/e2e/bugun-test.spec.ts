@@ -145,7 +145,7 @@ test.describe('öğrenci çekirdeği: Onboarding → Bugün → Test → Sonuç 
 
     // S09: belge PDF görüntüleyicide
     await page.getByTestId('belgelerim').getByRole('link', { name: 'Rasyonel sayılar · Not' }).click();
-    await page.waitForURL(/\/ogrenci\/gelisim\/belgeler\/[0-9a-f-]{36}$/);
+    await page.waitForURL(/\/ogrenci\/belge\/[0-9a-f-]{36}$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Rasyonel sayılar · Not' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Kapat' })).toHaveAttribute('href', '/ogrenci/gelisim');
     expect(await hasHorizontalOverflow(page)).toBe(false);

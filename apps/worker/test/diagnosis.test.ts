@@ -396,20 +396,27 @@ describe('upload.intake', () => {
     expect(ctx.enqueued).toEqual([{ name: 'diagnosis.run', data: { upload_ids: [UP1], enrollment_id: ENR }, opts: { singletonKey: `diagnosis:${UP1}` } }]);
   });
 
-  it('Okul denemesi → exams(deneme, uploaded) + oturum + audit bağı tek deyimde + "yakında" kartı', async () => {
+  it('Okul denemesi → exams(deneme, uploaded, telifli, processing) + oturum (grading) + audit bağı tek deyimde + exam.analyse + "inceliyorum" kartı', async () => {
     const db = intakeDb();
     const ctx = jobCtx({ db });
     const res = await getJob('upload.intake')!.handler!({ upload_ids: [UP1], kind: 'school_exam', student_id: STUDENT, enrollment_id: ENR }, ctx);
-    expect(res).toMatchObject({ kind: 'school_exam', examId: 'exam-1', sessionId: 'sess-1', reused: false, enqueued: [] });
+    expect(res).toMatchObject({ kind: 'school_exam', examId: 'exam-1', sessionId: 'sess-1', reused: false, enqueued: ['exam.analyse'] });
     const exam = db.calls.find((c) => /insert into public\.exams/.test(c.text))!;
-    expect(exam.text).toMatch(/'deneme', 'uploaded', \$4, 'draft'/);
-    expect(exam.values).toEqual([null, CUR, OWNER, 'Okul denemesi · 3 Kas', ENR, UP1, JSON.stringify([UP1])]);
+    expect(exam.text).toMatch(/'deneme', 'uploaded', \$4, true, 'processing'/);
+    expect(exam.text).toMatch(/'uploaded', 'grading', \$8::uuid\[\]/);
+    expect(exam.values).toEqual([null, CUR, OWNER, 'Okul denemesi · 3 Kas', ENR, UP1, JSON.stringify([UP1]), [UP1]]);
     // sınav, oturum ve audit bağı aynı deyimde (tek işlem)
     expect(exam.text).toMatch(/insert into public\.exam_sessions[\s\S]*app\.audit_event\('exam\.upload_intake'/);
     expect(db.calls.filter((c) => /insert into public\.exam_sessions|audit_event/.test(c.text))).toHaveLength(1);
     const card = db.calls.find((c) => /insert into public\.suggestions/.test(c.text))!;
     expect(card.values!.slice(2, 4)).toEqual([SCHOOL_EXAM_CARD.title, SCHOOL_EXAM_CARD.subtitle]);
-    expect(ctx.enqueued).toEqual([]);
+    expect(ctx.enqueued).toEqual([
+      {
+        name: 'exam.analyse',
+        data: { session_id: 'sess-1', exam_id: 'exam-1', enrollment_id: ENR, student_id: STUDENT, upload_ids: [UP1] },
+        opts: { singletonKey: 'exam:sess-1', singletonSeconds: 3600 },
+      },
+    ]);
   });
 
   it('yeniden denemede ikinci sınav açılmaz', async () => {

@@ -1,17 +1,36 @@
 {
   "note": "Yayımlanmış prompt sürümleri değişmez: metin değişirse yeni sürüm açın (bkz. README). Üreten: scripts/build-bundle.ts",
   "defaults": {
+    "answer_sheet": "v2",
     "coach_chat": "v1",
     "coach_deep": "v1",
     "conversation_summary": "v1",
     "curriculum_draft": "v1",
     "curriculum_research": "v1",
+    "exam_page_items": "v2",
+    "exam_report": "v2",
+    "inferred_keys": "v1",
     "memory_delta": "v1",
+    "page_class": "v1",
     "parent_chat": "v1",
-    "solution_diagnosis": "v1",
+    "solution_diagnosis": "v2",
     "suggestions_copy": "v1"
   },
   "prompts": {
+    "answer_sheet@v1": {
+      "sha256": "f21facad6fe3283fe353b5b2ee5d687c66eea3cdc1c6215dda3dd55bf72c36da",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "answer-sheet",
+      "tools": []
+    },
+    "answer_sheet@v2": {
+      "sha256": "96b00363eec57690d77a4478df1650e14a79f957a7218ca3e0ca9b52c3406013",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "answer-sheet",
+      "tools": []
+    },
     "coach_chat@v1": {
       "sha256": "bea88d042a13f2dc6096febb1888b6acaf5152880b173ef823caab8538d79b23",
       "model": "claude-sonnet-5-5",
@@ -62,11 +81,61 @@
         "web_search"
       ]
     },
+    "exam_page_items@v1": {
+      "sha256": "f5f397ee4a5ba4b38edecbc61bab9e75a4022502f17438d667fd5a45c1e9b6f4",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "exam-page-items",
+      "tools": []
+    },
+    "exam_page_items@v2": {
+      "sha256": "d4dcb760996f3657ab5070ec5393f5b15ffb15e2ffec87cbb7e661d9375868a2",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "exam-page-items",
+      "tools": []
+    },
+    "exam_report@v1": {
+      "sha256": "0e540b1aa8661c7d7c975dc6e176a848553a2ff4786554ebfd603bc3ab0fe381",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "exam-report",
+      "tools": [
+        "get_mastery",
+        "get_recent_exams"
+      ]
+    },
+    "exam_report@v2": {
+      "sha256": "87b14ac01bb7a400565004ce2d2298b87f9a65619317a8504d7a0521db43db36",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "exam-report",
+      "tools": [
+        "get_mastery",
+        "get_recent_exams"
+      ]
+    },
+    "inferred_keys@v1": {
+      "sha256": "c95fb421fc081e82d7cb5b31a16ca5150b8aa2296a4a0e97ab2ecce96d458d81",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "inferred-keys",
+      "tools": [
+        "code_execution"
+      ]
+    },
     "memory_delta@v1": {
       "sha256": "7d121cc8d4264dd1014552104f51e733a4ebd31792d7b38526d3b8a8b82260cd",
       "model": "claude-haiku-5-5",
       "effort": "low",
       "schema": "memory-delta",
+      "tools": []
+    },
+    "page_class@v1": {
+      "sha256": "adf3a3032552acd3da9e45a36b99fa0195aa41cde1b9a66c2edfc043977e005b",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "page-class",
       "tools": []
     },
     "parent_chat@v1": {
@@ -85,6 +154,13 @@
     },
     "solution_diagnosis@v1": {
       "sha256": "631691380e1320dc6db5ada097220442ead7447e1cd8eaab400308cc3daa51f2",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "solution-diagnosis",
+      "tools": []
+    },
+    "solution_diagnosis@v2": {
+      "sha256": "09acc87a27a78b2069b160c1d4dc4067b08bd2f2b7f2a41eb22338147f4395e6",
       "model": "claude-opus-5-5",
       "effort": "high",
       "schema": "solution-diagnosis",

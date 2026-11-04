@@ -6,7 +6,7 @@ import { BRIDGE_URL, JOURNEY_WEB_URL } from './e2e/journey/config.mjs';
 // kapatır (e2e/journey/stack.ts; SIGTERM'de geçici veritabanı silinir). JOURNEY_REUSE=1 geliştirmede açık yığını kullanır.
 export default defineConfig({
   testDir: './e2e',
-  testMatch: 'p1-journey.spec.ts',
+  testMatch: /p[12]-(journey|deneme)\.spec\.ts/,
   outputDir: 'test-results/journey-out',
   fullyParallel: false,
   workers: 1,

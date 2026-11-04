@@ -12,6 +12,8 @@ import { curriculumMergeJob, proposalsCollectJob, proposalsReviewJob } from './c
 import { diagnosisRunJob } from './diagnosis.js';
 import { diagnosisFollowupJob } from './diagnosisFollowup.js';
 import { dossierRenderJob } from './dossierRender.js';
+import { examAnalyseJob } from './exam-analyse.js';
+import { examReportJob } from './exam-report.js';
 import { llmPingJob } from './llmPing.js';
 import { memoryCompactJob } from './memoryCompact.js';
 import { noopJob } from './noop.js';
@@ -50,7 +52,9 @@ export const JOBS: readonly AnyJobDefinition[] = [
   uploadIntakeJob,
   diagnosisRunJob,
   diagnosisFollowupJob,
-  pending('exam.report', 'Deneme raporu (P2): grade_exam_session RPC ekler.', z.object({ session_id: uuid })),
+  // submit_exam_upload (0030) ve upload.intake school_exam atar; grade_exam_session exam.report atar
+  examAnalyseJob,
+  examReportJob,
   pending('document.generate', 'Belge üretimi (P3): request_document RPC ekler.', z.object({ document_id: uuid, kind: z.string().min(1) })),
   // start_practice (0021) bankada soru yoksa practice.generate atar; ön ısıtma curriculum.draft ve suggestions.refresh'ten
   practiceGenerateJob,

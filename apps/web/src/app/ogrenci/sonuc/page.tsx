@@ -12,6 +12,7 @@ import { uploadClient } from '@/server/uploads/client';
 import { isUuid } from '@/server/uploads/shared';
 import { getUploadState } from '@/server/uploads/status';
 import { Bekleme } from './bekleme';
+import { DenemeSonucu } from '../deneme/[session]/ekran';
 
 export const metadata: Metadata = { title: 'Sonuç' };
 
@@ -110,7 +111,7 @@ function SchoolReceived() {
         <h1 data-testid="tek-cumle" className="text-title-2 m-0 text-ink">
           Sayfaları aldım.
         </h1>
-        <p className="text-body m-0 text-ink-muted">Deneme analizi yakında açılıyor; hazır olunca sonucu Bugün’de görürsün.</p>
+        <p className="text-body m-0 text-ink-muted">Bu bağlantı eski; denemenin sonucu Bugün’deki kartta.</p>
       </div>
     </Center>
   );
@@ -120,6 +121,9 @@ function SchoolReceived() {
 export default async function SonucSayfasi({ searchParams }: { searchParams: Search }) {
   await requireRole('student', 'admin');
   const sp = await searchParams;
+  // Uygulama içi sınavın bitiş adresi (P2-C): deneme sonucu ekranı (canonical adres /ogrenci/deneme/[oturum])
+  const examParam = one(sp.deneme);
+  if (examParam) return <DenemeSonucu sessionId={examParam} detailOpen={one(sp.detay) === '1'} />;
   const supabase = await uploadClient();
   const analysisParam = one(sp.analiz);
   if (isUuid(analysisParam)) {

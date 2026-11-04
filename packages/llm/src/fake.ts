@@ -5,6 +5,9 @@
  *   1. `enqueue(route | '*', ...replies)` ile sıraya konmuş betik yanıtları (testler: araç çağrısı, ret, kesilme…)
  *   2. yapılandırılmış rotalarda kayıtlı v2 fikstür: `packages/llm/fixtures/<route>.json` ya da
  *      `packages/llm/fixtures/<route>/*.json` (v2 rota adlarıyla; sıralı ilk geçerli; `bad-*` ve `injection*` atlanır).
+ *      Eşlemeli fikstür `{ "fake_match": ["sayfa 2/3."], "output": {…} }`: istek mesajlarının metninde (küçük harf)
+ *      bütün parçalar geçiyorsa önce o seçilir (çok sayfalı deneme gibi girdiye bağlı yanıtlar); eşleşmeyen eşlemeli
+ *      fikstür atlanır, düz fikstürler eskisi gibi yedektir.
  *      Dizin `OGRENMEN_LLM_FIXTURES` ile değiştirilebilir; sahte taşıma yalnız bu dizini okur.
  *   3. `@ogrenmen/contracts` `fixtures/<şema>/valid/*.json` içinden sıralı ilk geçerli örnek
  *   4. strict JSON Schema'dan üretilmiş en küçük örnek
@@ -112,6 +115,28 @@ function jsonFiles(dir: string): string[] {
     .map((f) => join(dir, f));
 }
 
+/** Eşlemeli fikstür: `fake_match` parçalarının hepsi istek metninde geçerse `output` döner. */
+export interface MatchedFixture {
+  fake_match: string[];
+  output: unknown;
+}
+
+export function isMatchedFixture(x: unknown): x is MatchedFixture {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return false;
+  const m = (x as { fake_match?: unknown }).fake_match;
+  return Array.isArray(m) && m.length > 0 && m.every((p) => typeof p === 'string' && p !== '') && 'output' in x;
+}
+
+/** İstek mesajlarındaki bütün metin blokları (küçük harf; görsel ve araç sonuçları hariç). */
+export function requestText(body: Pick<RequestBody, 'messages'>): string {
+  const out: string[] = [];
+  for (const m of body.messages) {
+    if (typeof m.content === 'string') out.push(m.content);
+    else for (const b of m.content as readonly { type?: string; text?: unknown }[]) if (b.type === 'text' && typeof b.text === 'string') out.push(b.text);
+  }
+  return out.join('\n').toLocaleLowerCase('tr');
+}
+
 /** Strict JSON Schema'dan en küçük örnek (son çare; loose kurallarını garanti etmez). */
 export function sampleFromSchema(node: unknown, root: Record<string, unknown> = node as Record<string, unknown>): unknown {
   if (!node || typeof node !== 'object') return null;
@@ -187,9 +212,23 @@ export class FakeTransport implements LlmTransport {
     return null;
   }
 
-  /** Yapılandırılmış rota için örnek veri (fikstür → contracts örneği → üretilmiş). */
-  sampleFor(route: string, contract: Contract): unknown {
-    const candidates = [join(this.fixturesDir, `${route}.json`), ...jsonFiles(join(this.fixturesDir, route))];
+  /** Yapılandırılmış rota için örnek veri (eşlemeli fikstür → fikstür → contracts örneği → üretilmiş). */
+  sampleFor(route: string, contract: Contract, body?: Pick<RequestBody, 'messages'>): unknown {
+    const routeFiles = [join(this.fixturesDir, `${route}.json`), ...jsonFiles(join(this.fixturesDir, route))];
+    if (body) {
+      const text = requestText(body);
+      for (const file of routeFiles) {
+        if (!existsSync(file) || !statSync(file).isFile()) continue;
+        try {
+          const data = readJson(file);
+          if (!isMatchedFixture(data)) continue;
+          if (data.fake_match.every((p) => text.includes(p.toLocaleLowerCase('tr'))) && contract.isValid(data.output)) return data.output;
+        } catch {
+          // bozuk fikstür: sıradakine geç
+        }
+      }
+    }
+    const candidates = [...routeFiles];
     const cdir = contractsDir();
     if (cdir) candidates.push(...jsonFiles(join(cdir, 'fixtures', contract.name, 'valid')));
     for (const file of candidates) {
@@ -207,7 +246,7 @@ export class FakeTransport implements LlmTransport {
   private defaultReply(route: string, body: RequestBody): FakeReply {
     const schemaName = isRouteName(route) ? ROUTES[route].schema : null;
     if (body.output_config?.format && schemaName && isSchemaName(schemaName)) {
-      return { json: this.sampleFor(route, contractRegistry[schemaName] as Contract) };
+      return { json: this.sampleFor(route, contractRegistry[schemaName] as Contract, body) };
     }
     const seed = hash(JSON.stringify(stripCache(body.messages))).slice(0, 8);
     return { text: `Sahte yanıt (${route}, ${seed}). Birlikte adım adım bakalım: önce verilenleri yazalım.` };

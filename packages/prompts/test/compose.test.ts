@@ -99,12 +99,17 @@ describe('katman birleştirme', () => {
 
   it('rota listesi', () => {
     expect(listPromptRoutes()).toEqual([
+      'answer_sheet',
       'coach_chat',
       'coach_deep',
       'conversation_summary',
       'curriculum_draft',
       'curriculum_research',
+      'exam_page_items',
+      'exam_report',
+      'inferred_keys',
       'memory_delta',
+      'page_class',
       'parent_chat',
       'solution_diagnosis',
       'suggestions_copy',

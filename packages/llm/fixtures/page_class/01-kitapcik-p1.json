@@ -1,0 +1,21 @@
+{
+  "fake_match": [
+    "sayfa 1/3."
+  ],
+  "output": {
+    "page_class": "booklet",
+    "confidence": 0.96,
+    "rotation_degrees": 0,
+    "question_numbers_seen": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "has_figures": true,
+    "section_hint": "Matematik",
+    "printed_page_number": 1,
+    "unreadable": false
+  }
+}

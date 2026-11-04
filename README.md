@@ -66,6 +66,14 @@ Plan `docs/PLAN-v2.md` §14 fazlarıyla ilerler. **P0 Temel** tamamlandı; **P1 
 (üretim kapıları)** yazıldı ve 2026-11-03 entegrasyon doğrulamasından geçti: `make check-quick` ve yerel Postgres ile
 `make check-live` yeşil (20 adım: 6 kök + 14 modül, 0 FAIL). Gerçek API anahtarı gerektiren adımlar anahtar yokken SKIP yazar.
 
+**P2 Deneme** (`docs/PLAN-v2.md` §2 Akış 2b, §8 deneme analizi hattı; ayrıntı `docs/PLAN-v2-detail.md` §2, §4) yazıldı:
+okul denemesi yükleme (kitapçık ve optik form fotoğrafları; `submit_exam_upload`, 0030–0033), sayfa sınıflama ve soru
+çıkarımı (`exam.analyse` / `upload.intake` school_exam), anahtar çıkarımı (`inferred_keys`, `verified` yalnız SymPy ile),
+notlama ve deneme raporu (`exam.report`, `exam_report`), uygulama içi sınav oynatıcı (zamanlayıcı + soru ızgarası),
+tek cümle sonuç ve belge PDF'i (`pdf.render`, `packages/doc-render`, Playwright A4). Sentetik deneme seti
+`fixtures/exams/synthetic/` (gerçek yayıncı adı ya da logosu yok) `render.mjs` ile üretilir. Bu turda
+`bash scripts/check-all.sh --quick` 20/20 PASS (2026-11-04); canlı kip (`--live`) ve gerçek anahtar bu turda koşulmadı.
+
 P1 uçtan uca yolculuk testi (`apps/web/e2e/p1-journey.spec.ts`, `OGRENMEN_LIVE=1`'de `apps/web/check.sh` koşar;
 elle: `OGRENMEN_LIVE=1 bun run --cwd apps/web test:journey`): geçici v2 veritabanı + Supabase uyumlu yerel köprü
 (`apps/web/e2e/journey/stack.ts`: Auth, PostgREST alt kümesi, Storage; RLS/RPC/Storage politikaları gerçek Postgres'te)
@@ -90,6 +98,7 @@ elle: `OGRENMEN_LIVE=1 bun run --cwd apps/web test:journey`): geçici v2 veritab
 | `packages/llm` (geçit, dossier derleyici, hafıza işleyicileri, fake) | yeşil | canlı Anthropic testi `ANTHROPIC_API_KEY` ister (SKIP) |
 | `packages/prompts` (9 prompt, kilit, eval, `prompt_versions`) | yeşil | canlı `count_tokens` anahtar ister (SKIP) |
 | `packages/contracts`, `packages/design-system`, `packages/mastery-math`, `packages/pii` | yeşil | |
+| `packages/doc-render` (belge AST → HTML → PDF, A4, sunucu KaTeX, gömülü fontlar) | yeşil | Chromium yoksa PDF testleri SKIP, HTML testleri koşar |
 | `pipelines/{common,tablet,kalem,ders}` | yeşil | canlı testleri v1 şemasına yazılıydı: v2'de SKIP |
 | `content/tyt-matematik` | yeşil | |
 
@@ -135,10 +144,14 @@ elle: `OGRENMEN_LIVE=1 bun run --cwd apps/web test:journey`): geçici v2 veritab
   kalkar. `pipelines/common` içindeki Gemini/Groq-sohbet/OpenRouter/CF-AI adaptörleri yalnız bu eski sahte akışlar
   içindir; Claude yalnız `packages/llm`'dedir.
 - `fixtures/db/dev-seed.json` ve `fixtures/{kitap,panel,kulaklik}` hâlâ v1 verisini taşır; v2 tohum verisi ayrı iştir.
-- `packages/doc-render` (belge AST → PDF) P3 işidir; henüz yok (Bugün'deki belge kartları şimdilik yalnız testte).
+- P2 deneme hattının canlı kipte (`OGRENMEN_LIVE=1`) ve sahte LLM dışında gerçek model çıktısıyla (sayfa sınıflama,
+  anahtar, notlama) doğrulanması bekliyor; P2 yolculuk testi canlı Postgres üzerinde ayrıca koşulmalı.
+- Bugün'deki belge kartları yalnız P3 öncesi testlerde; belge kapsamı (P3) `document.generate` işiyle genişler
+  (`apps/worker` kayıt defterinde şimdilik bekleyen tanım).
 
-**Bir sonraki adım:** ilk gerçek Anthropic anahtarıyla canlı geçit/prompt/soru üretimi denetimi ve barındırılan
-Supabase duman testi; sonra P2 (deneme sınavı ve rapor) ve sonraki fazlar (P3 doğrulama servisi + belge PDF, P5 dersler).
+**Bir sonraki adım:** P2'nin `OGRENMEN_LIVE=1 bash scripts/check-all.sh --live` ile doğrulanması; ilk gerçek Anthropic
+anahtarıyla canlı geçit/prompt/soru üretimi denetimi ve barındırılan Supabase duman testi; sonra P3 (doğrulama servisi +
+belge PDF) ve P5 (dersler).
 Ekranlar mockup'lara (S01–S09b, S10/S10b, S12–S15) birebir uyar.
 
 ## Arşiv notu

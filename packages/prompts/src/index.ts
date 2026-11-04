@@ -18,6 +18,7 @@ export * from './meta.js';
 export * from './select.js';
 export * from './lint.js';
 export * from './registry.js';
+export * from './exam-input.js';
 
 let defaultRegistry: PromptRegistry | null = null;
 

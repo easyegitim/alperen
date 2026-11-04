@@ -22,6 +22,7 @@ EXPECTED_MODULES = [
     "content/tyt-matematik",
     "packages/contracts",
     "packages/design-system",
+    "packages/doc-render",
     "packages/llm",
     "packages/mastery-math",
     "packages/pii",

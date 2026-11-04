@@ -4,11 +4,12 @@
  * {upload_ids[], kind: 'own_work' | 'school_exam', student_id, enrollment_id}.
  *
  *   own_work    → `diagnosis.run` {upload_ids, enrollment_id} (tekil anahtar: ilk yükleme).
- *   school_exam → deneme analizi P2'dedir: şimdilik exams(kind='deneme', source='uploaded', status='draft') +
- *                 exam_sessions(mode='uploaded', status='analysing') kaydı, sayfa bağlantısı audit.events
- *                 'exam.upload_intake' satırında, yüklemeler 'ready' ve Bugün'e "Deneme analizi yakında — sayfaları
- *                 aldım" kartı (copy_key = upload:<ilk yükleme>; öneri motoru 48 saat boyunca 'analysing' oturumdan aynı
- *                 kartı kurar). P2'nin exam.analyse işi bu oturumları ve bağlı sayfaları alır.
+ *   school_exam → eski yol (web P2'de doğrudan submit_exam_upload çağırır): submit_exam_upload ile aynı kayıt —
+ *                 exams(kind='deneme', source='uploaded', is_copyrighted, status='processing') + exam_sessions(mode=
+ *                 'uploaded', status='grading', upload_ids, progress.stage='classify') — sayfa bağlantısı audit.events
+ *                 'exam.upload_intake' satırında, yüklemeler 'processing', `exam.analyse` kuyruğa atılır ve Bugün'e
+ *                 "Denemeni inceliyorum" kartı (copy_key = upload:<ilk yükleme>; öneri motoru süren oturumdan aynı kartı
+ *                 kurar).
  * İkinci çalıştırma (yeniden deneme) yeni sınav açmaz: aynı ilk yükleme için audit satırı varsa onu döner. Sınav, oturum
  * ve audit bağı tek SQL deyiminde (CTE) yazılır: iş arada düşerse yarım kayıt kalmaz.
  */
@@ -66,7 +67,7 @@ async function existingIntake(db: Db, firstUpload: string): Promise<{ examId: st
 
 export const uploadIntakeJob: JobDefinition<UploadIntakePayload, UploadIntakeResult> = {
   name: 'upload.intake',
-  description: 'Yükleme girişi: Kendi çalışmam → diagnosis.run; Okul denemesi → deneme kaydı (analiz P2) + Bugün kartı.',
+  description: 'Yükleme girişi: Kendi çalışmam → diagnosis.run; Okul denemesi → deneme kaydı + exam.analyse + Bugün kartı.',
   process: 'worker',
   payload,
   concurrency: 2,
@@ -87,34 +88,43 @@ export const uploadIntakeJob: JobDefinition<UploadIntakePayload, UploadIntakeRes
 
     const prev = await existingIntake(ctx.db, first);
     let examId: string;
-    let sessionId: string | null;
+    let sessionId: string;
     if (prev) {
-      ({ examId, sessionId } = prev);
+      examId = prev.examId;
+      if (!prev.sessionId) throw new PermanentJobError('eski deneme kaydının oturumu yok', 'OGR-JOB-144');
+      sessionId = prev.sessionId;
     } else {
       const owner = String(ups.find((u) => String(u.id) === first)?.owner_id ?? ups[0]!.owner_id);
       // tek deyim = tek işlem: exams → exam_sessions → audit bağı (yeniden denemenin anahtarı) birlikte yazılır ya da hiç
       const row = (
         await ctx.db.query(
           `with ex as (
-             insert into public.exams (course_id, curriculum_id, created_by, kind, source, title, status)
-             values ($1::uuid, $2::uuid, $3::uuid, 'deneme', 'uploaded', $4, 'draft') returning id
+             insert into public.exams (course_id, curriculum_id, created_by, kind, source, title, is_copyrighted, status)
+             values ($1::uuid, $2::uuid, $3::uuid, 'deneme', 'uploaded', $4, true, 'processing') returning id
            ), se as (
-             insert into public.exam_sessions (exam_id, enrollment_id, mode, status)
-             select ex.id, $5::uuid, 'uploaded', 'analysing' from ex returning id, exam_id
+             insert into public.exam_sessions (exam_id, enrollment_id, mode, status, upload_ids, progress)
+             select ex.id, $5::uuid, 'uploaded', 'grading', $8::uuid[],
+                    jsonb_build_object('stage', 'classify', 'pages_total', cardinality($8::uuid[]), 'pages_done', 0, 'updated_at', now())
+               from ex returning id, exam_id
            ), au as (
              select app.audit_event('exam.upload_intake', 'uploads', $6,
                       jsonb_build_object('exam_id', se.exam_id, 'session_id', se.id, 'upload_ids', $7::jsonb, 'enrollment_id', $5::text))
                from se
            )
            select se.exam_id, se.id as session_id, (select count(*) from au) as linked from se`,
-          [e.course_id ?? null, e.curriculum_id, owner, schoolExamTitle(ctx.now()), p.enrollment_id, first, JSON.stringify(p.upload_ids)],
+          [e.course_id ?? null, e.curriculum_id, owner, schoolExamTitle(ctx.now()), p.enrollment_id, first, JSON.stringify(p.upload_ids), p.upload_ids],
         )
       ).rows[0];
       if (!row || Number(row.linked) !== 1) throw new Error('deneme kaydı yazılamadı');
       examId = String(row.exam_id);
       sessionId = String(row.session_id);
     }
-    await ctx.db.query(`update public.uploads set status = 'ready' where id = any($1::uuid[])`, [p.upload_ids]);
+    await ctx.db.query(`update public.uploads set status = 'processing' where id = any($1::uuid[]) and status = 'stored'`, [p.upload_ids]);
+    await ctx.enqueue(
+      'exam.analyse',
+      { session_id: sessionId, exam_id: examId, enrollment_id: p.enrollment_id, student_id: p.student_id, upload_ids: p.upload_ids },
+      { singletonKey: `exam:${sessionId}`, singletonSeconds: 3600 },
+    );
     await writeUploadCard(
       ctx.db,
       p.student_id,
@@ -133,6 +143,6 @@ export const uploadIntakeJob: JobDefinition<UploadIntakePayload, UploadIntakeRes
       },
       ctx.now(),
     );
-    return { kind: p.kind, enqueued: [], examId, sessionId, reused: Boolean(prev) };
+    return { kind: p.kind, enqueued: ['exam.analyse'], examId, sessionId, reused: Boolean(prev) };
   },
 };

@@ -30,5 +30,6 @@
     "description": "Yüzde artış ve azalışı 1 ± p/100 çarpanıyla yazmak."
   },
   "style_hint": "tek adımlı yüzde problemi",
-  "confidence": 0.92
+  "confidence": 0.92,
+  "key_dispute": null
 }

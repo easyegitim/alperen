@@ -185,28 +185,31 @@ export const ROUTES = {
     model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'solution-diagnosis',
     tools: [], cache: SHARED, mode: 'sync', batchable: true, maxTokens: 16000,
   }),
+  // Deneme hattı (PLAN-v2 §8; P2). Kullanıcı turu metinleri @ogrenmen/prompts `exam-input.ts`'te; görseller file_id.
+  // Sayfa rotaları paralel ve öğrenci beklerken koşar: Haiku/Sonnet düşünmesiz, ürün (+ders) bloğu 1 sa önbellekli.
   page_class: route('page_class', {
-    purpose: 'Deneme sayfa sınıflama',
+    purpose: 'Deneme sayfa sınıflama (kitapçık | optik | karalama | anahtar | diğer; dönüklük, bölüm, sayfa no, okunamaz)',
     model: MODELS.haiku, effort: 'low', thinking: 'off', schema: 'page-class',
     tools: [], cache: PRODUCT_ONLY, mode: 'sync', maxTokens: 4000,
   }),
   exam_page_items: route('exam_page_items', {
-    purpose: 'Deneme OCR: sayfa → sorular',
+    purpose: 'Deneme OCR: kitapçık sayfası → sorular (kök, şıklar, şekil kutusu, sayfalar arası devam)',
     model: MODELS.sonnet, effort: 'medium', thinking: 'off', schema: 'exam-page-items',
     tools: [], cache: COURSE_ONLY, mode: 'sync', maxTokens: 16000,
   }),
   answer_sheet: route('answer_sheet', {
-    purpose: 'Optik form okuma',
+    purpose: 'Optik form okuma (soru başına işaret, çift işaret boş + not, satır güveni)',
     model: MODELS.sonnet, effort: 'medium', thinking: 'off', schema: 'answer-sheet',
     tools: [], cache: PRODUCT_ONLY, mode: 'sync', maxTokens: 8000,
   }),
   inferred_keys: route('inferred_keys', {
-    purpose: 'Cevap anahtarı çıkarımı (anahtar yoksa)',
+    // Gece/toplu değil ama sonuç beklemeye dayanıklı: Batch (0.5×); pause_turn ya da bad_output öğesi batchRetry ile senkron.
+    purpose: 'Cevap anahtarı çıkarımı (anahtar yoksa; Opus + code_execution, düşük güven "doğrulanmadı")',
     model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'inferred-keys',
     tools: ['code_execution'], cache: COURSE_ONLY, mode: 'batch', maxTokens: 16000,
   }),
   exam_report: route('exam_report', {
-    purpose: 'Deneme raporu (AST)',
+    purpose: 'Deneme raporu (exam-report AST: 3 bölüm, tek cümle özet, data_ref grafikleri)',
     model: MODELS.sonnet, effort: 'medium', thinking: 'adaptive', schema: 'exam-report',
     tools: READ_TOOLS, cache: SHARED, mode: 'sync', stream: true, maxTokens: 24000,
   }),

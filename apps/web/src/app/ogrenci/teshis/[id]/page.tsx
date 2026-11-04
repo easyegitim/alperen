@@ -7,6 +7,8 @@ import { MathText } from '@/ds';
 import { requireRole } from '@/server/auth';
 import { coachHref, ladderRows } from '@/server/diagnosis/present';
 import { getDiagnosis } from '@/server/diagnosis/read';
+import { isUuid } from '@/server/uploads/shared';
+import { examDetailHref } from '@/server/exam-result/present';
 import { uploadClient } from '@/server/uploads/client';
 import { AdimMerdiveni } from './adim-merdiveni';
 
@@ -14,9 +16,12 @@ export const metadata: Metadata = { title: 'Detay' };
 
 // Teşhis / Detay (mockup S06): soru, tek cümle (bozulan adım), katlı adım merdiveni, kazanım tek satır (kelime bandı),
 // tek birincil düğme "Koça sor". Çipler, etiketler ve meta bilgi gösterilmez (PLAN-v2 §13).
-export default async function TeshisSayfasi({ params }: { params: Promise<{ id: string }> }) {
+export default async function TeshisSayfasi({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ don?: string }> }) {
   await requireRole('student', 'admin');
   const { id } = await params;
+  const { don } = await searchParams;
+  // yalnız UUID kabul edilir (açık yönlendirme yok); aksi halde tek soruluk sonuç ekranı
+  const closeHref = isUuid(don) ? examDetailHref(don) : null;
   const d = await getDiagnosis(await uploadClient(), id);
   if (!d) {
     return (
@@ -32,7 +37,7 @@ export default async function TeshisSayfasi({ params }: { params: Promise<{ id: 
     <div className="mx-auto flex w-full max-w-lg flex-col gap-8">
       <header className="flex items-center justify-between">
         <h1 className="text-title-3 m-0 text-ink">Detay</h1>
-        <Link href={`/ogrenci/sonuc?analiz=${d.id}`} aria-label="Kapat" className="flex size-11 items-center justify-center rounded-full text-ink-muted hover:bg-surface-sunken hover:text-ink">
+        <Link href={closeHref ?? `/ogrenci/sonuc?analiz=${d.id}`} aria-label="Kapat" className="flex size-11 items-center justify-center rounded-full text-ink-muted hover:bg-surface-sunken hover:text-ink">
           <X aria-hidden="true" size={22} strokeWidth={1.75} />
         </Link>
       </header>

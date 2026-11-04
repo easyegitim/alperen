@@ -263,13 +263,16 @@ describe.skipIf(!live)('Yükle → Teşhis (gerçek Postgres)', () => {
     expect(n).toBe(2);
   });
 
-  it('Okul denemesi: exams(deneme, uploaded) + oturum (analysing) + "yakında" kartı; öğrenci kendi denemesini görür', async () => {
+  it('Okul denemesi (eski yol): exams(deneme, uploaded, telifli, processing) + oturum (grading) + exam.analyse + "inceliyorum" kartı; öğrenci kendi denemesini görür', async () => {
     const up = await studentUpload();
-    const res = (await getJob('upload.intake')!.handler!({ upload_ids: [up], kind: 'school_exam', student_id: elif, enrollment_id: enr }, jobCtx({ db: tmp.pool, now: () => new Date() }))) as { examId: string; sessionId: string };
-    const ex = (await tmp.pool.query('select kind, source, status, created_by from public.exams where id = $1', [res.examId])).rows[0]!;
-    expect(ex).toEqual({ kind: 'deneme', source: 'uploaded', status: 'draft', created_by: ELIF_PROFILE });
-    const sess = (await tmp.pool.query('select mode, status, enrollment_id from public.exam_sessions where id = $1', [res.sessionId])).rows[0]!;
-    expect(sess).toEqual({ mode: 'uploaded', status: 'analysing', enrollment_id: enr });
+    const ctx = jobCtx({ db: tmp.pool, now: () => new Date() });
+    const res = (await getJob('upload.intake')!.handler!({ upload_ids: [up], kind: 'school_exam', student_id: elif, enrollment_id: enr }, ctx)) as { examId: string; sessionId: string };
+    const ex = (await tmp.pool.query('select kind, source, status, created_by, is_copyrighted from public.exams where id = $1', [res.examId])).rows[0]!;
+    expect(ex).toEqual({ kind: 'deneme', source: 'uploaded', status: 'processing', created_by: ELIF_PROFILE, is_copyrighted: true });
+    const sess = (await tmp.pool.query(`select mode, status, enrollment_id, upload_ids, progress ->> 'stage' as stage from public.exam_sessions where id = $1`, [res.sessionId])).rows[0]!;
+    expect(sess).toEqual({ mode: 'uploaded', status: 'grading', enrollment_id: enr, upload_ids: [up], stage: 'classify' });
+    expect(ctx.enqueued).toEqual([expect.objectContaining({ name: 'exam.analyse', data: expect.objectContaining({ session_id: res.sessionId, exam_id: res.examId, upload_ids: [up] }) })]);
+    expect((await tmp.pool.query('select status from public.uploads where id = $1', [up])).rows[0]!.status).toBe('processing');
     const link = (await tmp.pool.query(`select diff from audit.events where action = 'exam.upload_intake' and row_id = $1`, [up])).rows[0]!;
     expect(link.diff).toMatchObject({ exam_id: res.examId, upload_ids: [up] });
     const seen = await asUser(ELIF_PROFILE, async (q) => ({
@@ -277,12 +280,12 @@ describe.skipIf(!live)('Yükle → Teşhis (gerçek Postgres)', () => {
       card: (await q(`select title, subtitle from public.list_today_suggestions() where kind = 'upload_result' and payload ->> 'upload_id' = $1`, [up])).rows,
     }), false);
     expect(seen.exam).toHaveLength(1);
-    expect(seen.card).toEqual([{ title: 'Deneme analizi yakında', subtitle: 'Sayfaları aldım; analiz açılınca sonucu burada görürsün.' }]);
-    // öneri motoru bekleyen denemenin kartını 'analysing' oturumdan yeniden kurar (silmez)
+    expect(seen.card).toEqual([{ title: 'Denemeni inceliyorum', subtitle: 'Sayfaları aldım; sonuç birkaç dakika içinde burada olacak.' }]);
+    // öneri motoru süren denemenin kartını oturumdan yeniden kurar (silmez)
     await getJob('suggestions.refresh')!.handler!({ student_id: elif, reason: 'test' }, jobCtx({ db: tmp.pool, now: () => new Date() }));
     const kept = (await tmp.pool.query(`select title, payload from public.suggestions where kind = 'upload_result' and payload ->> 'upload_id' = $1 and consumed_at is null`, [up])).rows;
     expect(kept).toHaveLength(1);
-    expect(kept[0]).toMatchObject({ title: 'Deneme analizi yakında', payload: { pending: true, session_id: res.sessionId, exam_id: res.examId } });
+    expect(kept[0]).toMatchObject({ title: 'Denemeni inceliyorum', payload: { pending: true, session_id: res.sessionId, exam_id: res.examId } });
     // yeniden deneme yeni sınav açmaz
     const again = await getJob('upload.intake')!.handler!({ upload_ids: [up], kind: 'school_exam', student_id: elif, enrollment_id: enr }, jobCtx({ db: tmp.pool }));
     expect(again).toMatchObject({ examId: res.examId, reused: true });

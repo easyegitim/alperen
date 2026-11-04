@@ -74,7 +74,7 @@ yeniden gönderilir; Batch içinde onarım turu yapılmaz.
 | page_class | Haiku · low · kapalı | page-class | — | senkron |
 | exam_page_items | Sonnet · medium · kapalı | exam-page-items | — | senkron |
 | answer_sheet | Sonnet · medium · kapalı | answer-sheet | — | senkron |
-| inferred_keys | Opus · high | inferred-keys | code_execution | Batch |
+| inferred_keys | Opus · high | inferred-keys | code_execution | Batch (`batchRetry` ile senkron; sahte kipte ikisi de) |
 | exam_report | Sonnet · medium | exam-report | get_mastery, get_recent_exams | akış |
 | curriculum_research | Opus · high | — (serbest metin, atıflı) | web_search, web_fetch (≤8) | akış |
 | curriculum_draft | Opus · high | curriculum-draft | — | akış |
@@ -119,7 +119,7 @@ kısıtını düşürdüğü için), yanıt loose şemayla doğrulanır; geçers
 
 | değişken | anlamı |
 |---|---|
-| `OGRENMEN_LLM=fake` | ağsız deterministik taşıma (`fake.ts`): betik yanıtları → `packages/llm/fixtures/<rota>.json` ya da `packages/llm/fixtures/<rota>/` (v2 rota adları) → contracts `fixtures/<şema>/valid` → şemadan örnek; önbellek benzetimi |
+| `OGRENMEN_LLM=fake` | ağsız deterministik taşıma (`fake.ts`): betik yanıtları → eşlemeli fikstür (`{fake_match, output}`: istek metninde bütün parçalar geçerse; çok sayfalı deneme) → `packages/llm/fixtures/<rota>.json` ya da `packages/llm/fixtures/<rota>/` (v2 rota adları) → contracts `fixtures/<şema>/valid` → şemadan örnek; önbellek benzetimi. Sentetik deneme fikstürleri: `fixtures/README.md` |
 | `OGRENMEN_LLM_FIXTURES` | sahte taşımanın rota fikstür dizini (varsayılan `packages/llm/fixtures`) |
 | `ANTHROPIC_API_KEY` | gerçek taşıma (SDK ortamdan okur; koda yazılmaz) |
 | `OGRENMEN_LIVE=1` | `check.sh` veritabanı entegrasyonunu (geçici veritabanı: PgStore, applyMemoryDelta, renderDossier, ders bloğu) ve anahtar varsa canlı testleri koşar: Haiku (ikinci çağrıda `cache_read_input_tokens > 0`; tur sistem mesajı ya da yedeği), müfredat (birleşik web_search + format isteği 400 beklenir; iki adım uçtan uca) |

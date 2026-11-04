@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Camera, Check, ClipboardList, FileText, FileUp, NotebookPen, X } from 'lucide-react';
 import { Button, Notice, buttonClasses, cn } from '@/ds';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { submitExam } from '@/server/exam-result/actions';
 import { submitUploads } from '@/server/uploads/actions';
 import { maxFilesFor, UPLOAD_BUCKET, UPLOAD_CHOICES, uploadPath, type SubmittedFile, type UploadKind } from '@/server/uploads/shared';
 import { newUploadId, preparePage, PrepareError } from './gorsel';
@@ -85,7 +86,8 @@ export function YukleAkisi({ ownerId }: { ownerId: string }) {
         files.push({ id, path, mime: prepared.mime, bytes: prepared.bytes, sha256: prepared.sha256, width: prepared.width, height: prepared.height, pages: null });
       }
       setProgress('Koçuna iletiliyor');
-      const res = await submitUploads({ kind, files });
+      // Okul denemesi: deneme kaydı + oturum + analiz işi (submit_exam_upload); Kendi çalışmam: teşhis (submit_upload)
+      const res = kind === 'school_exam' ? await submitExam({ files }) : await submitUploads({ kind, files });
       if (!res.ok) {
         // sayfaların bir kısmı önceki (yanıtı kaybolmuş) gönderimde: yeni anahtarlar, bir sonraki Gönder yeni gönderim
         if (res.stale) setPages((cur) => cur.map((p) => ({ ...p, key: newUploadId() })));

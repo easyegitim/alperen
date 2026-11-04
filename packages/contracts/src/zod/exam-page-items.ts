@@ -32,8 +32,12 @@ export const examPageItems = defineContract({
         { max: 60 },
       ),
       page_notes: c.str({ max: 400 }).nullable(),
+      unreadable: c
+        .added(z.boolean(), false)
+        .describe('Sayfa okunamayacak kadar bulanık, karanlık ya da kesik: true; o zaman items boş kalır'),
     }),
   refine: (v, ctx) => {
+    if (v.unreadable && v.items.length > 0) addIssue(ctx, ['items'], 'okunamayan sayfada soru listesi boş olmalı');
     const nos = v.items.map((i) => i.no);
     if (new Set(nos).size !== nos.length) addIssue(ctx, ['items'], 'soru numaraları tekil olmalı');
     v.items.forEach((it, i) => {

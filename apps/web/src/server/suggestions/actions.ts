@@ -5,8 +5,9 @@ import { getCurrentUser } from '@/server/auth';
 import { studentDb } from '@/server/practice/client';
 import { isUuid } from '@/server/practice/rpc';
 import { startForEnrollment, startFromSuggestion } from '@/server/practice/service';
-import { consumeSuggestion } from './service';
-import { noticeHref, parseSuggestions } from './arrange';
+import { examIntroHref } from '@/server/exam/routes';
+import { consumeSuggestion, listToday } from './service';
+import { examIdOf, noticeHref, parseSuggestions } from './arrange';
 import { studentContext } from './student';
 
 /** Hata Bugün'e kodla döner; ekran tek cümleye çevirir (practiceErrorMessage). */
@@ -20,6 +21,11 @@ export async function startSuggestion(formData: FormData): Promise<void> {
   if (!isUuid(id)) back('OGR-SUG-001');
   if (!(await getCurrentUser())) redirect('/giris');
   const db = await studentDb();
+  // mini_exam: alıştırma seti değil uygulama içi sınav; süre giriş ekranında "Başla"ya basınca başlar
+  const today = await listToday(db);
+  const hit = today.ok ? today.data.find((s) => s.id === id) : undefined;
+  const examId = hit ? examIdOf(hit) : null;
+  if (examId) redirect(`${examIntroHref(examId)}?oneri=${id}`);
   const res = await startFromSuggestion(db, id);
   if (!res.ok) back(res.code);
   redirect(`/ogrenci/test/${res.data.set_id}`);

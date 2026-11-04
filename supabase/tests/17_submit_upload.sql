@@ -4,6 +4,7 @@
 -- OGR-UPL-002, işlenmiş yükleme OGR-UPL-003, etkin kayıt yok OGR-UPL-004. Yeniden deneme ('processing', aynı küme, sırası
 -- önemsiz, tür aynı) aynı işi döner (küme işlenmiş olsa da); kümede başka gönderimin sayfası varsa (farklı küme, alt küme,
 -- farklı tür) OGR-UPL-003, yeni sayfa 'stored' kalır ve ikinci iş atılmaz.
+-- Okul denemesi bu yoldan gönderilmez (0030: school_exam OGR-UPL-001; tek yol submit_exam_upload, 18_exams_upload.sql).
 -- Yetki: anon çağıramaz, authenticated çağırır. Ayrıca apply_diagnosis otopilotu (0026): yalnız otopilotu etkin taslakta
 -- hemen kabul; eğitmen kapattıysa ya da sınav parkuru dışıysa öneri açık kalır.
 begin;
@@ -92,8 +93,8 @@ begin
                    'işlenen kümenin alt kümesi reddedilir');
   perform t.raises(format('select public.submit_upload(array[%L]::uuid[], ''own_work'')', t.v('U2')), 'OGR-UPL-003%',
                    'işlenen kümenin ikinci sayfası tek başına reddedilir (ikinci teşhis yok)');
-  perform t.raises(format('select public.submit_upload(array[%L, %L]::uuid[], ''school_exam'')', t.v('U1'), t.v('U2')), 'OGR-UPL-003%',
-                   'aynı küme farklı türle reddedilir (eski own_work işi school_exam diye dönmez)');
+  perform t.raises(format('select public.submit_upload(array[%L, %L]::uuid[], ''school_exam'')', t.v('U1'), t.v('U2')), 'OGR-UPL-001%',
+                   'aynı küme school_exam türüyle reddedilir (okul denemesi submit_exam_upload ile)');
   perform t.ok(t.n(format('select 1 from public.uploads where id = %L and status = ''stored''', t.v('UE'))) = 1,
                'reddedilen gönderimde yeni sayfa stored kalır');
   v_r2 := public.submit_upload(array[t.u('UE')], 'own_work');
@@ -118,23 +119,27 @@ begin
                'yeniden gönderim işlenmiş durumu değiştirmez');
 end $$;
 
--- Okul denemesi: 40 sayfaya kadar; etkin kayıt yoksa OGR-UPL-004
+-- Okul denemesi bu yoldan gönderilmez (tek yol submit_exam_upload); etkin kayıt yoksa OGR-UPL-004
 do $$
 declare
   v_r jsonb;
 begin
+  perform t.as_user(t.u('elif'));
+  perform t.raises(format('select public.submit_upload(array[%L]::uuid[], ''school_exam'')', t.v('UD')), 'OGR-UPL-001%submit_exam_upload%',
+                   'school_exam reddedilir: okul denemesi submit_exam_upload ile');
   perform t.as_admin();
+  perform t.ok((select u.status = 'stored' from public.uploads u where u.id = t.u('UD'))
+               and not exists (select 1 from audit.events e where e.action = 'upload.submit' and e.diff ->> 'kind' = 'school_exam'),
+               'reddedilen school_exam gönderimi durum değiştirmez, iş atmaz');
   update public.enrollments e set status = 'paused' where e.student_id = t.u('A');
   perform t.as_user(t.u('elif'));
-  perform t.raises(format('select public.submit_upload(array[%L]::uuid[], ''school_exam'')', t.v('UD')), 'OGR-UPL-004%',
+  perform t.raises(format('select public.submit_upload(array[%L]::uuid[], ''own_work'')', t.v('UD')), 'OGR-UPL-004%',
                    'etkin kayıt yoksa gönderilemez');
   perform t.as_admin();
   update public.enrollments e set status = 'active' where e.id = t.u('ENR_A');
   perform t.as_user(t.u('elif'));
-  v_r := public.submit_upload(array[t.u('UD')], 'school_exam');
-  perform t.ok(v_r ->> 'kind' = 'school_exam' and v_r ->> 'enrollment_id' = t.v('ENR_A'), 'Okul denemesi gönderimi');
-  perform t.raises(format('select public.submit_upload((select array_agg(gen_random_uuid()) from generate_series(1, 41)), %L)', 'school_exam'),
-                   'OGR-UPL-001%', 'Okul denemesi en çok 40 sayfa');
+  v_r := public.submit_upload(array[t.u('UD')], 'own_work');
+  perform t.ok(v_r ->> 'kind' = 'own_work' and v_r ->> 'enrollment_id' = t.v('ENR_A'), 'kayıt etkinleşince gönderim');
 end $$;
 
 -- apply_diagnosis otopilotu (0026) müfredat kurucunun kuralıyla: curriculum_autopilot_state (ai_draft + TYT/AYT/LGS +

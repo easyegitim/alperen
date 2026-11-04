@@ -2,6 +2,8 @@
 // sıralı, en çok 4 satır). Kural (PLAN-v2 §13): tek kahraman kart (ilk başlatılabilir öneri, tek birincil "Başla"),
 // altında en çok 3 kutu, belge/yükleme sonucu kartları ayrı satır.
 import { z } from 'zod';
+import { examHref } from '@/server/exam-result/present';
+import { documentHref } from '@/server/documents/present';
 
 export const SUGGESTION_KINDS = ['practice', 'weekly_homework', 'lesson_review', 'gap_analysis', 'mini_exam', 'document_ready', 'upload_result'] as const;
 export type SuggestionKind = (typeof SUGGESTION_KINDS)[number];
@@ -87,8 +89,8 @@ export function arrangeToday(items: Suggestion[], now: Date = new Date()): Today
   const live = items.filter((s) => !s.expiresAt || new Date(s.expiresAt).getTime() > now.getTime()).sort(compareSuggestions);
   const seen = new Set<string>();
   const unique = live.filter((s) => (seen.has(s.id) ? false : (seen.add(s.id), true)));
-  // Yalnız test akışı olan türler başlatılabilir; mini_exam'in henüz akışı yok (Koç ?oneri'yi okuyana dek kart olmaz).
-  const startable = unique.filter((s) => PRACTICE_KINDS.includes(s.kind));
+  // Başlatılabilir: alıştırma türleri ve exam_id'li mini_exam (uygulama içi sınav oynatıcısı); exam_id'siz mini_exam kart olmaz.
+  const startable = unique.filter((s) => PRACTICE_KINDS.includes(s.kind) || examIdOf(s) !== null);
   const notices = unique.filter((s) => NOTICE_KINDS.includes(s.kind));
   return { hero: startable[0] ?? null, boxes: startable.slice(1, 1 + MAX_BOXES), notices };
 }
@@ -116,6 +118,13 @@ export function boxLine(s: Suggestion): string | null {
   return count ? `${count} soru` : s.subtitle;
 }
 
+/** mini_exam önerisinin sınavı (payload.exam_id, UUID); başka türde ya da kimlik yoksa null. */
+export function examIdOf(s: Suggestion): string | null {
+  if (s.kind !== 'mini_exam') return null;
+  const v = s.payload.exam_id;
+  return typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v) ? v : null;
+}
+
 function str(v: unknown): string | null {
   return typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v) ? v : null;
 }
@@ -124,9 +133,12 @@ function str(v: unknown): string | null {
 export function noticeHref(s: Suggestion): string | null {
   if (s.kind === 'document_ready') {
     const id = str(s.payload.document_id);
-    return id ? `/ogrenci/gelisim/belgeler/${id}` : '/ogrenci/gelisim/belgeler';
+    return id ? documentHref(id) : '/ogrenci/gelisim/belgeler';
   }
   if (s.kind === 'upload_result') {
+    // Okul denemesi kartı oturum taşır; sonuç ekranı deneme adresindedir.
+    const session = str(s.payload.session_id);
+    if (session) return examHref(session);
     const analysis = str(s.payload.analysis_id);
     if (analysis) return `/ogrenci/sonuc?analiz=${analysis}`;
     const upload = str(s.payload.upload_id);

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { documentLine, type Band, type TopicRow } from '@/server/progress/present';
+import { documentHref } from '@/server/documents/present';
 import type { DocumentItem } from '@/server/progress/read';
 
 // Gelişim ekranının (mockup S08) sunucuda çizilen parçaları: üç sayı, katlı bölümler, bant rozeti, belge satırı.
@@ -60,7 +61,7 @@ export function DocumentList({ documents }: { documents: DocumentItem[] }) {
     <ul className="m-0 flex list-none flex-col p-0">
       {documents.map((d) => (
         <li key={d.id} className="flex border-t border-line">
-          <Link href={`/ogrenci/gelisim/belgeler/${d.id}`} className="flex min-h-13 flex-1 items-center justify-between gap-3 rounded-md text-ink no-underline">
+          <Link href={documentHref(d.id)} className="flex min-h-13 flex-1 items-center justify-between gap-3 rounded-md text-ink no-underline">
             <span className="text-label font-normal">{documentLine(d.title, d.kind)}</span>
             <ChevronRight aria-hidden="true" size={20} className="shrink-0 text-ink-muted" />
           </Link>

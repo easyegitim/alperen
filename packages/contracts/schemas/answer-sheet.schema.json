@@ -80,6 +80,13 @@
                 "type": "null"
               }
             ]
+          },
+          "confidence": {
+            "default": 1,
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Bu satırın okunuşuna güven (0..1)"
           }
         },
         "required": [
@@ -91,6 +98,11 @@
         ],
         "additionalProperties": false
       }
+    },
+    "unreadable": {
+      "default": false,
+      "description": "Form okunamayacak kadar bulanık, karanlık ya da kesik: true; o zaman answers boş kalır",
+      "type": "boolean"
     }
   },
   "required": [

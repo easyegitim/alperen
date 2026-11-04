@@ -99,15 +99,16 @@ test.describe('Yükle → Teşhis', () => {
     await page.screenshot({ path: `${SCREEN_DIR}/teshis-390.png`, fullPage: true });
   });
 
-  test('Okul denemesi: PDF olduğu gibi gider, "Sayfaları aldım" sonucu', async ({ page }) => {
+  test('Okul denemesi: PDF olduğu gibi gider, deneme oturumu açılır ve bekleme ekranı gelir', async ({ page }) => {
     await page.goto('/ogrenci/yukle');
     await page.getByText('Okul denemesi', { exact: true }).click();
     await expect(page.getByLabel(/Okul denemesi/)).toBeChecked();
     const pdf = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
     await page.getByTestId('dosya-girisi').setInputFiles({ name: 'deneme.pdf', mimeType: 'application/pdf', buffer: pdf });
     await page.getByRole('button', { name: 'Gönder' }).click();
-    await page.waitForURL(/\/ogrenci\/sonuc\?yukleme=[0-9a-f-]{36}&tur=deneme$/);
-    await expect(page.getByTestId('tek-cumle')).toHaveText('Sayfaları aldım.', { timeout: 15_000 });
+    // submit_exam_upload (P2-A): sonuç ekranı /ogrenci/deneme/<oturum>; ayrıntılı akış e2e/deneme-sonuc.spec.ts
+    await page.waitForURL(/\/ogrenci\/deneme\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Denemeni inceliyorum…' })).toBeVisible();
     const up = (await fakeState()).uploads.at(-1)!;
     expect(up).toMatchObject({ kind: 'pdf', mime: 'application/pdf', storage_path: `${USERS.student.id}/${up.id}.pdf` });
   });

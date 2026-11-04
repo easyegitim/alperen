@@ -156,7 +156,9 @@ export const UPLOAD_CARD = {
     reading: { title: 'Fotoğrafı okuyamadım', subtitle: 'Daha net bir fotoğrafla yeniden yükleyebilirsin.' },
     processing: { title: 'Yüklemeni şu an işleyemedim', subtitle: 'Yeniden dener misin? Sayfaları tekrar gönderebilirsin.' },
   },
-  pending: { title: 'Deneme analizi yakında', subtitle: 'Sayfaları aldım; analiz açılınca sonucu burada görürsün.' },
+  pending: { title: 'Denemeni inceliyorum', subtitle: 'Sayfaları aldım; sonuç birkaç dakika içinde burada olacak.' },
+  /** Değerlendirilen okul denemesi (alt satır: "Örnek Deneme 1: 5,5 net. Takıldığın yer: Üslü ifadeler."). */
+  exam: 'Deneme sonucun hazır',
 } as const;
 
 const VERDICT_LINE: Record<string, string> = {
@@ -175,7 +177,7 @@ export function uploadNotice(u: UploadSignal): { key: string; title: string; sub
     return {
       key: u.ref,
       ...UPLOAD_CARD.failed[kind],
-      payload: { upload_id: u.uploadId, upload_ids: ids, analysis_id: null, failed: true, failure: kind, reason: u.reason ?? null },
+      payload: { upload_id: u.uploadId, upload_ids: ids, analysis_id: null, session_id: u.sessionId ?? null, failed: true, failure: kind, reason: u.reason ?? null },
     };
   }
   if (state === 'pending') {
@@ -188,9 +190,11 @@ export function uploadNotice(u: UploadSignal): { key: string; title: string; sub
   if (u.sessionId) {
     return {
       key: u.ref,
-      title: UPLOAD_CARD.result,
-      subtitle: `Okul denemen değerlendirildi${u.net !== null ? ` · ${String(u.net).replace('.', ',')} net` : ''}`,
-      payload: { upload_id: u.uploadId, upload_ids: ids, analysis_id: null, session_id: u.sessionId },
+      title: UPLOAD_CARD.exam,
+      subtitle: u.oneLine?.trim()
+        ? clip(u.oneLine.trim(), 160)
+        : `Okul denemen değerlendirildi${u.net !== null ? ` · ${String(u.net).replace('.', ',')} net` : ''}`,
+      payload: { upload_id: u.uploadId, upload_ids: ids, analysis_id: null, session_id: u.sessionId, exam_id: u.examId ?? null, net: u.net },
     };
   }
   const line = u.oneLine?.trim() ? clip(u.oneLine.trim(), 160) : (VERDICT_LINE[u.verdict ?? ''] ?? 'Sonuç hazır');

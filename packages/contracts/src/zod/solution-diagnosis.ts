@@ -43,6 +43,17 @@ export const solutionDiagnosis = defineContract({
         .nullable()
         .describe('Uygun yaprak yoksa önerilen alt kazanım; yoksa null'),
       style_hint: c.str({ max: 200 }).nullable().describe('Sorunun tarzına ipucu (format/tuzak); yoksa null'),
+      key_dispute: c
+        .added(
+          z
+            .strictObject({
+              suspected: z.boolean().describe('Verilen anahtar kendi çözümünle çelişiyor ve çözümünü yeniden denetledikten sonra da çelişiyor: true'),
+              model_answer: c.str({ max: 80 }).nullable().describe('Kendi çözümünün cevabı (şık harfi ya da değer); bilinmiyorsa null'),
+            })
+            .nullable(),
+          null,
+        )
+        .describe('Deneme anahtarı şüpheliyse doldurulur (eğitmen incelemesine gider); anahtar çelişmiyorsa ya da deneme bağlamı yoksa null'),
       confidence: c.prob(),
     }),
   refine: (v, ctx) => {

@@ -6,7 +6,7 @@ import { isUuid } from './shared';
  * Yüklemenin durumu (bekleme ekranının yoklaması ve sonuç sayfası):
  *   waiting  — teşhis sürüyor (uploads 'stored'/'processing')
  *   ready    — solution_analyses satırı var (analysisId)
- *   received — okul denemesi alındı (uploads 'ready', teşhis yok; analiz P2)
+ *   received — eski bağlantı: okul denemesi 'ready', teşhis yok (güncel kart deneme sonucuna gider)
  *   failed   — okunamadı (reason 'reading': model reddetti ya da çıktı okunamadı) ya da işlenemedi (reason
  *              'processing': yapılandırma ya da son denemede de düşen iş). Neden, worker'ın audit 'diagnosis.failed'
  *              satırından öneri motorunun yeniden kurduğu Bugün kartındadır (payload.failure; 48 saat, açılan kart kalır)

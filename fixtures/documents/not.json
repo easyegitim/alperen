@@ -1,0 +1,198 @@
+{
+  "kind": "notes",
+  "title": "Rasyonel Sayılarda Dört İşlem",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": "Kişisel çalışma notu",
+    "generated_on": "2026-11-03",
+    "language": "tr",
+    "personalized": true,
+    "duration_min": null
+  },
+  "sections": [
+    {
+      "no": 1,
+      "title": "Hedefler"
+    },
+    {
+      "no": 2,
+      "title": "Kavram"
+    },
+    {
+      "no": 3,
+      "title": "Örnekler"
+    },
+    {
+      "no": 4,
+      "title": "Kendini sına"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "id": "h1",
+      "section_no": 1,
+      "level": 1,
+      "text": "Bu notun sonunda neyi yapabileceksin"
+    },
+    {
+      "type": "summary_box",
+      "id": "s1",
+      "section_no": 1,
+      "title": "Hedefler",
+      "bullets": [
+        "Paydaları eşitleyerek toplama ve çıkarma yapmak",
+        "Çarpma ve bölmede sadeleştirmeyi doğru sırada kullanmak",
+        "Sonucu sayı doğrusunda yorumlamak"
+      ]
+    },
+    {
+      "type": "heading",
+      "id": "h2",
+      "section_no": 2,
+      "level": 1,
+      "text": "Kesirlerle toplama"
+    },
+    {
+      "type": "paragraph",
+      "id": "p1",
+      "section_no": 2,
+      "text": "İki kesri toplarken paydaları ortak bir değere getirmen gerekir. Örneğin $\\dfrac{a}{b}+\\dfrac{c}{d}$ için ortak payda $b\\cdot d$ olabilir; ama en küçük ortak katı (EKOK) almak işlemi kısaltır."
+    },
+    {
+      "type": "definition_box",
+      "id": "d1",
+      "section_no": 2,
+      "term": "Rasyonel sayı",
+      "body": "a ve b tam sayı, $b\\neq 0$ olmak üzere $\\dfrac{a}{b}$ biçiminde yazılabilen sayıdır."
+    },
+    {
+      "type": "math_display",
+      "id": "m1",
+      "section_no": 2,
+      "latex": "\\frac{a}{b}+\\frac{c}{d}=\\frac{a\\cdot d+b\\cdot c}{b\\cdot d}"
+    },
+    {
+      "type": "figure",
+      "id": "f1",
+      "section_no": 2,
+      "source": "svg",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 420 90\" width=\"420\" height=\"90\"><line x1=\"20\" y1=\"45\" x2=\"400\" y2=\"45\" stroke=\"#051c60\" stroke-width=\"2\"/><g stroke=\"#051c60\" stroke-width=\"2\"><line x1=\"20\" y1=\"37\" x2=\"20\" y2=\"53\"/><line x1=\"115\" y1=\"37\" x2=\"115\" y2=\"53\"/><line x1=\"210\" y1=\"37\" x2=\"210\" y2=\"53\"/><line x1=\"305\" y1=\"37\" x2=\"305\" y2=\"53\"/><line x1=\"400\" y1=\"37\" x2=\"400\" y2=\"53\"/></g><g font-family=\"Lexend, sans-serif\" font-size=\"14\" fill=\"#051c60\" text-anchor=\"middle\"><text x=\"20\" y=\"75\">0</text><text x=\"115\" y=\"75\">1/4</text><text x=\"210\" y=\"75\">1/2</text><text x=\"305\" y=\"75\">3/4</text><text x=\"400\" y=\"75\">1</text></g><circle cx=\"305\" cy=\"45\" r=\"6\" fill=\"#0030a2\"/></svg>",
+      "alt": "Sıfırdan bire kadar dörde bölünmüş sayı doğrusu; 3/4 noktası işaretli"
+    },
+    {
+      "type": "common_mistake_callout",
+      "id": "c1",
+      "section_no": 2,
+      "pattern_id": "rasyonel.pay-payda-ayri-toplama",
+      "text": "Geçen denemede $\\dfrac{1}{2}+\\dfrac{1}{3}$ işlemini $\\dfrac{2}{5}$ bulmuştun: payları ve paydaları ayrı ayrı topladın. Önce paydaları eşitle, sonra yalnız payları topla."
+    },
+    {
+      "type": "heading",
+      "id": "h3",
+      "section_no": 3,
+      "level": 1,
+      "text": "Çözümlü örnekler"
+    },
+    {
+      "type": "worked_example",
+      "id": "w1",
+      "section_no": 3,
+      "title": "Toplama ve çıkarma bir arada",
+      "problem": "$\\dfrac{3}{4}+\\dfrac{5}{6}-\\dfrac{1}{3}$ işleminin sonucunu bul.",
+      "steps": [
+        "EKOK(4, 6, 3) = 12 olduğundan her kesri 12 paydaya getir: $\\dfrac{9}{12}+\\dfrac{10}{12}-\\dfrac{4}{12}$.",
+        "Payları işle: $9+10-4=15$.",
+        "Sadeleştir: $\\dfrac{15}{12}=\\dfrac{5}{4}$."
+      ],
+      "answer": "$\\dfrac{5}{4}$"
+    },
+    {
+      "type": "table",
+      "id": "t1",
+      "section_no": 3,
+      "caption": "İşlem türüne göre özet",
+      "header": [
+        "İşlem",
+        "Kural",
+        "Örnek"
+      ],
+      "rows": [
+        [
+          "Toplama",
+          "Paydaları eşitle, payları topla",
+          "$\\dfrac{1}{4}+\\dfrac{1}{4}=\\dfrac{1}{2}$"
+        ],
+        [
+          "Çarpma",
+          "Pay payla, payda paydayla",
+          "$\\dfrac{2}{3}\\cdot\\dfrac{3}{5}=\\dfrac{2}{5}$"
+        ],
+        [
+          "Bölme",
+          "İkinci kesri ters çevirip çarp",
+          "$\\dfrac{1}{2}:\\dfrac{1}{4}=2$"
+        ]
+      ]
+    },
+    {
+      "type": "summary_box",
+      "id": "s2",
+      "section_no": 3,
+      "title": "Aklında kalsın",
+      "bullets": [
+        "Toplamada önce payda eşitle.",
+        "Çarpmada çapraz sadeleştirme zaman kazandırır.",
+        "Bölme işleminde ikinci kesri ters çevir."
+      ]
+    },
+    {
+      "type": "page_break",
+      "id": "pb",
+      "section_no": 4
+    },
+    {
+      "type": "heading",
+      "id": "h4",
+      "section_no": 4,
+      "level": 1,
+      "text": "Kendini sına"
+    },
+    {
+      "type": "check_yourself",
+      "id": "k1",
+      "section_no": 4,
+      "question": "$\\dfrac{1}{2}+\\dfrac{1}{3}$ işleminin sonucu kaçtır?",
+      "answer_hidden": "$\\dfrac{5}{6}$. Paydalar 6 da eşitlenir: $\\dfrac{3}{6}+\\dfrac{2}{6}$."
+    },
+    {
+      "type": "check_yourself",
+      "id": "k2",
+      "section_no": 4,
+      "question": "$\\dfrac{2}{3}\\cdot\\dfrac{9}{4}$ çarpımı kaçtır?",
+      "answer_hidden": "$\\dfrac{3}{2}$. Önce sadeleştir: $\\dfrac{2\\cdot 9}{3\\cdot 4}=\\dfrac{18}{12}$."
+    },
+    {
+      "type": "check_yourself",
+      "id": "k3",
+      "section_no": 4,
+      "question": "$\\dfrac{5}{6}:\\dfrac{5}{12}$ bölümü kaçtır?",
+      "answer_hidden": "$2$. Bölme, ikinci kesrin çarpmaya göre tersiyle çarpmaktır."
+    },
+    {
+      "type": "check_yourself",
+      "id": "k4",
+      "section_no": 4,
+      "question": "$\\dfrac{7}{8}-\\dfrac{3}{4}$ farkı kaçtır?",
+      "answer_hidden": "$\\dfrac{1}{8}$."
+    },
+    {
+      "type": "check_yourself",
+      "id": "k5",
+      "section_no": 4,
+      "question": "$\\dfrac{1}{4}$ ile $\\dfrac{1}{3}$ arasında bir rasyonel sayı yaz.",
+      "answer_hidden": "Örneğin $\\dfrac{7}{24}$ (ikisinin ortalaması)."
+    }
+  ],
+  "keys": []
+}

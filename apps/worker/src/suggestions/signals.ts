@@ -211,7 +211,9 @@ export async function collectSignals(db: Db, studentId: string, now: Date): Prom
       [studentId],
     ),
     db.query(
-      `select es.id, es.enrollment_id, es.finished_at, (es.score ->> 'net') as net, link.row_id as upload_id, link.diff -> 'upload_ids' as upload_ids
+      `select es.id, es.enrollment_id, es.exam_id, es.finished_at, (es.score ->> 'net') as net, es.progress ->> 'card_line' as one_line,
+              coalesce(es.upload_ids[1]::text, link.row_id) as upload_id,
+              case when cardinality(es.upload_ids) > 0 then to_jsonb(es.upload_ids) else link.diff -> 'upload_ids' end as upload_ids
          from public.exam_sessions es join public.enrollments e on e.id = es.enrollment_id
          left join lateral (select ae.row_id, ae.diff from audit.events ae
                              where ae.action = 'exam.upload_intake' and ae.diff ->> 'session_id' = es.id::text
@@ -222,15 +224,17 @@ export async function collectSignals(db: Db, studentId: string, now: Date): Prom
         limit 2`,
       [studentId],
     ),
-    // alınan, analizi bekleyen okul denemesi (upload.intake; analiz P2): "Deneme analizi yakında" kartı
+    // alınan, analizi süren okul denemesi (exam.analyse: grading → analysing): "Denemeni inceliyorum" kartı
     db.query(
-      `select es.id, es.enrollment_id, es.started_at, link.row_id as upload_id, link.diff -> 'upload_ids' as upload_ids,
-              link.diff ->> 'exam_id' as exam_id
+      `select es.id, es.enrollment_id, es.started_at, es.exam_id,
+              coalesce(es.upload_ids[1]::text, link.row_id) as upload_id,
+              case when cardinality(es.upload_ids) > 0 then to_jsonb(es.upload_ids) else link.diff -> 'upload_ids' end as upload_ids
          from public.exam_sessions es join public.enrollments e on e.id = es.enrollment_id
-         join lateral (select ae.row_id, ae.diff from audit.events ae
-                        where ae.action = 'exam.upload_intake' and ae.diff ->> 'session_id' = es.id::text
-                        order by ae.created_at desc limit 1) link on true
-        where e.student_id = $1::uuid and es.mode = 'uploaded' and es.status = 'analysing'
+         left join lateral (select ae.row_id, ae.diff from audit.events ae
+                             where ae.action = 'exam.upload_intake' and ae.diff ->> 'session_id' = es.id::text
+                             order by ae.created_at desc limit 1) link on true
+        where e.student_id = $1::uuid and es.mode = 'uploaded' and es.status in ('grading', 'analysing')
+          and (cardinality(es.upload_ids) > 0 or link.row_id is not null)
           and es.started_at >= now() - interval '48 hours'
         order by es.started_at desc, es.id
         limit 2`,
@@ -286,7 +290,9 @@ export async function collectSignals(db: Db, studentId: string, now: Date): Prom
       uploadId: str(r.upload_id),
       uploadIds: strs(r.upload_ids),
       enrollmentId: String(r.enrollment_id),
+      examId: str(r.exam_id),
       verdict: null,
+      oneLine: str(r.one_line),
       at: iso(r.finished_at) ?? '',
       net: r.net === null || r.net === undefined ? null : Number(r.net),
     })),

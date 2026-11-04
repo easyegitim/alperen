@@ -6,8 +6,10 @@ import { FAKE_PORT, OTP_CODE, USERS, seedTables } from './fixtures.mjs';
 import { makeSession, userObject } from './jwt.mjs';
 import { handleUploads, seedUploadTables } from './fake-uploads.mjs';
 import { handlePractice, seedPracticeTables } from './fake-practice.mjs';
+import { handleExam, seedExamTables } from './fake-exam.mjs';
+import { handleExamResult } from './fake-exam-result.mjs';
 
-const tables = { ...seedTables(), ...seedUploadTables(), ...seedPracticeTables() };
+const tables = { ...seedTables(), ...seedUploadTables(), ...seedPracticeTables(), ...seedExamTables() };
 const requests = [];
 const invites = new Map();
 
@@ -131,10 +133,15 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
+  // Okul denemesi → bekleme → sonuç → rapor eki (submit_exam_upload, exam_session_view, exam_how_far, list_my_documents)
+  if (await handleExamResult({ req, res, path, tables, send, readBody, userFromAuth })) return;
   // Yükle → Teşhis eki (Storage nesneleri, submit_upload, worker benzetimi)
   if (await handleUploads({ req, res, path, url, tables, send, readBody, userFromAuth })) return;
   // Onboarding → Bugün → Test → Gelişim eki (P1 RPC'leri, şekil/belge Storage, worker benzetimi)
   if (await handlePractice({ req, res, path, tables, send, readBody, userFromAuth })) return;
+
+  // Uygulama içi sınav eki (start/record/finish_exam_session, v_exam_questions_student)
+  if (await handleExam({ req, res, path, tables, send, readBody, userFromAuth })) return;
 
   // --- PostgREST ---
   const rpc = /^\/rest\/v1\/rpc\/(\w+)$/.exec(path);

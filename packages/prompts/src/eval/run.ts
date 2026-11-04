@@ -3,7 +3,8 @@
  * sahte taşımasıyla ve `fake_reply` betiğiyle koşar; gerçek kipte aynı kod Anthropic'e gider. Prompt metni her zaman
  * bu paketten (`loadPrompt`) gelir; ders bloğu eval bağlamından, dossier vakadan.
  */
-import type { BetaMessageParam } from '@anthropic-ai/sdk/resources/beta/messages/messages';
+import { readFileSync } from 'node:fs';
+import type { BetaContentBlockParam, BetaMessageParam } from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import {
   createGateway,
   FakeTransport,
@@ -15,7 +16,23 @@ import {
 } from '@ogrenmen/llm';
 import { loadPrompt } from '../index.js';
 import { loadCourseContext, type EvalCase } from './cases.js';
-import { errorScore, scoreCoach, scoreDiagnosis, type CaseScore } from './score.js';
+import { errorScore, scoreCoach, scoreDiagnosis, scoreExamPageItems, type CaseScore } from './score.js';
+
+/** Depo kökü (eval görselleri `fixtures/...` yoluyla verilir). */
+const REPO_ROOT = new URL('../../../../', import.meta.url);
+
+/** Kullanıcı turu: görseller (base64) + metin. Görselsiz vakada düz metin. */
+function userContent(c: EvalCase): string | BetaContentBlockParam[] {
+  const images = c.input.images ?? [];
+  if (images.length === 0) return c.input.user;
+  return [
+    ...images.map((p): BetaContentBlockParam => ({
+      type: 'image',
+      source: { type: 'base64', media_type: p.endsWith('.png') ? 'image/png' : 'image/jpeg', data: readFileSync(new URL(p, REPO_ROOT)).toString('base64') },
+    })),
+    { type: 'text', text: c.input.user },
+  ];
+}
 
 export type EvalMode = 'fake' | 'anthropic';
 
@@ -90,12 +107,22 @@ async function runCase(c: EvalCase, opts: RunEvalOptions): Promise<CaseResult> {
     if (c.route === 'solution_diagnosis') {
       const res = await gateway.call('solution_diagnosis', {
         system,
-        user: c.input.user,
+        user: userContent(c),
         turn,
         promptVersion: prompt.meta.version,
         purpose: 'eval',
       });
       return { ...scoreDiagnosis(c, res.data), ...meta, model: res.model, costUsd: res.costUsd };
+    }
+    if (c.route === 'exam_page_items') {
+      const res = await gateway.call('exam_page_items', {
+        system,
+        user: userContent(c),
+        turn,
+        promptVersion: prompt.meta.version,
+        purpose: 'eval',
+      });
+      return { ...scoreExamPageItems(c, res.data), ...meta, model: res.model, costUsd: res.costUsd };
     }
     const results = c.input.tool_results ?? {};
     const turnMeta: Record<string, unknown>[] = [];

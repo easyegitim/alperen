@@ -69,7 +69,8 @@ describe('prompt_versions eşitlemesi (canlı Postgres)', () => {
     expect(loadPrompt('solution_diagnosis', { sources }).selection.source).toBe('pinned');
     expect(loadPrompt('memory_delta', { sources }).selection).toMatchObject({ source: 'default', ignored: [{ source: 'pinned', version: 'v9' }] });
 
-    const row = await db.query(`select system_text, schema_name, model, effort from public.prompt_versions where route = 'solution_diagnosis'`);
-    expect(row.rows[0]).toEqual({ system_text: loadPrompt('solution_diagnosis').text, schema_name: 'solution-diagnosis', model: 'claude-opus-5-5', effort: 'high' });
+    const def = loadPrompt('solution_diagnosis');
+    const row = await db.query(`select system_text, schema_name, model, effort from public.prompt_versions where route = 'solution_diagnosis' and version = $1`, [def.meta.version]);
+    expect(row.rows[0]).toEqual({ system_text: def.text, schema_name: 'solution-diagnosis', model: 'claude-opus-5-5', effort: 'high' });
   });
 });

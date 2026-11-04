@@ -8,6 +8,7 @@ insert into public.settings (key, value, description) values
   ('exam_guess_override', '0.2'::jsonb, 'Deneme cevabı gözleminde g (grade_exam_session)'),
   ('exam_blank_weight', '0.5'::jsonb, 'Boş bırakılan deneme sorusu gözleminin ağırlığı (grade_exam_session)'),
   ('exam_wrong_penalty', '0.25'::jsonb, 'Net hesabında yanlış başına düşülen doğru (ÖSYM: 4 yanlış 1 doğruyu götürür)'),
+  ('exam_time_grace_sec', '30'::jsonb, 'Uygulama içi denemede süre sınırından sonra cevabın kabul edildiği pay (sn; record_exam_response)'),
   ('memory_max_files', '12'::jsonb, 'Öğrenci başına en çok hafıza dosyası (memory_files_guard)'),
   ('memory_max_bytes', '8192'::jsonb, 'Hafıza dosyası en çok boyutu (bayt)'),
   ('memory_compact_bytes', '6144'::jsonb, 'Gece sıkıştırmasının devreye girdiği dosya boyutu (bayt)'),

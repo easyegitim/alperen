@@ -169,6 +169,41 @@
       ],
       "description": "Sorunun tarzına ipucu (format/tuzak); yoksa null"
     },
+    "key_dispute": {
+      "default": null,
+      "description": "Deneme anahtarı şüpheliyse doldurulur (eğitmen incelemesine gider); anahtar çelişmiyorsa ya da deneme bağlamı yoksa null",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "suspected": {
+              "type": "boolean",
+              "description": "Verilen anahtar kendi çözümünle çelişiyor ve çözümünü yeniden denetledikten sonra da çelişiyor: true"
+            },
+            "model_answer": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Kendi çözümünün cevabı (şık harfi ya da değer); bilinmiyorsa null"
+            }
+          },
+          "required": [
+            "suspected",
+            "model_answer"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "confidence": {
       "type": "number",
       "minimum": 0,

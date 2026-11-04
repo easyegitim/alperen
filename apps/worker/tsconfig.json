@@ -14,7 +14,8 @@
     "verbatimModuleSyntax": true,
     "esModuleInterop": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react-jsx"
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "*.config.ts"]
 }

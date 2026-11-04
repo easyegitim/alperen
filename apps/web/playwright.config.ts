@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
   // P1 yolculuğu kendi yığınıyla (gerçek Postgres + worker) ayrı yapılandırmada koşar: playwright.journey.config.ts
-  testIgnore: '**/p1-journey.spec.ts',
+  testIgnore: ['**/p1-journey.spec.ts', '**/p2-deneme.spec.ts'],
   outputDir: 'test-results',
   fullyParallel: false,
   workers: 1,

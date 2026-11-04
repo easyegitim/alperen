@@ -1,0 +1,44 @@
+{
+  "fake_match": [
+    "<exam_context>",
+    "soru no: 4."
+  ],
+  "output": {
+    "question_text": "$2^5-3^3$ işleminin sonucu kaçtır? A) $1$ B) $23$ C) $4$ D) $5$ E) $9$",
+    "student_work_text": "Kitapçık kenarında: 2^5 = 32, 3^3 = 9, 32 - 9 = 23",
+    "reference_solution_steps": [
+      "$2^5=32$",
+      "$3^3=27$",
+      "$32-27=5$, cevap D"
+    ],
+    "student_steps": [
+      {
+        "no": 1,
+        "text": "$2^5=32$",
+        "status": "ok"
+      },
+      {
+        "no": 2,
+        "text": "$3^3=9$",
+        "status": "error"
+      },
+      {
+        "no": 3,
+        "text": "$32-9=23$",
+        "status": "ok"
+      }
+    ],
+    "failing_step_no": 2,
+    "verdict": "wrong",
+    "error_cause": "careless",
+    "why_tr": "2. adımda $3^3$ ifadesini $9$ yazdın; üç tane 3 çarpılır, doğrusu $27$.",
+    "skill_ids": [
+      "tyt.mat.temel.uslu"
+    ],
+    "misconception_tags": [],
+    "proposed_subskill": null,
+    "style_hint": null,
+    "confidence": 0.8,
+    "key_dispute": null
+  }
+}

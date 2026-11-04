@@ -19,11 +19,16 @@ export const answerSheet = defineContract({
           marked_option: optionKey5.nullable().describe('Yalnız status=marked iken dolu'),
           marks_seen: c.arr(optionKey5, { max: 5 }).describe('Satırda görülen tüm işaretler'),
           note: c.str({ max: 200 }).nullable(),
+          confidence: c.added(c.prob('Bu satırın okunuşuna güven (0..1)'), 1),
         }),
         { max: 500 },
       ),
+      unreadable: c
+        .added(z.boolean(), false)
+        .describe('Form okunamayacak kadar bulanık, karanlık ya da kesik: true; o zaman answers boş kalır'),
     }),
   refine: (v, ctx) => {
+    if (v.unreadable && v.answers.length > 0) addIssue(ctx, ['answers'], 'okunamayan formda işaret listesi boş olmalı');
     const nos = v.answers.map((a) => a.question_no);
     if (new Set(nos).size !== nos.length) addIssue(ctx, ['answers'], 'soru numaraları tekil olmalı');
     v.answers.forEach((a, i) => {

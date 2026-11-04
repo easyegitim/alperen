@@ -50,12 +50,14 @@
       "version": "0.1.0",
       "dependencies": {
         "@ogrenmen/contracts": "workspace:*",
+        "@ogrenmen/doc-render": "workspace:*",
         "@ogrenmen/llm": "workspace:*",
         "@ogrenmen/prompts": "workspace:*",
         "@supabase/supabase-js": "2.118.0",
         "pg": "^8.23.1",
         "pg-boss": "^12.38.0",
         "playwright-core": "1.56.1",
+        "sharp": "0.35.5",
         "tsx": "^4.20.0",
         "web-push": "^3.6.7",
         "zod": "^4.1.0",
@@ -123,6 +125,30 @@
       "peerDependencies": {
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
+      },
+    },
+    "packages/doc-render": {
+      "name": "@ogrenmen/doc-render",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ogrenmen/contracts": "workspace:*",
+        "@ogrenmen/design-system": "workspace:*",
+        "katex": "0.16.11",
+        "playwright-core": "1.56.1",
+        "react": "19.3.1",
+        "react-dom": "19.3.1",
+      },
+      "devDependencies": {
+        "@eslint/js": "9.39.5",
+        "@types/katex": "0.16.7",
+        "@types/node": "22.10.2",
+        "@types/react": "19.3.0",
+        "@types/react-dom": "19.3.0",
+        "eslint": "9.39.5",
+        "pdfjs-dist": "4.10.38",
+        "typescript": "5.6.3",
+        "typescript-eslint": "8.72.1",
+        "vitest": "2.1.9",
       },
     },
     "packages/llm": {
@@ -435,6 +461,8 @@
     "@ogrenmen/contracts": ["@ogrenmen/contracts@workspace:packages/contracts"],
 
     "@ogrenmen/design-system": ["@ogrenmen/design-system@workspace:packages/design-system"],
+
+    "@ogrenmen/doc-render": ["@ogrenmen/doc-render@workspace:packages/doc-render"],
 
     "@ogrenmen/llm": ["@ogrenmen/llm@workspace:packages/llm"],
 

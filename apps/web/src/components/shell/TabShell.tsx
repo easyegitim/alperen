@@ -16,7 +16,7 @@ const TAB_ICONS: Record<string, LucideIcon> = { bugun: Sun, koc: MessageCircle, 
  * Odak ekranları (mockup S01, S04–S07, S09): alt çubuk ve kenar çubuğu yok; ekranın kendi "Kapat" bağlantısı vardır.
  * Önek eşleşmesi; diğer ekranlar bu listeye eklenebilir.
  */
-export const FOCUS_PREFIXES: readonly string[] = ['/ogrenci/test', '/ogrenci/onboarding', '/ogrenci/sonuc', '/ogrenci/teshis', '/ogrenci/yukle', '/ogrenci/gelisim/belgeler/'];
+export const FOCUS_PREFIXES: readonly string[] = ['/ogrenci/test', '/ogrenci/sinav', '/ogrenci/onboarding', '/ogrenci/sonuc', '/ogrenci/teshis', '/ogrenci/yukle', '/ogrenci/deneme', '/ogrenci/belge/', '/ogrenci/gelisim/belgeler/'];
 
 export function isFocusPath(pathname: string): boolean {
   return FOCUS_PREFIXES.some((p) => (p.endsWith('/') ? pathname.startsWith(p) && pathname.length > p.length : pathname === p || pathname.startsWith(`${p}/`)));

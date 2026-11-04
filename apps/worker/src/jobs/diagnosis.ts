@@ -33,6 +33,7 @@ import type { Db } from '../db.js';
 import { systemPrompt } from '../prompts.js';
 import { RANK_UPLOAD_RESULT, refKey, UPLOAD_CARD, uploadNotice, type UploadSignal } from '../suggestions/rules.js';
 import type { StorageLike } from '../storage.js';
+import { runExamDiagnosis } from './diagnosis-exam.js';
 import { PermanentJobError } from './errors.js';
 import { uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
@@ -45,10 +46,26 @@ export const MAX_SCHOOL_EXAM_UPLOADS = 40;
 /** Files API'deki kopya 90 gün sonra silinir (reşit olmayanın fotoğrafı süresiz kalmaz; API üst sınırı 7 776 000 sn). */
 export const FILE_TTL_SECONDS = 7_776_000;
 
-const payload = z.object({
-  upload_ids: z.array(uuid).min(1).max(MAX_DIAGNOSIS_UPLOADS),
-  enrollment_id: uuid,
-});
+/**
+ * Yük: Kendi çalışmam {upload_ids[1..4], enrollment_id}; deneme bağlamı (0030 exam_how_far, finish_exam_session,
+ * exam.analyse karalama dağıtımı) {upload_ids[0..4], enrollment_id, context: 'exam', exam_response_id, session_id,
+ * exam_id, question_no, how_far_text} → jobs/diagnosis-exam.ts.
+ */
+const payload = z
+  .object({
+    upload_ids: z.array(uuid).max(MAX_DIAGNOSIS_UPLOADS),
+    enrollment_id: uuid,
+    context: z.enum(['own_work', 'exam']).optional(),
+    exam_response_id: uuid.optional(),
+    session_id: uuid.optional(),
+    exam_id: uuid.optional(),
+    question_no: z.number().int().min(1).max(500).optional(),
+    how_far_text: z.string().max(2000).nullable().optional(),
+  })
+  .refine((p) => (p.context === 'exam' ? Boolean(p.exam_response_id) : p.upload_ids.length >= 1), {
+    message: 'Kendi çalışmam en az bir yükleme, deneme bağlamı exam_response_id ister',
+    path: ['upload_ids'],
+  });
 export type DiagnosisRunPayload = z.infer<typeof payload>;
 
 export type UserBlocks = Exclude<CallInput['user'], string>;
@@ -376,7 +393,7 @@ export function isMissingFileError(err: unknown): boolean {
 }
 
 /** Eksik (ya da `force` ile tümü) yüklemeleri Files API'ye çıkarır; kimlik uploads.anthropic_file_id'de saklanır. */
-async function ensureFiles(db: Db, uploader: FileUploader, uploads: UploadRow[], force: boolean): Promise<string[]> {
+export async function ensureFiles(db: Db, uploader: FileUploader, uploads: UploadRow[], force: boolean): Promise<string[]> {
   const ids: string[] = [];
   for (const u of uploads) {
     if (force || !u.anthropic_file_id) {
@@ -418,7 +435,7 @@ async function saveRawDiagnosis(db: Db, p: DiagnosisRunPayload, raw: RawDiagnosi
   ]);
 }
 
-interface EnrollmentRow {
+export interface EnrollmentRow {
   id: unknown;
   student_id: unknown;
   curriculum_id: unknown;
@@ -555,6 +572,7 @@ export const diagnosisRunJob: JobDefinition<DiagnosisRunPayload, DiagnosisRunRes
   concurrency: 2,
   retry: { retryLimit: 3, retryDelay: 20, retryBackoff: true, retryDelayMax: 600, expireInSeconds: 600, deleteAfterSeconds: 604_800 },
   handler: async (p, ctx) => {
+    if (p.context === 'exam') return runExamDiagnosis(p, ctx);
     const e = (
       await ctx.db.query(
         `select e.id, e.student_id, e.curriculum_id, e.course_id, st.public_ref

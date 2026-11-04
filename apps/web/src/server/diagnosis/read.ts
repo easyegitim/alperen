@@ -20,6 +20,22 @@ export interface DiagnosisView {
 }
 
 /**
+ * Savunma katmanı: analiz bir deneme yanıtına bağlıysa ve sınav telifliyse (ya da bağ okunamazsa) soru metni
+ * gösterilmez. Worker telifli denemede question_text'i zaten yazmaz; bu, eski satırlara karşı da korur.
+ */
+async function examQuestionHidden(client: UploadClient, analysisId: string): Promise<boolean> {
+  // bu tablolar UploadClient tiplerinde yok; yalnız bu okuma için gevşek tip
+  type Q = { select: (c: string) => { eq: (c: string, v: string) => { maybeSingle: () => Promise<{ data: Record<string, unknown> | null }> } } };
+  const supabase = client as unknown as { from: (t: string) => Q };
+  const { data: resp } = await supabase.from('exam_responses').select('session_id').eq('solution_analysis_id', analysisId).maybeSingle();
+  if (!resp) return false;
+  const { data: ses } = await supabase.from('exam_sessions').select('exam_id').eq('id', String(resp.session_id)).maybeSingle();
+  if (!ses) return true;
+  const { data: exam } = await supabase.from('exams').select('is_copyrighted').eq('id', String(ses.exam_id)).maybeSingle();
+  return exam?.is_copyrighted !== false;
+}
+
+/**
  * Teşhis satırı + kazanım adı + ustalık bandı + yanılgı metni (kullanıcının JWT'si; RLS: öğrenci yalnız kendi kaydının
  * teşhisini görür, veli hiç görmez). Bulunamazsa null.
  */
@@ -62,7 +78,7 @@ export async function getDiagnosis(supabase: UploadClient, analysisId: string): 
     verdict,
     failingStepNo,
     errorCause,
-    questionText: sa.question_text ?? null,
+    questionText: sa.question_text && !(await examQuestionHidden(supabase, sa.id)) ? sa.question_text : null,
     analysis,
     sentence: summarySentence({ verdict, failing_step_no: failingStepNo, error_cause: errorCause, analysis }),
     learned: verdict === 'unreadable' ? null : (tagText ?? skillName),

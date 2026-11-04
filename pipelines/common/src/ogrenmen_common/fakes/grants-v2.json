@@ -276,6 +276,7 @@
     },
     "public.exam_questions": {
       "columns": [
+        "bbox",
         "created_at",
         "difficulty",
         "exam_id",
@@ -284,6 +285,7 @@
         "kind",
         "no",
         "options",
+        "page_upload_id",
         "question_id",
         "section",
         "skill_ids",
@@ -300,6 +302,7 @@
     "public.exam_responses": {
       "columns": [
         "answer",
+        "blank_reason",
         "created_at",
         "exam_question_id",
         "flagged",
@@ -327,10 +330,12 @@
         "finished_at",
         "id",
         "mode",
+        "progress",
         "report_document_id",
         "score",
         "started_at",
-        "status"
+        "status",
+        "upload_ids"
       ],
       "service_role": {
         "select": "*",
@@ -362,10 +367,12 @@
     },
     "public.exams": {
       "columns": [
+        "answer_key_source",
         "course_id",
         "created_at",
         "created_by",
         "curriculum_id",
+        "duration_min",
         "generated_document_id",
         "held_on",
         "id",

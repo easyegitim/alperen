@@ -16,6 +16,8 @@ COPY package.json bun.lock ./
 COPY apps/worker/package.json apps/worker/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/llm/package.json packages/llm/package.json
+COPY packages/prompts/package.json packages/prompts/package.json
+COPY packages/doc-render/package.json packages/doc-render/package.json
 # Çalışma alanındaki öteki paketlerin manifestoları kilit dosyası uyumu için gerekir.
 COPY apps/web/package.json apps/web/package.json
 COPY packages/design-system/package.json packages/design-system/package.json
@@ -36,6 +38,13 @@ COPY packages/contracts/package.json packages/contracts/tsconfig.json packages/c
 COPY packages/contracts/src packages/contracts/src
 COPY packages/llm/package.json packages/llm/tsconfig.json packages/llm/
 COPY packages/llm/src packages/llm/src
+# Prompt paketi (route/*.md, kilit, paketlenmiş metin) ve belge oluşturucu (deneme raporu PDF: React → HTML → Chromium;
+# gömülü fontlar, design-system tokens.css)
+COPY packages/prompts packages/prompts
+COPY packages/doc-render/package.json packages/doc-render/tsconfig.json packages/doc-render/
+COPY packages/doc-render/src packages/doc-render/src
+COPY packages/doc-render/fonts packages/doc-render/fonts
+COPY packages/design-system packages/design-system
 # Parametrik soru şablonları (sıfır LLM) ve doldurucu
 COPY apps/worker/py apps/worker/py
 COPY content/tyt-matematik/curriculum.json content/tyt-matematik/

@@ -28,6 +28,8 @@ const inputSchema = z.strictObject({
   memory: z.record(z.string().regex(/^\/memories\//), z.string()).optional(),
   /** Araç çalıştırıcılarının döndüreceği sabit veriler (araç adı → JSON). */
   tool_results: z.record(z.string(), z.unknown()).optional(),
+  /** Görseller: depo köküne göre yol (`fixtures/...png`); kullanıcı turunda metinden önce base64 görsel bloğu olur. */
+  images: z.array(z.string().regex(/^fixtures\/[A-Za-z0-9_./-]+\.(png|jpe?g)$/)).optional(),
 });
 
 const fakeReplySchema = z.strictObject({
@@ -61,6 +63,21 @@ export const coachExpected = z.strictObject({
     .optional(),
 });
 
+const bbox = z.strictObject({ x: z.number(), y: z.number(), w: z.number(), h: z.number() });
+
+export const examPageItemsExpected = z.strictObject({
+  item_nos: z.array(z.number().int().positive()),
+  continues_on_next: z.array(z.number().int().positive()),
+  continues_from_previous: z.array(z.number().int().positive()),
+  /** Şekilli sorular ve gerçek kutuları (IoU ≥ 0,5 beklenir). */
+  figures: z.array(z.strictObject({ no: z.number().int().positive(), bbox })),
+  /** Soru başına beklenen şık metinleri (KaTeX biçim farkları normalize edilir). */
+  options: z.array(z.strictObject({ no: z.number().int().positive(), texts: z.array(z.string()) })),
+  /** Kökte geçmesi gereken parçalar (normalize, küçük harf). */
+  stem_contains: z.array(z.strictObject({ no: z.number().int().positive(), text: z.string().min(1) })),
+  unreadable: z.boolean(),
+});
+
 const base = {
   id: z.string().regex(/^[a-z0-9-]+$/),
   title: z.string().min(3),
@@ -72,11 +89,12 @@ const base = {
 export const evalCaseSchema = z.discriminatedUnion('route', [
   z.strictObject({ ...base, route: z.literal('solution_diagnosis'), expected: diagnosisExpected }),
   z.strictObject({ ...base, route: z.literal('coach_chat'), expected: coachExpected }),
+  z.strictObject({ ...base, route: z.literal('exam_page_items'), expected: examPageItemsExpected }),
 ]);
 
 export type EvalCase = z.output<typeof evalCaseSchema>;
 export type EvalRoute = EvalCase['route'];
-export const EVAL_ROUTES: readonly EvalRoute[] = ['coach_chat', 'solution_diagnosis'];
+export const EVAL_ROUTES: readonly EvalRoute[] = ['coach_chat', 'exam_page_items', 'solution_diagnosis'];
 
 /** Vakaları okur ve doğrular (dosya adına göre sıralı). `route` verilirse yalnız o rota. */
 export function loadEvalCases(opts: { dir?: string; route?: string } = {}): EvalCase[] {

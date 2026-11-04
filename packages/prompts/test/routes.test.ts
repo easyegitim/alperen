@@ -26,9 +26,11 @@ describe('prompt meta ↔ geçit rota tablosu', () => {
     for (const p of allPrompts()) if (p.meta.schema !== null) expect(isSchemaName(p.meta.schema)).toBe(true);
   });
 
-  it('serbest metin rotaları araçlı ya da sohbet; yapılandırılmış rotalar araçsız (bu paketteki rotalar için)', () => {
+  it('yapılandırılmış rotalarda web araçları yok (Citations uyumsuz); araçlı yapılandırılmış rotalar yalnız kod ya da okuma araçları', () => {
+    const allowed = new Set(['code_execution', 'get_mastery', 'get_recent_exams']);
     for (const p of allPrompts()) {
-      if (p.meta.schema !== null) expect(p.meta.tools, p.meta.route).toEqual([]);
+      if (p.meta.schema === null) continue;
+      for (const t of p.meta.tools) expect(allowed.has(t), `${p.meta.route}: ${t}`).toBe(true);
     }
   });
 });

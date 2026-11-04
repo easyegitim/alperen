@@ -147,9 +147,10 @@ describe.skipIf(!live)('Yükle zinciri: submit_upload → pgboss.job → upload.
     // yeniden gönderim (yanıt kayboldu): aynı iş, yenisi atılmaz; işlenmiş küme sonuca yönlenir
     const again = await submit([b, a], 'own_work');
     expect(again).toMatchObject({ reused: true, job_id: r.job_id });
-    // alt küme, tür değişimi ve başka sayfa eklenmiş küme: OGR-UPL-003, ikinci iş yok, yeni sayfa stored
+    // alt küme ve başka sayfa eklenmiş küme: OGR-UPL-003, ikinci iş yok, yeni sayfa stored
     await expect(submit([b], 'own_work')).rejects.toThrow(/OGR-UPL-003/);
-    await expect(submit([a, b], 'school_exam')).rejects.toThrow(/OGR-UPL-003/);
+    // okul denemesi submit_upload'dan geçmez (0030): tek giriş yolu submit_exam_upload
+    await expect(submit([a, b], 'school_exam')).rejects.toThrow(/OGR-UPL-001/);
     const c = await upload();
     await expect(submit([a, c], 'own_work')).rejects.toThrow(/OGR-UPL-003/);
     expect((await intakeJobsWith(b)).map((j) => j.id)).toEqual([r.job_id]);
@@ -158,18 +159,26 @@ describe.skipIf(!live)('Yükle zinciri: submit_upload → pgboss.job → upload.
     expect((await tmp.pool.query('select count(*)::int as n from public.solution_analyses where upload_ids && $1::uuid[]', [[a, b]])).rows[0]!.n).toBe(1);
   });
 
-  it('Okul denemesi: bekleyen deneme kartı (upload:<ilk>) yenilemeden sonra da kalır', async () => {
+  it('Okul denemesi: submit_exam_upload → exam.analyse (gerçek kuyruk); kartı hattın vardığı durumu söyler, yenileme kartı korur', async () => {
     const d = await upload();
-    const r = await submit([d], 'school_exam');
-    expect(r).toMatchObject({ kind: 'school_exam', reused: false });
+    const r = await asElif(async (q) => (await q('select public.submit_exam_upload($1::uuid[], $2::jsonb) as r', [[d], '{}'])).rows[0]!.r as Record<string, unknown>);
+    expect(r).toMatchObject({ reused: false });
+    // submit_exam_upload doğrudan exam.analyse işini kuyruğa atar (oturum, sayfalar)
+    const job = await waitFor(async () => (await tmp.pool.query(`select data from pgboss.job where name = 'exam.analyse' and data -> 'upload_ids' ? $1`, [d])).rows[0]);
+    const sessionId = String(job.data.session_id);
+    // tek fotoğraf (Storage'sız sahte taşıma): hat ya biter ya da okuma hatasıyla düşer; ikisinde de oturum son durumda
+    const s = await waitFor(async () => {
+      const row = (await tmp.pool.query('select status, progress from public.exam_sessions where id = $1', [sessionId])).rows[0]!;
+      return ['done', 'failed'].includes(String(row.status)) ? row : null;
+    });
+    const expected = s.status === 'done' ? 'Deneme sonucun hazır' : 'Fotoğrafı okuyamadım';
     const before = await waitFor(async () => {
       const rows = await card(d);
-      return rows.length === 1 ? rows : null;
+      return rows.length === 1 && rows[0]!.title === expected ? rows : null;
     });
-    expect(before[0]).toMatchObject({ title: 'Deneme analizi yakında', payload: { copy_key: `upload:${d}`, pending: true } });
     await refresh();
     const after = await card(d);
     expect(after).toHaveLength(1);
-    expect(after[0]).toMatchObject({ id: before[0]!.id, title: 'Deneme analizi yakında', subtitle: before[0]!.subtitle, payload: { pending: true } });
+    expect(after[0]).toMatchObject({ title: expected, subtitle: before[0]!.subtitle });
   });
 });

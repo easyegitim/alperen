@@ -85,10 +85,11 @@ describe('Bugün: öneri sıralaması (arrangeToday)', () => {
     expect(metaLine(sug(1, 'practice', 0, { subtitle: 'Kısa tekrar' }))).toBe('Kısa tekrar');
     expect(boxLine(sug(1, 'weekly_homework', 0, { payload: { minutes: 20, count: 10 } }))).toBe('20 dk');
     expect(boxLine(sug(1, 'weekly_homework', 0, { payload: { count: 5 } }))).toBe('5 soru');
-    expect(noticeHref(sug(1, 'document_ready', 0, { payload: { document_id: id(7) } }))).toBe(`/ogrenci/gelisim/belgeler/${id(7)}`);
+    expect(noticeHref(sug(1, 'document_ready', 0, { payload: { document_id: id(7) } }))).toBe(`/ogrenci/belge/${id(7)}`);
     expect(noticeHref(sug(1, 'upload_result', 0, { payload: { upload_id: id(8), analysis_id: id(9) } }))).toBe(`/ogrenci/sonuc?analiz=${id(9)}`);
     expect(noticeHref(sug(1, 'upload_result', 0, { payload: { upload_id: id(8) } }))).toBe(`/ogrenci/sonuc?yukleme=${id(8)}`);
     expect(noticeHref(sug(1, 'upload_result', 0, { payload: { upload_id: '../x' } }))).toBeNull();
+    expect(noticeHref(sug(1, 'upload_result', 0, { payload: { upload_id: id(8), session_id: id(5), exam_id: id(4), analysis_id: null } }))).toBe(`/ogrenci/deneme/${id(5)}`);
     expect(noticeLine(sug(1, 'document_ready', 0))).toBe('PDF');
   });
 });

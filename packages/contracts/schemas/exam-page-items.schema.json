@@ -159,6 +159,11 @@
           "type": "null"
         }
       ]
+    },
+    "unreadable": {
+      "default": false,
+      "description": "Sayfa okunamayacak kadar bulanık, karanlık ya da kesik: true; o zaman items boş kalır",
+      "type": "boolean"
     }
   },
   "required": [

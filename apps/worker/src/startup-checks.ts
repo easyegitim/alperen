@@ -44,6 +44,7 @@ export const REQUIRED_QUEUES: readonly string[] = [
   'diagnosis.run',
   'diagnosis.followup',
   'conversation.summarize',
+  'exam.analyse',
   'exam.report',
   'document.generate',
   'weekly.summary',

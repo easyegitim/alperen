@@ -225,6 +225,22 @@ describe('teşhis sunumu (present)', () => {
     expect(await getDiagnosis(client, 'yok')).toBeNull();
   });
 
+  it('getDiagnosis: telifli deneme analizinde soru metni gizlenir, telifsizde ve normal yüklemede görünür', async () => {
+    const base = {
+      solution_analyses: [{ id: SA, enrollment_id: 'e1', upload_ids: [U1], question_text: 'Soru', analysis: ANALYSIS, verdict: 'wrong', failing_step_no: 3, error_cause: 'procedure', skill_ids: [], misconception_tags: [] }],
+      enrollments: [{ id: 'e1', curriculum_id: 'c1' }],
+    };
+    const exam = (copyrighted: boolean) => ({
+      ...base,
+      exam_responses: [{ solution_analysis_id: SA, session_id: 's1' }],
+      exam_sessions: [{ id: 's1', exam_id: 'x1' }],
+      exams: [{ id: 'x1', is_copyrighted: copyrighted }],
+    });
+    expect((await getDiagnosis(fakeClient(exam(true)).client, SA))?.questionText).toBeNull();
+    expect((await getDiagnosis(fakeClient(exam(false)).client, SA))?.questionText).toBe('Soru');
+    expect((await getDiagnosis(fakeClient(base).client, SA))?.questionText).toBe('Soru');
+  });
+
   it('getDiagnosis yeni öğrencide (tek kanıt): bant yerine "henüz az kanıt", lowEvidence', async () => {
     const { client } = fakeClient({
       solution_analyses: [{ id: SA, enrollment_id: 'e1', upload_ids: [U1], question_text: 'Soru', analysis: ANALYSIS, verdict: 'wrong', failing_step_no: 3, error_cause: 'procedure', skill_ids: ['tyt.mat.temel.sayilar'], misconception_tags: [] }],

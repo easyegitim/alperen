@@ -124,6 +124,80 @@ export function scoreCoach(c: Extract<EvalCase, { route: 'coach_chat' }>, out: C
   return finish(c, checks);
 }
 
+export interface ExamPageItemsOutput {
+  items: {
+    no: number;
+    stem_text: string;
+    options: { key: string; text: string }[];
+    continues_from_previous: boolean;
+    continues_on_next: boolean;
+    figures: { bbox: { x: number; y: number; w: number; h: number } }[];
+  }[];
+  unreadable: boolean;
+}
+
+/** KaTeX yazım farklarını düzler: `$\frac{1}{2}$` ≈ `1/2`, `0{,}25` ≈ `0,25`, `\le` ≈ `≤`, boşluklar yok. */
+export function normalizeMath(s: string): string {
+  return s
+    .replace(/\$/g, '')
+    .replace(/\\[dt]?frac\{([^{}]*)\}\{([^{}]*)\}/g, '$1/$2')
+    .replace(/\{,\}/g, ',')
+    .replace(/\\leq?(?![a-z])/g, '≤')
+    .replace(/\\geq?(?![a-z])/g, '≥')
+    .replace(/\\cdot/g, '·')
+    .replace(/\\(left|right)/g, '')
+    .replace(/[−–]/g, '-')
+    .replace(/\s+/g, '')
+    .toLocaleLowerCase('tr');
+}
+
+function iou(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }): number {
+  const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+  const iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  const inter = ix * iy;
+  const union = a.w * a.h + b.w * b.h - inter;
+  return union <= 0 ? 0 : inter / union;
+}
+
+const sameSet = (a: readonly number[], b: readonly number[]) => JSON.stringify([...a].sort((x, y) => x - y)) === JSON.stringify([...b].sort((x, y) => x - y));
+
+export function scoreExamPageItems(c: Extract<EvalCase, { route: 'exam_page_items' }>, out: ExamPageItemsOutput): CaseScore {
+  const e = c.expected;
+  const byNo = new Map(out.items.map((i) => [i.no, i]));
+  const nos = out.items.map((i) => i.no);
+  const checks: Check[] = [
+    { name: 'okunabilirlik', pass: out.unreadable === e.unreadable },
+    { name: 'soru numaraları', pass: sameSet(nos, e.item_nos), detail: `${nos.join(',')} / beklenen ${e.item_nos.join(',')}` },
+    {
+      name: 'sonraki sayfaya devam',
+      pass: sameSet(out.items.filter((i) => i.continues_on_next).map((i) => i.no), e.continues_on_next),
+    },
+    {
+      name: 'önceki sayfadan devam',
+      pass: sameSet(out.items.filter((i) => i.continues_from_previous).map((i) => i.no), e.continues_from_previous),
+    },
+    {
+      name: 'şekilli sorular',
+      pass: sameSet(out.items.filter((i) => i.figures.length > 0).map((i) => i.no), e.figures.map((f) => f.no)),
+    },
+  ];
+  for (const f of e.figures) {
+    const got = byNo.get(f.no)?.figures[0]?.bbox;
+    const v = got ? iou(got, f.bbox) : 0;
+    checks.push({ name: `soru ${f.no} şekil kutusu (IoU ≥ 0,5)`, pass: v >= 0.5, detail: v.toFixed(2) });
+  }
+  for (const o of e.options) {
+    const got = (byNo.get(o.no)?.options ?? []).map((x) => normalizeMath(x.text));
+    const want = o.texts.map(normalizeMath);
+    checks.push({ name: `soru ${o.no} şıkları`, pass: JSON.stringify(got) === JSON.stringify(want), detail: `${got.join(' | ')} / beklenen ${want.join(' | ')}` });
+  }
+  for (const s of e.stem_contains) {
+    const stem = normalizeMath(byNo.get(s.no)?.stem_text ?? '');
+    checks.push({ name: `soru ${s.no} kökü: ${s.text}`, pass: stem.includes(normalizeMath(s.text)) });
+  }
+  return finish(c, checks);
+}
+
 export function errorScore(c: EvalCase, err: unknown): CaseScore {
   const msg = err instanceof Error ? err.message : String(err);
   return { id: c.id, route: c.route, checks: [{ name: 'çağrı', pass: false, detail: msg }], score: 0, pass: false, error: msg };

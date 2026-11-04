@@ -52,13 +52,26 @@ ile (sunucu havuzu) çözer, bellek kipinde kaynak vermeden çağırır (kilit v
 |---|---|---|---|---|---|
 | `coach_chat` | v1 | coach | Sonnet · medium | — | get_mastery, get_recent_exams, memory, record_turn_meta, search_evidence |
 | `coach_deep` | v1 (`extends: coach_chat/v1`) | coach | Opus · high | — | aynı |
-| `solution_diagnosis` | v1 | analyst | Opus · high | solution-diagnosis | — |
+| `solution_diagnosis` | v2 (`extends: solution_diagnosis/v1`; v1 + deneme bağlamı `<exam_context>`) | analyst | Opus · high | solution-diagnosis | — |
+| `page_class` | v1 | analyst | Haiku · low | page-class | — |
+| `exam_page_items` | v1 | analyst | Sonnet · medium | exam-page-items | — |
+| `answer_sheet` | v1 | analyst | Sonnet · medium | answer-sheet | — |
+| `inferred_keys` | v1 | analyst | Opus · high | inferred-keys | code_execution |
+| `exam_report` | v1 | generator | Sonnet · medium | exam-report | get_mastery, get_recent_exams |
 | `curriculum_research` | v1 | curriculum_author | Opus · high | — | web_fetch, web_search |
 | `curriculum_draft` | v1 | curriculum_author | Opus · high | curriculum-draft | — |
 | `memory_delta` | v1 | analyst | Haiku · low | memory-delta | — |
 | `conversation_summary` | v1 | analyst | Haiku · low | conversation-summary | — |
 | `suggestions_copy` | v1 | generator | Haiku · low | notification-copy | — |
 | `parent_chat` | v1 (iskelet) | parent_agent | Sonnet · low | — | get_child_summary, get_exam_sessions, get_mastery_overview, get_recent_activity, get_reports, request_report |
+
+Deneme rotalarının kullanıcı turu metinleri `src/exam-input.ts`'teki kurucularla yazılır (prompt gövdeleri bu biçimi
+anlatır): `pageClassUserText`, `examPageItemsUserText`, `answerSheetUserText`, `inferredKeysUserText`,
+`examReportUserText` (`<exam_result>` JSON), `examContextText` (`<exam_context>`; teşhis v2). Her sayfa metni
+`Yükleme sırası: sayfa N/T.` satırıyla başlar; sahte taşıma (OGRENMEN_LLM=fake) packages/llm/fixtures'taki eşlemeli
+fikstürü bu satırdan (`uploadOrderMatch`) ve teşhiste `examContextMatch(no)` ile seçer. Kullanıcı verisi (deneme adı)
+etiket ve satır sonu temizlenerek yazılır; veri bloğu kapatılamaz. Görsel isteyen üç prompt (sayfa, kitapçık, optik)
+görsel okunamıyorsa `unreadable: true` yazmayı ve tahmin etmemeyi söyler.
 
 Model, effort, şema ve araçlar geçidin rota tablosuyla (`packages/llm/src/routes.ts`) birebir aynı olmalıdır;
 `test/routes.test.ts` denetler.
@@ -106,7 +119,11 @@ claude-api `shared/prompt-audit.md` ile uyumlu; `src/lint.ts` derlemede ve testt
 ## Eval
 
 `eval/solution_diagnosis/` 5 sentetik vaka (Türkçe el yazısı transkripsiyonu metin olarak: kavram, dikkatsizlik,
-okuma, doğru çözüm, süre), `eval/coach_chat/` 3 vaka (ipucu modunda cevap vermeme, mod önerisi, hocana sor).
+okuma, doğru çözüm, süre), `eval/coach_chat/` 4 vaka (ipucu modunda cevap vermeme, mod önerisi, hocana sor, kayıt),
+`eval/exam_page_items/` 2 görselli vaka (`input.images`: `fixtures/exams/synthetic/booklet-p{1,2}.png`, gerçek kipte
+base64 görsel bloğu olarak gider; sayfa 1: şekil kutusu ve sonraki sayfaya devam, sayfa 2: numarasız başlayan devam).
+Kitapçık puanlayıcısı: soru numaraları, devam bayrakları, şekilli sorular ve kutunun IoU ≥ 0,5'i, şık metinleri
+(`normalizeMath` KaTeX yazım farklarını düzler), kökte geçmesi gereken parçalar, `unreadable`.
 Her vaka girdi, beklenen alanlar ve `fake_reply` (sahte kip betiği) taşır. Puanlayıcı deterministiktir: teşhiste
 verdict, ilk bozulan adım, neden, kazanım, yanılgı etiketi, alt kazanım önerisi, `why_tr` tek cümle ve ünlemsiz;
 koçta yasak/gerekli ifadeler, soru sorma, cümle sayısı, yüzde ve ünlem yokluğu, tur kaydı (mod önerisi, eğitmene iletme).
@@ -127,6 +144,8 @@ ANTHROPIC_API_KEY=… bun run --cwd packages/prompts eval    # aynı komut gerç
 
 - `eval_judge` hakemi (Opus, Batch) için prompt ve `eval_runs` yazımı; aktivasyon kapısı (hakem puanı belirgin
   düşerse `prompt_versions.active` açılmaz). `scripts/eval.ts` şimdilik yalnız deterministik puan verir.
-- Diğer rotaların promptları (deneme OCR, rapor, not/deneme üretimi, ders analizi, veli bildirimi…) sonraki fazlarda.
+- Diğer rotaların promptları (not/deneme üretimi, ders analizi, veli bildirimi…) sonraki fazlarda. Deneme rotaları
+  (P2) gerçek modelle hiç koşmadı: `ANTHROPIC_API_KEY=… bun run eval --route exam_page_items` ilk anahtarla denenmeli;
+  `page_class`, `answer_sheet`, `inferred_keys`, `exam_report` için eval vakası henüz yok (sahte fikstürleri var).
 - Gerçek çözüm fotoğraflarıyla eval seti (kurucunun ~60 fotoğrafı) geldiğinde `eval/solution_diagnosis` görselli
   vakalarla genişler; şu an girdi yalnız metin transkripsiyonudur.

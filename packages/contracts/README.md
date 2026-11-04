@@ -57,6 +57,17 @@ Rapor kipi (`kinds` yalnız `['report']`: `exam-report`, `report-ast`): veli oku
 ve `answer_key_page` blokları, `figure.source='upload'` (ham `uploads`) ve boş olmayan `keys[]` loose doğrulamada
 reddedilir; veliye görünen bütün metin alanlarında ünlem ve emoji yasaktır (`latex` ve `svg` hariç).
 
+Deneme sayfası sözleşmeleri (P2 ekleri, `added`: strict kipte zorunlu, eski veride varsayılan): `page-class`
+`printed_page_number` (basılı sayfa no ya da null) ve `unreadable`; `exam-page-items` ve `answer-sheet` sayfa düzeyinde
+`unreadable` (true iken `items`/`answers` boş olmalı; refine), `answer-sheet.answers[].confidence`. Çift işaret
+`status: multiple` (marked_option null, `marks_seen` ≥ 2, not zorunlu) notlamada boş sayılır.
+
+Deneme raporu şablonu (`exam-report` loose kuralları, `EXAM_REPORT_TEMPLATE`, `EXAM_REPORT_CHARTS`): bölümler 1 genel
+görünüm, 2 kazanımlar, 3 sonraki adım; ilk metin bloğu bölüm 1'de tek cümlelik özet paragrafı; `chart.data_ref`
+yalnız `section_nets` (score_by_section), `skill_map` (skill_heatmap), `error_causes` (error_cause_histogram),
+`time_per_question`, `trend` (mastery_trend) ve türüyle eşleşir (packages/doc-render `ChartDataMap` anahtarları);
+özet kutusu en çok 3 madde. `report-ast` bu kurallara bağlı değildir.
+
 Strict kipte `minItems: 1` (loose'ta en az 1 isteyen dizilerde) ile `uuid`/`date`/`date-time` biçimleri korunur; API bunları destekler.
 
 Tarza özel soru üretimi sözleşmesi `style-question-generation` adıyla kayıtlıdır (PLAN-v2 rota tablosundaki

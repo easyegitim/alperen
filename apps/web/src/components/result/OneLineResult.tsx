@@ -14,6 +14,8 @@ export interface ResultScore {
 export interface OneLineResultProps {
   /** Büyük skor ("6/8"); teşhis sonucunda verilmez. */
   score?: ResultScore;
+  /** Büyük sayı metni ("27,5 net"); skor yerine (deneme sonucu). */
+  big?: { text: string; label: string };
   /** Soru sırasıyla doğru (true), yanlış (false), cevapsız (null) noktaları. */
   dots?: Array<boolean | null>;
   /** Tek cümle sonuç: sayfanın h1'i. */
@@ -30,6 +32,10 @@ export interface OneLineResultProps {
   coachHref?: string;
   /** Üstte maskot gibi ek görsel. */
   top?: ReactNode;
+  /** Detay açık başlasın (ör. "Nereye kadar geldim?" dönüşü). */
+  defaultDetailOpen?: boolean;
+  /** "Detay"dan sonra ek sessiz eylem (ör. "Raporu aç (PDF)"); birincil düğme değildir. */
+  extra?: ReactNode;
 }
 
 /**
@@ -37,14 +43,20 @@ export interface OneLineResultProps {
  * "Neyi öğrendik" kartı; altta tek birincil "Devam et", sessiz "Detay" (katlı) ve küçük "Koça sor".
  * Test (alıştırma) ve teşhis sonuçları aynı bileşeni kullanır.
  */
-export function OneLineResult({ score, dots, sentence, learned, primary, detail, detailHref, coachHref, top }: OneLineResultProps) {
-  const [open, setOpen] = useState(false);
+export function OneLineResult({ score, big, dots, sentence, learned, primary, detail, detailHref, coachHref, top, defaultDetailOpen = false, extra }: OneLineResultProps) {
+  const [open, setOpen] = useState(defaultDetailOpen);
   const panelId = useId();
   const hasDetail = detail != null && detail !== false;
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-48px)] w-full max-w-md flex-col">
       <div className="flex flex-1 flex-col items-center justify-center gap-8 px-2 py-8 text-center">
         {top}
+        {big ? (
+          <p className="text-display m-0 text-primary tabular-nums" data-testid="buyuk-sayi">
+            <span aria-hidden="true">{big.text}</span>
+            <span className="sr-only">{big.label}</span>
+          </p>
+        ) : null}
         {score ? (
           <div className="flex flex-col items-center gap-4">
             <p className="text-display m-0 text-primary tabular-nums" data-testid="skor">
@@ -96,6 +108,7 @@ export function OneLineResult({ score, dots, sentence, learned, primary, detail,
             Detay
           </Link>
         ) : null}
+        {extra}
         {coachHref ? (
           <Link href={coachHref} className="text-small inline-flex min-h-11 items-center self-center rounded-md px-3 text-ink-muted">
             Koça sor

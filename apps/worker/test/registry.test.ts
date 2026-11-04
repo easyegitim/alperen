@@ -30,7 +30,18 @@ describe('iş kayıt defteri', () => {
   });
 
   it('işleyicisi olmayan SQL iş adları da kuyruk olarak kayıtlıdır', () => {
-    for (const n of ['exam.report', 'document.generate', 'memory.correction']) expect(getJob(n)?.handler).toBeNull();
+    for (const n of ['document.generate', 'memory.correction']) expect(getJob(n)?.handler).toBeNull();
+  });
+
+  it('deneme işleri işleyicili (P2): exam.analyse, exam.report', () => {
+    expect(getJob('exam.analyse')?.handler).toBeTypeOf('function');
+    expect(getJob('exam.report')?.handler).toBeTypeOf('function');
+    const id = '00000000-0000-0000-0000-000000000001';
+    expect(getJob('exam.analyse')!.payload.safeParse({ session_id: id, exam_id: id, upload_ids: [] }).success).toBe(false);
+    expect(getJob('exam.analyse')!.payload.safeParse({ session_id: id, exam_id: id, upload_ids: [id], enrollment_id: id, student_id: id }).success).toBe(true);
+    // diagnosis.run: deneme bağlamı fotoğrafsız (yalnız metin) olabilir, Kendi çalışmam olamaz
+    expect(getJob('diagnosis.run')!.payload.safeParse({ upload_ids: [], enrollment_id: id }).success).toBe(false);
+    expect(getJob('diagnosis.run')!.payload.safeParse({ upload_ids: [], enrollment_id: id, context: 'exam', exam_response_id: id, question_no: 4, how_far_text: 'x' }).success).toBe(true);
   });
 
   it('practice.generate ve practice.prewarm işleyicili (ilk Başla çıkmazı kapandı)', () => {

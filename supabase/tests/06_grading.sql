@@ -109,11 +109,16 @@ begin
   perform t.ok(public.grade_exam_session(t.u('S')) = t.v('score')::jsonb, 'tekrar notlama aynı skoru döner');
   perform t.raises(format($q$select public.record_exam_response(%L, %L, 'A')$q$, t.u('S'), t.u('Q2')), 'OGR-EXAM-003%',
                    'bitmiş oturumda cevap değiştirilemez');
-  perform public.record_exam_response(t.u('S'), t.u('Q2'), null, null, null, null, 'İkinci adımda takıldım');
+  perform t.raises(format($q$select public.record_exam_response(%L, %L, null, null, null, null, 'İkinci adımda takıldım')$q$, t.u('S'), t.u('Q2')),
+                   'OGR-EXAM-003%exam_how_far%', 'bitmiş oturumda "nereye kadar geldim" record_exam_response ile yazılmaz (exam_how_far)');
+  perform public.record_exam_response(t.u('S'), t.u('Q2'), null, 50, true);  -- işaret/süre bitmiş oturumda da yazılır
+  perform t.ok(public.exam_session_view(t.u('S')) -> 'summary' ->> 'counts_line' = '8 soruda 2 doğru, 1 yanlış, 3 boş, 2 notlanmadı.'
+               and public.exam_session_view(t.u('S')) -> 'summary' ->> 'one_line' like 'Net 1,75%',
+               'sayı satırı: notlanmayan sorular sayıya girer, toplam tutar (' || coalesce(public.exam_session_view(t.u('S')) -> 'summary' ->> 'counts_line', '-') || ')');
   perform t.as_admin();
   perform t.ok((select count(*) from public.observations o where o.enrollment_id = t.u('EA')) = v_n, 'tekrar notlama yeni gözlem yazmaz');
-  perform t.ok((select r.how_far_text = 'İkinci adımda takıldım' and r.answer = 'C' and r.flagged from public.exam_responses r
-                 where r.session_id = t.u('S') and r.exam_question_id = t.u('Q2')), 'bitmiş oturumda "nereye kadar geldim" yazılır, cevap korunur');
+  perform t.ok((select r.how_far_text is null and r.answer = 'C' and r.flagged from public.exam_responses r
+                 where r.session_id = t.u('S') and r.exam_question_id = t.u('Q2')), 'bitmiş oturumda cevap ve nereye-kadar alanı korunur');
 end $$;
 
 -- Tekrar deneme: aynı sınav + kayıt için ikinci notlanan oturum ustalığı değiştirmez (anahtar avı / kanıt şişirme yok)

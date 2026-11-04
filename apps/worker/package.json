@@ -19,12 +19,14 @@
   },
   "dependencies": {
     "@ogrenmen/contracts": "workspace:*",
+    "@ogrenmen/doc-render": "workspace:*",
     "@ogrenmen/llm": "workspace:*",
     "@ogrenmen/prompts": "workspace:*",
     "@supabase/supabase-js": "2.118.0",
     "pg": "^8.23.1",
     "pg-boss": "^12.38.0",
     "playwright-core": "1.56.1",
+    "sharp": "0.35.5",
     "tsx": "^4.20.0",
     "web-push": "^3.6.7",
     "zod": "^4.1.0"
