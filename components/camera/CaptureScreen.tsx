@@ -11,13 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { track } from "@/lib/analytics";
-import { submitDeviceAnalysis } from "@/lib/api/analysisClient";
+import { submitDeviceAnalysis, submitRunAnalysis, type ViewImage } from "@/lib/api/analysisClient";
 import { ApiClientError } from "@/lib/api/client";
 import { VisionClient } from "@/lib/face/client";
 import { DEVICE_STEP_MIN_MS, finishDeviceProgress, markDeviceStep, startDeviceProgress, type DeviceProgress } from "@/lib/face/deviceProgress";
 import { findHairline, propagateHairline } from "@/lib/face/hairline";
 import { sourceHashesFor } from "@/lib/face/hash";
 import { computeStableGeometry, toPixels, type GeometryFrame } from "@/lib/face/metrics";
+import { cropViewForServer } from "@/lib/face/viewCrop";
 import { qualitySummary } from "@/lib/face/quality";
 import { bindSessionSelfie, setSessionSelfie, setSessionViews, type SessionView } from "@/lib/face/sessionStore";
 import type { GeometryResult } from "@/lib/face/types";
@@ -51,12 +52,35 @@ type Captures = Partial<Record<ViewKey, CaptureResult>>;
 /** Zorunlu yan profil: iki profilden hangisi çekildiyse (KB P#4: "zorunlu yan profil iki profilden biri sayılır"). */
 const hasProfile = (c: Captures) => PROFILE_VIEWS.some((v) => c[v] !== undefined);
 
+/** Sunucuya gidecek set: ön 768 px + yan açılar 640 px JPEG (CONTRACTS_V2 §2.1); yalnız bellekte, yalnız POST /api/analyses*. */
+async function encodeCapturedSet(front: CaptureResult, sides: readonly { view: ViewKey; bitmap: ImageBitmap; sourceHash: string | null }[]): Promise<ViewImage[]> {
+  const frontPx = front.final.landmarks ? toPixels(front.final.landmarks, front.final.width, front.final.height) : null;
+  const out: ViewImage[] = [{ view: "front", blob: await cropViewForServer(front.image.bitmap, frontPx, "front"), sourceHash: front.sourceHash }];
+  for (const v of sides) out.push({ view: v.view, blob: await cropViewForServer(v.bitmap, null, v.view), sourceHash: v.sourceHash });
+  return out;
+}
+
+/** Bu analiz için hak var mı (sunucu kararı; abonelik ya da bu analize bağlı/bağlanmamış tek seferlik rapor). Hata → false. */
+async function analysisEntitled(analysisId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/billing/status?analysis=${encodeURIComponent(analysisId)}`, { credentials: "same-origin", cache: "no-store" });
+    if (!res.ok) return false;
+    const s = (await res.json()) as { analysisEntitled?: boolean | null };
+    return s.analysisEntitled === true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * /tara ekranı (F05, v2). Ön + yan profil zorunlu; 45°×2, ikinci profil ve saç çizgisi isteğe bağlı. Cihaz analizi (geometri,
  * oranlar, yüz şekli ön değerlendirmesi) yalnız ön fotoğraftan. "Analizi başlat": POST /api/analyses mode device_only —
  * görsel GÖNDERİLMEZ, LLM çağrılmaz; fotoğraflar ödeme sonrası tek POST için bellekte kalır. 478 nokta cihazdan çıkmaz.
+ * Hak varsa (abonelik ya da ödenmiş tek seferlik rapor) set hemen POST /api/analyses/[id]/run ile gönderilir ve sonuç kart
+ * kart açılır. `resumeAnalysisId` (/tara?analysis=…): ödeme sonrası çekime dönüş — cihaz analizi yeniden yapılmaz, set
+ * doğrudan o analize gönderilir (cihaz oranları ve ön değerlendirme değişmez, KB §4.2/7).
  */
-export function CaptureScreen({ aiProviderName }: { aiProviderName: string }) {
+export function CaptureScreen({ aiProviderName, resumeAnalysisId = null }: { aiProviderName: string; resumeAnalysisId?: string | null }) {
   const t = useTranslations("camera.captured");
   const tv = useTranslations("camera.views");
   const ta = useTranslations("analysis");
@@ -190,8 +214,33 @@ export function CaptureScreen({ aiProviderName }: { aiProviderName: string }) {
       // relaxed yalnız saklanan üst veridir; hiçbir skoru değiştirmez (C7).
       const geometry: GeometryResult = front.relaxed ? { ...g, quality: { ...g.quality, relaxed: true } } : g;
       const viewKeys = ["front", ...sideViews.map((v) => v.view)];
+      const sendSet = async (analysisId: string, resume: boolean) => {
+        track("full_analysis_submitted", { views: viewKeys.join(","), count: viewKeys.length, hashed: sourceHashes !== null, resume });
+        await submitRunAnalysis({ analysisId, images: await encodeCapturedSet(front, sideViews) });
+      };
+      if (resumeAnalysisId) {
+        // Ödeme sonrası çekime dönüş: satır zaten var; görseller bu analize gider, sonuç ekranı kart kart açar.
+        await sendSet(resumeAnalysisId, true);
+        await tick("save");
+        s = finishDeviceProgress(s);
+        setProgress(s);
+        setPhase("done");
+        await sleep(DONE_HOLD_MS);
+        if (capturedAtRef.current !== null) bindSessionSelfie(resumeAnalysisId, capturedAtRef.current);
+        router.push(`/analiz/${resumeAnalysisId}`);
+        return;
+      }
       track("device_analysis_submitted", { views: viewKeys.join(","), count: viewKeys.length, hashed: sourceHashes !== null });
       const analysis = await submitDeviceAnalysis({ clientRequestId: requestIdRef.current, geometry, sourceHashes });
+      // Hak zaten varsa (abonelik / bağlanmamış ödenmiş rapor) set bellekteyken hemen gider; hata sonucu engellemez
+      // (sonuç ekranındaki "Çekime dön" kartı yeniden gönderir).
+      if (analysis.stage === "device_only" && (await analysisEntitled(analysis.id))) {
+        try {
+          await sendSet(analysis.id, false);
+        } catch (e) {
+          track("analysis_failed", { reason: e instanceof ApiClientError ? e.code : "NETWORK" });
+        }
+      }
       if (saveProgress) {
         // SPEC 11.2: yalnız cihazda (IndexedDB); sunucuya gitmez.
         try {
@@ -365,6 +414,12 @@ export function CaptureScreen({ aiProviderName }: { aiProviderName: string }) {
               <span className="mt-0.5 block text-[11px] text-muted-foreground">{t("saveProgressHint")}</span>
             </span>
           </label>
+          {resumeAnalysisId ? (
+            <p className="flex items-start gap-2 rounded-xl border bg-brand-soft/40 p-3 text-[13px]" role="note">
+              <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" />
+              <span>{t("resumeNote")}</span>
+            </p>
+          ) : null}
           {error ? (
             <p role="alert" className="flex items-start gap-2.5 rounded-xl border border-dashed p-3 text-sm">
               <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warn" />
@@ -379,7 +434,7 @@ export function CaptureScreen({ aiProviderName }: { aiProviderName: string }) {
               {t("retake")}
             </Button>
             <Button size="lg" className="flex-[1.4]" disabled={startDisabled} onClick={() => geometry && void runDeviceAnalysis(geometry)}>
-              {ta("start")}
+              {resumeAnalysisId ? t("resumeStart") : ta("start")}
             </Button>
           </div>
           <p className="flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">

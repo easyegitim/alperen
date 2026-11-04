@@ -56,3 +56,17 @@ export async function submitFullAnalysis(params: { clientRequestId: string; geom
   if (!res) throw new Error("empty_response");
   return res;
 }
+
+/**
+ * Ödeme sonrası görsel gönderimi (CONTRACTS_V2 §2.3/3 + PLAN 3a retry): POST /api/analyses/[id]/run. device_only satırı
+ * kotaya sayılıp sıraya alınır; failed/takılı iş yeniden başlar. Görseller sunucuda saklanmadığı için set her seferinde
+ * istemciden gider; sourceHashes yalnız bütün görseller galeri dosyasıysa (KB Ç11). Yanıt: 202 ClientAnalysisV2 (queued/running).
+ */
+export async function submitRunAnalysis(params: { analysisId: string; images: ViewImage[] }): Promise<ClientAnalysisV2> {
+  const images = await Promise.all(params.images.map(async (i) => ({ view: i.view, data: await blobToBase64(i.blob) })));
+  const hashes = params.images.map((i) => i.sourceHash);
+  const sourceHashes = hashes.every((h): h is string => h !== null) ? hashes : null;
+  const res = await postJson<ClientAnalysisV2>(`/api/analyses/${encodeURIComponent(params.analysisId)}/run`, { images, ...(sourceHashes ? { sourceHashes } : {}) });
+  if (!res) throw new Error("empty_response");
+  return res;
+}

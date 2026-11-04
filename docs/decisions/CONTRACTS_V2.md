@@ -91,6 +91,7 @@ type AnalysisInput = {
    - `maxDuration` plan sınırına göre (Vercel Pro 300 s); süre sınırı yok ama `fail_stuck_jobs` 2 saatte takılı sayar.
    - İlk ödeme öncesi analiz olmadan doğrudan `full` gelirse: `reserve_analysis(..., 'queued')` ile aynı kota kuralı.
 4. **Yoklama** `GET /api/analyses/[id]` → `ClientAnalysisV2` (rota `AccessV2` hesaplar, §3.4). İstemci `stage` ve `sectionsReady` ile kart kart açar (W2 `RevealSequence`).
+   - **Ödeme sonrası görsel gönderimi (entegrasyon, 4 Kas):** iyzico yönlendirmesi sekme belleğini sildiği için set yeniden çekilir: sonuç ekranındaki "Çekime dön" → `/tara?analysis=<id>` → `POST /api/analyses/[id]/run { images[], sourceHashes? }`. Rota `device_only` satırı hak + `promote_analysis` ile sıraya alır (kota burada sayılır), `failed`/takılı işi yeniden başlatır, `completed` satırı olduğu gibi döner. `clientRequestId` gerekmez. Hak zaten varsa (abonelik / bağlanmamış ödenmiş rapor) çekim ekranı `device_only` yanıtından hemen sonra aynı seti bellekten `run`'a yollar (`GET /api/billing/status?analysis=` ile). Geometri satırdakidir; cihaz oranları ve ön yüz şekli ödeme sonrası değişmez (KB §4.2/7).
 5. **Set önbelleği** (`lib/score/setKey.ts`, W3): `set_key = HMAC-SHA-256(SET_CACHE_SECRET, hashes.slice().sort().join("\n"))` hex. `analysis_sets` satırı varsa ve `expires_at > now()` ise saklı `scores` kopyalanır, model çağrılmaz (Ç11). Secret yoksa önbellek kapalı. Kamera çekimi her zaman yeni settir; eşleşme yalnız galeriden gelen orijinal dosyalarda.
 
 Hak kaynakları (`AccessV2.entitled`, W2 `lib/billing/entitlement.ts`): `purchases(product='one_time_report', status='paid', analysis_id = this)` **veya** `purchases/subscriptions` aktif abonelik (analiz oluşturulurken ya da şimdi). `referralUnlock`: `FEATURE_REFERRAL_UNLOCK=true` ve `referrals where referrer_id = user and photo_submitted_at is not null` sayısı ≥ 5. `percentile`: `FEATURE_PERCENTILE=true`.
@@ -155,7 +156,8 @@ AnalysisFailure= { code: "AI_FAILED"|"AI_TIMEOUT"|"AI_SAFETY_BLOCKED"|"NO_FACE"|
 
 | Durum | device | overall | subscores | potential | explanations | report | improveFirst | faceShape.detailed | sectionsReady |
 |---|---|---|---|---|---|---|---|---|---|
-| `device_only` / `queued` / `running` / `failed` | açık | kilitli | kilitli | kilitli | kilitli | kilitli | kilitli | yok (agree null) | `["device"]` |
+| `device_only` / `queued` / `failed`; `running` hak yok | açık | kilitli | kilitli | kilitli | kilitli | kilitli | kilitli | yok (agree null) | `["device"]` |
+| `running`, **entitled** (kart kart açılış, KB P#23) | açık | `sections_ready`'de ise açık, değilse `{null, locked:false}` | aynı | aynı | aynı | aynı | aynı | `faceShape` hazırsa var | satırdaki liste |
 | `completed`, hak yok | açık | kilitli | kilitli | kilitli | kilitli | kilitli | kilitli | yok | `["device"]` |
 | `completed`, **referralUnlock** (hak yok) | açık | `{value, range:null, percentile:null}` | kilitli | kilitli | kilitli | kilitli | kilitli | yok | `["device"]` |
 | `completed`, **entitled** | açık | `{value, range, percentile?}` | `{value, range}` | `{value, range, delta}` | açık | açık | açık | var; `agree = detailed.shape === prelim.primary` | satırdaki liste |
@@ -244,7 +246,7 @@ Korunan e2e metinleri: `camera.guide.open = "Kamerayı aç"`, `analysis.start = 
 
 1. `lib/config/ai.server.ts` `hybrid.v2` okumuyor; `prepareScoring`/`scoreAnalysis` v1'de. **W3** bağlar.
 2. `lib/score/setKey.ts` (HMAC) ve `app/api/analyses/[id]/run` yok; algoritma §2.3'te. **W3**.
-3. `AccessV2` hesabı (`purchases`/`subscriptions`/`referrals`) yok. **W2** `lib/billing/entitlement.ts` genişletir.
+3. `AccessV2` hesabı: tek kaynak `lib/billing/{entitlement,purchases}.ts` (W2); `lib/score/engine/access.ts` yalnız yeniden dışa aktarır (entegrasyon, 4 Kas).
 4. Fiyatlar, teklif süresi, deneme hakları, e-posta ile giriş, yaw işareti: yer tutucu/varsayım; kurucu ve W1 doğrular.
 5. `0010` yalnız yerel; `pnpm db:types` push sonrası. `lib/db/types.ts` geçici aynadır (CLAUDE.md "tablo tipleri elle yazılmaz" kuralından bilinçli, geçici sapma; dosya üretilen tiple değiştirilecek).
 6. `0004 fail_stuck_jobs` 0010'da yeniden tanımlandı (queued/running 2 saat); SPEC 13.4 satırı buna göre okunmalı.

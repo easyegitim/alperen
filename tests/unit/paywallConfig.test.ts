@@ -54,6 +54,7 @@ const EVENT_NAMES: Record<AnalyticsEventName, true> = {
   capture_quality_prompt: true,
   device_analysis_submitted: true,
   device_analysis_completed: true,
+  full_analysis_submitted: true,
   referral_code_viewed: true,
   referral_claimed: true,
 };

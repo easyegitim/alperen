@@ -3,7 +3,7 @@ import { withGuard } from "@/lib/api/guard";
 import { getPremiumStatus } from "@/lib/api/premium";
 import { getTeaserConfig } from "@/lib/config/teaser";
 import { createAdminClient } from "@/lib/db/admin";
-import { getAccessV2 } from "@/lib/score/engine/access";
+import { getAccessV2 } from "@/lib/billing/purchases";
 import { toClientAnalysis, type AnalysisRow } from "@/lib/score/present";
 import { isV2Row, loadRowById, presentV2 } from "../v2";
 

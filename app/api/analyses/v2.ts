@@ -8,10 +8,13 @@ import { decodeImages } from "@/lib/api/analysesInput";
 import { ApiError } from "@/lib/api/errors";
 import { isUnlimitedQuota } from "@/lib/api/quota";
 import { effectiveLimit } from "@/lib/billing/entitlement";
+import type { AccessDetail } from "@/lib/billing/entitlement";
+import { bindOneTimePurchase, getAccessV2 } from "@/lib/billing/purchases";
 import { ENGINE_H2, SET_CACHE_SECRET_ENV } from "@/lib/config/engine.h2.server";
+import { isFeatureEnabled } from "@/lib/config/flags";
 import { ENTITLEMENTS } from "@/lib/config/plans";
 import type { GeometryResult } from "@/lib/face/types";
-import { bindOneTimePurchase, getAccessV2, type AccessDetail } from "@/lib/score/engine/access";
+import { checkServerCapture, withServerFaceShape } from "@/lib/score/engine/captureGate";
 import { JOB_STALE_MS, isJobStale, runAnalysisJob } from "@/lib/score/engine/jobs";
 import { createAnalysisRepo } from "@/lib/score/engine/repo";
 import { deviceResultFromGeometry, toClientAnalysisV2, type AnalysisRowV2, type ClientAnalysisV2 } from "@/lib/score/present";
@@ -149,19 +152,44 @@ export async function handleFull(admin: Admin, userId: string, input: AnalysisIn
   const { data: reservedId, error: rpcError } = await admin.rpc("reserve_analysis", { p_user: userId, p_client_request_id: input.clientRequestId, p_limit: q.limit, p_since: q.since, p_status: "queued" });
   if (rpcError) throw new Error("reserve_analysis failed");
   if (!reservedId) throw quotaError(q.retryAfterDays);
-  const { data: promoted, error: promoteError } = await admin.rpc("promote_analysis", { p_user: userId, p_analysis_id: reservedId, p_limit: q.limit, p_since: q.since });
-  if (promoteError) throw new Error("promote_analysis failed");
-  if (promoted === false) throw quotaError(q.retryAfterDays);
-
   const row = await loadRowById(admin, userId, String(reservedId));
   if (!row) throw new Error("analysis row missing");
+  return promoteAndStart({ admin, userId, row, access, quota: q, images: input.images, sourceHashes: input.sourceHashes, geometry: prepared.geometry });
+}
+
+export type PromoteArgs = {
+  admin: Admin;
+  userId: string;
+  row: RowV2;
+  access: AccessDetail;
+  quota: Awaited<ReturnType<typeof quotaWindow>>;
+  images: readonly ImageItem[];
+  sourceHashes: readonly string[] | null;
+  /** Sunucu yüz şekliyle hazırlanmış geometri; satırda geometri varsa o kullanılır (cihaz oranları ödeme sonrası değişmez, KB §4.2/7). */
+  geometry: GeometryResult;
+};
+
+/**
+ * device_only (ya da yeni queued) satırı kotaya sayar (promote_analysis) ve işi başlatır; 202. Tamamlanmış satır olduğu
+ * gibi döner (idempotent). İlerleyen (takılı olmayan) iş yeniden başlatılmaz. Ortak yol: POST /api/analyses (full) ve
+ * POST /api/analyses/[id]/run (ödeme sonrası yeniden gönderim; görseller sunucuda yok).
+ */
+export async function promoteAndStart(a: PromoteArgs): Promise<Response> {
+  const { admin, userId, access } = a;
+  let row = a.row;
   if (row.status === "completed") return Response.json(await presentV2(admin, userId, row, access));
+  if (row.status === "device_only" || row.status === "queued") {
+    const { data: promoted, error: promoteError } = await admin.rpc("promote_analysis", { p_user: userId, p_analysis_id: row.id, p_limit: a.quota.limit, p_since: a.quota.since });
+    if (promoteError) throw new Error("promote_analysis failed");
+    if (promoted === false) throw quotaError(a.quota.retryAfterDays);
+    row = (await loadRowById(admin, userId, row.id)) ?? row;
+  }
   // Zaten çalışan ve ilerleyen iş: yeniden başlatılmaz (idempotent 202). Takılı (stale) ya da failed/queued → başlat.
   if (row.status === "running" && !isJobStale(row, Date.now(), JOB_STALE_MS)) return Response.json(await presentV2(admin, userId, row, access), { status: 202 });
-  const setKey = computeSetKey(process.env[SET_CACHE_SECRET_ENV], input.sourceHashes);
-  if (!row.device_result) await admin.from("analyses").update(deviceColumns(prepared.geometry, setKey)).eq("id", row.id);
-  const geometry = row.geometry ?? prepared.geometry;
-  await startJob({ admin, userId, row, images: input.images, sourceHashes: input.sourceHashes, geometry, access });
+  const setKey = computeSetKey(process.env[SET_CACHE_SECRET_ENV], a.sourceHashes);
+  if (!row.device_result) await admin.from("analyses").update(deviceColumns(a.geometry, setKey)).eq("id", row.id);
+  const geometry = row.geometry ?? a.geometry;
+  await startJob({ admin, userId, row, images: a.images, sourceHashes: a.sourceHashes, geometry, access });
   const fresh = (await loadRowById(admin, userId, row.id)) ?? row;
   return Response.json(await presentV2(admin, userId, fresh, access), { status: 202 });
 }
@@ -171,9 +199,14 @@ function quotaError(retryAfterDays: number | null): ApiError {
   return new ApiError("QUOTA_EXCEEDED", "Yeni analiz hakkın henüz açılmadı.", retryAt);
 }
 
-/** Ödeme öncesi POST (mode device_only): kota sayılmaz, LLM yok; yalnız cihaz alanları (P§1). */
+/**
+ * Ödeme öncesi POST (mode device_only): kota sayılmaz, LLM yok, API anahtarı gerekmez; yalnız cihaz alanları (P§1).
+ * Sunucu çekim kapısı yalnız "yüz yok" (PLAN 1d) → NO_FACE; yüz şekli sunucuda fs-v2 ile yeniden hesaplanır (tek kaynak).
+ */
 export async function handleDeviceOnly(admin: Admin, userId: string, input: AnalysisInput): Promise<Response> {
-  const geometry = prepareScoringV2(input.geometry).geometry;
+  const gate = checkServerCapture(input.geometry);
+  if (!gate.ok) throw new ApiError("NO_FACE", "Fotoğrafta tek bir yüz bulunamadı; yeniden çek.");
+  const geometry = withServerFaceShape(input.geometry, gate.faceShape);
   const { data: reservedId, error } = await admin.rpc("reserve_analysis", { p_user: userId, p_client_request_id: input.clientRequestId, p_limit: 1, p_since: "-infinity", p_status: "device_only" });
   if (error || !reservedId) throw new Error("reserve_analysis failed");
   const id = String(reservedId);
@@ -183,6 +216,10 @@ export async function handleDeviceOnly(admin: Admin, userId: string, input: Anal
   if (!row.device_result) {
     const { error: upErr } = await admin.from("analyses").update(deviceColumns(geometry, setKey)).eq("id", id);
     if (upErr) throw new Error("analysis update failed");
+    // Davet kilidi (KB Ç12, FEATURE_REFERRAL_UNLOCK): davet edilen ilk cihaz analizini yolladı → referrals.photo_submitted_at (bir kez).
+    if (isFeatureEnabled("referralUnlock")) {
+      await admin.from("referrals").update({ photo_submitted_at: new Date().toISOString() }).eq("referee_id", userId).is("photo_submitted_at", null);
+    }
   }
   const fresh = (await loadRowById(admin, userId, id)) ?? row;
   const access = await getAccessV2(admin, userId, id);

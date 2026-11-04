@@ -6,10 +6,10 @@ import { getAiEnv } from "@/lib/config/ai.server";
 import { REQUIRED_ANALYSIS_CONSENTS } from "@/lib/consent";
 import { createAdminClient } from "@/lib/db/admin";
 import { FRONT_MAX_BYTES, TOTAL_IMAGE_MAX_BYTES, VIEW_BY_KEY, VIEW_KEYS, checkViewSet } from "@/lib/face/views";
-import { getAccessV2 } from "@/lib/score/engine/access";
+import { getAccessV2 } from "@/lib/billing/purchases";
 import { JOB_STALE_MS, isJobStale } from "@/lib/score/engine/jobs";
 import { prepareScoringV2 } from "@/lib/score/service";
-import { isV2Row, loadRowById, presentV2, startJob, validateImages } from "../../v2";
+import { isV2Row, loadRowById, presentV2, promoteAndStart, quotaWindow, validateImages } from "../../v2";
 
 export const runtime = "nodejs";
 /** İş bu çağrının içinde (after) koşar; Vercel Pro sınırı (PLAN_V2 3a). */
@@ -44,8 +44,11 @@ const RunInput = z
 
 /**
  * POST /api/analyses/[id]/run { images[], sourceHashes? } → 202 ClientAnalysisV2.
- * Yalnız hybrid.v2 satırları: failed (retryable) ya da takılı (10 dk ilerleme yok) queued/running. Hak yeniden
- * kontrol edilir; kota yeniden sayılmaz (satır zaten sayıldı; failed sayılmaz). Zaten ilerleyen iş yeniden başlatılmaz.
+ * Yalnız hybrid.v2 satırları:
+ *  - device_only (ödeme sonrası görsel gönderimi; görseller sunucuda yoktur, çekim ekranı yeniden yollar): hak → kota
+ *    (promote_analysis) → iş. clientRequestId gerekmez; satır kimliği yeter.
+ *  - failed (retryable) ya da takılı (10 dk ilerleme yok) queued/running: kota yeniden sayılmaz (satır zaten sayıldı).
+ * Hak her çağrıda yeniden kontrol edilir; zaten ilerleyen iş yeniden başlatılmaz; completed olduğu gibi döner.
  */
 export const POST = withGuard({ schema: RunInput, requireAdult: true, requireConsents: REQUIRED_ANALYSIS_CONSENTS }, async ({ req, user, input }) => {
   if (getAiEnv().scoreEngine !== "hybrid.v2") throw new ApiError("FEATURE_DISABLED", "Bulunamadı.");
@@ -58,13 +61,11 @@ export const POST = withGuard({ schema: RunInput, requireAdult: true, requireCon
   const access = await getAccessV2(admin, user.id, row.id);
   if (!access.entitled) throw new ApiError("PREMIUM_REQUIRED", "Tam analiz için ödeme gerekiyor.");
   if (row.status === "completed") return Response.json(await presentV2(admin, user.id, row, access));
-  if (row.status === "device_only") throw new ApiError("BAD_INPUT", "Önce POST /api/analyses (mode: full) ile sıraya al.");
-  if (row.status !== "failed" && !isJobStale(row, Date.now(), JOB_STALE_MS)) return Response.json(await presentV2(admin, user.id, row, access), { status: 202 });
+  if (row.status !== "device_only" && row.status !== "failed" && !isJobStale(row, Date.now(), JOB_STALE_MS)) return Response.json(await presentV2(admin, user.id, row, access), { status: 202 });
   const geometry = prepareScoringV2(row.geometry).geometry;
   validateImages(input.images);
-  await startJob({ admin, userId: user.id, row, images: input.images, sourceHashes: input.sourceHashes ?? null, geometry: row.geometry ?? geometry, access });
-  const fresh = (await loadRowById(admin, user.id, row.id)) ?? row;
-  return Response.json(await presentV2(admin, user.id, fresh, access), { status: 202 });
+  const quota = await quotaWindow(admin, user.id, access.subscriptionActive);
+  return promoteAndStart({ admin, userId: user.id, row, access, quota, images: input.images, sourceHashes: input.sourceHashes ?? null, geometry });
 });
 
 function notFound(): Response {

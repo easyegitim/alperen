@@ -121,6 +121,26 @@ describe("toClientAnalysisV2: ödeme sonrası (entitled)", () => {
     expect(c.viewsUsed).toBe(3);
   });
 
+  it("running + hak (kart kart açılış, KB P#23): yalnız sections_ready'deki bölümler açık; kalanı açık-null; hak yoksa kilitli", () => {
+    const running: AnalysisRowV2 = { ...completed, status: "running", report: undefined, sections_ready: ["device", "overall", "subscores"] };
+    const c = toClientAnalysisV2(running, PAID);
+    expect(c.stage).toBe("running");
+    expect(c.overall).toEqual({ value: { value: 5.8, range: [5.6, 6.0], percentile: null }, locked: false });
+    expect(c.subscores.skin).toEqual({ value: { value: 6.3, range: [6.1, 6.5] }, locked: false });
+    expect(c.potential).toEqual({ value: null, locked: false });
+    expect(c.explanations.skin).toEqual({ value: null, locked: false });
+    expect(c.report).toEqual({ value: null, locked: false });
+    expect(c.improveFirst).toEqual({ value: null, locked: false });
+    expect(c.faceShape?.detailed).toBeUndefined();
+    expect(c.sectionsReady).toEqual(["device", "overall", "subscores"]);
+    // Hak yokken running satırı tamamen kilitli; sectionsReady yalnız cihaz.
+    const locked = toClientAnalysisV2(running, NONE);
+    expect(locked.overall).toEqual({ value: null, locked: true });
+    expect(locked.subscores.skin).toEqual({ value: null, locked: true });
+    expect(locked.sectionsReady).toEqual(["device"]);
+    expect(JSON.stringify(locked)).not.toMatch(LEAK);
+  });
+
   it("FEATURE_PERCENTILE açık: yalnız genel skorda yüzdelik (numeric metin sayıya çevrilir)", () => {
     const c = toClientAnalysisV2(completed, { ...PAID, percentile: true });
     expect(c.overall.value?.percentile).toBe(61.5);

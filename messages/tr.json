@@ -675,6 +675,8 @@
       "lead": "Kalite kapısından geçti.",
       "sendNote": "Analizi başlatınca fotoğraf yalnız skorlama için, rızanla, geçici olarak gönderilir.",
       "eyebrowV2": "Fotoğraflar",
+      "resumeNote": "Ödemen alındı. Bu fotoğraf seti tam analiz için gönderilir; telefonunda hesaplanan oranlar ve yüz şekli ön değerlendirmesi değişmez.",
+      "resumeStart": "Fotoğrafları gönder",
       "leadV2": "Ön ve yan profil hazır. İstersen 45°, ikinci profil ya da saç çizgisi ekle; hepsi isteğe bağlı ve sonucu güçlendirir.",
       "sendNoteV2": "Analizi başlatınca yalnız telefonunda hesaplanan oranlar gönderilir; fotoğrafların bu adımda telefonundan çıkmaz. Tam sonuç için fotoğrafların, rızanla, ödeme sonrası yapay zekâ modeline gider."
     },
@@ -1283,7 +1285,9 @@
         "body": "Davet ettiğin 5 kişi uygulamayı indirip fotoğraf yollarsa yalnız genel skorun açılır; potansiyel, alt skorlar ve rapor ödemeyle.",
         "progress": "{done} / {total} davet tamamlandı",
         "code": "Davet kodun",
-        "share": "Daveti paylaş"
+        "share": "Daveti paylaş",
+        "shareText": "Aura'da yüz analizini dene; davet kodum: {code}",
+        "copied": "Davet metni kopyalandı."
       },
       "eyebrow": "Tam sonuç",
       "lead": "Analiz ücretlidir. Ödeme sonrası bu analiz kart kart açılır.",

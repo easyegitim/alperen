@@ -29,6 +29,8 @@ export type AnalyticsEvents = {
   /** Cihaz analizi gönderildi: açı adları virgülle (ör. "front,profile_left"), sayı. */
   device_analysis_submitted: { views: string; count: number; hashed: boolean };
   device_analysis_completed: undefined;
+  /** Ödeme sonrası fotoğraf seti gönderildi (POST /api/analyses/[id]/run): açı adları ve sayı; resume = çekime dönüş. */
+  full_analysis_submitted: { views: string; count: number; hashed: boolean; resume: boolean };
   referral_code_viewed: undefined;
   referral_claimed: { ok: boolean };
   checkout_started: { plan: string };

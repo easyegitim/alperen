@@ -260,7 +260,8 @@ function readRanges(raw: unknown): ScoreRanges {
 function readSignalsV2(a: AnalysisRowV2): ClientSignalsV2 | null {
   const parsed = ClientSignalsV2.safeParse(a.signals);
   if (parsed.success) return parsed.data;
-  if (a.signals != null) console.warn(`[score] signals_v2_parse_failed analysis=${a.id}`);
+  // running satırda signals yalnız ilerleme damgası taşıyabilir (henüz sonuç yok); uyarı yalnız tamamlanmış satırda.
+  if (a.signals != null && a.status === "completed") console.warn(`[score] signals_v2_parse_failed analysis=${a.id}`);
   return null;
 }
 
@@ -274,10 +275,12 @@ const num = (v: unknown): number | null => (typeof v === "number" && Number.isFi
 
 /**
  * hybrid.v2 kilit kuralları:
- *  - stage device_only (ve queued/running/failed): yalnız cihaz alanları açık; skor, alt skor, potansiyel, açıklama, rapor,
+ *  - stage device_only (ve queued/failed): yalnız cihaz alanları açık; skor, alt skor, potansiyel, açıklama, rapor,
  *    öncelik listesi kilitli yer tutucu (sabit; gerçek değerden türemez).
- *  - entitled: her şey açık; hazır olmayan bölüm { value:null, locked:false } (sectionsReady ile açılır).
- *  - referralUnlock (entitled değil): yalnız overall.value; range ve percentile null; geri kalan kilitli.
+ *  - entitled + completed: her şey açık; hazır olmayan bölüm { value:null, locked:false }.
+ *  - entitled + running (kart kart açılış, KB P#23/Ç16): yalnız `sections_ready` listesindeki bölümler açık; kalanı
+ *    { value:null, locked:false } (henüz hazır değil). Hak yoksa running satırı da kilitlidir.
+ *  - referralUnlock (entitled değil, completed): yalnız overall.value; range ve percentile null; geri kalan kilitli.
  *  - "excluded" alt skor herkese { null, locked:false }; "not_visible" yalnız açık sonuçta listelenir.
  */
 export function toClientAnalysisV2(a: AnalysisRowV2, access: AccessV2): ClientAnalysisV2 {
@@ -288,11 +291,17 @@ export function toClientAnalysisV2(a: AnalysisRowV2, access: AccessV2): ClientAn
   const deviceResult = device.success ? device.data : deviceResultFromGeometry(a.geometry);
   const scored = stage === "completed";
   const open = scored && access.entitled;
+  const readyList = readSections(a.sections_ready);
+  const readySet = new Set<SectionKey>(readyList);
+  /** Hak var ve iş ilerliyor ya da bitti: kilit yer tutucusu yerine hazır olanlar açık, kalanı açık-null. */
+  const live = access.entitled && (scored || stage === "running");
+  const sectionOpen = (k: SectionKey) => open || (live && readySet.has(k));
+  const notReady: Locked<null> = live ? OPEN_NULL : LOCKED;
   const excluded = new Set<SubKey>(signals?.notAssessed.filter((n) => n.reason === "excluded").map((n) => n.sub) ?? []);
 
   const overallValue = num(a.overall);
   let overall: Locked<OverallV2 | null>;
-  if (open) {
+  if (sectionOpen("overall")) {
     overall =
       overallValue == null
         ? OPEN_NULL
@@ -300,21 +309,21 @@ export function toClientAnalysisV2(a: AnalysisRowV2, access: AccessV2): ClientAn
   } else if (scored && access.referralUnlock && overallValue != null) {
     overall = { value: { value: overallValue, range: null, percentile: null }, locked: false };
   } else {
-    overall = LOCKED;
+    overall = notReady;
   }
 
   const potentialValue = num(a.potential);
   const potential: Locked<PotentialV2 | null> =
-    open && potentialValue != null && overallValue != null && ranges.potential
+    sectionOpen("potential") && potentialValue != null && overallValue != null && ranges.potential
       ? { value: { value: potentialValue, range: ranges.potential, delta: round1(Math.max(0, potentialValue - overallValue)) }, locked: false }
-      : open
+      : sectionOpen("potential")
         ? OPEN_NULL
-        : LOCKED;
+        : notReady;
 
   const subscores = Object.fromEntries(
     SUB_KEYS_V2.map((k) => {
       if (excluded.has(k)) return [k, OPEN_NULL];
-      if (!open) return [k, LOCKED];
+      if (!sectionOpen("subscores")) return [k, notReady];
       const v = num(a.subscores?.[k]);
       const r = ranges.subscores?.[k];
       return [k, v == null || !r ? OPEN_NULL : { value: { value: v, range: r }, locked: false }];
@@ -324,17 +333,17 @@ export function toClientAnalysisV2(a: AnalysisRowV2, access: AccessV2): ClientAn
   const explanations = Object.fromEntries(
     SUB_KEYS_V2.map((k) => {
       if (excluded.has(k)) return [k, OPEN_NULL];
-      if (!open) return [k, LOCKED];
+      if (!sectionOpen("explanations")) return [k, notReady];
       const e = signals?.explanations[k];
       return [k, e ? { value: e, locked: false } : OPEN_NULL];
     }),
   ) as Record<SubKey, Locked<ExplanationV2 | null>>;
 
-  const reportParsed = open ? ReportV3.safeParse(a.report) : null;
-  const report: Locked<ReportV3 | null> = !open ? LOCKED : reportParsed?.success ? { value: reportParsed.data, locked: false } : OPEN_NULL;
+  const reportParsed = sectionOpen("report") ? ReportV3.safeParse(a.report) : null;
+  const report: Locked<ReportV3 | null> = !sectionOpen("report") ? notReady : reportParsed?.success ? { value: reportParsed.data, locked: false } : OPEN_NULL;
 
   const override = a.face_shape_override && ["oval", "round", "square", "long", "heart", "diamond"].includes(a.face_shape_override) ? (a.face_shape_override as FaceShape) : undefined;
-  const detailed = open ? (signals?.faceShapeDetailed ?? null) : null;
+  const detailed = sectionOpen("faceShape") ? (signals?.faceShapeDetailed ?? null) : null;
   const faceShape: FaceShapeV2 | null = deviceResult
     ? {
         prelim: deviceResult.faceShapePrelim,
@@ -357,10 +366,10 @@ export function toClientAnalysisV2(a: AnalysisRowV2, access: AccessV2): ClientAn
     explanations,
     report,
     faceShape,
-    improveFirst: !open ? LOCKED : signals ? { value: signals.improveFirst.filter((i) => !excluded.has(i.sub)), locked: false } : OPEN_NULL,
-    sectionsReady: open ? readSections(a.sections_ready) : deviceResult ? ["device"] : [],
+    improveFirst: !sectionOpen("improveFirst") ? notReady : signals ? { value: signals.improveFirst.filter((i) => !excluded.has(i.sub)), locked: false } : OPEN_NULL,
+    sectionsReady: live ? readyList : deviceResult ? ["device"] : [],
     noiseBand: NOISE_BAND_CLIENT,
-    notAssessed: signals?.notAssessed.filter((n) => n.reason === "excluded" || open) ?? [],
+    notAssessed: signals?.notAssessed.filter((n) => n.reason === "excluded" || live) ?? [],
     captureHints: signals?.captureHints ?? [],
     viewsUsed: signals?.viewsUsed.length ?? 0,
     failure: stage === "failed" ? (a.failure ?? { code: "AI_FAILED", retryable: true }) : null,

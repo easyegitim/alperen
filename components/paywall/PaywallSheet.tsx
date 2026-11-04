@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { PlanCheck, planCardClass } from "@/components/billing/PlanOption";
 import { IllustrativeBeforeAfter, type Presentation } from "./IllustrativeBeforeAfter";
 import { OfferCountdown } from "./OfferCountdown";
+import { ReferralBlock } from "./ReferralBlock";
 import { useOffer } from "./useOffer";
 
 type Step = "benefits" | "products";
@@ -211,6 +212,7 @@ export function PaywallProvider({
                 <IllustrativeBeforeAfter presentation={presentation} ageBand={ageBand} />
                 {offerStatus === "ready" && offer ? <OfferCountdown offer={offer} skewMs={skewMs} onEnded={onEnded} /> : null}
                 {offerStatus === "error" ? <p className="text-[11px] text-muted-foreground">{tv("offerUnavailable")}</p> : null}
+                {analysisId ? <ReferralBlock /> : null}
                 <Link href="/yontem?from=paywall" className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-brand underline-offset-4 hover:underline">
                   {t("methodLink")}
                   <ArrowUpRight aria-hidden="true" className="size-4" />
