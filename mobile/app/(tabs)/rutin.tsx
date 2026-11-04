@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, View } from "react-native";
 import { EXERCISES, EXERCISE_SAFETY_TEXT } from "@/content/exercises";
 import { HABITS } from "@/content/habits";
@@ -8,23 +8,35 @@ import { SKIN_STEPS } from "@/content/skin-steps";
 import { track } from "@/lib/analytics";
 import { exerciseEligible } from "@/lib/coach/eligibility";
 import { QuestionnaireSchema } from "@/lib/questionnaire";
-import { completionRatio, computeStreak, istanbulDate, type DayLog } from "@/lib/routine/streak";
+import { getRoutineForgiving, ROUTINE_FORGIVING } from "@/lib/config/routine";
+import { canUseFreeze, computeForgivingStreak, restDaysLeftThisWeek, type FreezeRecord } from "@/lib/routine/forgiving";
+import { completionRatio, istanbulDate, type DayLog } from "@/lib/routine/streak";
 import { ExerciseTimer } from "@/mobile/src/components/routine/ExerciseTimer";
+import { StreakCard } from "@/mobile/src/components/routine/StreakCard";
 import { Button } from "@/mobile/src/components/ui/Button";
 import { Card } from "@/mobile/src/components/ui/Card";
 import { Screen } from "@/mobile/src/components/ui/Screen";
 import { Text } from "@/mobile/src/components/ui/Text";
+import { FREEZE_TABLE, freezeStoreError, freezesFromRows, recentDays } from "@/mobile/src/features/routine/forgivingView";
 import { useSession } from "@/mobile/src/features/session/SessionProvider";
 import { scoped } from "@/mobile/src/lib/i18n";
 import { getSupabase } from "@/mobile/src/lib/supabase";
 import { radius, spacing, useTheme } from "@/mobile/src/theme";
 
 const t = scoped("routine");
+const tv = scoped("routine.v2");
+/** Affedici seri sayıları (ÖNERİ; env ile değişir, placeholder notu görünür). */
+const FORGIVING = { ...getRoutineForgiving(process.env), placeholder: ROUTINE_FORGIVING.placeholder };
+/** Dinlenme köprüsü olayı günde bir kez (yüksüz). */
+const restTracked = new Set<string>();
 type Item = { id: string; kind: "step" | "exercise" | "habit"; ref_id: string | null; slot: "morning" | "evening" | "daily" | "weekly"; title: string; position: number };
 const SLOTS = ["morning", "daily", "evening", "weekly"] as const;
 type Status = { premium: boolean };
 
-/** /rutin (F12 mobil): premium; bugünün listesi, routine_logs upsert (iyimser), seri, zamanlayıcı, düzenleme. RLS: kendi satırları. */
+/**
+ * /rutin (F12 mobil → Faz 6 affedici seri, CONTRACTS_V2 S3.3.2/S3.6): premium; bugünün listesi, routine_logs upsert (iyimser),
+ * affedici seri (dinlenme günü köprüsü + aylık dondurma; routine_freezes RLS, tablo yoksa dondurma gizli), zamanlayıcı, düzenleme.
+ */
 export default function RoutineTab() {
   const { colors } = useTheme();
   const { api, user } = useSession();
@@ -33,18 +45,23 @@ export default function RoutineTab() {
   const [eligible, setEligible] = useState(false);
   const [items, setItems] = useState<Item[] | null>(null);
   const [logs, setLogs] = useState<DayLog[]>([]);
+  const [freezes, setFreezes] = useState<{ available: boolean; records: FreezeRecord[] }>({ available: true, records: [] });
+  const [freezing, setFreezing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
 
   const load = useCallback(async () => {
     const supabase = getSupabase();
     const since = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
-    const [st, prof, i, l] = await Promise.all([
+    const [st, prof, i, l, f] = await Promise.all([
       api.get<Status>("/api/billing/status").catch(() => null),
       user ? supabase.from("profiles").select("questionnaire").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
       supabase.from("routine_items").select("id, kind, ref_id, slot, title, position").eq("active", true).order("position"),
       supabase.from("routine_logs").select("log_date, item_id, done").gte("log_date", since),
+      supabase.from(FREEZE_TABLE).select("freeze_date").gte("freeze_date", since),
     ]);
+    // Dondurma tablosu yoksa (migration 0015 uygulanmamış) bölüm gizlenir; seri yine affedici hesaplanır.
+    setFreezes(f.error ? { available: freezeStoreError(f.error) !== "unavailable", records: [] } : { available: true, records: freezesFromRows(f.data) });
     setPremium(Boolean(st?.premium));
     const q = QuestionnaireSchema.safeParse(prof.data?.questionnaire);
     setEligible(q.success ? exerciseEligible(q.data) : false);
@@ -59,8 +76,18 @@ export default function RoutineTab() {
   );
 
   const dailyIds = useMemo(() => (items ?? []).filter((i) => i.slot !== "weekly").map((i) => i.id), [items]);
-  const streak = useMemo(() => computeStreak(logs, dailyIds.length, today), [logs, dailyIds.length, today]);
+  const forgiving = useMemo(() => ({ logs, activeItemCount: dailyIds.length, today, freezes: freezes.records, config: FORGIVING }), [logs, dailyIds.length, today, freezes.records]);
+  const streak = useMemo(() => computeForgivingStreak(forgiving), [forgiving]);
+  const restLeft = useMemo(() => restDaysLeftThisWeek(forgiving), [forgiving]);
+  const days = useMemo(() => recentDays({ ...forgiving, days: 7 }), [forgiving]);
+  const freezeCheck = useMemo(() => canUseFreeze(freezes.records, today, today, FORGIVING), [freezes.records, today]);
   const ratio = useMemo(() => completionRatio(logs, dailyIds, today), [logs, dailyIds, today]);
+  useEffect(() => {
+    if (streak.restDaysBridged > 0 && !restTracked.has(today)) {
+      restTracked.add(today);
+      track("routine_rest_day");
+    }
+  }, [streak.restDaysBridged, today]);
   const doneToday = (id: string) => logs.some((l) => l.log_date === today && l.item_id === id && l.done);
 
   async function toggle(item: Item) {
@@ -74,6 +101,20 @@ export default function RoutineTab() {
       return;
     }
     if (next) track("routine_checked", { kind: item.kind });
+  }
+  async function freezeToday() {
+    if (!user || !freezeCheck.ok) return;
+    setFreezing(true);
+    const { error } = await getSupabase().from(FREEZE_TABLE).insert({ user_id: user.id, freeze_date: today });
+    setFreezing(false);
+    if (error) {
+      const reason = freezeStoreError(error);
+      if (reason === "unavailable") setFreezes((f) => ({ ...f, available: false }));
+      else Alert.alert(reason === "unknown" ? t("saveError") : tv(`errors.${reason}`));
+      return;
+    }
+    track("routine_freeze_used");
+    setFreezes((f) => ({ ...f, records: [...f.records, { date: today }] }));
   }
   async function remove(item: Item) {
     setItems((prev) => (prev ?? []).filter((i) => i.id !== item.id));
@@ -134,16 +175,17 @@ export default function RoutineTab() {
         </Card>
       ) : (
         <>
-          <Card>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text>{t("today", { date: new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long" }) })}</Text>
-              <Text style={{ fontWeight: "600" }}>{t("streak", { n: streak })}</Text>
-            </View>
-            <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(ratio * 100) }} style={{ height: 6, borderRadius: 3, backgroundColor: colors.muted }}>
-              <View style={{ width: `${Math.round(ratio * 100)}%`, height: 6, borderRadius: 3, backgroundColor: colors.foreground }} />
-            </View>
-            <Text variant="small">{t("streakHint")}</Text>
-          </Card>
+          <StreakCard
+            dateLabel={new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
+            pct={Math.round(ratio * 100)}
+            doneCount={dailyIds.filter((id) => doneToday(id)).length}
+            total={dailyIds.length}
+            streak={streak}
+            restLeft={restLeft}
+            config={FORGIVING}
+            days={days}
+            freeze={{ available: freezes.available, check: freezeCheck, busy: freezing, onFreeze: () => void freezeToday() }}
+          />
           {SLOTS.map((slot) => {
             const list = items.filter((i) => i.slot === slot);
             if (!list.length) return null;

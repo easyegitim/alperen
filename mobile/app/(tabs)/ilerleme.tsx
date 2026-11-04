@@ -5,11 +5,13 @@ import { Alert, Image, Pressable, TextInput, View } from "react-native";
 import { ENTITLEMENTS } from "@/lib/config/plans";
 import type { ClientAnalysisSummary } from "@/lib/score/present";
 import { ScoreTrend } from "@/mobile/src/components/analysis/ScoreTrend";
+import { ScoreChangeNote } from "@/mobile/src/components/progress/ScoreChangeNote";
 import { Button } from "@/mobile/src/components/ui/Button";
 import { Card } from "@/mobile/src/components/ui/Card";
 import { Screen } from "@/mobile/src/components/ui/Screen";
 import { Text } from "@/mobile/src/components/ui/Text";
 import { useSession } from "@/mobile/src/features/session/SessionProvider";
+import { trendPointsFromSummaries } from "@/mobile/src/features/progress/change";
 import { scoped } from "@/mobile/src/lib/i18n";
 import { deleteProgressPhoto, listProgressPhotos, updateProgressNote, type ProgressPhoto } from "@/mobile/src/lib/progressStore";
 import { radius, spacing, useTheme } from "@/mobile/src/theme";
@@ -17,7 +19,10 @@ import { radius, spacing, useTheme } from "@/mobile/src/theme";
 const t = scoped("progress");
 type Status = { premium: boolean };
 
-/** /ilerleme (F13 mobil): cihazdaki fotoğraflar (sanal alan, ağ yok), yan yana karşılaştırma, skor trendi (premium), yeni hak kartı. */
+/**
+ * /ilerleme (F13 mobil → Faz 6; CONTRACTS_V2 S3.3.3): cihazdaki fotoğraflar (sanal alan, ağ yok; hayalet kılavuz da dizinde kalır),
+ * yan yana karşılaştırma, skor trendi (premium) + ±gürültü bandı "Değişim yok" notu (kıyas yalnız kendi geçmişiyle), yeni hak kartı.
+ */
 export default function ProgressTab() {
   const { colors } = useTheme();
   const { api } = useSession();
@@ -44,8 +49,7 @@ export default function ProgressTab() {
     }, [api]),
   );
 
-  const completed = points.filter((p) => p.status === "completed");
-  const trend = completed.filter((p) => p.overall !== null && p.potential !== null).map((p) => ({ id: p.id, date: p.createdAt, overall: p.overall!, potential: p.potential!, calibrationVersion: p.calibrationVersion }));
+  const trend = trendPointsFromSummaries(points);
   const a = photos?.find((p) => p.id === pick[0]);
   const b = photos?.find((p) => p.id === pick[1]);
 
@@ -63,7 +67,10 @@ export default function ProgressTab() {
         </Card>
       ) : null}
       {premium ? (
-        <Card><ScoreTrend points={trend} /></Card>
+        <Card>
+          <ScoreTrend points={trend} />
+          <ScoreChangeNote points={trend} />
+        </Card>
       ) : (
         <Card title={t("trendLockedTitle")} description={t("trendLockedBody")}>
           <Button title={t("goPremium")} variant="outline" onPress={() => router.push("/premium")} />

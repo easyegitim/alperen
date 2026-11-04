@@ -4,6 +4,7 @@ import { getTeaserConfig } from "@/lib/config/teaser";
 import type { ClientAnalysis, ClientAnalysisV2 } from "@/lib/score/present";
 import { AnalysisProgress } from "@/mobile/src/components/analysis/AnalysisProgress";
 import { LockedResult } from "@/mobile/src/components/analysis/LockedResult";
+import { ResultV2View } from "@/mobile/src/components/analysis/result/ResultV2View";
 import { ScoreView } from "@/mobile/src/components/analysis/ScoreView";
 import { Button } from "@/mobile/src/components/ui/Button";
 import { Card } from "@/mobile/src/components/ui/Card";
@@ -14,7 +15,7 @@ import { boundSelfieFor } from "@/mobile/src/features/capture/sessionSelfie";
 import { uploadPendingSet } from "@/mobile/src/features/capture/upload";
 import { PaywallProvider } from "@/mobile/src/features/paywall/PaywallSheet";
 import { useSession } from "@/mobile/src/features/session/SessionProvider";
-import { ApiClientError, waitForAnalysis, type BillingStatusDto, type Presentation } from "@/mobile/src/lib/api";
+import { ApiClientError, type BillingStatusDto, type Presentation } from "@/mobile/src/lib/api";
 import { scoped } from "@/mobile/src/lib/i18n";
 import { getSupabase } from "@/mobile/src/lib/supabase";
 
@@ -27,7 +28,7 @@ const isV2 = (a: ClientAnalysis | ClientAnalysisV2): a is ClientAnalysisV2 => "s
  * /analiz/[id] (CONTRACTS_V2 S3.0/S3.1 ortak dosya): GET /api/analyses/[id] (kilitli değer gelmez) + hak durumu.
  *  - hybrid.v2 satırı, hak YOK → kilitli ekran (W7a: LockedResult + paywall sheet v2).
  *  - hybrid.v2 satırı, hak VAR → bellekteki set varsa /run'a gönderilir; set yoksa ve satır device_only ise "Çekime dön";
- *    aksi hâlde açık/kart kart dal (W7b: components/analysis/result/*; aşağıdaki ResultBranch yer tutucusunu W7b değiştirir).
+ *    aksi hâlde açık/kart kart dal (W7b: ResultV2View; yoklama ve kart kart açılış bileşenin içinde).
  *  - eski satır (v1) → mevcut ScoreView.
  */
 export default function AnalysisScreen() {
@@ -119,39 +120,10 @@ export default function AnalysisScreen() {
               <Button title={t("result.pending.cta")} size="lg" onPress={() => router.push({ pathname: "/tara", params: { analysis: v2.id } })} />
             </Card>
           ) : (
-            <ResultBranch initial={v2} onUpdate={(next) => setLoaded((l) => (l ? { ...l, a: next } : l))} />
+            <ResultV2View initial={v2} onUpdate={(next) => setLoaded((l) => (l ? { ...l, a: next } : l))} />
           )
         ) : null}
       </Screen>
     </>
-  );
-}
-
-/**
- * Açık/kart kart dal — W7b yer tutucusu (CONTRACTS_V2 S3.0: W7b `components/analysis/result/*` bileşenlerini ekler ve bu
- * bileşeni kendi ResultV2View'ıyla değiştirir; bu dosyanın kilit dallanmasına dokunmaz). Şimdilik: aşama metni + yoklama.
- */
-function ResultBranch({ initial, onUpdate }: { initial: ClientAnalysisV2; onUpdate: (a: ClientAnalysisV2) => void }) {
-  const { aura } = useSession();
-  const [a, setA] = useState(initial);
-  useEffect(() => {
-    if (a.stage === "completed" || a.stage === "failed") return;
-    const ac = new AbortController();
-    void waitForAnalysis(aura, a.id, {
-      signal: ac.signal,
-      onUpdate: (next) => {
-        setA(next);
-        onUpdate(next);
-      },
-    });
-    return () => ac.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- yalnız kimlik ve ilk aşama için başlar
-  }, [a.id]);
-  const sections = a.sectionsReady.join(", ");
-  return (
-    <Card title={t("result.title")} description={t(`stage.${a.stage}`)}>
-      {a.stage === "running" ? <Text variant="small">{t("reveal.waiting")} {sections}</Text> : null}
-      {a.stage === "completed" ? <Text variant="muted">{t("reveal.ready")}</Text> : null}
-    </Card>
   );
 }

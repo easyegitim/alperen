@@ -1,6 +1,7 @@
 // SPEC 11.2 / SPEC-MOBILE M7: ilerleme fotoğrafları yalnız cihazda (uygulama belge dizini). Hiçbir fonksiyon ağa çıkmaz.
 import { Directory, File, Paths } from "expo-file-system";
-import { addEntry, orphanFiles, parseIndex, removeEntry, serializeIndex, setNote, type ProgressEntry, type ProgressIndex } from "@/mobile/src/features/progress";
+import type { GhostOutline } from "@/lib/face/ghostGuide";
+import { addEntry, latestGhost, orphanFiles, parseIndex, removeEntry, serializeIndex, setNote, type ProgressEntry, type ProgressIndex } from "@/mobile/src/features/progress";
 
 const DIR_NAME = "progress";
 const INDEX_NAME = "index.json";
@@ -27,13 +28,16 @@ function toPhoto(d: Directory, e: ProgressEntry): ProgressPhoto {
   return { ...e, uri: new File(d, e.file).uri };
 }
 
-/** Analiz kopyasını (≤ 1280 px JPEG) sanal alana kopyalar. */
-export async function addProgressPhoto(sourceUri: string, analysisId?: string): Promise<ProgressPhoto> {
+export type AddProgressOptions = { analysisId?: string; /** Hayalet kılavuz (CONTRACTS_V2 S3.3.4): yalnız bu dizinde kalır; ağa çıkmaz. */ ghost?: GhostOutline | null };
+
+/** Analiz kopyasını (≤ 1280 px JPEG) sanal alana kopyalar. İkinci parametre eski imza (analysisId) ya da seçenekler. */
+export async function addProgressPhoto(sourceUri: string, options?: string | AddProgressOptions): Promise<ProgressPhoto> {
+  const opts: AddProgressOptions = typeof options === "string" ? { analysisId: options } : (options ?? {});
   const d = dir();
   const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const file = `${id}.jpg`;
   await new File(sourceUri).copy(new File(d, file));
-  const entry: ProgressEntry = { id, file, takenAt: Date.now(), analysisId };
+  const entry: ProgressEntry = { id, file, takenAt: Date.now(), ...(opts.analysisId ? { analysisId: opts.analysisId } : {}), ...(opts.ghost ? { ghost: opts.ghost } : {}) };
   writeIndex(d, addEntry(await readIndex(d), entry));
   return toPhoto(d, entry);
 }
@@ -67,6 +71,15 @@ export async function deleteProgressPhoto(id: string): Promise<void> {
     if (f.exists) f.delete();
   }
   writeIndex(d, removeEntry(index, id));
+}
+
+/** Yeniden analizde kamera üstüne silik çizgi için son çekimin kılavuzu (yalnız cihazda). */
+export async function getLatestGhost(): Promise<GhostOutline | null> {
+  try {
+    return latestGhost(await readIndex(dir()));
+  } catch {
+    return null;
+  }
 }
 
 /** Hesap silme ve rıza geri alma için: tüm fotoğraflar ve dizin. */
