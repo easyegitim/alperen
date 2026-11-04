@@ -436,3 +436,180 @@ Sprint 2 inceleme düzeltmeleri (F09, 4 Kasım 2026; güvenlik/tıp/gizlilik, de
 | 26 | Etiket eşleşmesi: ≥ 3 harf (durak sözcük listesiyle), çok sözcüklü etiket tüm sözcükleri geçince eşleşir (`tokenizeTr`). TSV içe aktarma: alan varsayılan kontrendikasyonları (saç/renk/sakal/egzersiz) eklenir, K8 etiketi olmayan kilo içeriği, https olmayan `source_url`, safety ihlalli başlık/özet (doktor katmanı hariç) satırı düşürür; adım kartı kaynağı yalnız https ise bağlantı | S2.2 "kurallar modelden önce kodda" |
 | 27 | Berber kartı KB §8 "önden ve yandan görsel" içermez: stil illüstrasyonları (kullanıcı fotoğrafı değil) üretilmedi; `plan.v2.barber.front/side` ölü anahtarları kaldırıldı. Görseller gelince `BarberSpec.imageFront/imageSide` eklenir | AÇIK (varlık yok); KB §8 ONAYLI ÖNERİ'nin eksik parçası |
 | 28 | Saç dökülmesi kartı "plana eklendi" cümlesini yalnız planda saç derisi adımı varken (`hasScalpStep`) söyler; aksi hâlde genel öneri metni | Doğru olmayan iddia kaldırıldı |
+
+---
+
+## Sprint 3 — Faz 6 (web) ve mobil eşitlik (M9) sözleşmeleri (T2, 4 Kasım 2026)
+
+Kaynak önceliği aynı: KB > PLAN_V2 > bu belge > SPEC/CLAUDE.md. Sprint 1–2 sözleşmeleri (§0–§9, S2.*) aynen geçerli. Motor ve sağlayıcılar (`lib/score/engine/*`, `lib/ai/*`) bu sprintte **donmuştur**; sunucu eski takma adları (`image`, `presetId`, 6 parametreli `reserve_tryon`) bir sürüm daha tutar — bu sprintte kaldırılmaz. Ücretli/ağ AI çağrısı yok; birim testler sağlayıcıyı taklit eder. Push, uzak migration, deploy, EAS build, mağaza gönderimi yok.
+
+### S3.0 Dosya sahipliği
+
+| İz | Yazar | Yalnız okur |
+|---|---|---|
+| **W6** web Faz 6 (F08 paylaşım/berber/hayalet, F12 rutin/ilerleme, F14 davet girişi, F18 admin oranı) | `lib/share/card.ts` (spec'ten çizim: `renderShareCard(spec)`), `components/share/*`, `components/plan/BarberCard.tsx` (paylaş), `components/camera/GhostGuideOverlay.tsx` (yeni), `components/camera/{SelfieCamera,CaptureScreen}.tsx` (kılavuz katmanı), `lib/local/progressStore.ts` (Dexie v2: `ghost`), `components/routine/*`, `components/progress/*`, `components/analysis/ScoreTrend.tsx` (gürültü etiketi), `app/api/routine/**` (gerekirse), `app/api/admin/metrics/route.ts` (`tryonQuality`), `app/admin/**` (oran kartı), `app/api/billing/revenuecat/route.ts` + `lib/billing/revenuecat.ts` (tek seferlik ürün eşlemesi, S3.3.7), `components/paywall/ReferralBlock.tsx` + yeni `ReferralClaimForm.tsx`, `supabase/migrations/0015_v2_faz6.sql` (yalnız dosya), `tests/unit/*` (kendi), `tests/e2e/privacy.spec.ts` (ghost/oval kuralı), `tr.json`: S3.4'teki ad alanlarının **metin değerleri** | `lib/share/spec.ts`, `lib/routine/forgiving.ts`, `lib/config/routine.ts`, `lib/progress/noise.ts`, `lib/face/ghostGuide.ts`, `lib/analytics.ts` |
+| **W7a** mobil ödeme öncesi + paywall (M9-a) | `mobile/app/baslangic/{yas,cinsiyet,giris,izinler}.tsx`, `mobile/app/index.tsx` (anonim oturum → giriş), `mobile/app/tara.tsx` (çoklu açı, kalite pop-up'ı, cihaz ilerlemesi, `device_only` gönderim, ghost katmanı), `mobile/app/analiz/[id].tsx` **kilitli durum** (`stage !== completed || overall.locked`), `mobile/app/premium.tsx` (paywall v2: fayda listesi, illüstratif önce/sonra, sunucu süreli teklif, ürünler, davet bloğu + kod girişi), `mobile/src/features/{auth,onboarding,capture,paywall,billing,referral}/**`, `mobile/src/components/{capture,analysis/Locked*,paywall}/**`, `mobile/tests/{onboarding,capture,billing,referral}*.test.ts` | S3.2 paylaşılan katman, `lib/face/*`, `lib/score/present.ts`, `lib/billing/{offer,entitlement}.ts`, `lib/referral/{code,unlock}.ts` |
+| **W7b** mobil açık sonuç + plan + dene + rutin/ilerleme (M9-b) | `mobile/app/analiz/[id].tsx` **açık/kart kart durum** (`ResultV2` karşılığı; W7a ile aynı dosyada `stage`'e göre dallanır — ortak dosya: önce W7a kilitli iskeleti yazar, W7b `components/analysis/result/*` bileşenlerini ekler), `mobile/app/plan/[id]/{index,anket}.tsx`, `mobile/app/(tabs)/{dene,plan,rutin,ilerleme}.tsx`, `mobile/src/components/{analysis/result,report,plan,tryon,routine,progress}/**`, `mobile/src/features/{tryon,routine,progress,share}/**`, `mobile/src/native/tryon.ts` (kombin/glow-up maskeleri), `mobile/src/lib/progressStore.ts` (`ghost` alanı), `mobile/tests/{tryon,progressShare,plan,routine}*.test.ts` | S3.2, `lib/coach/planTypes.ts`, `lib/questionnaireV2.ts`, `lib/config/plan.ts`, `lib/tryon/*` (saf), `lib/api/tryonInput.ts`, `lib/share/spec.ts`, `lib/routine/forgiving.ts`, `lib/progress/noise.ts` |
+| **T2 (bu)** | `mobile/app/_layout.tsx`, `mobile/app/(tabs)/_layout.tsx`, `mobile/src/lib/{api,flags}.ts`, `mobile/src/theme/*`, `mobile/src/features/session/SessionProvider.tsx` (`aura` alanı), `mobile/eslint.config.js` (M1 listesi), `mobile/.env.example`, rota yer tutucuları, `mobile/tests/{sharedV2,apiV2}.test.ts`, `lib/share/spec.ts`, `lib/routine/forgiving.ts`, `lib/config/{routine,scoring}.ts` (`NOISE_BAND`), `lib/progress/noise.ts`, `lib/face/ghostGuide.ts`, `lib/analytics.ts` (olay adları), `messages/tr.json` (ad alanları + KB metinleri), `.env.example`, bu bölüm | — |
+
+Paylaşılan dosyayı değiştirmek gerekirse: önce burada sözleşmeyi güncelle, sonra kodu; diğer izleri bilgilendir ve raporda `outOfOwnershipEdit` olarak listele. `mobile/app/analiz/[id].tsx` iki izin ortak dosyasıdır: W7a `stage`/kilit dallanmasını ve kilitli görünümü yazar; W7b yalnız `ResultV2View` dalını ekler (ayrı bileşen dosyasında), aynı satırlara dokunmaz.
+
+### S3.1 Mobil rota haritası (expo-router; typed routes `pnpm --filter mobile typecheck` ile üretilir)
+
+| Mobil rota (dosya) | Sahip | Web karşılığı | Durum (T2 sonrası) | Veri / kural |
+|---|---|---|---|---|
+| `/` (`app/index.tsx`) | W7a | `/` | var (anonim oturum) | v2: CTA → `/baslangic/yas`; anonim oturum **kalkar** (KB P#2, §2.3 "anonim oturum yok"); `/api/referral` ve `/api/billing/sync` zaten `allowAnonymous:false` |
+| `/baslangic/yas` | W7a | `app/(app)/baslangic/yas` | var (doğum yılı) → bant listesine döner | `aura.onboarding.age(ageBand)`; `under_18` + bayrak kapalı → `FEATURE_DISABLED` → `onboarding.age.under18Soon*` |
+| `/baslangic/cinsiyet` | W7a | `baslangic/cinsiyet` | **yer tutucu** | `aura.onboarding.profile(presentation)`; `onboarding.gender.*` |
+| `/baslangic/giris` | W7a | `baslangic/giris` (`components/auth/SignIn.tsx`) | **yer tutucu** | Google/Apple: Supabase `signInWithOAuth` (PKCE, `skipBrowserRedirect:true`) + `expo-web-browser openAuthSessionAsync(url, "aura://auth/callback")` + `exchangeCodeForSession` (LinkAccount'taki kalıp; `linkIdentity` yerine oturum yokken `signInWithOAuth`); Apple, Google varsa zorunlu (Apple 4.8); e-posta OTP yedek (KB §11.11 AÇIK): `signInWithOtp({ email })` + `verifyOtp({ type:"email" })`; metinler `auth.signIn.*` |
+| `/baslangic/izinler` | W7a | `baslangic/izinler` | var | aydınlatma + açık rıza ayrı metin; sürüm artışı W1'de yapıldı; `aura.onboarding.complete()` → `(tabs)/analiz` |
+| `/baslangic/anket` | — | — | var (v1; dokunulmaz) | v2'de kullanılmaz (anket ödeme sonrası `/plan/[id]/anket`); dosya kalır, bağlantısı kaldırılır |
+| `/tara` | W7a | `(gated)/tara` (`components/camera/*`) | var (tek açı) | çoklu açı adımları (`lib/face/views.ts`), kalite pop-up'ı (`camera.qualityPrompt.*`), cihaz ilerlemesi (`lib/face/deviceProgress.ts`), `aura.analyses.deviceOnly` (görsel yok), ödeme sonrası `aura.analyses.run(id, images)`; `?analysis=<id>` ile çekime dönüş; hayalet kılavuz katmanı (S3.3.4) |
+| `/analiz/[id]` | W7a (kilitli) + W7b (açık) | `(gated)/analiz/[id]` (`ScoreViewV2`, `ResultV2View`, `RevealSequence`) | var (v1 ScoreView) | `aura.analyses.get` + `waitForAnalysis`; kilitli: halka+kilit, bulanık çubuklar, oranlar açık, 3 bulanık adım, cihazda bulanık plan önizlemesi; açık: kart kart (`sectionsReady`), explain5, yüz şekli override (`aura.me.faceShape`), ölçüler, potansiyel, rapor v3, paylaşım kartı (S3.3.1) |
+| `/premium` | W7a | `(gated)/premium` (`components/paywall/*`) | var (RevenueCat v1) | paywall v2 (`paywall.v2.*`): `aura.billing.offer()` sunucu sayacı, ürünler (`PRODUCTS`, `listedProducts`), mağaza paketleri (RevenueCat), satın alma → `aura.billing.sync()` → `aura.billing.status()`; **istemci premium açmaz**; davet bloğu `aura.referral.get()` + kod girişi `aura.referral.claim(code)` |
+| `/plan/[id]` (`plan/[id]/index.tsx`) | W7b | `(gated)/plan/[id]` (`components/plan/PlanView.tsx`) | var (v1 ReportView; **`plan/[analysisId]` → `plan/[id]` taşındı**, çağrılar güncellendi) | `aura.plan.get` (404 → anket var mı? yoksa `/plan/[id]/anket`; varsa `aura.plan.create`), `PlanViewV2`, fazlar/öncelik/adım kartı/çipler, berber kartı (S3.3.1), "Dene" → `/(tabs)/dene?preset=`, "İyileşmiş halin" → `/(tabs)/dene?mode=glow_up&analysis=` |
+| `/plan/[id]/anket` | W7b | `(gated)/plan/[id]/anket` (`QuestionnaireWizardV2`) | **yer tutucu** | `emptyQuestionnaireV2(prefill)` + `QuestionnaireV2Schema`; `aura.questionnaire.submit` → `/plan/[id]`; skor değişmez |
+| `/(tabs)/analiz` | W7b | `(gated)/analiz` | var | `aura.analyses.list()`; yeni analiz → `/tara` |
+| `/(tabs)/plan` | W7b | `(gated)/plan` | var (v1) | son tamamlanmış analiz → `/plan/[id]`; hak yoksa kilit kartı |
+| `/(tabs)/dene` | W7b | `(gated)/dene` (`components/tryon/*`) | var (v1 tek stil) | `aura.tryon.status`, kombin seçici (`presets{hair,beard,color}`), glow-up paneli (`mode:"glow_up"`, `analysisId`, `layers`, plan adımları), `TRYON_QC_FAILED` kartı (hak düşmez), etiket (`common.aiGenerated`) + paylaş, "Bozuk görünüyor" → `aura.tryon.flag`; kompozit maskesi `maskRegionFor(mode, presets, layers)`; drift → `aura.tryon.drift` |
+| `/(tabs)/rutin` | W7b | `(gated)/rutin` | var (v1) | affedici seri (S3.3.2): `computeForgivingStreak`, dinlenme/dondurma metinleri `routine.v2.*`; dondurma kaydı S3.6 |
+| `/(tabs)/ilerleme` | W7b | `(gated)/ilerleme` | var (v1) | ±bant "değişim yok" (S3.3.3): `classifyChange(prev, next, a.noiseBand)`; fotoğraflar sanal alanda; `ghost` alanı |
+| `/hesap`, `/silme`, `/uzman` | — | aynı | var | değişmez |
+
+### S3.2 Mobil paylaşılan katman (T2; iki iz de buna dokunmaz)
+
+**`mobile/src/lib/api.ts`** — `createApiClient` değişmedi (Bearer). Yeni `createAuraApi(client)` → `AuraApi`; `useSession().aura` ile gelir. Yollar web rotalarıyla birebir; tipler yalnız saf modüllerden:
+
+| Alan | Fonksiyon | Rota | Yanıt / not |
+|---|---|---|---|
+| onboarding | `age(ageBand)` | `POST /api/onboarding/age { ageBand }` | `{ isAdult, ageBand }`; under_18 + bayrak kapalı → `FEATURE_DISABLED` |
+| | `profile(presentation)` | `POST /api/onboarding/profile` | 204 |
+| | `complete()` | `POST /api/onboarding/complete` | 204; `BAD_INPUT presentation_missing` |
+| analyses | `list()` | `GET /api/analyses` | `ClientAnalysisSummary[]` |
+| | `deviceOnly({ clientRequestId, geometry, sourceHashes? })` | `POST /api/analyses` (mode `device_only`) | `200 ClientAnalysisV2` (stage `device_only`); **görsel yok**, kota sayılmaz |
+| | `run(id, { images, sourceHashes? })` | `POST /api/analyses/[id]/run` | `202 ClientAnalysisV2` (queued); ön + ≥1 profil; `PREMIUM_REQUIRED` / `QUOTA_EXCEEDED` |
+| | `get(id)` / `getLegacy(id)` | `GET /api/analyses/[id]` | `ClientAnalysisV2` (v2 satır) / `ClientAnalysis` (v1 satır) |
+| billing | `status(analysisId?)` | `GET /api/billing/status[?analysis=]` | `BillingStatusDto { premium, plan, periodEnd, cancelAtPeriodEnd, status, analysisEntitled }` |
+| | `offer()` | `GET /api/billing/offer` | `OfferResponse` (`lib/billing/offer.ts`; `serverNow` ile sayaç; `prices[*].placeholder`) |
+| | `sync()` | `POST /api/billing/sync` | `{ premium, plan, periodEnd }`; `RATE_LIMITED` (6/dk) |
+| questionnaire | `submit(q)` | `POST /api/questionnaire` | 204 |
+| plan | `get(id)` / `create(id, regenerate?)` | `GET /api/plan/[id]` / `POST /api/plan` | `PlanDto { view: PlanViewV2, created?, fallback?, hairLossSignal }`; `NOT_FOUND`, `PREMIUM_REQUIRED`, `QUOTA_EXCEEDED` |
+| doctor | `get(id)` / `screen({ answers, analysisId? })` | `GET /api/doctor?analysisId=` / `POST /api/doctor/screen` | `DoctorDto { state, steps, disclosure:true }` / `{ result, retakeAt? }` |
+| me | `faceShape(shape|null)` | `PATCH /api/me/face-shape` | `{ override }` |
+| tryon | `status()` / `run(TryonInputV2Raw)` / `runLegacy(TryonInput)` / `drift(eventId)` / `flag(eventId)` | `GET /api/tryon/status` / `POST /api/tryon` / `POST /api/tryon/[id]/{drift,flag}` | `TryonStatusDto` / `TryonResultV2` (`TRYON_QC_FAILED` 422 → görsel yok, hak düşmez) / 204 |
+| referral | `get()` / `claim(code)` | `GET /api/referral` / `POST /api/referral { code }` | `ReferralDto { code, progress{done,total,pending}, unlocked }` / 204; bayrak kapalı → `FEATURE_DISABLED` |
+
+Yoklama yardımcıları: `ANALYSIS_POLL = { intervalMs 2500, maxIntervalMs 6000, timeoutMs 15 dk }`, `nextPollDelayMs(attempt)`, `isAnalysisSettled(stage)`, `waitForAnalysis(aura, id, { onUpdate, signal, sleep, timeoutMs })` — her yanıt `onUpdate`'e gider (kart kart açılış `sectionsReady` ile), `completed|failed`'da durur. Testler: `mobile/tests/apiV2.test.ts` (görsel yalnız `[id]/run` ve `/api/tryon` gövdesinde).
+
+**`mobile/src/lib/flags.ts`** — `FlagKey` aynası tam (`under18, percentile, doctorLayer, referralUnlock, yearlyPlan, productLinks, glowUp, tryonCombo` + eskiler); Sprint 3'te yeni bayrak yok (hayalet kılavuz ve berber kartı ONAYLI ÖNERİ, bayraksız; affedici seri ÖNERİ → yapılandırma yer tutucu, bayrak değil). Sunucu son sözü söyler.
+
+**`mobile/src/theme/index.ts`** — `Palette` += `brand, brandSoft, elevated, success, warn, info, track, overlay` (web `globals.css` adlarıyla, açık/koyu); `radius` += `sm, xl`; `touchTarget = 44`; `typeScale`; `motion` (reduce-motion'da kapatılır). İki iz yeni renk sabiti tanımlamaz.
+
+**`mobile/app/_layout.tsx`** — kök `Stack` v2 rotalarını kaydeder (`baslangic`, `tara`, `analiz/[id]`, `premium` modal, `plan/[id]/index`, `plan/[id]/anket`); ekranlar kendi `Stack.Screen` başlıklarını koyar. `(tabs)/_layout.tsx` değişmedi (sekmeler KB §3.2/7 ile aynı: Analiz · Plan · Dene · Rutin · İlerleme).
+
+**M1 saf modül listesi (doğrulandı; `mobile/tests/sharedV2.test.ts` her birini içe aktarır):** `lib/score/{contract,present}.ts`, `lib/coach/planTypes.ts`, `lib/questionnaireV2.ts`, `lib/config/{plan,plans,flags,scoring,routine,tryon,teaser}.ts`, `lib/tryon/types.ts`, `lib/api/{tryonInput,analysesInput,errors}.ts`, `lib/onboarding/{age,gate}.ts`, `lib/face/{views,ghostGuide,overlay,deviceProgress,hash,indices,…}.ts`, `lib/share/spec.ts` (`lib/share/card.ts` DOM — yasak), `lib/routine/{streak,forgiving}.ts`, `lib/progress/noise.ts`, `lib/billing/{offer,entitlement,revenuecat}.ts`, `lib/referral/{code,unlock}.ts`, `lib/analytics.ts`, `content/*`, `messages/tr.json`. ESLint `no-restricted-imports` listesine eklendi: `@/lib/coach/{generatePlan,planStore}`, `@/lib/doctor/*`, `@/lib/referral/{server,verify,links}`, `@/lib/onboarding/{presentation,profileRead}`, `@/lib/api/quota`, `@/lib/tryon/quota`, `@/lib/tryon/*.server`, `@/lib/face/sessionStore` (ImageBitmap); istisnalar `!@/lib/share/spec`, `!@/lib/billing/{offer,entitlement}`.
+
+### S3.3 Web Faz 6 sözleşmeleri (W6 uygular; T2 saf modülleri yazdı)
+
+#### S3.3.1 Paylaşım kartları — `lib/share/spec.ts` (KB §8 KARAR R2-Ö3, ONAYLI ÖNERİ R2-Ö2, K17)
+
+```ts
+SHARE_CARD_KINDS = ["score","strongest","barber"]; SHARE_CARD_FORMATS = ["story","square"]; SHARE_CARD_SIZES; SHARE_AUDIENCES = ["personal","marketing"]
+ShareCardSpec = ScoreShareSpec | StrongestShareSpec | BarberShareSpec   // ortak: format, audience, appName, url, disclaimer, withPhoto
+ScoreShareSpec     { kind:"score", overall, potential|null, subs[≤3]{key,label,value} }
+StrongestShareSpec { kind:"strongest", sub, title ("En güçlü yanın: {area}"), line (≤120, nötr tek cümle; ExplanationV2.held[0]) }   // SAYI YOK
+BarberShareSpec    { kind:"barber", barber: BarberSpec, presetIds{hair?,beard?}, lines[], withPhoto:false }   // görsel yok (S2.14 #27)
+shareSpecIssues(spec) → ShareSpecIssue[]  ("photo_on_marketing_card" | "photo_on_barber_card" | aralık/uzunluk | "url_missing")
+SHARE_RULES.photoAllowed(kind, audience); strongestSub(subscores); topSubs(subscores, labelOf); shareFileName(kind, now)
+```
+
+- **Kural (K17):** `audience:"marketing"` kartında kullanıcı fotoğrafı **yok** — `shareSpecIssues` boş değilse çizici (web `lib/share/card.ts`, mobil Skia) **çizmez**. Varsayılan kart skor kartı; "En güçlü yanın" isteğe bağlı; berber kartı plan ekranındaki "Berbere göster"den (`BarberSpec`: stil adı, yanlar kaç numara, üst kaç cm, sakal hattı; önden/yandan görsel varlık gelince `imageFront/imageSide`). Kart cihazda üretilir; sunucuya gitmez. Etiket metinleri `share.v2.*`. W6 `renderShareCard(spec, photo?)` imzasına geçer (eski `ShareCardInput` bir sürüm kalır); mobil `features/share/layout.ts` aynı spec'i alır (W7b).
+- Analitik: `share_card_created { withPhoto, kind }` (skor değeri yok).
+
+#### S3.3.2 Affedici seri — `lib/config/routine.ts`, `lib/routine/forgiving.ts` (PLAN Faz 6 **[ÖNERİ]**; CLAUDE NOTU)
+
+```ts
+ROUTINE_FORGIVING = { restDaysPerWeek: 1, freezesPerMonth: 1, placeholder: true }; getRoutineForgiving(env)  // ROUTINE_REST_DAYS_PER_WEEK 0–3, ROUTINE_FREEZES_PER_MONTH 0–4 (mobil EXPO_PUBLIC_ aynı)
+FreezeRecord = { date: "YYYY-MM-DD" }
+computeForgivingStreak({ logs, activeItemCount, today, freezes?, config? }) → { streak, restDaysBridged, freezesBridged, today: "done"|"frozen"|"pending" }
+restDaysLeftThisWeek(...) → n; canUseFreeze(freezes, date, today, config) → { ok } | { ok:false, reason: limit_reached|already_frozen|future_date|bad_date }
+dayStatus(day, ...) → done|rest|frozen|missed|pending; isoWeekKey(ymd) "YYYY-Www" (Pzt başlangıç); monthKey(ymd) "YYYY-MM"
+```
+
+- Kurallar: yapılan gün (≥ %80, SPEC 11.1) seriyi artırır; **dondurulan gün** ve haftada `restDaysPerWeek` **eksik gün** seriyi köprüler (sayılmaz, koparmaz); bugün tamamlanmadıysa eksik sayılmaz (dünden geriye). Zincirin başındaki köprüler sayılmaz. `computeStreak` (v1) olduğu gibi kalır; arayüz `placeholder` iken `routine.v2.placeholderNote` gösterir.
+- Analitik: `routine_rest_day` (dinlenme günü köprü olarak gösterildiğinde, günde bir), `routine_freeze_used`.
+
+#### S3.3.3 İlerleme gürültü bandı — `lib/progress/noise.ts`, `lib/config/scoring.ts NOISE_BAND` (KB §4.2)
+
+- **Tek kaynak:** `NOISE_BAND = 0.3` artık `lib/config/scoring.ts`'te (saf); `lib/config/engine.h2.server.ts` yeniden dışa aktarır, `ClientAnalysisV2.noiseBand = NOISE_BAND_CLIENT = NOISE_BAND`. Motor dosyalarına dokunulmadı.
+- `classifyChange(prev, next, band = NOISE_BAND) → { delta (tek ondalık), kind: no_change|up|down, band }` — |Δ| ≤ bant (sınır dahil) "değişim yok". `CHANGE_LABEL_KEY` → `progress.v2.change.*`; `formatBand` "0,3"; `formatDelta` "+0,4"/"−0,5"; `trendChanges(points)` ardışık çiftler. Kalibrasyon sürümü farklıysa karşılaştırma yapılmaz (`progress.v2.calibrationChanged`); istemci `a.noiseBand`'ı geçirir.
+- Analitik: `progress_no_change_shown` (yüksüz).
+
+#### S3.3.4 Hayalet kılavuz — `lib/face/ghostGuide.ts` (KB §8 ONAYLI ÖNERİ R2-Ö1)
+
+```ts
+GHOST_INDICES (43 = FACE_OVAL 36 + göz köşeleri 4 + burun ucu + ağız köşeleri 2); GHOST_STYLE { opacity 0.35, strokeWidth 2 }
+GhostOutline (zod) = { version:1, aspect (w/h), mirrored, oval[36], eyes[4], nose, mouth[2] (hepsi 0–1 normalize), takenAt }
+ghostOutlineFromLandmarks(landmarks px, frameW, frameH, { mirrored, takenAt }) → GhostOutline | null   // z atılır; 478 nokta tutulmaz
+ghostPolylines(outline, viewport{w,h}, { mirror }) → { oval, eyes, nose, mouth } px   // "cover" eşlemesi (önizlemeyle aynı), ayna farkında x çevrilir
+polylinePath(points, close); parseGhostOutline(raw) → GhostOutline | null
+```
+
+- **Saklama:** yalnız cihazda, ilerleme kaydıyla birlikte: web `lib/local/progressStore.ts` Dexie **v2** `ProgressPhoto.ghost?: GhostOutline` (W6); mobil `ProgressEntry.ghost?: GhostOutline` (`index.json`, W7b). Analiz çekiminde ön kare için üretilir (kalite kapısından geçen kare; `AnalysisProgress`'ten önce). **Hiçbir isteğe, analitiğe, loga girmez**; `privacy.spec.ts` gövdede `"oval"`, `"ghost"`, `"eyes":[[` anahtarlarını yasaklar (W6 ekler). Yeniden analizde kamera üstüne silik çizgi (`ghost.*` metinleri, toggle; `prefers-reduced-motion`'dan bağımsız statik). Analitik: `ghost_guide_shown`.
+
+#### S3.3.5 Davet kodu girişi (KB P#15/Ç12)
+
+- **Karar:** ayrı `POST /api/referral/claim` rotası **yok** — W1'in `POST /api/referral { code } → 204` rotası zaten "claim"dir (`checkClaim`, `verifyReferralDevice` yer tutucu, `FEATURE_REFERRAL_UNLOCK`). W6 web giriş formunu (`components/paywall/ReferralClaimForm.tsx`, paywall v2 davet bloğunun altında ve `/baslangic/izinler` sonrası isteğe bağlı), W7a mobil formunu yazar. Hata eşlemesi `BAD_INPUT` mesajı → `referral.claim.errors.{unknown_code,self,already_claimed,device,generic}`; `FEATURE_DISABLED` → `disabled`. Kod biçimi `REFERRAL_CODE_RE` (`DV-XXXX-XXXX`, `normalizeReferralCode`). Analitik: `referral_claimed { ok }` (kod yok).
+
+#### S3.3.6 Admin "Bozuk görünüyor" oranı (KB §7.3/5; F18)
+
+- `GET /api/admin/metrics` yanıtı += `tryonQuality: { day, mode, success, qc_failed, identity_drift, flagged_broken, broken_rate }[]` (`ops.daily_tryon_quality`, 0014). PostgREST `ops` şemasını açmaz: W6 `0015_v2_faz6.sql` ile `public.ops_daily_tryon_quality(p_days int)` RPC'si (0007 kalıbı, `security definer`, yalnız service role) ekler; admin sayfasında günlük tablo + son 7 gün oranı; %5 üstü vurgulanır (CLAUDE NOTU eşik). Görsel yok.
+
+#### S3.3.7 Mobil ödeme eşitliği (sunucu tarafı; W6)
+
+- RevenueCat tek seferlik ürün: `lib/billing/revenuecat.ts` saf eşlemeye `productFromStoreId(id) → ProductId | null` (env `REVENUECAT_PRODUCT_ONE_TIME_REPORT_ID`, `…_PROMO_ID`; abonelikler mevcut `planFromProductId`), webhook `NON_RENEWING_PURCHASE` → `purchases(provider='revenuecat', product='one_time_report', status='paid', analysis_id null)` (idempotent `event_key`); `/api/analyses/[id]/run` mevcut `promoteAndStart` bağlar. Mağaza ürün kimlikleri ve fiyat kademeleri **AÇIK** (kurucu; S3.7). İstemci sonucu premium açmaz (değişmedi).
+
+### S3.4 `messages/tr.json` ad alanları (anahtar kümeleri sözleşme; `messagesTone` WALKED'a eklendi)
+
+| Ad alanı | İz | Sabit anahtarlar / KB metinleri |
+|---|---|---|
+| `share.v2.*` | W6/W7b | `kinds` = SHARE_CARD_KINDS, `kindHint.*`, `strongestTitle` = **"En güçlü yanın: {area}"** (KB §8), `photoToggle`, `photoHint`, `marketingNoPhoto`, `barberNoPhoto`, `disclaimer`, `footer`, `create`, `download`, `shared`, `downloaded`, `error`, `invalid`, `deviceNote`; eski `share.*` (v1 kart) kalır |
+| `routine.v2.*` | W6/W7b | `restDay`, `restDayHint {n}`, `restDaysLeft {n}`, `restDaysNone`, `freeze`, `freezeHint {n}`, `freezeUsed`, `freezeDone`, `frozenDay`, `missedDay`, `streakKept`, `bridgedNote {rest,freeze}`, `placeholderNote`, `errors.*` = FreezeCheck nedenleri |
+| `progress.v2.*` | W6/W7b | `change.{noChange,up,down}` ("Değişim yok" / "Yükseldi" / "Düştü"), `noiseNote {band}`, `deltaLabel {delta}`, `sincePrevious`, `calibrationChanged`, `changeAria {label}`; `analysis.noChange {band}` kalır |
+| `referral.claim.*` | W6/W7a | `title`, `body`, `label`, `placeholder`, `submit`, `skip`, `success`, `errors.{unknown_code,self,already_claimed,device,disabled,generic}` |
+| `ghost.*` | W6/W7a | `title`, `body` (KB §8 birebir anlam: "yüz çizgisi kamerada silik görünür; aynı açıya ve mesafeye otur"), `show`, `hide`, `none`, `aria`, `aligned`, `deviceNote` |
+| `mobile.*` | T2/W7a/W7b | `stub.{title,body,back}` (yer tutucu ekranlar; sprint sonunda kullanılmaz kalmalı), `signIn.{emailFallback,openBrowser}`, `share.{systemSheet,saved}` |
+
+Ton: BANNED listesi geçerli; "incele-" kökü yok; "ücretsiz" sözü yok.
+
+### S3.5 Analitik (`lib/analytics.ts`)
+
+`SPRINT3_EVENTS = ghost_guide_shown, routine_rest_day, routine_freeze_used, progress_no_change_shown, barber_card_opened` — **yüksüz**. Değişen: `share_card_created { withPhoto, kind? }`. Var olan: `referral_claimed { ok }`. Mobil **aynı adları** kullanır (`posthog-react-native` aynı `track`; ayrı `mobile_*` adı yok — platform PostHog SDK'nın kendi özelliğidir). Kılavuz noktası, seri sayısı, skor farkı, kod, fotoğraf olaylara girmez (`sanitizeProps` + tip).
+
+### S3.6 Veritabanı ve saklama (yalnız dosya; canlı projeye push onay ister; canlı proje 0010–0014'ü de almadı)
+
+- **0015_v2_faz6.sql** (W6; ÖNERİ): `routine_freezes (user_id, freeze_date date, created_at; pk (user_id, freeze_date))`, RLS sahip `select/insert/delete`; trigger `routine_freeze_limit()` takvim ayında `> 1` satırı reddeder (SQL sabiti; env ile değil — kurucu sayıyı değiştirirse migration); `public.ops_daily_tryon_quality(p_days)` RPC. Web/mobil `routine_freezes`'i `routine_logs` gibi doğrudan RLS ile okur/yazar; `canUseFreeze` istemci UX'i, trigger sunucu kapısı.
+- Hayalet kılavuz ve ilerleme fotoğrafları **veritabanına girmez** (IndexedDB / sanal alan).
+- `lib/db/types.ts` aynası W6 tarafından `routine_freezes` ile güncellenir; `pnpm db:types` push sonrası.
+
+### S3.7 Açık maddeler ve kurucudan beklenenler
+
+1. Affedici seri sayıları (haftada dinlenme, ayda dondurma) — ÖNERİ; `placeholder:true`.
+2. Berber kartı önden/yandan stil görselleri (varlık yok; KB §8 ONAYLI ÖNERİ'nin eksik parçası).
+3. Davet kilidi cihaz doğrulaması (KB §11.15) — `verifyReferralDevice` yer tutucu.
+4. RevenueCat/App Store/Play ürünleri: `one_time_report` (+ tanıtım), `weekly`, `monthly` (yıllık bayrakla); fiyat kademeleri; Apple Small Business.
+5. Google/Apple OAuth: Supabase sağlayıcıları (web'de var), **Apple Services ID + `aura://auth/callback` yönlendirme izni**, Android için Google istemci kimliği; e-posta OTP kalıyor mu (KB §11.11).
+6. Mobil gizlilik proxy testi (mitmproxy, `mobile/tests/privacy/`) gerçek cihazda; `oval`/`ghost` kuralı eklenir.
+7. Admin oran eşiği (%5) — CLAUDE NOTU.
+
+### S3.8 T2 kararları ve sapmalar
+
+| # | Karar | Not |
+|---|---|---|
+| 1 | `mobile/app/plan/[analysisId].tsx` → `mobile/app/plan/[id]/index.tsx` (`git mv`; param `id`), çağrılar (`(tabs)/plan.tsx`, `ScoreView.tsx`) güncellendi | expo-router aynı seviyede iki farklı dinamik ad kabul etmez; web `/plan/[id]` ile aynı |
+| 2 | `POST /api/referral/claim` açılmadı; `POST /api/referral` claim'dir | Çift rota yok; mobil `aura.referral.claim` |
+| 3 | `NOISE_BAND` `lib/config/scoring.ts`'e taşındı; `engine.h2.server.ts` yeniden dışa aktarır | Motor dosyalarına dokunulmadı; `engineH2Config.test` aynen geçer |
+| 4 | `SessionProvider.aura` eklendi (T2 paylaşılan dosya) | İzler `useSession().aura` kullanır; `api` (ham) kalır |
+| 5 | Mobil ESLint M1 listesi genişletildi (S3.2) | `sharedV2.test` kuralı yapılandırmadan okur |
+| 6 | Yer tutucu ekranlar `mobile.stub.*` ile derlenir; sprint sonunda hiçbiri kalmamalı (W7a/W7b kapanış şartı) | `giris`, `cinsiyet`, `plan/[id]/anket` |
+| 7 | `routine_freezes` sunucuda (RLS + trigger) — ÖNERİ; W6 bayraksız `placeholder` notu ile | Cihazlar arası tutarlılık; limit sunucu kapısı |

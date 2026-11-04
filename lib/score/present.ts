@@ -1,6 +1,6 @@
 // SPEC 14.1 teaser kırpması. Kilitli değerler JSON'a hiç girmez (null + locked:true).
 // hybrid.v1 eklemeleri ve kilit kuralları: UI spec §1.2, engine spec §8.
-import { SUB_KIND, SUB_KIND_HYBRID } from "@/lib/config/scoring";
+import { NOISE_BAND, SUB_KIND, SUB_KIND_HYBRID } from "@/lib/config/scoring";
 import { SUB_KEYS_V2, type SubKey, type TeaserMode } from "@/lib/config/teaser";
 import type { FaceShape, GeometryResult } from "@/lib/face/types";
 import {
@@ -221,7 +221,7 @@ export type ClientAnalysisV2 = {
   failure: AnalysisFailure | null;
 };
 
-export const NOISE_BAND_CLIENT = 0.3;
+export const NOISE_BAND_CLIENT: number = NOISE_BAND;
 
 const LOCKED: { value: null; locked: true } = { value: null, locked: true };
 const OPEN_NULL: { value: null; locked: false } = { value: null, locked: false };

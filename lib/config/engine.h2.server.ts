@@ -32,7 +32,7 @@ export const CONSENSUS = { runs: 3, extraRunIfSpread: 0.5, maxRuns: 4 } as const
 export const POTENTIAL_H2 = { maxAboveOverall: 1.5, absoluteMax: 9.5 } as const;
 
 /** Yeniden analizde ±0,3'ten küçük fark "değişim yok" (KB §4.2/4). */
-export const NOISE_BAND = 0.3;
+export { NOISE_BAND } from "@/lib/config/scoring";
 
 /** Aynı dosya seti (bayt bayt) bu süre boyunca aynı skoru alır (Ç11); analysis_sets.expires_at. */
 export const SET_CACHE_DAYS = 365;
