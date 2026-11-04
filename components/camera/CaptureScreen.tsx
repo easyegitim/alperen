@@ -6,15 +6,19 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DeviceAnalysisProgress } from "@/components/analysis/AnalysisProgress";
 import { GeometryOverlay, type OverlaySource } from "@/components/analysis/GeometryOverlay";
+import { GhostGuide } from "@/components/camera/GhostGuide";
+import { ReferralClaimForm } from "@/components/paywall/ReferralClaimForm";
 import { SelfieCamera, type CaptureResult } from "@/components/camera/SelfieCamera";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { track } from "@/lib/analytics";
 import { submitDeviceAnalysis, submitRunAnalysis, type ViewImage } from "@/lib/api/analysisClient";
 import { ApiClientError } from "@/lib/api/client";
 import { VisionClient } from "@/lib/face/client";
 import { DEVICE_STEP_MIN_MS, finishDeviceProgress, markDeviceStep, startDeviceProgress, type DeviceProgress } from "@/lib/face/deviceProgress";
+import { ghostOutlineFromLandmarks, type GhostOutline } from "@/lib/face/ghostGuide";
 import { findHairline, propagateHairline } from "@/lib/face/hairline";
 import { sourceHashesFor } from "@/lib/face/hash";
 import { computeStableGeometry, toPixels, type GeometryFrame } from "@/lib/face/metrics";
@@ -23,7 +27,7 @@ import { qualitySummary } from "@/lib/face/quality";
 import { bindSessionSelfie, setSessionSelfie, setSessionViews, type SessionView } from "@/lib/face/sessionStore";
 import type { GeometryResult } from "@/lib/face/types";
 import { OPTIONAL_VIEWS, PROFILE_VIEWS, VIEWS, VIEW_BY_KEY, type ViewKey } from "@/lib/face/views";
-import { addProgressPhoto } from "@/lib/local/progressStore";
+import { addProgressPhoto, latestGhostOutline } from "@/lib/local/progressStore";
 import { cn } from "@/lib/utils";
 
 /** Çekim sonrası cihazda geometri (F06): segmenter → saç çizgisi → 5 kare medyanı → GeometryResult (yalnız ön). */
@@ -96,6 +100,21 @@ export function CaptureScreen({ aiProviderName, resumeAnalysisId = null }: { aiP
   const [saveProgress, setSaveProgress] = useState(false);
   const capturedAtRef = useRef<number | null>(null);
   const requestIdRef = useRef<string>(crypto.randomUUID());
+  // Faz 6 hayalet kılavuz (KB §8 R2-Ö1): önceki ilerleme kaydındaki yüz çizgisi (yalnız IndexedDB; ağa çıkmaz).
+  // Önceki analiz yoksa katman yok; varsa varsayılan açık, kullanıcı kapatabilir.
+  const tgh = useTranslations("ghost");
+  const [ghost, setGhost] = useState<GhostOutline | null>(null);
+  const [ghostOn, setGhostOn] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void latestGhostOutline().then((g) => {
+      if (!cancelled) setGhost(g);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const front = captures.front ?? null;
 
@@ -246,7 +265,10 @@ export function CaptureScreen({ aiProviderName, resumeAnalysisId = null }: { aiP
         try {
           const canvas = new OffscreenCanvas(front.image.width, front.image.height);
           canvas.getContext("2d")?.drawImage(front.image.bitmap, 0, 0);
-          await addProgressPhoto({ blob: await canvas.convertToBlob({ type: "image/jpeg", quality: 0.85 }), analysisId: analysis.id });
+          // Hayalet kılavuz için 43 noktalık çizgi altkümesi (ham kare koordinatı, mirrored:false); 478 nokta saklanmaz.
+          const { width: gw, height: gh } = front.image;
+          const ghostOutline = front.final.landmarks ? ghostOutlineFromLandmarks(front.final.landmarks.map((p) => ({ x: p.x * gw, y: p.y * gh })), gw, gh, { mirrored: false, takenAt: Date.now() }) : null;
+          await addProgressPhoto({ blob: await canvas.convertToBlob({ type: "image/jpeg", quality: 0.85 }), analysisId: analysis.id, ghost: ghostOutline ?? undefined });
         } catch {
           // depolama kapalıysa sessizce geç
         }
@@ -298,7 +320,17 @@ export function CaptureScreen({ aiProviderName, resumeAnalysisId = null }: { aiP
           onGalleryBatch={step.view === "front" ? (items) => void place(items) : undefined}
           onBack={captures.front ? () => setStep({ kind: "summary" }) : undefined}
           labels={requiredProfile ? { name: tv("profileAny.name"), instruction: tv("profileAny.instruction") } : undefined}
+          overlay={step.view === "front" && ghost && ghostOn ? <GhostGuide outline={ghost} mirror /> : undefined}
         />
+        {step.view === "front" && ghost ? (
+          <div className="mx-auto flex w-full max-w-sm items-center justify-between gap-3 rounded-xl border bg-muted/40 px-3 py-2">
+            <label htmlFor="ghost-guide" className="min-w-0 text-[13px]">
+              <span className="font-semibold">{tgh("title")}</span>
+              <span className="block text-[11px] leading-snug text-muted-foreground">{tgh("body")}</span>
+            </label>
+            <Switch id="ghost-guide" checked={ghostOn} onCheckedChange={setGhostOn} aria-label={ghostOn ? tgh("hide") : tgh("show")} />
+          </div>
+        ) : null}
         {step.view === "front" ? <p className="text-center text-[11px] text-muted-foreground">{tv("profileRequiredNote")}</p> : null}
       </div>
     );
@@ -425,9 +457,13 @@ export function CaptureScreen({ aiProviderName, resumeAnalysisId = null }: { aiP
             <Checkbox checked={saveProgress} onCheckedChange={(v) => setSaveProgress(v === true)} className="mt-0.5 size-5" />
             <span>
               <span className="font-semibold">{t("saveProgress")}</span>
-              <span className="mt-0.5 block text-[11px] text-muted-foreground">{t("saveProgressHint")}</span>
+              <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                {t("saveProgressHint")} {tgh("saveHint")}
+              </span>
             </span>
           </label>
+          {/* Davet kodu (KB Ç12): ilk cihaz analizinden ÖNCE girilir (fotoğraf yollanınca davet tamamlanır); bayrak kapalıysa çizilmez. */}
+          {!resumeAnalysisId ? <ReferralClaimForm /> : null}
           {resumeAnalysisId ? (
             <p className="flex items-start gap-2 rounded-xl border bg-brand-soft/40 p-3 text-[13px]" role="note">
               <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" />

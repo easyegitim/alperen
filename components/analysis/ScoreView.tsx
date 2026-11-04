@@ -14,6 +14,7 @@ import { REVEAL_COUNT_MS, REVEAL_LINES_MS, ScoreHero, ScoreHeroLocked } from "@/
 import { LockedSubscoreList, SubscoreList, type SubRow } from "@/components/analysis/SubscoreList";
 import { useBoundSelfie } from "@/components/analysis/useBoundSelfie";
 import { usePaywall } from "@/components/paywall/PaywallSheet";
+import { ReferralBlock } from "@/components/paywall/ReferralBlock";
 import { FeedbackButtons } from "@/components/report/FeedbackButtons";
 import { ShareCardButton } from "@/components/share/ShareCardButton";
 import { Button } from "@/components/ui/button";
@@ -225,6 +226,8 @@ export function ScoreViewV2({ a }: { a: ClientAnalysisV2 }) {
       <LockedSubscoreList keys={SUB_KEYS_V2} onLocked={onLocked} />
       <ImproveFirstCard v={{ value: null, locked: true }} analysisId={a.id} onLocked={onLocked} />
       <LockedPlanPreview source={source} onTap={() => onLocked("plan")} />
+      {/* Faz 6 (KB Ç12): davet bloğu kilitli sonuçta da görünür (bayrak kapalıysa 404 → çizilmez). */}
+      <ReferralBlock />
       {a.device ? <DeviceMeasurementsCard ratios={a.device.ratios} /> : null}
       <p className="text-center text-[11px] text-muted-foreground">{t("competitorsNote")}</p>
       <MethodDisclosure hybrid />

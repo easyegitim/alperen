@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, CalendarDays, Check, Flame, ListChecks, Moon, Plus, Sun, Clock3, Trash2, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, Check, ListChecks, Moon, Plus, Sun, Clock3, Trash2, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -8,40 +8,57 @@ import { toast } from "sonner";
 import { EXERCISES, EXERCISE_SAFETY_TEXT } from "@/content/exercises";
 import { HABITS } from "@/content/habits";
 import { SKIN_STEPS } from "@/content/skin-steps";
-import { ScoreRing } from "@/components/analysis/ScoreRing";
 import { ExerciseTimer } from "@/components/routine/ExerciseTimer";
 import { StateCard } from "@/components/routine/StateCard";
+import { StreakCard } from "@/components/routine/StreakCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { track } from "@/lib/analytics";
+import { getRoutineForgiving, ROUTINE_FORGIVING } from "@/lib/config/routine";
 import { createClient } from "@/lib/db/browser";
-import { completionRatio, computeStreak, istanbulDate, type DayLog } from "@/lib/routine/streak";
+import { freezeStoreError, recentDays } from "@/lib/routine/calendar";
+import { canUseFreeze, computeForgivingStreak, restDaysLeftThisWeek, type FreezeRecord } from "@/lib/routine/forgiving";
+import { completionRatio, istanbulDate, type DayLog } from "@/lib/routine/streak";
 import { cn } from "@/lib/utils";
 
 type Item = { id: string; kind: "step" | "exercise" | "habit"; ref_id: string | null; slot: "morning" | "evening" | "daily" | "weekly"; title: string; position: number };
 const SLOTS = ["morning", "daily", "evening", "weekly"] as const;
 const SLOT_ICON: Record<(typeof SLOTS)[number], LucideIcon> = { morning: Sun, daily: Clock3, evening: Moon, weekly: CalendarDays };
 
-/** /rutin (F12): bugünün listesi, routine_logs upsert (iyimser), seri, zamanlayıcılar, düzenleme. RLS: kendi satırları. */
+/** Faz 6 affedici seri sayıları (ÖNERİ; env ile değişir): NEXT_PUBLIC_ olmadığından istemcide varsayılan + placeholder notu. */
+const FORGIVING = { ...getRoutineForgiving(), placeholder: ROUTINE_FORGIVING.placeholder };
+
+/**
+ * /rutin (F12): bugünün listesi, routine_logs upsert (iyimser), affedici seri (Faz 6: dinlenme günü + dondurma; eski
+ * computeStreak kayıt biçimi aynen), zamanlayıcılar, düzenleme. RLS: kendi satırları. routine_freezes (0015) yoksa
+ * dondurma bölümü gizlenir; seri yine hesaplanır.
+ */
 export function RoutineScreen({ userId, exerciseEligible }: { userId: string; exerciseEligible: boolean }) {
   const t = useTranslations("routine");
+  const tv = useTranslations("routine.v2");
   const today = istanbulDate();
   const [items, setItems] = useState<Item[] | null>(null);
   const [logs, setLogs] = useState<DayLog[]>([]);
+  const [freezes, setFreezes] = useState<FreezeRecord[]>([]);
+  const [freezeAvailable, setFreezeAvailable] = useState(true);
+  const [freezeBusy, setFreezeBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
 
   const load = useCallback(async () => {
     const supabase = createClient();
     const since = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
-    const [i, l] = await Promise.all([
+    const [i, l, f] = await Promise.all([
       supabase.from("routine_items").select("id, kind, ref_id, slot, title, position").eq("active", true).order("position"),
       supabase.from("routine_logs").select("log_date, item_id, done").gte("log_date", since),
+      supabase.from("routine_freezes").select("freeze_date").gte("freeze_date", since),
     ]);
     setItems((i.data ?? []) as Item[]);
     setLogs((l.data ?? []) as DayLog[]);
+    if (f.error) setFreezeAvailable(freezeStoreError(f.error) !== "unavailable");
+    setFreezes(((f.data ?? []) as { freeze_date: string }[]).map((r) => ({ date: String(r.freeze_date) })));
   }, []);
 
   useEffect(() => {
@@ -49,7 +66,42 @@ export function RoutineScreen({ userId, exerciseEligible }: { userId: string; ex
   }, [load]);
 
   const dailyIds = useMemo(() => (items ?? []).filter((i) => i.slot !== "weekly").map((i) => i.id), [items]);
-  const streak = useMemo(() => computeStreak(logs, dailyIds.length, today), [logs, dailyIds.length, today]);
+  const forgiving = useMemo(() => computeForgivingStreak({ logs, activeItemCount: dailyIds.length, today, freezes, config: FORGIVING }), [logs, dailyIds.length, today, freezes]);
+  const restLeft = useMemo(() => restDaysLeftThisWeek({ logs, activeItemCount: dailyIds.length, today, freezes, config: FORGIVING }), [logs, dailyIds.length, today, freezes]);
+  const week = useMemo(() => recentDays({ logs, activeItemCount: dailyIds.length, today, freezes, config: FORGIVING, days: 7 }), [logs, dailyIds.length, today, freezes]);
+  const freezeCheck = useMemo(() => canUseFreeze(freezes, today, today, FORGIVING), [freezes, today]);
+
+  // routine_rest_day: dinlenme günü köprü olarak gösterildiğinde, günde bir (yüksüz; sayı gitmez).
+  useEffect(() => {
+    if (!week.some((d) => d.status === "rest")) return;
+    const key = `aura.routine.restDay.${today}`;
+    try {
+      if (window.sessionStorage.getItem(key) === "1") return;
+      window.sessionStorage.setItem(key, "1");
+    } catch {
+      // depolama kapalıysa oturumda bir kez
+    }
+    track("routine_rest_day");
+  }, [week, today]);
+
+  async function freezeToday() {
+    if (!freezeCheck.ok) {
+      toast.error(tv(`errors.${freezeCheck.reason}`));
+      return;
+    }
+    setFreezeBusy(true);
+    const { error } = await createClient().from("routine_freezes").insert({ user_id: userId, freeze_date: today });
+    setFreezeBusy(false);
+    if (error) {
+      const reason = freezeStoreError(error);
+      if (reason === "unavailable") setFreezeAvailable(false);
+      toast.error(reason === "limit_reached" || reason === "already_frozen" || reason === "future_date" ? tv(`errors.${reason}`) : t("saveError"));
+      return;
+    }
+    setFreezes((prev) => [...prev, { date: today }]);
+    track("routine_freeze_used");
+    toast.success(tv("freezeDone"));
+  }
   const ratio = useMemo(() => completionRatio(logs, dailyIds, today), [logs, dailyIds, today]);
   const doneToday = (id: string) => logs.some((l) => l.log_date === today && l.item_id === id && l.done);
 
@@ -115,26 +167,17 @@ export function RoutineScreen({ userId, exerciseEligible }: { userId: string; ex
 
   return (
     <div className="space-y-3">
-      <Card className="bg-hero-glow">
-        <CardContent className="flex items-center gap-5">
-          <ScoreRing value={pct} max={100} size={104} stroke={10} animate>
-            <span className="num text-2xl font-bold">{pct}%</span>
-          </ScoreRing>
-          <div className="min-w-0 flex-1 space-y-2">
-            <p className="eyebrow">{t("today", { date: new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long" }) })}</p>
-            <p className="flex items-center gap-1.5">
-              <Flame className="size-5 text-brand" aria-hidden="true" />
-              <span className="num text-brand-gradient text-2xl font-bold">{streak}</span>
-              <span className="text-sm font-semibold">{t("streakDays")}</span>
-            </p>
-            <p className="num text-xs text-muted-foreground">{t("doneCount", { done: doneCount, total: dailyIds.length })}</p>
-            <span className="sr-only">
-              {t("progressAria")}: {pct}%. {t("streak", { n: streak })}
-            </span>
-          </div>
-        </CardContent>
-        <p className="px-5 text-[11px] leading-relaxed text-muted-foreground">{t("streakHint")}</p>
-      </Card>
+      <StreakCard
+        dateLabel={new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
+        pct={pct}
+        doneCount={doneCount}
+        total={dailyIds.length}
+        streak={forgiving}
+        restLeft={restLeft}
+        config={FORGIVING}
+        days={week}
+        freeze={{ available: freezeAvailable, check: freezeCheck, busy: freezeBusy, onFreeze: () => void freezeToday() }}
+      />
 
       {SLOTS.map((slot) => {
         const list = items.filter((i) => i.slot === slot);
