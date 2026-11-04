@@ -2129,7 +2129,8 @@
         "doctor": "Doktor katmanına git",
         "expert": "Saç sağlığı uzmanı bul",
         "notMedical": "Teşhis değildir; tıbbi tavsiye değildir."
-      }
+      },
+      "tabsAria": "Plan alanları"
     }
   },
   "doctor": {

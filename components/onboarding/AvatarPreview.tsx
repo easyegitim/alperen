@@ -6,9 +6,9 @@ import type { BeardLengthPref, HairLengthPref } from "@/lib/config/plan";
 type Props = { hair: HairLengthPref; beard: BeardLengthPref; presentation: "male" | "female" | "unspecified"; className?: string; label?: string };
 
 const HAIR_PATH: Record<Exclude<HairLengthPref, "keep">, string> = {
-  short: "M28 40 Q50 18 72 40 Q70 30 50 28 Q30 30 28 40 Z",
-  medium: "M22 46 Q50 10 78 46 L78 60 Q74 44 66 40 Q50 32 34 40 Q26 44 22 60 Z",
-  long: "M18 48 Q50 6 82 48 L84 96 Q78 90 76 70 Q72 44 50 36 Q28 44 24 70 Q22 90 16 96 Z",
+  short: "M30 38 Q32 16 50 14 Q68 16 70 38 Q60 30 50 30 Q40 30 30 38 Z",
+  medium: "M26 52 Q24 10 50 10 Q76 10 74 52 Q72 38 62 32 Q50 28 38 32 Q28 38 26 52 Z",
+  long: "M18 100 Q20 6 50 6 Q80 6 82 100 Q74 92 74 62 Q72 38 62 32 Q50 28 38 32 Q28 38 26 62 Q26 92 18 100 Z",
 };
 
 const BEARD_PATH: Record<Exclude<BeardLengthPref, "keep" | "none">, string> = {

@@ -161,12 +161,12 @@ export function PlanView({ analysisId, reportId, initial, expertNetworkEnabled, 
       </Card>
 
       <Tabs defaultValue="all">
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
-          <TabsTrigger value="all" className="h-9 rounded-full border bg-card px-3 data-[state=active]:border-brand data-[state=active]:bg-brand-soft">
+        <TabsList className="flex h-auto! w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-transparent p-0 [scrollbar-width:none]" aria-label={t("tabsAria")}>
+          <TabsTrigger value="all" className="h-9 shrink-0 rounded-full border bg-card px-3 data-[state=active]:border-brand data-[state=active]:bg-brand-soft">
             {t("allTab")}
           </TabsTrigger>
           {areas.map((a) => (
-            <TabsTrigger key={a} value={a} className="h-9 rounded-full border bg-card px-3 data-[state=active]:border-brand data-[state=active]:bg-brand-soft">
+            <TabsTrigger key={a} value={a} className="h-9 shrink-0 rounded-full border bg-card px-3 data-[state=active]:border-brand data-[state=active]:bg-brand-soft">
               {t(`tabs.${a}`)}
             </TabsTrigger>
           ))}

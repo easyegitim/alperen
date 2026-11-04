@@ -35,9 +35,10 @@ export class FakePostgrest {
         limit = Number(v);
         continue;
       }
-      const m = /^(eq|in|is|neq|gt)\.(.*)$/s.exec(v);
+      const m = /^(eq|in|is|neq|gt)\.([\s\S]*)$/.exec(v);
       if (!m) continue;
-      const [, op, raw] = m as [string, string, string];
+      const op = m[1] ?? "";
+      const raw = m[2] ?? "";
       if (op === "eq") filters.push((r) => String(r[k]) === raw);
       else if (op === "neq") filters.push((r) => String(r[k]) !== raw);
       else if (op === "gt") filters.push((r) => String(r[k]) > raw);

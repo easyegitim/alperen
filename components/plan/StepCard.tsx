@@ -87,7 +87,7 @@ export function StepCard({ step, links = [], index = 0, id }: Props) {
                     target="_blank"
                     rel="noopener noreferrer sponsored"
                     onClick={() => void postJson("/api/links/click", { linkId: l.id }).catch(() => undefined)}
-                    className="inline-flex min-h-9 items-center gap-1.5 text-brand underline-offset-2 hover:underline"
+                    className="inline-flex min-h-9 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-brand underline-offset-2 hover:underline"
                   >
                     {l.isAd ? <span className="rounded border px-1 text-[10px] font-semibold uppercase text-muted-foreground">{t("links.adLabel")}</span> : null}
                     {l.label}
