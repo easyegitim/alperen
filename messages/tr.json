@@ -1023,6 +1023,7 @@
     "competitorsNote": "Aura'nın ölçeği, çoğu kişiye 7 ve üstü veren uygulamalardan daha sıkıdır; 5–6 arası yaygın bir sonuçtur.",
     "rangeLabel": "Aralık {lo}–{hi}",
     "percentile": "İnsanların %{p}'inden yüksek",
+    "percentileV2": "İnsanların %{p}''{suffix} yüksek",
     "noChange": "Değişim yok (±{band})",
     "explain5": {
       "lookedAt": "Neye baktık",
@@ -1047,6 +1048,91 @@
       "running": "Analiz hazırlanıyor; kartlar hazır oldukça açılır",
       "failed": "Analiz tamamlanamadı; hakkın düşmedi. Yeniden deneyebilirsin.",
       "retry": "Yeniden dene"
+    },
+    "result": {
+      "title": "Sonucun",
+      "overallAria": "Genel skorun {value}; aralık {lo}–{hi}",
+      "rangeNote": "Açıklamalar bu aralığa dayanır; tek sayı değil, güvenli bir bant.",
+      "potentialTitle": "Potansiyelin",
+      "potentialChip": "Potansiyel {potential} · +{delta}",
+      "potentialAtTop": "Potansiyeline çok yakınsın",
+      "potentialCaption": "Her kazanç bir plan adımına bağlıdır; toplam en fazla +1,5.",
+      "potentialRange": "Potansiyel aralığı {lo}–{hi}",
+      "subscoreRange": "Aralık {lo}–{hi}",
+      "subscoreAria": "{name}: {value}; aralık {lo}–{hi}",
+      "structuralNote": "Bu alan bakımla değişmez; saç, sakal ve kaş seçimleri algıyı etkiler.",
+      "viewsUsed": "{n} açı kullanıldı",
+      "notReady": "Hazırlanıyor…",
+      "missing": "Bu bölüm bu analizde üretilmedi.",
+      "faceShape": {
+        "title": "Yüz şeklin",
+        "prelimLabel": "Ön değerlendirme (telefonunda)",
+        "detailedLabel": "Detaylı sonuç (çoklu açı)",
+        "reasonLabel": "Neden",
+        "overrideLabel": "Senin seçimin",
+        "pickTitle": "Sence hangisi?",
+        "pickBody": "Seçtiğin şekil geçerli olur; saç ve sakal önerileri buna göre güncellenir. Ön değerlendirme ve detaylı sonuç silinmez.",
+        "save": "Kaydet",
+        "cancel": "Vazgeç",
+        "remove": "Seçimimi kaldır",
+        "saved": "Yüz şekli seçimin kaydedildi.",
+        "error": "Kaydedilemedi; biraz sonra tekrar dene.",
+        "shapeAria": "{shape} seçeneği"
+      },
+      "measures": {
+        "title": "Ölçülerin",
+        "balanced": "Dengeli aralık",
+        "yours": "Senin değerin",
+        "aria": "{name}: senin değerin {value}; dengeli aralık {lo}–{hi}",
+        "note": "Kıyas yalnız bu aralıkla ve kendi geçmişinle; aralık geniştir ve dışı bir yargı değildir.",
+        "deviceOnly": "Dengeli aralık çubuğu rapor hazır olunca gelir."
+      },
+      "improve": {
+        "title": "Önce odaklan",
+        "gain": "+{gain}",
+        "gainAria": "Genel skora tahmini katkı +{gain}",
+        "empty": "Bu analizde öncelik adımı üretilmedi."
+      },
+      "report": {
+        "title": "Raporun",
+        "regionsTitle": "Bölge bölge",
+        "strength": "Güçlü yan",
+        "seen": "Fotoğrafta görülen",
+        "improvements": "Fırsatlar",
+        "noChange": "Değişiklik gerekmez.",
+        "closingTitle": "Kapanış"
+      },
+      "region": {
+        "brows": "Kaşlar",
+        "eyeArea": "Göz çevresi",
+        "nose": "Burun",
+        "lipsSmile": "Dudak ve gülüş",
+        "cheeks": "Elmacık ve yanak",
+        "jawline": "Çene hattı",
+        "skin": "Cilt",
+        "hair": "Saç",
+        "beard": "Sakal"
+      },
+      "section": {
+        "device": "Cihaz ölçümleri",
+        "overall": "Genel skor",
+        "subscores": "Alt skorlar",
+        "potential": "Potansiyel",
+        "faceShape": "Yüz şekli",
+        "explanations": "Açıklamalar",
+        "improveFirst": "İlk adımlar",
+        "report": "Rapor"
+      },
+      "pending": {
+        "title": "Ödemen alındı",
+        "body": "Tam analiz için fotoğraf setini gönder; sonuç kart kart açılır.",
+        "cta": "Çekime dön"
+      },
+      "progressAria": "Analiz ilerlemesi",
+      "progressLabel": "{done} / {total} kart hazır",
+      "retryHint": "Fotoğraflar sunucuda saklanmadığı için yeniden deneme çekim ekranından yapılır.",
+      "shareTitle": "Paylaş",
+      "announceSuffix": "hazır"
     }
   },
   "paywall": {
@@ -1149,7 +1235,34 @@
         "progress": "{done} / {total} davet tamamlandı",
         "code": "Davet kodun",
         "share": "Daveti paylaş"
-      }
+      },
+      "eyebrow": "Tam sonuç",
+      "lead": "Analiz ücretlidir. Ödeme sonrası bu analiz kart kart açılır.",
+      "beforeAfter": {
+        "title": "Örnek dönüşüm",
+        "before": "Önce",
+        "after": "Sonra",
+        "caption": "Temsili çizim; gerçek bir kullanıcı değildir. Sonuçlar kişiye göre değişir.",
+        "aria": "İllüstratif önce ve sonra çizimi; temsili bir figür, gerçek bir kullanıcı değil"
+      },
+      "anchor": "Tek seferlik rapor {oneTime} · Haftalık {weekly}",
+      "seeProducts": "Seçenekleri gör",
+      "productsTitle": "Ürününü seç",
+      "unlockWith": "Kilidi aç · {price}",
+      "unlockPending": "Fiyat belirlenince açılır",
+      "regularStruck": "Normal fiyat {price}; şimdi {promo}",
+      "perPeriod": {
+        "weekly": "/ hafta",
+        "monthly": "/ ay",
+        "yearly": "/ yıl"
+      },
+      "oneTimeNote": "Tek ödeme; yenilenmez.",
+      "subscriptionNote": "Abonelik dönem sonunda otomatik yenilenir; hesap sayfasından tek tıkla iptal edebilirsin.",
+      "offerRemaining": "Tanıtım fiyatı için kalan süre",
+      "offerAria": "Tanıtım fiyatı için kalan süre {time}",
+      "offerUnavailable": "Teklif bilgisi alınamadı; normal fiyatlar geçerli.",
+      "benefitsAria": "Ödemeyle eline geçecekler",
+      "thisAnalysisNote": "Tek seferlik rapor yalnız bu analiz için geçerlidir."
     }
   },
   "share": {
@@ -1202,7 +1315,8 @@
       "AI_FAILED": "Ödeme sağlayıcısına ulaşılamadı. Biraz sonra tekrar dene.",
       "BAD_INPUT": "Formda eksik veya hatalı alan var.",
       "NETWORK": "Bağlantı sorunu.",
-      "GENERIC": "Bir sorun oluştu."
+      "GENERIC": "Bir sorun oluştu.",
+      "PREMIUM_REQUIRED": "Bu işlem için ödeme gerekiyor."
     },
     "result": {
       "ok": {
@@ -1220,7 +1334,11 @@
         "title": "Ödeme sonucu bekleniyor",
         "body": "Ödeme kuruluşundan onay bekleniyor; birkaç saniye içinde güncellenecek."
       },
-      "account": "Hesap"
+      "account": "Hesap",
+      "okOneTime": {
+        "title": "Ödemen alındı, sonucun hazırlanıyor",
+        "body": "Bu analizin tam sonucu kart kart açılacak; yeni çekim gerekmez."
+      }
     },
     "secure": "Güvenli ödeme · iyzico",
     "stepsAria": "Ödeme adımları",
@@ -1231,7 +1349,11 @@
       "pay": "Ödeme"
     },
     "stepDone": "tamamlandı",
-    "consentTitle": "Onaylar"
+    "consentTitle": "Onaylar",
+    "chooseProduct": "Ürün seç",
+    "continueProduct": "{amount} ile devam et",
+    "pricePendingCta": "Fiyat belirlenince açılır",
+    "oneTimeWaiver": "Dijital hizmetin hemen başlamasını onaylıyorum; cayma hakkımın sona ereceğini biliyorum."
   },
   "report": {
     "title": "Planın",

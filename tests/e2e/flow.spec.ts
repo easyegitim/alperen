@@ -82,18 +82,30 @@ test.describe("Ana akış (F01–F13)", () => {
     expect(detail!.potential?.locked).toBe(true);
     expect(detail!.potential?.value).toBeNull();
 
-    // Kilitli alana dokunma → paywall
+    // Kilitli alana dokunma → kısa paywall (KB §3.4): fayda listesi, illüstratif önce/sonra, tek ₺ satırı; "ücretsiz" yok
     await page.getByRole("button", { name: /potansiyel|kilidi aç|premium/i }).first().click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByRole("dialog").getByText(/₺|TL/)).toBeVisible();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText("Eline geçecekler")).toBeVisible();
+    await expect(dialog.getByText("İllüstratif")).toBeVisible();
+    await expect(dialog.getByText(/₺|TL/)).toBeVisible();
+    await expect(dialog.getByText(/ücretsiz|bedava|garanti/i)).toHaveCount(0);
 
-    // Sayfa 2: planlar (yıllık seçili) → /premium aynı analize dönüş bilgisiyle (UI spec §4.1, §8.4)
-    await page.getByRole("dialog").getByRole("button", { name: "Planları gör" }).click();
-    const plans = page.getByRole("dialog").getByRole("radiogroup");
-    await expect(plans).toBeVisible();
-    await expect(plans.getByRole("radio", { name: "Yıllık" })).toBeChecked();
-    await page.getByRole("dialog").getByRole("link", { name: /^Devam et/ }).click();
-    await expect(page).toHaveURL(/\/premium\?plan=yearly&from=score_potential&analysis=[0-9a-f-]{36}/);
+    // Sayfa 2: ürünler (tek seferlik rapor seçili, bu analize bağlı) → /premium aynı analize dönüş bilgisiyle
+    await dialog.getByRole("button", { name: "Seçenekleri gör" }).click();
+    const products = dialog.getByRole("radiogroup");
+    await expect(products).toBeVisible();
+    await expect(products.getByRole("radio", { name: "Tek seferlik rapor" })).toBeChecked();
+    await expect(products.getByRole("radio", { name: "Haftalık" })).toBeVisible();
+    await expect(products.getByRole("radio", { name: "Aylık" })).toBeVisible();
+    // Fiyat belirlenmişse "Kilidi aç · ₺…" bağlantısı; yer tutucuysa satış yok (düğme pasif) — ikisi de kabul.
+    const unlock = dialog.getByRole("link", { name: /^Kilidi aç/ });
+    if (await unlock.isVisible().catch(() => false)) {
+      await unlock.click();
+      await expect(page).toHaveURL(/\/premium\?product=one_time_report&from=score_potential&analysis=[0-9a-f-]{36}/);
+    } else {
+      await expect(dialog.getByRole("button", { name: "Fiyat belirlenince açılır" })).toBeDisabled();
+    }
 
     // Anonim hesap ödeme uçlarına giremez; hesap bağlama istemi
     const checkout = await page.request.post("/api/billing/checkout", { data: { plan: "weekly", buyer: {}, accepted: { terms: true, waiver: true } } });
