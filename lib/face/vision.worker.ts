@@ -2,7 +2,7 @@
 import { isModuleWorkerFromProbe } from "./workerEnv";
 import { FaceLandmarker, FilesetResolver, ImageSegmenter, type FaceLandmarkerResult } from "@mediapipe/tasks-vision";
 import type { Protect } from "@/content/types";
-import { CompositeError, compositeTryon, geometryDrift, type DriftPolicy } from "@/lib/tryon/composite";
+import { CompositeError, compositeTryon, geometryDrift, type CompositeFailReason, type DriftPolicy } from "@/lib/tryon/composite";
 import { faceBoxToPixels, pixelStatsFromRgba } from "./pixelStats";
 import { SEG_CLASS, type BlendshapeScores, type FrameAnalysis, type Point, type SegmentationResult } from "./types";
 
@@ -11,12 +11,12 @@ export type WorkerRequest =
   | { type: "detectVideo"; id: number; bitmap: ImageBitmap; timestamp: number }
   | { type: "detectImage"; id: number; bitmap: ImageBitmap }
   | { type: "segment"; id: number; bitmap: ImageBitmap }
-  | { type: "tryon"; id: number; c: ImageBitmap; g: ImageBitmap; landmarksC: Point[]; protect: Protect; policy: DriftPolicy }
+  | { type: "tryon"; id: number; c: ImageBitmap; g: ImageBitmap; landmarksC: Point[]; protect: Protect; policy: DriftPolicy; glowUp?: boolean }
   | { type: "close"; id: number };
 
 export type TryonWorkerResult =
   | { ok: true; image: ImageBitmap; residual: number; drift: { length: number; jaw: number }; toneAdjusted: boolean }
-  | { ok: false; reason: "no_face_in_output" | "alignment_residual" | "geometry_drift" | "canvas" };
+  | { ok: false; reason: CompositeFailReason | "geometry_drift" };
 
 export type InitResult = { delegate: "GPU" | "CPU" };
 
@@ -190,14 +190,14 @@ async function detectImage(bitmap: ImageBitmap): Promise<FrameAnalysis> {
 }
 
 /** SPEC 10.4–10.5: G'de yüz bul → hizala → kompozit → kompozitte tekrar yüz bul → geometri sapması. Görseller bellekte kalır. */
-async function tryon(c: ImageBitmap, g: ImageBitmap, landmarksC: Point[], protect: Protect, policy: DriftPolicy): Promise<TryonWorkerResult> {
+async function tryon(c: ImageBitmap, g: ImageBitmap, landmarksC: Point[], protect: Protect, policy: DriftPolicy, glowUp = false): Promise<TryonWorkerResult> {
   await ensureMode("IMAGE");
   const resG = landmarker!.detect(g);
   if (resG.faceLandmarks.length !== 1) return { ok: false, reason: "no_face_in_output" };
   const landmarksG = resG.faceLandmarks[0].map((p) => ({ x: p.x * g.width, y: p.y * g.height }));
   let comp;
   try {
-    comp = await compositeTryon({ c, g, landmarksC, landmarksG, protect });
+    comp = await compositeTryon({ c, g, landmarksC, landmarksG, protect, glowUp });
   } catch (e) {
     return { ok: false, reason: e instanceof CompositeError ? e.reason : "canvas" };
   }
@@ -260,7 +260,7 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         break;
       case "tryon":
         try {
-          const r = await tryon(msg.c, msg.g, msg.landmarksC, msg.protect, msg.policy);
+          const r = await tryon(msg.c, msg.g, msg.landmarksC, msg.protect, msg.policy, msg.glowUp);
           reply({ id: msg.id, ok: true, result: r }, r.ok ? [r.image] : []);
         } finally {
           msg.c.close();

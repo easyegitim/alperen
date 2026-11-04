@@ -3,7 +3,7 @@ export type ApiErrorCode =
   | "UNAUTHENTICATED" | "ANONYMOUS_NOT_ALLOWED" | "NOT_ADULT" | "CONSENT_REQUIRED"
   | "PREMIUM_REQUIRED" | "QUOTA_EXCEEDED" | "BAD_INPUT" | "IMAGE_TOO_LARGE" | "BAD_PRESET"
   | "NO_FACE" | "AI_SAFETY_BLOCKED" | "AI_FAILED" | "AI_TIMEOUT" | "ALREADY_SUBSCRIBED"
-  | "FEATURE_DISABLED" | "RATE_LIMITED" | "CAPTURE_QUALITY" | "INTERNAL";
+  | "FEATURE_DISABLED" | "RATE_LIMITED" | "CAPTURE_QUALITY" | "TRYON_QC_FAILED" | "INTERNAL";
 
 export const API_ERROR_STATUS: Record<ApiErrorCode, number> = {
   UNAUTHENTICATED: 401,
@@ -24,6 +24,8 @@ export const API_ERROR_STATUS: Record<ApiErrorCode, number> = {
   RATE_LIMITED: 429,
   // Sunucu çekim kapısı reserve_analysis'ten önce: hak düşmez (UI spec C13, engine spec §3.6).
   CAPTURE_QUALITY: 422,
+  // Sanal deneme kalite kontrolü (KB Ç10): görsel gösterilmez, hak düşmez (tryon_events.status = qc_failed).
+  TRYON_QC_FAILED: 422,
   INTERNAL: 500,
 };
 

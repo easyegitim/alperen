@@ -143,3 +143,80 @@ export async function shareOrDownload(blob: Blob, filename: string, title: strin
   setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   return "downloaded";
 }
+
+// ── Sanal deneme paylaşım görseli (PLAN 5e; KB §7.4 K16): etiket her çıktıya gömülür ──────────────────────────────
+
+/** Çizim için gereken en küçük 2D bağlam yüzeyi (OffscreenCanvas ve test sahteleri ortak). */
+export type ShareDrawContext = {
+  fillStyle: string | CanvasGradient | CanvasPattern;
+  font: string;
+  textBaseline: CanvasTextBaseline;
+  textAlign: CanvasTextAlign;
+  fillRect(x: number, y: number, w: number, h: number): void;
+  fillText(text: string, x: number, y: number): void;
+  measureText(text: string): { width: number };
+  drawImage(image: CanvasImageSource, dx: number, dy: number, dw: number, dh: number): void;
+  beginPath(): void;
+  roundRect(x: number, y: number, w: number, h: number, r: number): void;
+  fill(): void;
+};
+
+export type TryonShareInput = {
+  after: CanvasImageSource & { width: number; height: number };
+  /** Zorunlu: common.aiGenerated ("Aura ile oluşturuldu · YZ simülasyonu"). Boş etiketle çizim reddedilir. */
+  label: string;
+  /** Stil adı (ör. "Buzz kesim + Van Dyke"); görselin altına yazılır. */
+  title: string;
+  appName: string;
+};
+
+/** Etiket kutusu yerleşimi (saf): sağ alt köşe, görsel genişliğine ölçekli. */
+export function tryonLabelLayout(w: number, h: number, textWidth: number): { fontPx: number; padding: number; x: number; y: number; boxW: number; boxH: number } {
+  const fontPx = Math.max(14, Math.round(w * 0.028));
+  const padding = Math.round(fontPx * 0.6);
+  const boxW = textWidth + padding * 2, boxH = fontPx + padding;
+  return { fontPx, padding, x: w - boxW - fontPx, y: h - boxH - fontPx, boxW, boxH };
+}
+
+/**
+ * Deneme sonucunu paylaşım görseline çizer: görsel + gömülü YZ etiketi (sağ alt) + stil adı ve uygulama adı (alt şerit).
+ * Etiket boşsa Error: etiketsiz paylaşım görseli üretilmez (K16).
+ */
+export function drawTryonShare(ctx: ShareDrawContext, input: TryonShareInput, w: number, h: number): void {
+  if (!input.label.trim()) throw new Error("ai_label_required");
+  const imgH = Math.round(h * 0.88);
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(input.after, 0, 0, w, imgH);
+  // YZ etiketi görselin ÜSTÜNE gömülür (kırpılsa da görselde kalır)
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+  const probe = tryonLabelLayout(w, imgH, 0);
+  ctx.font = `600 ${probe.fontPx}px system-ui, sans-serif`;
+  const lay = tryonLabelLayout(w, imgH, ctx.measureText(input.label).width);
+  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  ctx.beginPath();
+  ctx.roundRect(lay.x, lay.y, lay.boxW, lay.boxH, Math.round(lay.boxH / 2));
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(input.label, lay.x + lay.padding, lay.y + lay.padding / 2);
+  // Alt şerit: stil adı + uygulama adı
+  const stripY = imgH;
+  const titlePx = Math.max(16, Math.round(w * 0.034));
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `600 ${titlePx}px system-ui, sans-serif`;
+  ctx.fillText(input.title, Math.round(w * 0.05), stripY + Math.round((h - imgH) * 0.22));
+  ctx.fillStyle = "#bdbdbd";
+  ctx.font = `400 ${Math.round(titlePx * 0.8)}px system-ui, sans-serif`;
+  ctx.fillText(input.appName, Math.round(w * 0.05), stripY + Math.round((h - imgH) * 0.58));
+}
+
+/** Paylaşım / indirme görseli (JPEG): kare görsel + alt şerit. Sunucuya hiçbir şey gitmez. */
+export async function renderTryonShareImage(input: TryonShareInput): Promise<Blob> {
+  const w = input.after.width, h = Math.round(input.after.width / 0.88);
+  const canvas = new OffscreenCanvas(w, h);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas_unavailable");
+  drawTryonShare(ctx, input, w, h);
+  return canvas.convertToBlob({ type: "image/jpeg", quality: 0.92 });
+}
