@@ -33,6 +33,8 @@ export type AnalyticsEvents = {
   referral_claimed: { ok: boolean };
   checkout_started: { plan: string };
   subscription_activated: { plan: string };
+  /** F14 v2: tek seferlik rapor ödemesi sunucuda doğrulandı (ürün adı; analiz kimliği, fiyat yok). */
+  purchase_completed: { product: string };
   subscription_canceled: { plan: string };
   report_viewed: undefined;
   tryon_started: { presetKind: "hair" | "beard" | "color" };
@@ -47,7 +49,7 @@ export type AnalyticsEvents = {
   overlay_opened: { source: "photo" | "schematic" };
   method_viewed: { from: MethodFrom };
   paywall_step_viewed: { step: "plans"; trigger: string };
-  paywall_plan_selected: { plan: "weekly" | "monthly" | "yearly" | "week_pass" };
+  paywall_plan_selected: { plan: "weekly" | "monthly" | "yearly" | "week_pass" | "one_time_report" };
   paywall_dismissed: { step: "benefits" | "plans" };
   capture_manual_offered: undefined;
   /** issue: QualityIssue kodu. */

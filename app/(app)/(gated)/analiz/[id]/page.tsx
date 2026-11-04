@@ -3,15 +3,17 @@ import { getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
 import { ProcessingCard } from "@/components/analysis/ProcessingCard";
 import { ScoreView, ScoreViewV2 } from "@/components/analysis/ScoreView";
+import { ResultV2View } from "@/components/analysis/result/ResultV2View";
 import { PaywallProvider } from "@/components/paywall/PaywallSheet";
 import { getPublicEngineInfo } from "@/lib/ai/disclosure.server";
 import { getPremiumStatus } from "@/lib/api/premium";
+import { getAccessV2 } from "@/lib/billing/purchases";
 import { isFeatureEnabled } from "@/lib/config/flags";
 import { getTeaserConfig } from "@/lib/config/teaser";
 import { createAdminClient } from "@/lib/db/admin";
 import { createClient } from "@/lib/db/server";
-import { engineOf, toClientAnalysis, toClientAnalysisV2, type AnalysisRow, type AnalysisRowV2 } from "@/lib/score/present";
-import { selectAnalysisRowsV2 } from "@/lib/score/rowColumns";
+import { toClientAnalysis, type AnalysisRow } from "@/lib/score/present";
+import { isV2Row, loadRowById, presentV2 } from "@/app/api/analyses/v2";
 
 /** /analiz/[id]: sunucu kırpılmış görünümü üretir; kilitli değerler HTML'e ve istemciye girmez. */
 export default async function AnalysisPage({ params }: PageProps<"/analiz/[id]">) {
@@ -24,23 +26,28 @@ export default async function AnalysisPage({ params }: PageProps<"/analiz/[id]">
   if (!user) redirect("/");
 
   const admin = createAdminClient();
-  const { data } = await selectAnalysisRowsV2((cols) => admin.from("analyses").select(cols).eq("id", id).eq("user_id", user.id).maybeSingle());
-  if (!data) notFound();
+  // 0010 sütunlarıyla okur; sütun yoksa (migration uygulanmamış) eski listeye düşer (app/api/analyses/v2.ts).
+  const row = await loadRowById(admin, user.id, id);
+  if (!row) notFound();
 
   const t = await getTranslations("analysis");
-  const row = data as AnalysisRowV2;
   const teaser = getTeaserConfig();
 
-  // v2 (KB §3.3): ödeme öncesi cihaz sonucu ve hak yokken tamamlanmış hybrid.v2 satırı kilitli ekranda. Hak (AccessV2)
-  // hesabı W2'nin lib/billing/entitlement.ts genişletmesini bekler; o gelene kadar hak yok (hiçbir skor açılmaz).
-  if (row.status === "device_only" || (engineOf(row) === "hybrid.v2" && row.status === "completed")) {
-    const a = toClientAnalysisV2(row, { entitled: false, referralUnlock: false, percentile: false });
+  // hybrid.v2 satırı (device_only/queued/running/completed/failed): hak (AccessV2, sunucuda purchases/subscriptions/referrals)
+  // varsa kart kart açılan sonuç (W2 ResultV2View); yoksa kilitli ekran (W1 ScoreViewV2, KB §3.3). Rapor yalnız hak varken okunur.
+  if (isV2Row(row)) {
+    const access = await getAccessV2(admin, user.id, row.id);
+    const a = await presentV2(admin, user.id, row, access);
     return (
       <div className="mx-auto w-full max-w-lg px-4 py-6">
         <h1 className="sr-only">{t("pageTitle")}</h1>
-        <PaywallProvider teaserMode={teaser.mode} analysisId={a.id} weekPassEnabled={isFeatureEnabled("weekPass")}>
-          <ScoreViewV2 a={a} />
-        </PaywallProvider>
+        {access.entitled ? (
+          <ResultV2View initial={a} />
+        ) : (
+          <PaywallProvider teaserMode={teaser.mode} analysisId={a.id} weekPassEnabled={isFeatureEnabled("weekPass")}>
+            <ScoreViewV2 a={a} />
+          </PaywallProvider>
+        )}
       </div>
     );
   }

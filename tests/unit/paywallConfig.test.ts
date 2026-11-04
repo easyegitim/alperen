@@ -26,6 +26,7 @@ const EVENT_NAMES: Record<AnalyticsEventName, true> = {
   account_linked: true,
   checkout_started: true,
   subscription_activated: true,
+  purchase_completed: true,
   subscription_canceled: true,
   report_viewed: true,
   tryon_started: true,
