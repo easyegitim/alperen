@@ -2321,7 +2321,8 @@
     "none": "Önceki analizden kılavuz yok; ilk analizden sonra görünür.",
     "aria": "Önceki yüz çizgisi kılavuzu",
     "aligned": "Hizalandın; çekebilirsin.",
-    "deviceNote": "Kılavuz cihazında üretilir ve yalnız burada durur; hiçbir yere gönderilmez."
+    "deviceNote": "Kılavuz cihazında üretilir ve yalnız burada durur; hiçbir yere gönderilmez.",
+    "saveHint": "Kaydedersen bir sonraki çekimde yüz çizgin kamerada silik kılavuz olur."
   },
   "mobile": {
     "stub": {

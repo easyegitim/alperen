@@ -144,6 +144,17 @@ test.describe("Gizlilik (tüm ağ trafiği)", () => {
       expect(html).not.toMatch(/"improveFirst":\{"value":\[/);
       // Hiçbir hosta giden gövdede landmark dizisi yok
       for (const r of requests) expect(r.postData() ?? "", new URL(r.url()).host).not.toMatch(/"landmarks"/);
+      // Faz 6 (S3.3.4): hayalet kılavuz çizgisi (GhostOutline: oval/eyes/nose/mouth) yalnız IndexedDB'de; hiçbir gövdede yok.
+      for (const r of requests) expect(r.postData() ?? "", `${new URL(r.url()).host} hayalet kılavuz`).not.toMatch(/"oval"|"ghost"|"eyes":\[\[/);
+      // Faz 6 (S3.3.1): paylaşım kartı cihazda üretilir; kart görseli (JPEG) hiçbir isteğe girmez — hasImagePayload kuralı
+      // (3. adım) izinli uçlar dışındaki her görsel gövdesini zaten reddeder; burada açıkça: izinli uçlara da kart gitmez.
+      for (const r of imageReqs) expect(r.postData() ?? "", "paylaşım kartı").not.toMatch(/aura-(score|strongest|barber)-/);
+      // Faz 6 (S3.3.5): davet kodu girişi POST /api/referral yalnız { code } taşır (e-posta, cihaz, skor yok).
+      for (const r of requests.filter((q) => q.method() === "POST" && new URL(q.url()).pathname === "/api/referral")) {
+        const claim = JSON.parse(r.postData() ?? "{}") as Record<string, unknown>;
+        expect(Object.keys(claim)).toEqual(["code"]);
+        expect(String(claim.code)).toMatch(/^[A-Za-z0-9 -]{8,20}$/);
+      }
 
       // 7) Supabase istemcisiyle (anon key + kullanıcının kendi oturum JWT'si) analyses / coach_reports / analysis_sets
       //    okunamıyor: tarayıcı politikası yok → 401 ya da boş dizi. purchases okunabilir ama skor taşımaz; yine de boş olmalı.

@@ -3,7 +3,7 @@
 import { ArrowUpRight, Camera, CameraOff, ChevronDown, CircleCheck, ImageUp, Images, LoaderCircle, RotateCcw, Scale, ScanFace, Send, ShieldCheck, Smartphone, Smile, Sun, TriangleAlert, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { QualityPrompt } from "@/components/camera/QualityPrompt";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +56,8 @@ type Props = {
   onBack?: () => void;
   /** Zorunlu yan profil adımında genel "Yan profil" adı ve yönergesi (hangi yanak olduğu yaw'dan anlaşılır). */
   labels?: { name: string; instruction: string };
+  /** Canlı önizleme üstüne ek katman (Faz 6 hayalet kılavuz, GhostGuide); oval kılavuzun üstünde, sayaç altında. */
+  overlay?: ReactNode;
 };
 
 const TIP_ICONS = { light: Sun, neutral: Smile, frame: ScanFace, alone: User } as const;
@@ -72,7 +74,7 @@ async function fileHash(file: File): Promise<string | null> {
  * SPEC 7 / KB §3.1: rehber → kamera (aynalı, oval kılavuz, tek satır uyarı) → 600 ms kararlı → 3-2-1 → çekim (ön);
  * yan görünümlerde elle deklanşör. Galeriden yükleme (ön adımda çoklu). Kötü ışık/bulanıklıkta ret yok, evet/hayır pop-up'ı.
  */
-export function SelfieCamera({ view = VIEW_BY_KEY.front, stepLabel, optionalNote, onCapture, onGalleryBatch, takenViews = [], aiProviderName, onBack, labels }: Props) {
+export function SelfieCamera({ view = VIEW_BY_KEY.front, stepLabel, optionalNote, onCapture, onGalleryBatch, takenViews = [], aiProviderName, onBack, labels, overlay }: Props) {
   const t = useTranslations("camera");
   const isFront = view.geometry;
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -611,6 +613,7 @@ export function SelfieCamera({ view = VIEW_BY_KEY.front, stepLabel, optionalNote
             strokeDasharray={issue || !isFront ? "6 6" : undefined}
           />
         </svg>
+        {overlay && (stage === "live" || stage === "countdown") ? overlay : null}
         {stage === "countdown" ? (
           <div className="absolute inset-0 flex items-center justify-center" aria-live="assertive">
             <span className="num text-display font-bold text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]">{countdown || 1}</span>
