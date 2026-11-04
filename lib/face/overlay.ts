@@ -103,3 +103,46 @@ export function notMeasuredLayers(items: readonly ExplainItem[]): OverlayLayerKe
     return key !== null && missing.has(key);
   });
 }
+
+// ── v2: kilitli sonuç ekranındaki yuvarlak portre noktaları (KB P#6/P§6, PLAN 1f) ──────────────────────────────────
+/**
+ * 478 yerine 30–70 anahtar nokta: yüz hattı (36), kaş üstü, göz köşeleri, iris, burun hattı, dudak köşeleri, çene
+ * köşeleri, alın. Alın/saç çizgisi noktası ağda yoktur (ağ tepesi 10 kullanılır). Yoğun sakalda çene hattı tahminidir.
+ */
+export const PORTRAIT_KEY_LANDMARKS: readonly number[] = Array.from(
+  new Set<number>([
+    ...FACE_OVAL,
+    IDX.glabella, IDX.nasion, IDX.noseTip, IDX.subnasale, IDX.upperLipMid,
+    IDX.foreheadR, IDX.foreheadL, IDX.browTopR, IDX.browTopL,
+    IDX.eyeOuterR, IDX.eyeOuterL, IDX.eyeInnerR, IDX.eyeInnerL, IDX.irisR, IDX.irisL,
+    IDX.mouthR, IDX.mouthL, IDX.stomionUpper, IDX.stomionLower,
+    IDX.gonionR, IDX.gonionL, IDX.foreheadMid, IDX.noseBridge,
+  ]),
+);
+
+export type PortraitGeometry = {
+  /** Kare kırpım (kaynak piksel); yuvarlak portre bu kareden çizilir. */
+  crop: CropRect;
+  /** Çıktı tuvali piksel koordinatında anahtar noktalar (eksik nokta atlanır). */
+  points: [number, number][];
+  /** Aynı dönüşümle yüz hattı (kapalı) — ince kılavuz çizgisi için. */
+  oval: Polyline | null;
+};
+
+/**
+ * Yuvarlak portre: yüz kutusu + dolgu ile KARE kırpım (aspect 1), sonra outSize piksele ölçek. Noktalar ve fotoğraf
+ * aynı kırpım/ölçek dönüşümünden geçer; dışarıya yalnız çizim gider, koordinatlar hiçbir yere gönderilmez.
+ */
+export function portraitGeometry(landmarks: readonly Point[], w: number, h: number, outSize: number, pad = 0.42): PortraitGeometry {
+  const crop = faceCrop(landmarks, w, h, pad, 1);
+  const k = crop.width > 0 ? outSize / crop.width : 1;
+  const map = (p: Point): [number, number] => [(p.x - crop.x) * k, (p.y - crop.y) * k];
+  const points: [number, number][] = [];
+  for (const i of PORTRAIT_KEY_LANDMARKS) {
+    const p = landmarks[i];
+    if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+    points.push(map(p));
+  }
+  const oval = line(landmarks, [...FACE_OVAL, FACE_OVAL[0]]);
+  return { crop, points, oval: oval ? oval.map(([x, y]) => map({ x, y })) : null };
+}

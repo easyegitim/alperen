@@ -73,6 +73,56 @@ export const MANUAL_QUALITY_CONFIG: QualityConfig = {
 
 export const MANUAL_CAPTURE = { offerAfterMs: 8_000 } as const;
 
+// ── v2 (KB §3.1/6, PLAN 1d): "uygun fotoğraf reddedilmez, ret yerine uyarı" ────────────────────────────────────────
+/**
+ * Galeri / stüdyo portresi yapılandırması: yaw 15°, roll 10°, pitch 15° (telefon kol boyu, hafif dönük kabul edilir);
+ * ışık ve netlik eşikleri gevşek. Bu eşiklerin üstü bile artık ret değil, uyarıdır (lenientReview).
+ */
+export const GALLERY_QUALITY_CONFIG: QualityConfig = {
+  ...QUALITY_CONFIG,
+  faceWidthRatio: { min: 0.25, max: 0.85 },
+  centerOffsetMax: 0.2,
+  yawMaxDeg: 15,
+  pitchMaxDeg: 15,
+  rollMaxDeg: 10,
+  brightness: { min: 60, max: 215 },
+  brightnessBalanceMax: 50,
+  sharpnessMin: 40,
+};
+
+/** Yalnız bunlar çekimi engeller (KB R1-E12/E14): yüz yok ya da birden çok yüz. Geri kalan her sorun uyarıdır. */
+export const HARD_ISSUES = ["no_face", "multiple_faces"] as const satisfies readonly QualityIssue[];
+export type HardIssue = (typeof HARD_ISSUES)[number];
+
+export type LenientReview = {
+  /** Engel: yalnız yüz yok / çok yüz. */
+  hard: HardIssue | null;
+  /** Uyarı olarak gösterilecek sorunlar (öncelik sırasıyla). Boşsa pop-up çıkmaz. */
+  warnings: QualityIssue[];
+  report: QualityReport;
+};
+
+/**
+ * Ödeme öncesi inceleme: sert sorun → ret; diğer sorunlar → "Işık yetersiz ya da fotoğraf bulanık; sonuç zayıf
+ * olabilir. Yine de devam edilsin mi?" pop-up'ı (camera.qualityPrompt). Sonuç yalnız kullanıcı "Evet" derse çıkar.
+ */
+export function lenientReview(frame: FrameAnalysis, cfg: QualityConfig = GALLERY_QUALITY_CONFIG): LenientReview {
+  const report = checkQuality(frame, cfg);
+  const hard = report.issues.find((i): i is HardIssue => (HARD_ISSUES as readonly QualityIssue[]).includes(i)) ?? null;
+  return { hard, warnings: hard ? [] : report.issues, report };
+}
+
+/**
+ * Yan görünümler (profil, 45°, saç çizgisi; KB P#4 Claude notu): ödeme öncesi "gerçekten profil mi" doğrulanmaz;
+ * yalnız tek yüz / okunabilirlik. 90° profilde yüz ağı güvenilmez olduğu için profil için "yüz yok" da engel değildir;
+ * birden çok yüz her görünümde engeldir.
+ */
+export function sideViewReview(frame: FrameAnalysis, opts: { allowNoFace: boolean }): { hard: HardIssue | null } {
+  if (frame.faces > 1) return { hard: "multiple_faces" };
+  if (frame.faces === 0 && !opts.allowNoFace) return { hard: "no_face" };
+  return { hard: null };
+}
+
 export type QualityReport = {
   passed: boolean;
   /** Öncelik sırasına göre; ilk öğe ekranda gösterilir. */

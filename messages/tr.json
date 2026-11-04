@@ -192,7 +192,13 @@
       "emailNote": "E-posta ile giriş seçeneği karar bekliyor.",
       "legalNote": "Devam ederek Kullanım Koşulları'nı kabul etmiş olursun.",
       "error": "Giriş tamamlanamadı. Tekrar dene.",
-      "cancelled": "Giriş iptal edildi."
+      "cancelled": "Giriş iptal edildi.",
+      "choicesMissing": "Yaş aralığı ve cinsiyet seçimin bulunamadı. Baştan seçip devam et.",
+      "backToStart": "Başa dön",
+      "saveError": "Seçimlerin kaydedilemedi. Tekrar dene.",
+      "retry": "Tekrar dene",
+      "finishing": "Hesabın hazırlanıyor…",
+      "terms": "Metni oku"
     }
   },
   "account": {
@@ -347,7 +353,9 @@
       "label": "Başlangıç adımları",
       "age": "Yaş",
       "consents": "İzinler",
-      "profile": "Profil"
+      "profile": "Profil",
+      "gender": "Cinsiyet",
+      "account": "Hesap"
     },
     "age": {
       "title": "Kaç yaşındasın?",
@@ -370,14 +378,17 @@
         "50_plus": "50+"
       },
       "under18SoonTitle": "18 altı için yakında",
-      "under18SoonBody": "Bu yaş aralığı için hizmet henüz açık değil. Hazır olduğunda burada duyuracağız."
+      "under18SoonBody": "Bu yaş aralığı için hizmet henüz açık değil. Hazır olduğunda burada duyuracağız.",
+      "soonTag": "Yakında",
+      "changeBand": "Başka aralık seç",
+      "bandNote": "Yaş aralığın hesabında saklanır; öneriler ve örnekler buna göre seçilir. Fotoğraftan yaş tahmini ya da yüz tanıma yapılmaz."
     },
     "consents": {
       "noticeMeta": "Sürüm {version} · {date}",
       "scrollHint": "Devam etmek için metnin sonuna kadar kaydır.",
       "read": "Okudum",
       "title": "İzinler",
-      "description": "Analiz için üç izin gerekli. Hangi verinin nereye gittiğini her maddede görürsün; fotoğrafın hiçbir yerde saklanmaz.",
+      "description": "Analiz için üç izin gerekli. Hangi verinin nereye gittiğini her maddede görürsün; fotoğrafların hiçbir yerde saklanmaz.",
       "required": "analiz için gerekli",
       "optional": "isteğe bağlı",
       "missingRequired": "Üç gerekli izin olmadan analiz yapılamaz. İstersen uygulamayı izin vermeden de kapatabilirsin; hiçbir verin işlenmez.",
@@ -387,15 +398,15 @@
       "items": {
         "biometric_processing": {
           "title": "Yüz verilerimin işlenmesi",
-          "body": "Selfie'nden türetilen yüz oranları, yüz şeklin ve skorların hesaplanır ve hesabında saklanır. Yüz tanıma veya kimlik eşleştirme yapılmaz."
+          "body": "Ön fotoğrafından türetilen yüz oranları, yüz şeklin ve skorların hesaplanır ve hesabında saklanır. Galeriden seçtiğin dosyaların karma değeri (hash) ve skor seti 1 yıl saklanır; aynı dosyalar 1 yıl aynı skoru alır. Yüz tanıma veya kimlik eşleştirme yapılmaz."
         },
         "photo_ai_analysis": {
           "title": "Fotoğrafımın yapay zekâ ile analizi",
-          "body": "Selfie'n skor için yapay zekâ modeline gönderilir; sunucuda, veritabanında veya loglarda saklanmaz."
+          "body": "Ön ve yan profil fotoğrafların (eklersen 45°, ikinci profil ve saç çizgisi) skor ve rapor için yapay zekâ modeline gönderilir; sunucuda, veritabanında veya loglarda saklanmaz."
         },
         "cross_border_transfer": {
           "title": "Yurt dışına aktarım",
-          "body": "Selfie'n ve analiz verilerin yurt dışındaki yapay zekâ ve altyapı sağlayıcılarına geçici olarak aktarılır."
+          "body": "Fotoğrafların ve analiz verilerin yurt dışındaki yapay zekâ ve altyapı sağlayıcılarına geçici olarak aktarılır."
         },
         "marketing": {
           "title": "Pazarlama iletişimi",
@@ -415,7 +426,8 @@
         "female": "Kadın",
         "unspecified": "Belirtmek istemiyorum"
       },
-      "continue": "Devam"
+      "continue": "Devam",
+      "error": "Kaydedilemedi. Tekrar dene."
     }
   },
   "questionnaire": {
@@ -560,7 +572,8 @@
         "light": "Pencereye dön; ışık yüzüne önden gelsin.",
         "neutral": "Gözler açık, ağız kapalı, gülümseme yok.",
         "frame": "Başının üstü ve çenen kadrajda olsun.",
-        "alone": "Karede yalnız sen ol; gözlük takıyorsan çıkarman gerekmez."
+        "alone": "Karede yalnız sen ol; gözlük takıyorsan çıkarman gerekmez.",
+        "distance": "Telefonu kol boyu uzakta tut; yakın ön kamera burnu büyük gösterir. Saçını alından çek, gözlüğünü çıkar."
       },
       "open": "Kamerayı aç",
       "upload": "Galeriden yükle",
@@ -592,7 +605,9 @@
       "holdStill": "Sabit kal",
       "cancel": "Vazgeç",
       "manual": "Şimdi çek",
-      "manualHint": "Koşullar tam değil ama çekebilirsin; ışık yüzüne önden gelirse sonuç daha tutarlı olur."
+      "manualHint": "Koşullar tam değil ama çekebilirsin; ışık yüzüne önden gelirse sonuç daha tutarlı olur.",
+      "shutter": "Çek",
+      "sideHint": "Bu açı ödeme öncesi doğrulanmaz; yalnız tek kişi olmalı. Uygun değilse analiz sırasında yeniden çekim istenir."
     },
     "issues": {
       "no_face": "Yüz bulunamadı",
@@ -658,7 +673,10 @@
       },
       "eyebrow": "Adım 2 / 2",
       "lead": "Kalite kapısından geçti.",
-      "sendNote": "Analizi başlatınca fotoğraf yalnız skorlama için, rızanla, geçici olarak gönderilir."
+      "sendNote": "Analizi başlatınca fotoğraf yalnız skorlama için, rızanla, geçici olarak gönderilir.",
+      "eyebrowV2": "Fotoğraflar",
+      "leadV2": "Ön ve yan profil hazır. İstersen 45°, ikinci profil ya da saç çizgisi ekle; hepsi isteğe bağlı ve sonucu güçlendirir.",
+      "sendNoteV2": "Analizi başlatınca yalnız telefonunda hesaplanan oranlar gönderilir; fotoğrafların bu adımda telefonundan çıkmaz. Tam sonuç için fotoğrafların, rızanla, ödeme sonrası yapay zekâ modeline gider."
     },
     "trust": {
       "title": "Fotoğrafına ne oluyor?",
@@ -703,13 +721,25 @@
       "profileRequiredNote": "Ön ve yan profil zorunlu; diğerleri isteğe bağlıdır.",
       "addOptional": "İsteğe bağlı açı ekle",
       "pickFromGallery": "Galeriden seç (birden çok)",
-      "done": "Fotoğraflar hazır"
+      "done": "Fotoğraflar hazır",
+      "optionalStep": "İsteğe bağlı · {name}",
+      "profileAny": {
+        "name": "Yan profil",
+        "instruction": "Başını bir yana çevir; bir yanağın ve kulağın kameraya baksın."
+      },
+      "takenAria": "Çekilen açılar",
+      "removeAria": "{name} fotoğrafını kaldır",
+      "back": "Özete dön"
     },
     "qualityPrompt": {
       "title": "Fotoğraf zayıf olabilir",
       "body": "Işık yetersiz ya da fotoğraf bulanık; sonuç zayıf olabilir. Yine de devam edilsin mi?",
       "yes": "Evet",
       "no": "Hayır"
+    },
+    "gallery": {
+      "noneAssigned": "Seçilen fotoğraflarda uygun bir yüz bulunamadı. Tek kişilik, net bir fotoğraf dene.",
+      "someSkipped": "{selected} fotoğraftan {assigned} tanesi bir açıya yerleşti; kalanı atlandı (aynı açı ya da yüz bulunamadı)."
     }
   },
   "geometry": {
@@ -735,7 +765,9 @@
     "fwhr": "Yüz genişlik-yükseklik oranı",
     "thirds": "Üçte birler (üst / orta / alt)",
     "note": "Bu oranlar yalnız tarif eder; iyi ya da kötü anlamı taşımaz. Skorlamaya bağlam olarak gider.",
-    "noteV2": "Bu oranlar yüzünü tarif eder. Yapısal alt skorlarda herkes için aynı, geniş referans aralıklarıyla kullanılır; aralığın içindeki her değer aynı puanı alır. Yüz şekli ve genişlik–yükseklik oranı puana girmez."
+    "noteV2": "Bu oranlar yüzünü tarif eder. Yapısal alt skorlarda herkes için aynı, geniş referans aralıklarıyla kullanılır; aralığın içindeki her değer aynı puanı alır. Yüz şekli ve genişlik–yükseklik oranı puana girmez.",
+    "faceShapePrelim": "Yüz şeklin (ön değerlendirme)",
+    "nearTo": "{other} şekle yakın"
   },
   "analysis": {
     "start": "Analizi başlat",
@@ -805,7 +837,12 @@
       "planPreviewTitle": "Sana özel plan",
       "faceShapePrelim": "Ön değerlendirme",
       "deviceDone": "Analizin tamamlandı",
-      "unlockBody": "Genel skorun, potansiyelin, alt skorların, açıklamalar ve raporun ödemeyle açılır."
+      "unlockBody": "Genel skorun, potansiyelin, alt skorların, açıklamalar ve raporun ödemeyle açılır.",
+      "tag": "Kilitli",
+      "open": "Açık",
+      "subscoresNote": "Yedi alt skorun adları açık; değerler ve açıklamalar ödemeyle açılır. Çubuklar herkeste aynıdır, skorunu göstermez.",
+      "planPreviewBody": "Saç, sakal ve bakım adımları fotoğrafına göre seçilir; önizlemeler ödemeyle netleşir.",
+      "planPreviewAria": "Bulanık plan önizlemeleri (kilitli)"
     },
     "statusProcessing": "Analiz işleniyor…",
     "statusFailed": "Bu analiz tamamlanamadı; hakkın düşmedi. Yeni bir çekim yapabilirsin.",
@@ -913,7 +950,8 @@
         "eyeAxis": "Göz köşelerinden geçen eksen.",
         "spacing": "İki göz bebeği arasındaki mesafe.",
         "widths": "Elmacık ve çene genişliklerinin birbirine oranı."
-      }
+      },
+      "portraitAria": "Fotoğrafının üzerinde yüz noktaları (yalnız bu cihazda)"
     },
     "explain": {
       "itemStatus": "{item}: {status}",
@@ -1047,6 +1085,17 @@
       "running": "Analiz hazırlanıyor; kartlar hazır oldukça açılır",
       "failed": "Analiz tamamlanamadı; hakkın düşmedi. Yeniden deneyebilirsin.",
       "retry": "Yeniden dene"
+    },
+    "deviceProgress": {
+      "title": "Telefonunda analiz ediliyor",
+      "landmarks": "Yüz noktaları (478, telefonunda)",
+      "ratios": "Dört oran: göz açısı, çene genişliği, genişlik–yükseklik, üçte birler",
+      "faceShape": "Yüz şekli ön değerlendirmesi",
+      "views": "{count} açı hazır",
+      "save": "Cihaz sonucu hesabına kaydediliyor",
+      "done": "Analizin tamamlandı",
+      "doneSr": "tamamlandı",
+      "hint": "Fotoğrafların bu adımda telefonundan çıkmaz."
     }
   },
   "paywall": {

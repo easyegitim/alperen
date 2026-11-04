@@ -63,12 +63,15 @@ export function normalize(pts: Point[], width: number, height: number): Point[] 
   return pts.map((p) => ({ x: p.x / width, y: p.y / height, z: p.z }));
 }
 
-/** Şekil başına referans parametreler (SPEC 7.6 kurallarının ortasına düşer). */
+/**
+ * Şekil başına referans parametreler (fs-v2 kurallarının ortasına düşer). Saç çizgisi yok → etkin uzunluk =
+ * length/cheek × 1,12: yuvarlak 1,10 · kare 1,25 · oval/kalp/elmas 1,32 · uzun 1,51.
+ */
 export const SHAPE_PARAMS: Record<string, SyntheticParams> = {
-  oval: { cheek: 100, length: 142, jaw: 84, forehead: 88 },
-  round: { cheek: 100, length: 120, jaw: 80, forehead: 85 },
-  square: { cheek: 100, length: 125, jaw: 96, forehead: 92 },
-  long: { cheek: 100, length: 165, jaw: 85, forehead: 88 },
-  heart: { cheek: 100, length: 142, jaw: 72, forehead: 95 },
-  diamond: { cheek: 100, length: 142, jaw: 70, forehead: 72 },
+  oval: { cheek: 100, length: 118, jaw: 84, forehead: 88 },
+  round: { cheek: 100, length: 98, jaw: 80, forehead: 85 },
+  square: { cheek: 100, length: 112, jaw: 96, forehead: 92 },
+  long: { cheek: 100, length: 135, jaw: 85, forehead: 88 },
+  heart: { cheek: 100, length: 118, jaw: 72, forehead: 95 },
+  diamond: { cheek: 100, length: 118, jaw: 70, forehead: 72 },
 };

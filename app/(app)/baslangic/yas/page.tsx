@@ -1,24 +1,24 @@
-import { redirect } from "next/navigation";
 import { AgeGate } from "@/components/onboarding/AgeGate";
 import { OnboardingSteps } from "@/components/onboarding/OnboardingSteps";
+import { isFeatureEnabled } from "@/lib/config/flags";
 import { createClient } from "@/lib/db/server";
-import { currentYearIstanbul, selectableBirthYears } from "@/lib/onboarding/age";
-import { CONSENTS_PATH } from "@/lib/onboarding/gate";
+import { isAgeBand } from "@/lib/onboarding/age";
+import { GENDER_PATH } from "@/lib/onboarding/gate";
+import { readAgeBand } from "@/lib/onboarding/profileRead";
 
-/** F03: doğum yılı. Zaten 18+ işaretliyse izinlere geç. */
+/** KB §3.1 adım 1: yaş bandı. Oturum gerekmez (yaş → cinsiyet → hesap); oturum varsa seçim hemen yazılır. */
 export default async function AgeGatePage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/");
-  const { data: profile } = await supabase.from("profiles").select("is_adult").eq("id", user.id).maybeSingle();
-  if (profile?.is_adult) redirect(CONSENTS_PATH);
+  const signedIn = Boolean(user && !user.is_anonymous);
+  const initial = user ? await readAgeBand(supabase, user.id) : null;
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-8 px-4 py-6">
       <OnboardingSteps current="age" />
-      <AgeGate years={selectableBirthYears(currentYearIstanbul())} nextPath={CONSENTS_PATH} />
+      <AgeGate under18Enabled={isFeatureEnabled("under18")} signedIn={signedIn} initial={isAgeBand(initial) ? initial : null} nextPath={GENDER_PATH} />
     </div>
   );
 }

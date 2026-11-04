@@ -1,15 +1,18 @@
 import { redirect } from "next/navigation";
-import { OnboardingSteps } from "@/components/onboarding/OnboardingSteps";
 import { QuestionnaireWizard } from "@/components/onboarding/QuestionnaireWizard";
 import { getConsentState } from "@/lib/api/guard";
 import { hasRequiredAnalysisConsents } from "@/lib/consent";
 import { createClient } from "@/lib/db/server";
 import { getLegalVersion } from "@/lib/legal/docs";
-import { AGE_GATE_PATH, CAPTURE_PATH, CONSENTS_PATH } from "@/lib/onboarding/gate";
+import { AGE_GATE_PATH, CAPTURE_PATH, CONSENTS_PATH, GENDER_PATH } from "@/lib/onboarding/gate";
+import { readPresentationSafe } from "@/lib/onboarding/profileRead";
 import { safeReturnPath } from "@/lib/onboarding/returnPath";
 import { QuestionnaireSchema } from "@/lib/questionnaire";
 
-/** F04: anket. 18+ ve üç zorunlu rıza olmadan açılmaz. `next` yalnız /plan/<uuid> ise oraya dönülür (UI spec §7). */
+/**
+ * F04: anket. 18+ ve üç zorunlu rıza olmadan açılmaz. `next` yalnız /plan/<uuid> ise oraya dönülür (UI spec §7).
+ * v2: ödeme öncesi akışta yer almaz (KB R2-C13); cinsiyet profilden gelir, burada sorulmaz. PLAN 4c'de plan önüne taşınır.
+ */
 export default async function QuestionnairePage({ searchParams }: PageProps<"/baslangic/anket">) {
   const { next } = await searchParams;
   const supabase = await createClient();
@@ -24,16 +27,14 @@ export default async function QuestionnairePage({ searchParams }: PageProps<"/ba
   const consentVersion = await getLegalVersion("acik-riza");
   if (!hasRequiredAnalysisConsents(state, () => consentVersion)) redirect(CONSENTS_PATH);
 
+  const presentation = await readPresentationSafe(supabase, user.id);
+  if (!presentation) redirect(GENDER_PATH);
   const existing = QuestionnaireSchema.safeParse(profile.questionnaire);
   const returnPath = safeReturnPath(next);
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-8 px-4 pt-6">
-      {returnPath ? null : <OnboardingSteps current="profile" />}
-      {/* SPEC 7.1: model onboarding sırasında arka planda yüklenir */}
-      <link rel="prefetch" href="/mediapipe/face_landmarker.task" as="fetch" crossOrigin="anonymous" />
-      <link rel="prefetch" href="/mediapipe/wasm/vision_wasm_module_internal.wasm" as="fetch" crossOrigin="anonymous" />
-      <QuestionnaireWizard nextPath={returnPath ?? CAPTURE_PATH} initial={existing.success ? existing.data : undefined} />
+      <QuestionnaireWizard nextPath={returnPath ?? CAPTURE_PATH} initial={existing.success ? existing.data : undefined} presentation={presentation} />
     </div>
   );
 }

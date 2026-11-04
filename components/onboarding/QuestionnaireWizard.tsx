@@ -23,7 +23,6 @@ import {
   HAIR_TYPES,
   JAW_HEALTH_ISSUES,
   MINUTES_PER_DAY,
-  PRESENTATIONS,
   QuestionnaireSchema,
   SKIN_TYPES,
   type Questionnaire,
@@ -34,7 +33,9 @@ type Draft = Partial<Omit<Questionnaire, "body">> & {
   bodySkipped?: boolean;
 };
 
-const STEPS = ["goals", "presentation", "hair", "beard", "skin", "budget", "accessories", "body", "jawHealth", "note"] as const;
+// v2 (KB R2-C13, CONTRACTS_V2 §5): cinsiyet ödeme öncesi ayrı ekranda sorulur (profiles.presentation); burada sorulmaz,
+// değeri profil üzerinden taşınır (şema alanı dolu kalır; W3 analysisContextFromQuestionnaire profili önce okur).
+const STEPS = ["goals", "hair", "beard", "skin", "budget", "accessories", "body", "jawHealth", "note"] as const;
 type Step = (typeof STEPS)[number];
 const DRAFT_KEY = "aura.questionnaire.draft.v1";
 
@@ -60,14 +61,14 @@ function toDraft(initial?: Partial<Questionnaire>): Draft {
 const noop = () => () => {};
 
 /** Sunucuda iskelet, istemcide (hidrasyon sonrası) sihirbaz: sessionStorage taslağı güvenle okunur. */
-export function QuestionnaireWizard(props: { nextPath: string; initial?: Partial<Questionnaire> }) {
+export function QuestionnaireWizard(props: { nextPath: string; initial?: Partial<Questionnaire>; presentation: Questionnaire["presentation"] }) {
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   if (!hydrated) return <Skeleton className="h-72 w-full rounded-xl" />;
   return <Wizard {...props} />;
 }
 
 /** SPEC 9.2 anketi: ekran başına bir konu, ilerleme çubuğu, geri; boy/kilo atlanabilir; çene sağlığı çoklu seçim. */
-function Wizard({ nextPath, initial }: { nextPath: string; initial?: Partial<Questionnaire> }) {
+function Wizard({ nextPath, initial, presentation }: { nextPath: string; initial?: Partial<Questionnaire>; presentation: Questionnaire["presentation"] }) {
   const t = useTranslations("questionnaire");
   const router = useRouter();
   const [draft, setDraft] = useState<Draft>(() => ({ ...toDraft(initial), ...loadDraft() }));
@@ -89,8 +90,6 @@ function Wizard({ nextPath, initial }: { nextPath: string; initial?: Partial<Que
     switch (step) {
       case "goals":
         return (draft.goals?.length ?? 0) > 0;
-      case "presentation":
-        return Boolean(draft.presentation);
       case "hair":
         return Boolean(draft.hairType && draft.hairLength);
       case "beard":
@@ -118,7 +117,7 @@ function Wizard({ nextPath, initial }: { nextPath: string; initial?: Partial<Que
       !draft.bodySkipped && draft.body?.heightCm && draft.body?.weightKg && draft.body?.activity
         ? { heightCm: Number(draft.body.heightCm), weightKg: Number(draft.body.weightKg), activity: draft.body.activity }
         : undefined;
-    const candidate = { ...draft, body, note: draft.note?.trim() || undefined };
+    const candidate = { ...draft, presentation, body, note: draft.note?.trim() || undefined };
     delete (candidate as Draft).bodySkipped;
     const parsed = QuestionnaireSchema.safeParse(candidate);
     return parsed.success ? parsed.data : null;
@@ -179,9 +178,6 @@ function Wizard({ nextPath, initial }: { nextPath: string; initial?: Partial<Que
               label={(k) => t(`options.goals.${k}`)}
               onChange={(goals) => patch({ goals })}
             />
-          ) : null}
-          {step === "presentation" ? (
-            <Radio options={PRESENTATIONS} value={draft.presentation} label={(k) => t(`options.presentation.${k}`)} onChange={(presentation) => patch({ presentation })} />
           ) : null}
           {step === "hair" ? (
             <>

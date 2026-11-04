@@ -1,6 +1,12 @@
 export const AGE_GATE_PATH = "/baslangic/yas";
+/** v2 (KB §3.1): yaş → cinsiyet → hesap (Google/Apple) → rızalar → fotoğraflar. İlk üçü oturumsuz açılır. */
+export const GENDER_PATH = "/baslangic/cinsiyet";
+export const SIGN_IN_PATH = "/baslangic/giris";
 export const CONSENTS_PATH = "/baslangic/izinler";
+/** Anket ödeme sonrasına taşındı (KB R2-C13); yol plan ekranı önünde kullanılmak üzere duruyor (PLAN 4c). */
 export const QUESTIONNAIRE_PATH = "/baslangic/anket";
+/** Oturum gerekmeyen başlangıç ekranları ((app)/layout bunları oturumsuz geçirir). */
+export const PUBLIC_ONBOARDING_PATHS = [AGE_GATE_PATH, GENDER_PATH, SIGN_IN_PATH] as const;
 export const CAPTURE_PATH = "/tara";
 /** Silme talebi bekleyen hesap: "Silme talebini iptal et" ekranı (SPEC Faz 13 madde 4). */
 export const DELETION_PATH = "/silme";

@@ -16,7 +16,21 @@ export type AnalyticsEvents = {
   analysis_completed: { tier: "free" | "premium" };
   analysis_failed: { reason: string };
   paywall_viewed: { trigger: string; teaserMode: string };
-  account_linked: { method: "email" | "google" };
+  account_linked: { method: "email" | "google" | "apple" };
+  // v2 ödeme öncesi akış (CONTRACTS_V2 §8): yalnız adım adları, açı adları ve sayılar; bant, cinsiyet, e-posta, skor yok.
+  sign_in_started: { method: "google" | "apple" | "email" };
+  onboarding_step_completed: { step: "age" | "age_under18_soon" | "gender" | "account" | "consents" };
+  /** view: ViewKey; source: kamera/galeri. */
+  capture_view_captured: { view: string; source: "camera" | "gallery" };
+  /** Galeriden çoklu seçim: kaç dosya seçildi, kaçı bir açıya yerleşti. */
+  capture_gallery_batch: { selected: number; assigned: number };
+  /** Kalite pop-up'ı (KB R1-E12): yalnız cevap. */
+  capture_quality_prompt: { answer: "yes" | "no" };
+  /** Cihaz analizi gönderildi: açı adları virgülle (ör. "front,profile_left"), sayı. */
+  device_analysis_submitted: { views: string; count: number; hashed: boolean };
+  device_analysis_completed: undefined;
+  referral_code_viewed: undefined;
+  referral_claimed: { ok: boolean };
   checkout_started: { plan: string };
   subscription_activated: { plan: string };
   subscription_canceled: { plan: string };

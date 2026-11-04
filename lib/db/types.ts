@@ -8,9 +8,11 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-/** profiles'a 0010 ile eklenen sütunlar (0001/0006/0008 sütunları üretilen dosyada gelir). */
+/** profiles'a 0010 (ve 0011 referral_code) ile eklenen sütunlar (0001/0006/0008 sütunları üretilen dosyada gelir). */
 export type ProfilesV2Columns = {
   Row: {
+    /** 0011: DV-XXXX-XXXX; yalnız service role yazar. */
+    referral_code: string | null;
     age_band: "under_18" | "18_24" | "25_34" | "35_49" | "50_plus" | null;
     /** generated always as (age_band = 'under_18') stored */
     under_18: boolean | null;
@@ -18,12 +20,14 @@ export type ProfilesV2Columns = {
     face_shape_override: "oval" | "round" | "square" | "long" | "heart" | "diamond" | null;
   };
   Insert: {
+    referral_code?: string | null;
     age_band?: "under_18" | "18_24" | "25_34" | "35_49" | "50_plus" | null;
     under_18?: never;
     presentation?: "male" | "female" | "unspecified" | null;
     face_shape_override?: "oval" | "round" | "square" | "long" | "heart" | "diamond" | null;
   };
   Update: {
+    referral_code?: string | null;
     age_band?: "under_18" | "18_24" | "25_34" | "35_49" | "50_plus" | null;
     under_18?: never;
     presentation?: "male" | "female" | "unspecified" | null;
