@@ -8,6 +8,7 @@ import { StateCard, StateCardLink } from "@/components/routine/StateCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPremiumStatus } from "@/lib/api/premium";
 import { ENTITLEMENTS } from "@/lib/config/plans";
+import { NOISE_BAND } from "@/lib/config/scoring";
 import { createAdminClient } from "@/lib/db/admin";
 import { createClient } from "@/lib/db/server";
 
@@ -55,7 +56,7 @@ export default async function ProgressPage() {
       {premium && points.length >= 2 ? (
         <Card>
           <CardContent>
-            <ScoreTrend points={points} />
+            <ScoreTrend points={points} band={NOISE_BAND} />
           </CardContent>
         </Card>
       ) : premium ? (

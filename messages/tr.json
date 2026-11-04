@@ -1948,7 +1948,8 @@
       "deltaLabel": "Önceki analize göre {delta}",
       "sincePrevious": "Önceki analize göre",
       "calibrationChanged": "Kalibrasyon sürümü değişti; bu iki analiz karşılaştırılmaz.",
-      "changeAria": "Skor değişimi: {label}"
+      "changeAria": "Skor değişimi: {label}",
+      "ownHistoryNote": "Kıyas yalnız kendi geçmişinle; başka kullanıcılarla sıralama yok."
     }
   },
   "experts": {
