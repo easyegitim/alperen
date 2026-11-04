@@ -16,6 +16,8 @@ export type StepLink = { id: string; label: string; url: string; isAd: boolean; 
 type Props = { step: StepCardType; links?: StepLink[]; index?: number; id?: string };
 
 const fmtTry = (n: number) => n.toLocaleString("tr-TR");
+/** Kaynak yalnız https ise bağlantı olur; düz atıf metin olarak basılır (javascript:/göreli yol href'e girmez). */
+const isHttpsUrl = (s: string) => /^https:\/\/\S+$/i.test(s);
 
 /** Adım kartı (KB §6.1): ne, hangi gözleme bağlı, ₺ aralığı, sıklık, dk/gün, zorluk, kanıt cümlesi + kaynak; "Dene" ve "Berbere göster". */
 export function StepCard({ step, links = [], index = 0, id }: Props) {
@@ -38,6 +40,11 @@ export function StepCard({ step, links = [], index = 0, id }: Props) {
           </div>
           <h3 className="text-[15px] font-semibold">{step.title}</h3>
           {step.summary ? <p className="text-[13px] leading-relaxed text-muted-foreground">{step.summary}</p> : null}
+          {step.rationale ? (
+            <p className="text-[13px] leading-relaxed">
+              <span className="font-semibold">{t("step.rationale")}:</span> <span className="text-muted-foreground">{step.rationale}</span>
+            </p>
+          ) : null}
         </div>
         {step.tryonPresetId ? (
           <Button asChild variant="outline" size="sm" className="h-11 shrink-0 rounded-full px-3.5 text-brand">
@@ -58,10 +65,16 @@ export function StepCard({ step, links = [], index = 0, id }: Props) {
         {step.evidence.source ? (
           <>
             {" · "}
-            <a href={step.evidence.source} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-brand underline-offset-2 hover:underline">
-              {t("step.source")}
-              <ExternalLink className="size-3" aria-hidden="true" />
-            </a>
+            {isHttpsUrl(step.evidence.source) ? (
+              <a href={step.evidence.source} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-brand underline-offset-2 hover:underline">
+                {t("step.source")}
+                <ExternalLink className="size-3" aria-hidden="true" />
+              </a>
+            ) : (
+              <span>
+                {t("step.source")}: {step.evidence.source}
+              </span>
+            )}
           </>
         ) : null}
       </p>

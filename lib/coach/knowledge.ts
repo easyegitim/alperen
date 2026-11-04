@@ -5,8 +5,9 @@ import { EXERCISES } from "@/content/exercises";
 import { HABITS } from "@/content/habits";
 import { HAIR_PRESETS } from "@/content/hair-presets";
 import { SKIN_STEPS } from "@/content/skin-steps";
-import { EVIDENCE_FROM_GRADE, EVIDENCE_LEVELS, PLAN_AREAS, PLAN_TIERS, type BudgetBand, type GoalDirection, type PlanArea, type PlanTier, type TimeBand } from "@/lib/config/plan";
+import { BUDGET_BAND_TRY, EVIDENCE_FROM_GRADE, EVIDENCE_LEVELS, ONE_TIME_BUDGET_BAND_TRY, PLAN_AREAS, PLAN_TIERS, type BudgetBand, type GoalDirection, type OneTimeBudgetBand, type PlanArea, type PlanTier, type TimeBand } from "@/lib/config/plan";
 import { normalizeTr } from "@/lib/ai/safety";
+import type { FaceShape } from "@/lib/face/types";
 import type { GOALS } from "@/lib/questionnaire";
 import { REGION_KEYS, type RegionKey } from "@/lib/score/contract";
 import { CostTryRange, Evidence, StepFrequency } from "./planTypes";
@@ -24,7 +25,8 @@ export const CONTRAINDICATIONS = [
   "head_covering", // K9: başörtüsü → saç/renk yok
   "head_covering_unknown", // Ç17: tahmin ve seçim yoksa saç önerisi üretilmez
   "jaw_health_issue", // K10: çene sağlığı "hiçbiri" değilse egzersiz yok
-  "female_presentation", // sakal içeriği yok
+  "female_presentation", // sakal içeriği ve yalnız erkek sunumu için tanımlı stiller (preset.presentation ["male"]) yok
+  "male_presentation", // yalnız kadın sunumu için tanımlı stiller (preset.presentation ["female"]) erkek sunumunda yok
   "no_beard_preference", // sakal tercihi "yok"
   "under_18", // Ç1: doktor katmanı, yağ oranı, oruç yok
   "bmi_below_25", // K8
@@ -32,6 +34,9 @@ export const CONTRAINDICATIONS = [
   "glasses", // gözlük çerçevesiyle uyumsuz stil (nadir)
 ] as const;
 export type Contraindication = (typeof CONTRAINDICATIONS)[number];
+
+/** Yüz şekli kimlikleri (lib/face/types FaceShape ile birebir; saç/sakal kaydı `faceShapes` için). */
+export const FACE_SHAPE_IDS = ["oval", "round", "square", "long", "heart", "diamond"] as const satisfies readonly FaceShape[];
 
 export const COST_BANDS = ["none", "low", "medium", "high"] as const;
 export type CostBand = (typeof COST_BANDS)[number];
@@ -68,6 +73,8 @@ export const MethodRecord = z.object({
   flawIds: z.array(z.string().max(40)).max(20),
   /** "Dene" bağı: content/presets kimliği. */
   tryonPresetId: z.string().max(80).optional(),
+  /** Saç/sakal stili hangi yüz şekillerine uyar (preset.suits); boş/yok = her şekle. Kod süzer (PLAN §3). */
+  faceShapes: z.array(z.enum(FACE_SHAPE_IDS)).max(FACE_SHAPE_IDS.length).optional(),
   source: z.object({ kind: z.enum(["catalog", "tsv"]), ref: z.string().max(120) }),
 });
 export type MethodRecord = z.infer<typeof MethodRecord>;
@@ -79,6 +86,8 @@ export type KnowledgeConstraints = {
   jawHealth: "none" | "issue";
   beardPreference: "none" | "some";
   budgetBand: BudgetBand;
+  /** Tek seferlik uzman/klinik bandı (anket); yoksa "unknown" (süzgeç yok). Tek seferlik kayıtların ilgi puanında. */
+  oneTimeBudgetBand?: OneTimeBudgetBand;
   timeBand: TimeBand;
   under18: boolean;
   /** K8 kuralı sonucu (bodyRules): true ise yağ oranı/kalori kaydı verilebilir. */
@@ -96,6 +105,8 @@ export type KnowledgeQuery = {
   regions?: RegionKey[];
   goals: (typeof GOALS)[number][];
   goalDirection?: GoalDirection;
+  /** Geçerli yüz şekli (kullanıcı düzeltmesi > detaylı > ön); null/yok = süzgeç yok. Saç/sakal kayıtları buna göre süzülür. */
+  faceShape?: FaceShape | null;
   constraints: KnowledgeConstraints;
 };
 
@@ -115,6 +126,7 @@ export function filterByConstraints(records: readonly MethodRecord[], c: Knowled
   if (c.headCovering === null) active.add("head_covering_unknown");
   if (c.jawHealth === "issue") active.add("jaw_health_issue");
   if (c.presentation === "female") active.add("female_presentation");
+  if (c.presentation === "male") active.add("male_presentation");
   if (c.beardPreference === "none") active.add("no_beard_preference");
   if (c.under18) active.add("under_18");
   if (!c.bodyFatAllowed) active.add("bmi_below_25");
@@ -128,8 +140,35 @@ export function filterByConstraints(records: readonly MethodRecord[], c: Knowled
   });
 }
 
+/** Kayıt yüz şekline uyuyor mu (saf): şekil bilinmiyorsa ya da kayıt şekil listesi taşımıyorsa evet. */
+export function matchesFaceShape(r: Pick<MethodRecord, "faceShapes">, faceShape: FaceShape | null | undefined): boolean {
+  if (!faceShape || !r.faceShapes || r.faceShapes.length === 0) return true;
+  return r.faceShapes.includes(faceShape);
+}
+
+/**
+ * Tek seferlik adım (kesim, uzman, klinik) tek seferlik bütçe bandını aşıyor mu (saf; PLAN §3 bütçe → ₺):
+ * "unknown" → süzgeç yok; "none" (şimdilik yok) → aylık bandın üst sınırı geçerli; üst sınırı açık bant → aşmaz.
+ */
+export function exceedsOneTimeBudget(cost: { min: number; max: number | null }, oneTime: OneTimeBudgetBand, monthly: BudgetBand): boolean {
+  if (oneTime === "unknown") return false;
+  const max = oneTime === "none" ? BUDGET_BAND_TRY[monthly].max : (ONE_TIME_BUDGET_BAND_TRY[oneTime]?.max ?? null);
+  if (max === null) return false;
+  return cost.min > max;
+}
+
 const budgetRank: Record<BudgetBand, number> = { upto_1000: 0, "1000_2500": 1, "2500_5000": 2, "5000_plus": 3 };
 const costRank: Record<CostBand, number> = { none: 0, low: 0, medium: 1, high: 2 };
+
+/** Eşleşmede anlam taşımayan kısa Türkçe sözcükler (normalize); üç harfli etiketler ("spf", "ton") ise eşleşir. */
+const STOPWORDS: ReadonlySet<string> = new Set(["bir", "ile", "her", "icin", "ama", "gibi", "daha", "olan", "veya", "cok", "iki", "bu", "ve", "de", "da", "ne", "mi", "mu", "ya", "en", "az", "kez", "gun"]);
+
+/** Gözlem ve etiket sözcükleri: normalize, ≥ 3 harf, durak sözcükler dışarıda (saf). */
+export function tokenizeTr(s: string): string[] {
+  return normalizeTr(s)
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+}
 
 /** Hedef yönü (KB Ö7) → stil etiketleri: "daha keskin ve olgun" kesim/sakal setine, "daha yumuşak ve genç" yumuşak dokuya yaklaşır. */
 const DIRECTION_TAGS: Record<GoalDirection, string[]> = {
@@ -147,9 +186,13 @@ export function relevanceScore(r: MethodRecord, q: KnowledgeQuery): number {
   if (q.areas.includes(r.area)) s += 3;
   const regionHits = q.regions?.filter((k) => r.regions.includes(k)).length ?? 0;
   if (regionHits > 0) s += 2 + Math.min(1, regionHits - 1) * 0.5;
-  const words = new Set(q.observations.flatMap((o) => normalizeTr(o).split(/[^a-z0-9]+/).filter((w) => w.length > 3)));
+  const words = new Set(q.observations.flatMap(tokenizeTr));
   let tagHits = 0;
-  for (const t of r.tags) if (words.has(normalizeTr(t))) tagHits += 1;
+  // Çok sözcüklü etiket ("sac derisi") tüm sözcükleri gözlemde geçince eşleşir; tek sözcük ("spf") doğrudan.
+  for (const t of r.tags) {
+    const toks = tokenizeTr(t);
+    if (toks.length > 0 && toks.every((w) => words.has(w))) tagHits += 1;
+  }
   s += Math.min(3, tagHits) * 2;
   if (q.goals.includes("general")) s += 0.5;
   const goalArea: Partial<Record<(typeof GOALS)[number], PlanArea[]>> = { hair: ["hair", "color"], beard: ["beard"], skin: ["skin"], face_contours: ["exercise", "habit"], style: ["style", "hair", "beard"] };
@@ -161,6 +204,7 @@ export function relevanceScore(r: MethodRecord, q: KnowledgeQuery): number {
   }
   if (costRank[r.costBand] <= budgetRank[q.constraints.budgetBand]) s += 1;
   else s -= 2;
+  if (r.frequency.per === "once" && q.constraints.oneTimeBudgetBand && exceedsOneTimeBudget(r.costTryRange ?? COST_BAND_TRY[r.costBand], q.constraints.oneTimeBudgetBand, q.constraints.budgetBand)) s -= 2;
   // Günlük adımda süre payı: kullanıcının bandının yarısından azı önde (bütçe gibi; aşanlar zaten filtrelendi).
   if (r.frequency.per === "day" && r.minutesPerDay <= q.constraints.timeBand / 2) s += 0.5;
   if (r.evidence.level === "many_studies") s += 0.5;
@@ -185,7 +229,7 @@ export function validateMethodIds(ids: readonly string[], known: ReadonlySet<str
 // maliyet gelince MethodsKnowledgeSource gerçek değerleri taşır). Kanıt varsayılanı "expert_opinion"; yalnız günlük
 // SPF "many_studies" (güneş korumasının cilt yaşlanması kanıtı yaygın ve tartışmasızdır).
 
-const tr = (s: string) => normalizeTr(s).split(/[^a-z0-9]+/).filter((w) => w.length > 3);
+const tr = tokenizeTr;
 
 /** Katalog alanı → ilgili rapor bölgeleri (yapısal bölge yalnız algı/stil alanında; planTypes STRUCTURAL_REGIONS). */
 const AREA_REGIONS: Record<PlanArea, RegionKey[]> = {
@@ -279,7 +323,12 @@ function exerciseRecord(e: (typeof EXERCISES)[number]): MethodRecord {
 }
 
 type Preset = (typeof HAIR_PRESETS)[number];
-function presetRecord(p: Preset, area: "hair" | "beard" | "color"): MethodRecord {
+/** Preset → kayıt. Gizli (sürüm kapısı, KB §7.3/4) preset kayıt olmaz; sunum ve yüz şekli (suits) kodla süzülür (PLAN §3). */
+function presetRecord(p: Preset, area: "hair" | "beard" | "color"): MethodRecord | null {
+  if (p.hidden) return null;
+  const pres = p.presentation ?? [];
+  const presentationContra: Contraindication[] = pres.length === 1 ? (pres[0] === "male" ? ["female_presentation"] : ["male_presentation"]) : [];
+  const base: Contraindication[] = area === "beard" ? ["female_presentation", "no_beard_preference"] : ["head_covering", "head_covering_unknown"];
   return {
     id: p.id,
     area,
@@ -296,9 +345,10 @@ function presetRecord(p: Preset, area: "hair" | "beard" | "color"): MethodRecord
     effort: 1,
     tags: [...new Set([...tr(p.nameTr), ...(p.noteTr ? tr(p.noteTr) : []), ...p.suits])],
     regions: area === "beard" ? ["beard", "jawline"] : ["hair"],
-    contraindications: area === "beard" ? ["female_presentation", "no_beard_preference"] : ["head_covering", "head_covering_unknown"],
+    contraindications: [...new Set<Contraindication>([...base, ...presentationContra])],
     flawIds: [],
     tryonPresetId: p.id,
+    ...(p.suits.length > 0 ? { faceShapes: [...p.suits] } : {}),
     source: { kind: "catalog", ref: `content/${area}-presets.ts#${p.id}` },
   };
 }
@@ -312,7 +362,7 @@ export function catalogMethodRecords(): MethodRecord[] {
     ...HAIR_PRESETS.map((p) => presetRecord(p, "hair")),
     ...BEARD_PRESETS.map((p) => presetRecord(p, "beard")),
     ...COLOR_PRESETS.map((p) => presetRecord(p, "color")),
-  ];
+  ].filter((r): r is MethodRecord => r !== null);
 }
 
 /** İlk sürüm bilgi tabanı: SPEC katalogları + etiket/anahtar kelime eşleşmesi. W4 retrieve sıralamasını iyileştirebilir. */
@@ -327,9 +377,14 @@ export class CatalogKnowledgeSource implements KnowledgeSource {
     this.byId = new Map(this.records.map((r) => [r.id, r]));
   }
 
+  /**
+   * Kısıtlar (K8/K9/K10/Ç1/Ç17) + izinli alanlar + yüz şekli KODLA süzülür, sonra ilgiye göre sıralanır: model yalnız
+   * uygulanabilir kayıtları görür (CONTRACTS_V2 S2.2); alan dışı kayıt ≤ 40 bütçesini harcamaz.
+   */
   async retrieve(q: KnowledgeQuery, limit = KNOWLEDGE_RETRIEVE_LIMIT): Promise<MethodRecord[]> {
     const n = Math.max(1, Math.min(KNOWLEDGE_RETRIEVE_LIMIT, limit));
     return filterByConstraints(this.records, q.constraints)
+      .filter((r) => (q.areas.length === 0 || q.areas.includes(r.area)) && matchesFaceShape(r, q.faceShape))
       .map((r, i) => ({ r, s: relevanceScore(r, q), i }))
       .sort((a, b) => b.s - a.s || a.i - b.i)
       .slice(0, n)

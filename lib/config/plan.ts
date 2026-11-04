@@ -72,6 +72,8 @@ export const BODY_IMAGE_SCREEN_QUESTIONS = ["q1", "q2", "q3", "q4"] as const;
 export type BodyImageScreenQuestion = (typeof BODY_IMAGE_SCREEN_QUESTIONS)[number];
 /** CLAUDE NOTU (BDDQ benzeri eşik; klinik ölçek değil): "evet" sayısı bu değere ulaşırsa risk. */
 export const BODY_IMAGE_SCREEN_RISK_YES_COUNT = 2;
+/** CLAUDE NOTU: "risk" sonucu yapışkandır; tarama ancak bu kadar gün sonra yeniden alınabilir (KB §6.4 "risk → doktor katmanı kapalı" sayfa yenilemeyle aşılamaz). */
+export const BODY_IMAGE_SCREEN_RETAKE_DAYS = 30;
 
 /** Öncelik tablosu (KB §6.1): etki / emek; eşitlikte önce daha az emek. Saf. */
 export function priorityScore(impact: 1 | 2 | 3, effort: 1 | 2 | 3): number {

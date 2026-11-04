@@ -3,23 +3,39 @@
 import { Stethoscope } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { BodyImageScreen } from "@/components/plan/BodyImageScreen";
+import { BodyImageRiskNotice, BodyImageScreen } from "@/components/plan/BodyImageScreen";
 import { StepCard } from "@/components/plan/StepCard";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { BodyImageScreenResult } from "@/lib/config/plan";
 import type { PlanViewV2 } from "@/lib/coach/planTypes";
 
-type Props = { doctor: PlanViewV2["doctor"]; expertNetworkEnabled: boolean };
+type Props = { doctor: PlanViewV2["doctor"]; expertNetworkEnabled: boolean; analysisId: string };
 
 /**
  * Doktor katmanı (KB Ç3/Ç5; AUP): yalnız hekim onaylı öğeler (sunucu süzer); her öğede YZ açıklaması ve "Tıbbi tavsiye değildir".
- * off → tek satır; under_18 → gösterilmez; screen_required → tarama; screen_risk → uzmanla konuşma; pending → bekliyor.
+ * off → tek satır; under_18 → gösterilmez; screen_required → tarama; screen_risk → uzmanla konuşma (yeniden yükleyince de,
+ * tarama tekrar sorulmaz); pending → bekliyor. Tarama sonrası durum iyimser yazılmaz: sunucudan (GET /api/doctor) okunur.
  */
-export function DoctorLayer({ doctor, expertNetworkEnabled }: Props) {
+export function DoctorLayer({ doctor, expertNetworkEnabled, analysisId }: Props) {
   const t = useTranslations("doctor");
   const [state, setState] = useState(doctor.state);
+  const [steps, setSteps] = useState(doctor.steps);
   if (state === "off" || state === "under_18") return null;
-  const onResult = (r: BodyImageScreenResult) => setState(r === "risk" ? "screen_risk" : "pending_review");
+  const onResult = async (r: BodyImageScreenResult) => {
+    if (r === "risk") {
+      setState("screen_risk");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/doctor?analysisId=${encodeURIComponent(analysisId)}`, { headers: { accept: "application/json" } });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = (await res.json()) as PlanViewV2["doctor"];
+      setSteps(Array.isArray(data.steps) ? data.steps : []);
+      setState(data.state ?? "none");
+    } catch {
+      setState("none");
+    }
+  };
   return (
     <Card id="section-doctor" className="scroll-mt-32">
       <CardHeader>
@@ -32,8 +48,10 @@ export function DoctorLayer({ doctor, expertNetworkEnabled }: Props) {
         </h2>
       </CardHeader>
       <CardContent className="space-y-3">
-        {state === "screen_required" || state === "screen_risk" ? (
-          <BodyImageScreen onResult={onResult} expertNetworkEnabled={expertNetworkEnabled} />
+        {state === "screen_required" ? (
+          <BodyImageScreen onResult={(r) => void onResult(r)} expertNetworkEnabled={expertNetworkEnabled} analysisId={analysisId} />
+        ) : state === "screen_risk" ? (
+          <BodyImageRiskNotice expertNetworkEnabled={expertNetworkEnabled} />
         ) : state === "pending_review" ? (
           <p className="text-[13px] leading-relaxed text-muted-foreground">{t("pending")}</p>
         ) : state === "none" ? (
@@ -42,7 +60,7 @@ export function DoctorLayer({ doctor, expertNetworkEnabled }: Props) {
           <>
             <p className="rounded-xl bg-muted/60 p-3 text-[12px] leading-relaxed text-muted-foreground">{t("disclosure")}</p>
             <div className="space-y-2">
-              {doctor.steps.map((s, i) => (
+              {steps.map((s, i) => (
                 <StepCard key={s.id} step={s} index={i} id={`step-${s.id}`} />
               ))}
             </div>

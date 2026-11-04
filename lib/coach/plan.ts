@@ -1,9 +1,9 @@
 import { scanTextV2 } from "@/lib/ai/safety";
-import { exceedsBudget } from "@/content/budget";
+import { exceedsBudget, exceedsOneTimeBudget } from "@/content/budget";
 import { PLAN_PHASES, type PlanArea, type PlanPhase } from "@/lib/config/plan";
 import type { RegionKey, ReportV3 } from "@/lib/score/contract";
 import { barberSpecFor } from "./barber";
-import { COST_BAND_TRY, filterByConstraints, type MethodRecord } from "./knowledge";
+import { COST_BAND_TRY, filterByConstraints, matchesFaceShape, type MethodRecord } from "./knowledge";
 import { areasForContext, basisChipsV2, constraintsFromContext, exclusionsV2, isUnder18, type PlanContextV2 } from "./planBasisV2";
 import {
   PERCEPTION_AREAS,
@@ -42,6 +42,8 @@ export type PlanMetaInput = {
   knowledgeSource: "catalog" | "methods";
   retrievedIds: readonly string[];
   droppedUnknownIds: number;
+  /** Claude seçimi alınamadı, belirlenimci yedek kullanıldı: "yapay zekâ ile hazırlandı" yerine kural tabanlı uyarısı. */
+  fallback?: boolean;
 };
 
 export type BuildPlanInput = {
@@ -92,10 +94,16 @@ export function observationFor(report: ReportV3 | null, region: RegionKey): stri
   return safeText(r.improvements[0] ?? r.seen, 200);
 }
 
+/**
+ * Kayıt → adım kartı. summary = kaydın "ne yapılacağı" metni (nasıl/ne zaman; KB §6.1), rationale = Claude'un "neden sende"
+ * gerekçesi (safety'den geçmezse düşer); ikisi ayrı alanlardır, gerekçe talimatın yerini almaz. Başlık safety'den geçmezse
+ * kayıt buildPlanV2'de düşer (stepFromRecord çağrılmaz).
+ */
 export function stepFromRecord(r: MethodRecord, sel: PlanSelection, report: ReportV3 | null): StepCard {
   const { region, perceptionOnly } = resolveRegion(r, sel.region);
   const observation = observationFor(report, region);
-  const summary = safeText(sel.rationale, 400) ?? safeText(r.summary, 400, { allowDigits: true });
+  const summary = safeText(r.summary, 400, { allowDigits: true });
+  const rationale = safeText(sel.rationale, 400);
   const barber = r.area === "hair" || r.area === "beard" ? barberSpecFor(r.tryonPresetId ?? r.id) : undefined;
   return {
     id: r.id,
@@ -104,6 +112,7 @@ export function stepFromRecord(r: MethodRecord, sel: PlanSelection, report: Repo
     tier: r.tier,
     title: r.title,
     ...(summary ? { summary } : {}),
+    ...(rationale ? { rationale } : {}),
     observationRef: { region, ...(observation ? { observation } : {}) },
     costTryRange: r.costTryRange ?? COST_BAND_TRY[r.costBand],
     frequency: r.frequency,
@@ -118,7 +127,7 @@ export function stepFromRecord(r: MethodRecord, sel: PlanSelection, report: Repo
   };
 }
 
-export type DroppedReason = "unknown" | "doctor_tier" | "constraint" | "area" | "budget" | "duplicate" | "limit";
+export type DroppedReason = "unknown" | "doctor_tier" | "constraint" | "area" | "face_shape" | "budget" | "safety" | "duplicate" | "limit";
 
 export type BuildPlanResult = { plan: PlanV2Type; dropped: { id: string; reason: DroppedReason }[] };
 
@@ -159,8 +168,20 @@ export function buildPlanV2(input: BuildPlanInput): BuildPlanResult {
       dropped.push({ id: r.id, reason: "constraint" });
       continue;
     }
+    // Saç/sakal kaydı yüz şekline (kullanıcı düzeltmesi dahil) göre süzülür (PLAN §3); şekil bilinmiyorsa süzgeç yok.
+    if (!matchesFaceShape(r, ctx.faceShape)) {
+      dropped.push({ id: r.id, reason: "face_shape" });
+      continue;
+    }
+    // Bilgi tabanı başlığı da safety.ts'ten geçer (TSV kaydı ilaç/işlem/teşhis adı taşıyamaz; eski JSON sızdırmaz).
+    if (!safeText(r.title, 120, { allowDigits: true })) {
+      dropped.push({ id: r.id, reason: "safety" });
+      continue;
+    }
     const cost = r.costTryRange ?? COST_BAND_TRY[r.costBand];
-    if (r.frequency.per !== "once" && exceedsBudget(cost, ctx.questionnaire.budget)) {
+    // Tekrarlı adım aylık banda, tek seferlik (kesim, uzman, klinik) adım tek seferlik banda sığmalı (PLAN §3 bütçe → ₺).
+    const overBudget = r.frequency.per === "once" ? exceedsOneTimeBudget(cost, ctx.questionnaire.oneTimeBudget, ctx.questionnaire.budget) : exceedsBudget(cost, ctx.questionnaire.budget);
+    if (overBudget) {
       dropped.push({ id: r.id, reason: "budget" });
       continue;
     }
@@ -171,7 +192,8 @@ export function buildPlanV2(input: BuildPlanInput): BuildPlanResult {
     steps.push(stepFromRecord(r, sel, report));
   }
 
-  const disclaimers: DisclaimerKey[] = ["notMedicalAdvice", "aiGenerated", "changeTakesWeeks", "cosmeticProcedures"];
+  // Belirlenimci yedekte "yapay zekâ ile hazırlandı" denmez (sahte başarı yok): kural tabanlı seçim uyarısı yazılır.
+  const disclaimers: DisclaimerKey[] = ["notMedicalAdvice", input.meta.fallback ? "deterministicFallback" : "aiGenerated", "changeTakesWeeks", "cosmeticProcedures"];
   if (isUnder18(ctx.ageBand)) disclaimers.push("under18Limits");
 
   const plan: PlanV2Type = {

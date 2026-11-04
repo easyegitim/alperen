@@ -2,6 +2,7 @@
 
 import { Droplets, Scissors, Smile, Sparkles, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -13,9 +14,10 @@ type Props = {
   layers: readonly GlowUpLayer[];
   onChange: (layers: GlowUpLayer[]) => void;
   onRun: () => void;
-  /** Plandan gelen adımlar (W4 plan_v2); boşsa katalogdan seçilir (sunucu). */
+  /** Plandan gelen adımlar (W4 plan_v2). Boşsa glow-up çalışmaz: önce plan açılır (KB §7.2: görsel plana bağlı). */
   planSteps: readonly PlanStepLite[];
-  hasAnalysis: boolean;
+  /** Glow-up bağı: en son tamamlanmış analiz; yoksa önce analiz gerekir. */
+  analysisId: string | null;
   disabled?: boolean;
 };
 
@@ -23,8 +25,10 @@ const LAYER_ICON: Record<GlowUpLayer, LucideIcon> = { hair: Scissors, beard: Smi
 const LAYER_AREAS: Record<GlowUpLayer, readonly string[]> = { hair: ["hair", "color"], beard: ["beard"], skin: ["skin", "habit"] };
 
 /** "İyileşmiş halin" (KB §7.2; PLAN 5d): adım anahtarları yalnız saç · yalnız sakal · cilt · hepsi; doktor işlemleri yok. */
-export function GlowUpPanel({ layers, onChange, onRun, planSteps, hasAnalysis, disabled }: Props) {
+export function GlowUpPanel({ layers, onChange, onRun, planSteps, analysisId, disabled }: Props) {
   const t = useTranslations("tryon.v2.glowUp");
+  const hasAnalysis = Boolean(analysisId);
+  const hasPlan = planSteps.length > 0;
   const all = layers.length === GLOW_UP_LAYERS.length;
   const toggle = (l: GlowUpLayer, on: boolean) => onChange(on ? [...new Set([...layers, l])] : layers.filter((x) => x !== l));
   const visibleSteps = planSteps.filter((s) => layers.some((l) => LAYER_AREAS[l].includes(s.area)));
@@ -62,8 +66,15 @@ export function GlowUpPanel({ layers, onChange, onRun, planSteps, hasAnalysis, d
         </fieldset>
         <div className="space-y-1.5">
           <p className="eyebrow">{t("stepsTitle")}</p>
-          {planSteps.length === 0 ? (
-            <p className="text-[12px] text-muted-foreground">{t("fromCatalog")}</p>
+          {!hasPlan ? (
+            <div className="space-y-2 rounded-2xl border border-dashed p-3">
+              <p role={hasAnalysis ? "alert" : undefined} className="text-[13px] leading-relaxed text-muted-foreground">{t("planRequired")}</p>
+              {analysisId ? (
+                <Button asChild variant="outline" size="sm" className="h-11 rounded-xl">
+                  <Link href={`/plan/${analysisId}`}>{t("planOpen")}</Link>
+                </Button>
+              ) : null}
+            </div>
           ) : (
             <ul className="flex flex-wrap gap-1.5">
               {visibleSteps.map((s) => (
@@ -78,7 +89,7 @@ export function GlowUpPanel({ layers, onChange, onRun, planSteps, hasAnalysis, d
           <li>{t("noDoctor")}</li>
           <li>{t("regenPaid")} {t("notForAds")}</li>
         </ul>
-        <Button size="lg" className="w-full" onClick={onRun} disabled={disabled || !hasAnalysis || layers.length === 0}>{t("run")}</Button>
+        <Button size="lg" className="w-full" onClick={onRun} disabled={disabled || !hasAnalysis || !hasPlan || layers.length === 0}>{t("run")}</Button>
       </CardContent>
     </Card>
   );

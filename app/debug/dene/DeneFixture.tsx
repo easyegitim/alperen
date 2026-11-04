@@ -85,7 +85,7 @@ export function DeneFixture({ state }: { state: DeneFixtureState }) {
       </div>
     );
   }
-  if (state === "glowup") return <GlowUpPanel layers={layers} onChange={setLayers} onRun={() => undefined} planSteps={PLAN_STEPS} hasAnalysis />;
+  if (state === "glowup") return <GlowUpPanel layers={layers} onChange={setLayers} onRun={() => undefined} planSteps={PLAN_STEPS} analysisId="11111111-1111-4111-8111-111111111111" />;
   if (state === "qc_failed") return <QcFailedCard onBack={() => undefined} />;
   if (state === "generating") return <TryonGenerating title="Kombin deneniyor…" elapsed={14} />;
   if (!urls) return <p className="text-sm text-muted-foreground">Sentetik görseller hazırlanıyor…</p>;

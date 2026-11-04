@@ -10,6 +10,7 @@ import { ApiError } from "@/lib/api/errors";
 import { isUnlimitedQuota } from "@/lib/api/quota";
 import { isFeatureEnabled } from "@/lib/config/flags";
 import { draftDoctorRecommendations } from "@/lib/doctor/generate";
+import { hasActiveDoctorRow } from "@/lib/doctor/queue";
 import type { FaceShape } from "@/lib/face/types";
 import { resolvePhotoConfirm } from "@/lib/questionnaireV2";
 import { validateMethodIds, type KnowledgeQuery, type KnowledgeSource } from "./knowledge";
@@ -49,7 +50,8 @@ export function planContextFrom(profile: ProfilePlanRow, analysis: { faceShape: 
 export function knowledgeQueryFrom(ctx: PlanContextV2, report: { regions: { key: RegionKey; seen: string; improvements: string[] }[] } | null, photoFacts: string[]): KnowledgeQuery {
   const observations = [...photoFacts, ...(report?.regions.flatMap((r) => [r.seen, ...r.improvements]) ?? [])];
   const regions = (report?.regions.filter((r) => r.improvements.length > 0).map((r) => r.key) ?? []).filter((k) => (REGION_KEYS as readonly string[]).includes(k));
-  return { observations, areas: areasForContext(ctx), regions, goals: ctx.questionnaire.goals, goalDirection: ctx.questionnaire.goalDirection, constraints: constraintsFromContext(ctx) };
+  // faceShape: saç/sakal kayıtları yüz şekline göre süzülür (PLAN §3; kullanıcı düzeltmesi > detaylı > ön değerlendirme).
+  return { observations, areas: areasForContext(ctx), regions, goals: ctx.questionnaire.goals, goalDirection: ctx.questionnaire.goalDirection, faceShape: ctx.faceShape, constraints: constraintsFromContext(ctx) };
 }
 
 export type GeneratePlanArgs = {
@@ -114,6 +116,8 @@ export async function generatePlanV2(a: GeneratePlanArgs): Promise<GeneratePlanR
         goals: q.goals,
         goalDirection: q.goalDirection,
         budget: q.budget,
+        oneTimeBudget: q.oneTimeBudget,
+        presentation: ctx.presentation,
         minutesPerDay: q.minutesPerDay,
         sportDays: q.activity.sportDays,
         work: q.activity.work,
@@ -155,13 +159,16 @@ export async function generatePlanV2(a: GeneratePlanArgs): Promise<GeneratePlanR
       knowledgeSource: knowledge.name,
       retrievedIds: records.map((r) => r.id),
       droppedUnknownIds: droppedUnknown,
+      fallback,
     },
   });
   await savePlan(a.admin, reportRow.id, plan);
 
-  // Doktor katmanı taslağı: yalnız flag + 18+ + tarama "ok"; kuyruğa yazar, kullanıcıya dönmez. Hata planı bozmaz.
+  // Doktor katmanı taslağı: yalnız flag + 18+ + tarama "ok" ve bu analiz için satır yokken (tek taslak); kuyruğa yazar,
+  // kullanıcıya dönmez. Tarama çoğunlukla plandan SONRA yapılır: o yol lib/doctor/enqueue.ts (POST /api/doctor/screen).
   try {
-    await draftDoctorRecommendations({
+    const skip = !ctx.doctorLayerEnabled || isUnder18(ctx.ageBand) || ctx.bodyImageScreen !== "ok" || (await hasActiveDoctorRow(a.admin, a.userId, a.analysisId));
+    if (!skip) await draftDoctorRecommendations({
       admin: a.admin,
       userId: a.userId,
       analysisId: a.analysisId,

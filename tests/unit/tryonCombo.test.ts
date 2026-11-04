@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { API_ERROR_STATUS } from "@/lib/api/errors";
+import { loadGlowUpSteps } from "@/lib/tryon/glowUpPlan.server";
+import { fixturePlanView } from "@/tests/fixtures/planV2";
+import { FakePostgrest } from "@/tests/helpers/fakePostgrest";
 import { legacyPresetId, presetNames, resolvePresets, selectGlowUpSteps, type GlowUpStepLike } from "@/lib/tryon/combo";
 import { sumWeights } from "@/lib/tryon/quota";
 import { TRYON_EVENT_STATUSES } from "@/lib/tryon/types";
@@ -61,5 +64,25 @@ describe("glow-up adım seçimi (KB §7.2 anahtarlar; doktor işlemi görselde y
     const t = selectGlowUpSteps([{ id: "x", area: "hair", tier: "diy", tryonPresetId: "yok" }], [], ["hair"]);
     expect(t.hairPresetId).toBeNull();
     expect(t.appliedStepIds).toEqual(["x"]);
+  });
+});
+
+describe("glow-up adım kaynağı: YALNIZ plan_v2 (KB §7.2/Ç9; katalog yedeği yok)", () => {
+  const USER = "22222222-2222-4222-8222-222222222222";
+  const ANALYSIS = "11111111-1111-4111-8111-111111111111";
+  it("plan yoksa null (rota plan_required der); başka kullanıcının planı okunmaz; plan varsa adımlar plandan", async () => {
+    const db = new FakePostgrest();
+    db.tables.coach_reports = [{ id: "r1", user_id: USER, analysis_id: ANALYSIS, plan_v2: null, created_at: "2026-11-04T10:00:00.000Z" }];
+    expect(await loadGlowUpSteps(db.client, USER, ANALYSIS)).toBeNull();
+    expect(await loadGlowUpSteps(db.client, USER, "33333333-3333-4333-8333-333333333333")).toBeNull();
+    const plan = fixturePlanView().plan;
+    db.tables.coach_reports = [{ id: "r1", user_id: USER, analysis_id: ANALYSIS, plan_v2: plan, created_at: "2026-11-04T10:00:00.000Z" }];
+    expect(await loadGlowUpSteps(db.client, "44444444-4444-4444-8444-444444444444", ANALYSIS)).toBeNull();
+    const steps = await loadGlowUpSteps(db.client, USER, ANALYSIS);
+    expect(steps).not.toBeNull();
+    expect(steps!.map((s) => s.id)).toEqual(plan.steps.map((s) => s.id));
+    // bozuk plan JSON'u katalogla doldurulmaz
+    db.tables.coach_reports = [{ id: "r1", user_id: USER, analysis_id: ANALYSIS, plan_v2: { version: "plan.v2", steps: "yok" }, created_at: "2026-11-04T10:00:00.000Z" }];
+    expect(await loadGlowUpSteps(db.client, USER, ANALYSIS)).toBeNull();
   });
 });

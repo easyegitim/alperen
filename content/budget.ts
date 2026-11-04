@@ -1,7 +1,9 @@
 // Bütçe bantları (KB §6.6 TASLAK, AÇIK §11.3; PLAN 4c). Bant adları sözleşme (lib/config/plan.ts), tutarlar burada ve
 // messages/tr.json questionnaire.v2.options.* içinde. Kurucu tutarları verene kadar `placeholder: true`.
 import { BUDGET_BANDS, BUDGET_BAND_TRY, ONE_TIME_BUDGET_BANDS, ONE_TIME_BUDGET_BAND_TRY, type BudgetBand, type OneTimeBudgetBand } from "@/lib/config/plan";
-import { COST_BANDS, COST_BAND_TRY, type CostBand } from "@/lib/coach/knowledge";
+import { COST_BANDS, COST_BAND_TRY, exceedsOneTimeBudget, type CostBand } from "@/lib/coach/knowledge";
+
+export { exceedsOneTimeBudget };
 
 export const BUDGET_PLACEHOLDER = true as const;
 

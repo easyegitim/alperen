@@ -197,7 +197,7 @@ async function tryon(c: ImageBitmap, g: ImageBitmap, landmarksC: Point[], protec
   const landmarksG = resG.faceLandmarks[0].map((p) => ({ x: p.x * g.width, y: p.y * g.height }));
   let comp;
   try {
-    comp = await compositeTryon({ c, g, landmarksC, landmarksG, protect, glowUp });
+    comp = await compositeTryon({ c, g, landmarksC, landmarksG, protect, glowUp, policy });
   } catch (e) {
     return { ok: false, reason: e instanceof CompositeError ? e.reason : "canvas" };
   }

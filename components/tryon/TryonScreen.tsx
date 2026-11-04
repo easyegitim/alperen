@@ -21,7 +21,7 @@ import { renderTryonShareImage, shareOrDownload } from "@/lib/share/card";
 import { base64ToBlob } from "@/lib/tryon/base64";
 import { presetNames, resolvePresets } from "@/lib/tryon/combo";
 import { driftPolicyForPresets } from "@/lib/tryon/composite";
-import { GLOW_UP_LAYERS, TRYON_MODES, maskRegionFor, type GlowUpLayer, type TryonMode, type TryonPresets, type TryonResultV2 } from "@/lib/tryon/types";
+import { GLOW_UP_LAYERS, TRYON_MODES, glowUpSkinActive, maskRegionFor, type GlowUpLayer, type TryonMode, type TryonPresets, type TryonResultV2 } from "@/lib/tryon/types";
 import { ComboPicker } from "./ComboPicker";
 import { GlowUpPanel } from "./GlowUpPanel";
 import { QcFailedCard } from "./QcFailedCard";
@@ -39,7 +39,7 @@ type Props = {
   presentation: "male" | "female" | "unspecified";
   /** Glow-up bağı: en son analiz (yoksa glow-up kapalı görünür). */
   analysisId: string | null;
-  /** Plandan gelen adımlar (W4 plan_v2); boşsa sunucu katalogdan seçer. */
+  /** Plandan gelen adımlar (W4 plan_v2); boşsa glow-up önce plana yönlendirir (sunucu plan_required). */
   planSteps: PlanStepLite[];
   flags: { combo: boolean; glowUp: boolean };
 };
@@ -65,7 +65,7 @@ export function TryonScreen({ consentVersion, hasConsent, recommended, quota, in
   const [stage, setStage] = useState<Stage>("gallery");
   const [picked, setPicked] = useState<TryonPresets>(() => {
     const p = initialPreset ? getPreset(initialPreset) : undefined;
-    return p ? { [p.kind]: p.id } : {};
+    return p && !p.hidden ? { [p.kind]: p.id } : {};
   });
   const [layers, setLayers] = useState<GlowUpLayer[]>([...GLOW_UP_LAYERS]);
   const [pending, setPending] = useState<RunRequest | null>(null);
@@ -151,8 +151,9 @@ export function TryonScreen({ consentVersion, hasConsent, recommended, quota, in
       eventId = res.eventId;
       const gBlob = base64ToBlob(res.image, res.mimeType); // fetch("data:") CSP tarafından engellenir
       const g = await createImageBitmap(gBlob);
-      const protect = maskRegionFor(res.mode, res.presets);
-      const out = await VisionClient.get().tryon(c, g, landmarksC, protect, driftPolicyForPresets(res.presets), res.mode === "glow_up");
+      // Maske ve doku kapısı sunucunun uyguladığı katmanlara göre: cilt katmanı kapalıysa yüz saç/sakal denemesi gibi geri yazılır.
+      const protect = maskRegionFor(res.mode, res.presets, res.layers);
+      const out = await VisionClient.get().tryon(c, g, landmarksC, protect, driftPolicyForPresets(res.presets), glowUpSkinActive(res.mode, res.layers));
       if (!out.ok) {
         console.warn("[tryon] kontrol başarısız:", out.reason); // yalnız neden kodu; görsel/nokta yok
         await postJson(`/api/tryon/${eventId}/drift`, {}).catch(() => undefined);
@@ -179,7 +180,7 @@ export function TryonScreen({ consentVersion, hasConsent, recommended, quota, in
       });
       setFlagged(false);
       setSlider(50);
-      setUsed((u) => u + 1);
+      setUsed((u) => u + Math.max(1, res.weight ?? 1));
       track("tryon_result", { status: "success", durationMs: Math.round(nowMs() - start) });
       setStage("result");
     } catch (e) {
@@ -190,7 +191,8 @@ export function TryonScreen({ consentVersion, hasConsent, recommended, quota, in
         setStage("qc_failed");
         return;
       }
-      setError(t.has(`errors.${code}`) ? t(`errors.${code}`) : t.has(`v2.errors.${code}`) ? t(`v2.errors.${code}`) : t("errors.GENERIC"));
+      const planRequired = e instanceof ApiClientError && code === "BAD_INPUT" && e.message === "plan_required";
+      setError(planRequired ? t("v2.glowUp.planRequired") : t.has(`errors.${code}`) ? t(`errors.${code}`) : t.has(`v2.errors.${code}`) ? t(`v2.errors.${code}`) : t("errors.GENERIC"));
       setStage("gallery");
     } finally {
       window.clearInterval(timerRef.current);
@@ -315,7 +317,7 @@ export function TryonScreen({ consentVersion, hasConsent, recommended, quota, in
       </Tabs>
       <p className="text-[12px] text-muted-foreground">{t(`v2.modeHint.${mode}`)}</p>
       {mode === "glow_up" ? (
-        <GlowUpPanel layers={layers} onChange={setLayers} onRun={startGlowUp} planSteps={planSteps} hasAnalysis={Boolean(analysisId)} disabled={remaining === 0} />
+        <GlowUpPanel layers={layers} onChange={setLayers} onRun={startGlowUp} planSteps={planSteps} analysisId={analysisId} disabled={remaining === 0} />
       ) : (
         <ComboPicker mode={mode} value={picked} onChange={setPicked} onRun={startStyleOrCombo} recommended={recommended} presentation={presentation} disabled={remaining === 0} />
       )}

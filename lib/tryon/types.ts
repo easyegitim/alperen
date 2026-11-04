@@ -35,11 +35,21 @@ export type MaskRegion = (typeof MASK_REGIONS)[number];
 const _protectIsMaskRegion: MaskRegion = "below_brows" satisfies Protect;
 void _protectIsMaskRegion;
 
-/** Moda ve parçalara göre maske (saf): combo'da sakal varsa yanak/favori modele kalır; glow_up yalnız özellikleri korur. */
-export function maskRegionFor(mode: TryonMode, presets: TryonPresets): MaskRegion {
-  if (mode === "glow_up") return "features_only";
+/**
+ * Moda, parçalara ve glow-up katmanlarına göre maske (saf): combo'da sakal varsa yanak/favori modele kalır. glow_up yalnız
+ * CİLT katmanı açıkken özellikleri korur (features_only: cilt modele kalır, KB Ç9 plana bağlı cilt değişimi); cilt katmanı
+ * kapalıysa saç/sakal denemesi gibi yüz orijinal piksellerle geri yazılır (sakal varsa features_cheeks, yoksa below_brows).
+ */
+export function maskRegionFor(mode: TryonMode, presets: TryonPresets, layers?: readonly GlowUpLayer[]): MaskRegion {
+  if (mode === "glow_up" && glowUpSkinActive(mode, layers)) return "features_only";
   if (presets.beard) return "features_cheeks";
   return "below_brows";
+}
+
+/** glow_up'ta cilt katmanı açık mı (doku kapısı ve ince doku geri yazımı yalnız o zaman). layers verilmezse hepsi açık sayılır. */
+export function glowUpSkinActive(mode: TryonMode, layers?: readonly GlowUpLayer[]): boolean {
+  if (mode !== "glow_up") return false;
+  return layers === undefined || layers.length === 0 || layers.includes("skin");
 }
 
 /** Claude kalite kontrolü nedenleri (R2-C10/3; kapalı liste; analitik ve admin yalnız bu kodları görür). */
@@ -93,6 +103,10 @@ export type TryonResultV2 = {
   regenCount: number;
   /** Glow-up: görselin altında yazılan uygulanmış plan adımı kimlikleri. */
   appliedStepIds: string[];
+  /** Glow-up: sunucunun uyguladığı katmanlar (istemci maske/doku kapısını buna göre seçer); diğer modlarda boş. */
+  layers: GlowUpLayer[];
+  /** Bu istek için kotadan düşen ağırlık (lib/config/tryon weights; 0014 öncesi 1). */
+  weight: number;
   /** common.aiGenerated: "Aura ile oluşturuldu · YZ simülasyonu" (K16); istemci görsele gömer. */
   label: string;
 };

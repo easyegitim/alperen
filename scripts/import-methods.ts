@@ -13,8 +13,10 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import { pathToFileURL } from "node:url";
 import { EVIDENCE_FROM_GRADE, PLAN_AREAS, PLAN_TIERS, type PlanArea, type PlanTier } from "../lib/config/plan";
+import { getPreset } from "../content/presets";
+import { WEIGHT_CONTENT_RE } from "../lib/coach/bodyRules";
 import { CONTRAINDICATIONS, COST_BANDS, COST_BAND_TRY, MethodRecord, MethodsFile, TSV_FLAW_COLUMNS, TSV_METHOD_COLUMNS, type Contraindication, type CostBand } from "../lib/coach/knowledge";
-import { normalizeTr } from "../lib/ai/safety";
+import { normalizeTr, scanTextV2 } from "../lib/ai/safety";
 import { REGION_KEYS, type RegionKey } from "../lib/score/contract";
 
 export type TsvTable = { header: string[]; rows: Record<string, string>[] };
@@ -53,6 +55,24 @@ const level3 = (v: string): 1 | 2 | 3 | null => {
 
 export type RowResult = { ok: true; record: MethodRecord } | { ok: false; line: number; id: string; reason: string };
 
+/**
+ * Alan varsayılan kontrendikasyonları (K9/Ç17 saç-renk, sunum/tercih sakal, K10 egzersiz): TSV satırı boş bıraksa da kod
+ * ekler; böylece başörtülü kullanıcıya saç, çene sağlığı cevabı olana egzersiz kaydı modele hiç gitmez (CONTRACTS_V2 S2.2).
+ */
+export const AREA_DEFAULT_CONTRAINDICATIONS: Partial<Record<PlanArea, readonly Contraindication[]>> = {
+  hair: ["head_covering", "head_covering_unknown"],
+  color: ["head_covering", "head_covering_unknown"],
+  beard: ["female_presentation", "no_beard_preference"],
+  exercise: ["jaw_health_issue"],
+};
+/** K8/Ç1: kilo/kalori içeriği taşıyan alışkanlık satırı bu etiketlerden en az birini taşımalı; yoksa satır düşer (uydurulmaz). */
+const WEIGHT_GUARDS: readonly Contraindication[] = ["bmi_below_25", "under_18", "restriction_signal"];
+
+/** Kullanıcı kanalı safety taraması (rakam serbest): ihlal varsa kural adları (boş = temiz). Doktor katmanı ayrı kanaldır. */
+export function safetyIssues(text: string, path: string): string[] {
+  return [...new Set(scanTextV2(text, path).filter((v) => v.rule !== "score_in_text").map((v) => v.rule))];
+}
+
 /** Bir TSV satırını MethodRecord'a çevirir; her alan doğrulanır, geçersizse satır nedeniyle düşer. */
 export function rowToRecord(row: Record<string, string>, line: number, sourceFile: string): RowResult {
   const id = row.id ?? "";
@@ -79,15 +99,30 @@ export function rowToRecord(row: Record<string, string>, line: number, sourceFil
   const sep = TSV_METHOD_COLUMNS.listSeparator;
   const regions = list(row.regions, sep);
   if (!regions.every((r) => (REGION_KEYS as readonly string[]).includes(r))) return fail("regions");
-  const contraindications = list(row.contraindications, sep);
-  if (!contraindications.every((c) => (CONTRAINDICATIONS as readonly string[]).includes(c))) return fail("contraindications");
+  const listed = list(row.contraindications, sep);
+  if (!listed.every((c) => (CONTRAINDICATIONS as readonly string[]).includes(c))) return fail("contraindications");
+  const contraindications = [...new Set<Contraindication>([...(listed as Contraindication[]), ...(AREA_DEFAULT_CONTRAINDICATIONS[area] ?? [])])];
   const title = (row.user_label_tr || row.title_tr || "").trim();
   if (!title) return fail("title_tr");
   const summary = (row.summary_tr ?? "").trim();
+  // K8/Ç1: kalori/kilo içeriği yalnız VKİ ≥ 25 ve 18+ ile; satır bunu etiketlememişse düşer (safety'den önce: neden belirgin olsun).
+  if (WEIGHT_CONTENT_RE.test(`${title} ${summary}`) && !contraindications.some((c) => WEIGHT_GUARDS.includes(c))) return fail("weight_content");
+  // Kullanıcıya görünen başlık ve özet safety.ts'ten geçer (ilaç/işlem/teşhis/kalori/aşağılayıcı dil); doktor katmanı ayrı kanal.
+  if (tier !== "doctor") {
+    const bad = [...safetyIssues(title, "title"), ...safetyIssues(summary, "summary")];
+    if (bad.length > 0) return fail(`safety:${bad[0]}`);
+  }
   const min = row.cost_min_try ? Number(row.cost_min_try) : null;
   const max = row.cost_max_try ? Number(row.cost_max_try) : null;
   const costTryRange = min !== null && Number.isFinite(min) ? { min: Math.max(0, Math.round(min)), max: max !== null && Number.isFinite(max) ? Math.round(max) : null } : COST_BAND_TRY[costBand];
   const source = (row.source_url ?? "").trim();
+  // Kaynak yalnız https bağlantısı (adım kartı href olarak basar); düz atıf ya da javascript: kabul edilmez.
+  if (source && !/^https:\/\/\S+$/i.test(source)) return fail("source_url");
+  const presetId = (row.tryon_preset_id ?? "").trim();
+  if (presetId) {
+    const preset = getPreset(presetId);
+    if (!preset || preset.hidden) return fail("tryon_preset_id");
+  }
   const record = {
     id,
     area,
@@ -104,9 +139,9 @@ export function rowToRecord(row: Record<string, string>, line: number, sourceFil
     effort,
     tags: [...new Set(list(row.tags, sep).map((t) => normalizeTr(t)))].slice(0, 20),
     regions: regions as RegionKey[],
-    contraindications: contraindications as Contraindication[],
+    contraindications,
     flawIds: list(row.flaw_ids, sep).slice(0, 20),
-    ...(row.tryon_preset_id ? { tryonPresetId: row.tryon_preset_id } : {}),
+    ...(presetId ? { tryonPresetId: presetId } : {}),
     source: { kind: "tsv" as const, ref: `${sourceFile}#${line}` },
   };
   const parsed = MethodRecord.safeParse(record);

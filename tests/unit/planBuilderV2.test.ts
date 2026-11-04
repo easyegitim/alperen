@@ -108,16 +108,19 @@ describe("buildPlanV2 (PLAN 4d/4e; KB §6.1, K6–K10, Ç1, Ç2; CONTRACTS_V2 S2
     expect(build([{ id: "st_pricey" }], high, [...records, pricey]).plan.steps).toHaveLength(1);
   });
 
-  it("safety.ts: ihlalli gerekçe düşer (kayıt özeti kalır); gözlem metni rapordan nötr gelir", () => {
+  it("safety.ts: ihlalli gerekçe düşer; kayıt özeti (ne yapılacağı) HER ZAMAN kalır, gerekçe ayrı alandır; gözlem metni rapordan nötr gelir", () => {
     const { plan } = build([
       { id: "st_spf", rationale: "Bu adım skoru 0,4 puan artırır." },
       { id: "st_cleanser_foaming", rationale: "Botoks yerine bunu dene." },
       { id: "st_moisturizer_light", rationale: "Parlamayı dengeler." },
     ]);
     const [a, b, c] = plan.steps;
-    expect(a!.summary).not.toMatch(/0,4/);
-    expect(b!.summary).not.toMatch(/botoks/i);
-    expect(c!.summary).toBe("Parlamayı dengeler.");
+    expect(a!.rationale).toBeUndefined();
+    expect(a!.summary).toBe(records.find((r) => r.id === "st_spf")!.summary);
+    expect(b!.rationale).toBeUndefined();
+    expect(JSON.stringify(b)).not.toMatch(/botoks/i);
+    expect(c!.rationale).toBe("Parlamayı dengeler.");
+    expect(c!.summary).toBe(records.find((r) => r.id === "st_moisturizer_light")!.summary);
     expect(a!.observationRef.observation).toBe("Günlük SPF");
     for (const s of plan.steps) {
       expect(s.summary ?? "").not.toMatch(WEIGHT_CONTENT_RE);
@@ -180,5 +183,59 @@ describe("buildPlanV2 (PLAN 4d/4e; KB §6.1, K6–K10, Ç1, Ç2; CONTRACTS_V2 S2
       if (p.kind === "beard") expect(spec.beardLine).toBeDefined();
     }
     expect(barberSpecFor("st_spf")).toBeUndefined();
+  });
+});
+
+describe("buildPlanV2 — inceleme düzeltmeleri (PLAN §3 kişiselleştirme; KB §6.1)", () => {
+  it("tek seferlik bütçe: 'şimdilik yok' cevabında aylık bandı aşan tek seferlik uzman adımı düşer; 'bilmiyorum'da süzgeç yok; bant varsa bant", () => {
+    const clinic: MethodRecord = { ...records.find((r) => r.id === "st_spf")!, id: "ex_expert_once", tier: "expert", costBand: "high", costTryRange: { min: 40_000, max: 80_000 }, frequency: { per: "once", times: 1 } };
+    const q = fixturePlanContext().questionnaire;
+    const none = fixturePlanContext({ questionnaire: { ...q, budget: "upto_1000", oneTimeBudget: "none" } });
+    expect(build([{ id: "ex_expert_once" }], none, [...records, clinic]).dropped).toContainEqual({ id: "ex_expert_once", reason: "budget" });
+    const unknown = fixturePlanContext({ questionnaire: { ...q, budget: "upto_1000", oneTimeBudget: "unknown" } });
+    expect(build([{ id: "ex_expert_once" }], unknown, [...records, clinic]).plan.steps).toHaveLength(1);
+    const low = fixturePlanContext({ questionnaire: { ...q, oneTimeBudget: "upto_15000" } });
+    expect(build([{ id: "ex_expert_once" }], low, [...records, clinic]).dropped).toContainEqual({ id: "ex_expert_once", reason: "budget" });
+    const high = fixturePlanContext({ questionnaire: { ...q, oneTimeBudget: "15000_60000" } });
+    expect(build([{ id: "ex_expert_once" }], high, [...records, clinic]).plan.steps).toHaveLength(1);
+    // aylık banda sığan tek seferlik kesim "şimdilik yok" cevabında da kalır
+    expect(build([{ id: "textured_crop" }], none).plan.steps.map((s) => s.id)).toEqual(["textured_crop"]);
+  });
+
+  it("yüz şekli: kaydın uymadığı şekilde saç/sakal adımı düşer (kullanıcı düzeltmesi dahil); şekil bilinmiyorsa süzgeç yok", () => {
+    const round = fixturePlanContext({ faceShape: "round", faceShapeSource: "override" });
+    const r = build([{ id: "french_crop" }, { id: "textured_crop" }], round); // french_crop: oval/long/heart
+    expect(r.dropped).toContainEqual({ id: "french_crop", reason: "face_shape" });
+    expect(r.plan.steps.map((s) => s.id)).toEqual(["textured_crop"]);
+    const unknown = fixturePlanContext({ faceShape: null, faceShapeSource: null });
+    expect(build([{ id: "french_crop" }], unknown).plan.steps.map((s) => s.id)).toEqual(["french_crop"]);
+  });
+
+  it("sunum: kadın sunumunda yalnız erkek için tanımlı saç stili düşer (constraint); erkek sunumunda yalnız kadın stili düşer", () => {
+    const female = fixturePlanContext({ presentation: "female", faceShape: "round", faceShapeSource: "detailed" });
+    const r = build([{ id: "buzz_cut" }, { id: "pixie" }, { id: "st_spf" }], female);
+    expect(r.dropped).toContainEqual({ id: "buzz_cut", reason: "constraint" });
+    expect(r.plan.steps.map((s) => s.id)).toEqual(expect.arrayContaining(["st_spf"]));
+    expect(r.plan.steps.some((s) => s.id === "buzz_cut")).toBe(false);
+    const male = fixturePlanContext({ faceShape: null, faceShapeSource: null });
+    expect(build([{ id: "pixie" }], male).dropped).toContainEqual({ id: "pixie", reason: "constraint" });
+  });
+
+  it("bilgi tabanı başlığı safety.ts'ten geçmezse kayıt düşer (eski JSON sızdırmaz); katalog başlıklarının hepsi geçer", () => {
+    const bad: MethodRecord = { ...records.find((r) => r.id === "st_spf")!, id: "m_bad_title", title: "Retinoid krem" };
+    const r = build([{ id: "m_bad_title" }, { id: "st_spf" }], fixturePlanContext(), [...records, bad]);
+    expect(r.dropped).toContainEqual({ id: "m_bad_title", reason: "safety" });
+    expect(r.plan.steps.map((s) => s.id)).toEqual(["st_spf"]);
+    for (const rec of records) expect(safeText(rec.title, 120, { allowDigits: true }), rec.id).toBeDefined();
+  });
+
+  it("belirlenimci yedekte 'yapay zekâ ile hazırlandı' yazılmaz; kural tabanlı uyarısı yazılır", () => {
+    const ai = build([{ id: "st_spf" }]).plan.disclaimers;
+    expect(ai).toContain("aiGenerated");
+    expect(ai).not.toContain("deterministicFallback");
+    const fb = buildPlanV2({ selections: [{ id: "st_spf" }], records, report: FIXTURE_REPORT, ctx: fixturePlanContext(), meta: { ...meta, fallback: true } }).plan.disclaimers;
+    expect(fb).toContain("deterministicFallback");
+    expect(fb).not.toContain("aiGenerated");
+    expect(fb).toContain("notMedicalAdvice");
   });
 });

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { PlanSelectionProvider, PlanSelectionResult } from "@/lib/ai/provider";
 import { ApiError } from "@/lib/api/errors";
 import { generatePlanV2, knowledgeQueryFrom, planContextFrom } from "@/lib/coach/generatePlan";
+import { enqueueDoctorDraft } from "@/lib/doctor/enqueue";
+import type { DoctorDraftProvider } from "@/lib/doctor/generate";
+import { fixturePlanView } from "@/tests/fixtures/planV2";
 import { MethodsKnowledgeSource, type MethodsFile } from "@/lib/coach/knowledge";
 import { PlanV2 } from "@/lib/coach/planTypes";
 import { ZERO_USAGE } from "@/lib/config/ai.server";
@@ -95,6 +98,11 @@ describe("generatePlanV2 (PLAN 4d/4e/4f; CONTRACTS_V2 S2.1 kural 1/3/6; Ç10)", 
     expect(r.view.plan.steps.length).toBeGreaterThanOrEqual(6);
     expect(r.view.plan.meta.promptVersion).toBe("plan.v2+fallback");
     expect(r.view.plan.steps.every((s) => s.tier !== "doctor")).toBe(true);
+    // sahte başarı yok: "yapay zekâ ile hazırlandı" yerine kural tabanlı uyarısı
+    expect(r.view.plan.disclaimers).toContain("deterministicFallback");
+    expect(r.view.plan.disclaimers).not.toContain("aiGenerated");
+    const ok = await generatePlanV2({ admin: asAdmin(seed()), userId: USER, analysisId: ANALYSIS, provider: provider(SELECTION), env });
+    expect(ok.view.plan.disclaimers).toContain("aiGenerated");
   });
 
   it("anket v2 yoksa BAD_INPUT questionnaire_required; tamamlanmamış analizde BAD_INPUT", async () => {
@@ -141,5 +149,51 @@ describe("generatePlanV2 (PLAN 4d/4e/4f; CONTRACTS_V2 S2.1 kural 1/3/6; Ç10)", 
     expect(q.regions).toEqual(["brows", "skin", "hair"]);
     expect(q.areas).toContain("exercise");
     expect(q.constraints.doctorLayer).toBe(false);
+  });
+
+  it("istem: sunum ve tek seferlik bütçe anket bloğunda; sorgu yüz şeklini taşır (saç/sakal süzgeci)", async () => {
+    const calls: string[] = [];
+    await generatePlanV2({ admin: asAdmin(seed()), userId: USER, analysisId: ANALYSIS, provider: provider(SELECTION, calls), env });
+    expect(calls[0]).toContain('"presentation":"male"');
+    expect(calls[0]).toContain('"oneTimeBudget":"none"');
+    const q = knowledgeQueryFrom(fixturePlanContext({ faceShape: "round", faceShapeSource: "override" }), FIXTURE_REPORT, []);
+    expect(q.faceShape).toBe("round");
+    expect(q.constraints.oneTimeBudgetBand).toBe("none");
+  });
+
+  it("doktor taslağı tarama 'ok' olunca kuyruğa girer (plan var, flag açık, 18+); tek taslak; tarama yok/risk ya da plan yokken hiç", async () => {
+    const doctorFile: MethodsFile = {
+      version: "methods.v1",
+      importedAt: "2026-11-04T00:00:00.000Z",
+      sourceFile: "test",
+      records: [{ id: "dr_topical", area: "skin", title: "Hekim kararı", summary: "x", tier: "doctor", evidence: { level: "many_studies" }, costBand: "medium", frequency: { per: "day", times: 1 }, minutesPerDay: 1, difficulty: 1, impact: 2, effort: 1, tags: ["parlama"], regions: ["skin"], contraindications: [], flawIds: [], source: { kind: "tsv", ref: "t#1" } }],
+    };
+    const knowledge = new MethodsKnowledgeSource([doctorFile]);
+    let drafts = 0;
+    const doctorProvider: DoctorDraftProvider = {
+      model: "claude-opus-5-5",
+      async draft() {
+        drafts += 1;
+        return { out: { items: [{ methodId: "dr_topical", area: "skin", rationale: "Bu konuda karar muayenede hekimindir.", sources: ["https://www.titck.gov.tr/x"] }] }, usage: ZERO_USAGE, model: "claude-opus-5-5", fallbackServed: false };
+      },
+    };
+    const on = { FEATURE_DOCTOR_LAYER: "true" };
+    const plan = fixturePlanView().plan;
+    const db = seed({ screen: "ok", plan });
+    const r = await enqueueDoctorDraft({ admin: asAdmin(db), userId: USER, analysisId: ANALYSIS, env: on, knowledge, provider: doctorProvider });
+    expect(r).not.toBeNull();
+    expect(db.tables.doctor_recommendations).toHaveLength(1);
+    expect(db.tables.doctor_recommendations![0]).toMatchObject({ status: "draft", user_id: USER, analysis_id: ANALYSIS });
+    // ikinci çağrı taslağı çoğaltmaz
+    expect(await enqueueDoctorDraft({ admin: asAdmin(db), userId: USER, analysisId: ANALYSIS, env: on, knowledge, provider: doctorProvider })).toBeNull();
+    expect(db.tables.doctor_recommendations).toHaveLength(1);
+    expect(drafts).toBe(1);
+    // tarama yok / risk / plan yok / flag kapalı → hiçbir çağrı, hiçbir satır
+    for (const db2 of [seed({ screen: null, plan }), seed({ screen: "risk", plan }), seed({ screen: "ok" })]) {
+      expect(await enqueueDoctorDraft({ admin: asAdmin(db2), userId: USER, analysisId: ANALYSIS, env: on, knowledge, provider: doctorProvider })).toBeNull();
+      expect(db2.tables.doctor_recommendations).toHaveLength(0);
+    }
+    expect(await enqueueDoctorDraft({ admin: asAdmin(seed({ screen: "ok", plan })), userId: USER, analysisId: ANALYSIS, env, knowledge, provider: doctorProvider })).toBeNull();
+    expect(drafts).toBe(1);
   });
 });

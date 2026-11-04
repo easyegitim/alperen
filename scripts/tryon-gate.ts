@@ -25,7 +25,8 @@ import { TRYON_IMAGE_MODEL_DEFAULT, getTryonConfig } from "../lib/config/tryon";
 import { TRYON_RELEASE_GATE, type QcReason } from "../lib/tryon/types";
 import { argValue, isMain, toCsv } from "./engine-tooling";
 
-export type GateOutcome = "pass" | "qc_failed" | "unchecked" | "error";
+/** unchecked = kontrol kapalı; qc_unavailable = kontrol açık ama yapılamadı (ikisi de geçmiş sayılmaz, "kontrolsüz" sayılır). */
+export type GateOutcome = "pass" | "qc_failed" | "unchecked" | "qc_unavailable" | "error";
 export type GateRow = { face: string; style: string; outcome: GateOutcome; regenCount: number; reasons: QcReason[] };
 
 export type StyleStat = { style: string; total: number; passed: number; rate: number; hide: boolean };
@@ -52,7 +53,7 @@ export function evaluateTryonGate(rows: readonly GateRow[], gate = TRYON_RELEASE
     pass: rows.length > 0 && rate >= gate.minPassRate,
     styles,
     hiddenStyles: styles.filter((s) => s.hide).map((s) => s.style),
-    unchecked: rows.filter((r) => r.outcome === "unchecked").length,
+    unchecked: rows.filter((r) => r.outcome === "unchecked" || r.outcome === "qc_unavailable").length,
   };
 }
 

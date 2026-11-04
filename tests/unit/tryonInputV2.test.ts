@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PRESET_BY_ID } from "@/content/presets";
 import { TRYON_IMAGE_MAX_BYTES, TryonInput, TryonInputV2, TryonInputV2Raw, decodeJpegLimited, normalizeTryonInput } from "@/lib/api/tryonInput";
 import { GLOW_UP_GATE, TRYON_COMBO_MIN_PARTS, TRYON_IMAGE_MODEL_DEFAULT, TRYON_QC_MAX_REGEN_DEFAULT, TRYON_QC_MODEL_DEFAULT, getTryonConfig } from "@/lib/config/tryon";
 import { MASK_REGIONS, QC_REASONS, QcVerdict, TRYON_EVENT_STATUSES, TRYON_MODES, TRYON_RELEASE_GATE, maskRegionFor, qcPass, type QcReason } from "@/lib/tryon/types";
@@ -28,6 +29,19 @@ describe("TryonInput v2 (CONTRACTS_V2 Sprint 2; KB §7.1–7.2)", () => {
     expect(TryonInputV2Raw.safeParse({ clientRequestId: id(), mode: "style", presets: { hair: "van_dyke" }, image }).success).toBe(false);
     expect(TryonInputV2Raw.safeParse({ clientRequestId: id(), mode: "style", presets: { hair: "uydurma" }, image }).success).toBe(false);
     expect(TryonInputV2Raw.safeParse({ clientRequestId: id(), mode: "style", presets: { hair: "buzz_cut", beard: "goatee" }, image }).success).toBe(false);
+  });
+
+  it("sürüm kapısında gizlenen (hidden) stil hiçbir gövdede kabul edilmez (KB §7.3/4)", () => {
+    const p = PRESET_BY_ID.get("buzz_cut")!;
+    p.hidden = true;
+    try {
+      expect(TryonInputV2Raw.safeParse({ clientRequestId: id(), mode: "style", presets: { hair: "buzz_cut" }, image }).success).toBe(false);
+      expect(TryonInputV2Raw.safeParse({ clientRequestId: id(), presetId: "buzz_cut", image }).success).toBe(false);
+      expect(TryonInputV2Raw.safeParse({ clientRequestId: id(), mode: "combo", presets: { hair: "buzz_cut", beard: "goatee" }, image }).success).toBe(false);
+    } finally {
+      delete p.hidden;
+    }
+    expect(TryonInputV2Raw.safeParse({ clientRequestId: id(), mode: "style", presets: { hair: "buzz_cut" }, image }).success).toBe(true);
   });
 
   it("combo: saç + sakal zorunlu, renk isteğe bağlı; mode verilmezse parçalardan çıkarılır", () => {

@@ -182,7 +182,11 @@ function Wizard(p: QuestionnaireWizardV2Props) {
           <p className="text-sm text-muted-foreground">{index === 0 ? t("intro") : t(`stepHints.${step}`)}</p>
         </div>
 
-        {step === "goals" ? <CheckList options={GOALS} selected={draft.goals} label={(k) => tq(`goals.${k}`)} onChange={(goals) => patch({ goals: goals.length ? goals : ["general"] })} /> : null}
+        {step === "goals" ? (
+          <Field label={t("fields.goals")}>
+            <CheckList options={GOALS} selected={draft.goals} label={(k) => tq(`goals.${k}`)} onChange={(goals) => patch({ goals: goals.length ? goals : ["general"] })} />
+          </Field>
+        ) : null}
 
         {step === "direction" ? (
           <Field label={t("fields.goalDirection")}>
@@ -234,7 +238,11 @@ function Wizard(p: QuestionnaireWizardV2Props) {
           </>
         ) : null}
 
-        {step === "skin" ? <Radio options={SKIN_TYPES} value={draft.skinType} label={(k) => tq(`skinType.${k}`)} onChange={(skinType) => patch({ skinType })} /> : null}
+        {step === "skin" ? (
+          <Field label={t("fields.skinType")}>
+            <Radio options={SKIN_TYPES} value={draft.skinType} label={(k) => tq(`skinType.${k}`)} onChange={(skinType) => patch({ skinType })} />
+          </Field>
+        ) : null}
 
         {step === "jaw" ? (
           <Field label={t("fields.jawHealth")} hint={t("hints.jaw")}>

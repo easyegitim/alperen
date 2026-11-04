@@ -39,6 +39,8 @@ export type CompositeInput = {
    * dokunun geri yazımı. Kapı geçmezse CompositeError(skin_*) → görsel gösterilmez, hak düşmez.
    */
   glowUp?: boolean;
+  /** Sapma kuralı (sakal parçası varsa beard_add/beard_remove): çene ucu hizalamaya girmez (alignPointsFor). */
+  policy?: DriftPolicy;
 };
 
 export type CompositeResult = {
@@ -68,9 +70,14 @@ export function driftPolicyForPresets(presets: TryonPresets): DriftPolicy {
 /** Sakal bölgesini modele bırakan maskeler: çene ucu (152) sakalla yer değiştirir, hizalamada kullanılmaz. */
 const BEARD_FREE_PROTECT: ReadonlySet<Protect> = new Set<Protect>(["above_lip", "features_cheeks", "beard_only"]);
 
-/** Hizalama noktaları: sakal stillerinde çene ucu (152) sakalla yer değiştirir; yalnız üst yüz noktaları kullanılır. */
-export function alignPointsFor(protect: Protect): readonly number[] {
-  return BEARD_FREE_PROTECT.has(protect) ? ALIGN_POINTS.filter((i) => i !== IDX.menton) : ALIGN_POINTS;
+/**
+ * Hizalama noktaları: sakal stillerinde çene ucu (152) sakalla yer değiştirir; yalnız üst yüz noktaları kullanılır.
+ * Karar maskeden (sakal bölgesini modele bırakanlar) YA DA sapma kuralından gelir: glow_up features_only maskesiyle bile
+ * planda sakal parçası varsa (policy beard_add/beard_remove) menton dışarıda kalır; yoksa 7 nokta LS uyumu aykırı değerle
+ * kayar ve artık kapısı (alignment_residual) sakallı glow-up'ı hiç geçirmez.
+ */
+export function alignPointsFor(protect: Protect, policy: DriftPolicy = "symmetric"): readonly number[] {
+  return BEARD_FREE_PROTECT.has(protect) || policy !== "symmetric" ? ALIGN_POINTS.filter((i) => i !== IDX.menton) : ALIGN_POINTS;
 }
 
 /** İşaretli göreli sapma (yeni − eski) / eski, kurala göre kabul. */
@@ -100,7 +107,7 @@ export async function compositeTryon(input: CompositeInput): Promise<CompositeRe
   const LC = input.landmarksC;
 
   // 2) Benzerlik dönüşümü L_G → L_C (sabit noktalar), artık kontrolü.
-  const points = alignPointsFor(input.protect);
+  const points = alignPointsFor(input.protect, input.policy);
   const src = points.map((i) => LG[i]);
   const dst = points.map((i) => LC[i]);
   const t = estimateSimilarity(src, dst);

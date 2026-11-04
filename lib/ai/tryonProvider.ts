@@ -21,6 +21,8 @@ export type TryonRequest = {
   /** v2: mod ve parçalar (yalnız bilgi; istem prompt alanında hazır gelir). */
   mode?: TryonMode;
   presets?: TryonPresets;
+  /** Rota son tarihi: iptalde istek istemci tarafında kesilir (sağlayıcı yine faturalandırabilir); satır failed yazılır. */
+  signal?: AbortSignal;
 };
 export type TryonResult = { imageBase64: string; mimeType: string };
 
@@ -29,7 +31,9 @@ export interface TryonProvider {
   generateTryOn(req: TryonRequest): Promise<TryonResult>;
 }
 
-const TIMEOUT_MS = 50_000;
+/** Tek üretim çağrısı zaman aşımı; rota yeniden üretim bütçesini bundan türetir (app/api/tryon/route.ts). */
+export const TRYON_GENERATE_TIMEOUT_MS = 50_000;
+const TIMEOUT_MS = TRYON_GENERATE_TIMEOUT_MS;
 
 export class GeminiTryonProvider implements TryonProvider {
   readonly model = getTryonConfig().imageModel;
@@ -45,7 +49,7 @@ export class GeminiTryonProvider implements TryonProvider {
           ai.models.generateContent({
             model: this.model,
             contents: [{ role: "user", parts: [{ inlineData: { mimeType: "image/jpeg", data: req.imageBase64 } }, { text: req.prompt }] }],
-            config: { responseModalities: ["IMAGE"], httpOptions: { timeout: TIMEOUT_MS } },
+            config: { responseModalities: ["IMAGE"], httpOptions: { timeout: TIMEOUT_MS }, ...(req.signal ? { abortSignal: req.signal } : {}) },
           }),
         { retries: 1, baseDelayMs: 2_000, onRetry: (attempt, e) => console.warn(`[ai] deneme ${this.model} geçici hata, tekrar ${attempt}: ${aiErrorSummary(e)}`) },
       );

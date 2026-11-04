@@ -59,9 +59,16 @@ export async function listQueue(admin: SupabaseClient, status?: DoctorStatus): P
 
 export type ReviewInput = { id: string; decision: "physician_reviewed" | "rejected"; physicianId: string; items: DoctorItem[]; notes?: string | null; knownMethodIds: ReadonlySet<string> | null };
 
+/** Bu analiz için reddedilmemiş bir satır (taslak, onaylı ya da teslim edilmiş) var mı: taslak tekrarı önlenir. */
+export async function hasActiveDoctorRow(admin: SupabaseClient, userId: string, analysisId: string): Promise<boolean> {
+  const rows = await userRows(admin, userId, analysisId);
+  return rows.some((r) => r.status !== "rejected");
+}
+
 /**
  * Hekim kararı (admin rotası): onayda physician_items zorunlu ve doğrulanır (doz/marka/satış/izinsiz alan → ret); reddetme
- * öğesiz. Yalnız draft ya da daha önce incelenmiş (henüz teslim edilmemiş) satır değişir.
+ * öğesiz. Herhangi bir öğe kurala takılırsa HİÇBİR ŞEY yazılmaz (ok:false + issues): hekim metni düzeltip yeniden gönderir;
+ * sessizce eksilmiş bir liste "onaylandı" diye kullanıcıya gitmez. Yalnız draft ya da daha önce incelenmiş satır değişir.
  */
 export async function reviewRecommendation(admin: SupabaseClient, input: ReviewInput): Promise<{ ok: boolean; issues: ReturnType<typeof validateDoctorItems>["issues"] }> {
   const now = new Date().toISOString();
@@ -70,7 +77,7 @@ export async function reviewRecommendation(admin: SupabaseClient, input: ReviewI
     return { ok: !error, issues: [] };
   }
   const { valid, issues } = validateDoctorItems(input.items, input.knownMethodIds);
-  if (valid.length === 0) return { ok: false, issues };
+  if (valid.length === 0 || issues.length > 0) return { ok: false, issues };
   const { error } = await admin
     .from("doctor_recommendations")
     .update({ status: "physician_reviewed", physician_items: valid, physician_id: input.physicianId, physician_notes: input.notes ?? null, reviewed_at: now })

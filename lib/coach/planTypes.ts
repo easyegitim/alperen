@@ -65,8 +65,10 @@ export const StepCard = z.object({
   tier: z.enum(PLAN_TIERS),
   /** Kullanıcıya görünen nötr ad (KB §5 ÖNERİ: iç taksonomi adı rapora olduğu gibi geçmez). */
   title: z.string().min(1).max(120),
-  /** Ne yapılacağı (1–2 cümle). */
+  /** Ne yapılacağı (1–2 cümle; kaydın nasıl/ne zaman metni). */
   summary: z.string().max(400).optional(),
+  /** "Neden sende": Claude'un gözleme bağlı gerekçesi (safety.ts'ten geçmiş); talimatın yerini almaz. */
+  rationale: z.string().max(400).optional(),
   observationRef: ObservationRef,
   costTryRange: CostTryRange,
   frequency: StepFrequency,
@@ -136,7 +138,7 @@ export type PlanExclusions = z.infer<typeof PlanExclusions>;
 export const DOCTOR_LAYER_STATES = ["off", "under_18", "screen_required", "screen_risk", "pending_review", "available", "none"] as const;
 export type DoctorLayerState = (typeof DOCTOR_LAYER_STATES)[number];
 
-export const DISCLAIMER_KEYS = ["notMedicalAdvice", "aiGenerated", "cosmeticProcedures", "changeTakesWeeks", "under18Limits"] as const;
+export const DISCLAIMER_KEYS = ["notMedicalAdvice", "aiGenerated", "deterministicFallback", "cosmeticProcedures", "changeTakesWeeks", "under18Limits"] as const;
 export type DisclaimerKey = (typeof DISCLAIMER_KEYS)[number];
 
 export const PlanMeta = z.object({

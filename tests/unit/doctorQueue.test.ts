@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { DOCTOR_LAYER } from "@/lib/config/plan";
-import { bodyImageScreenResult, deliverableItems, doctorLayerState, doctorStepCard } from "@/lib/doctor/rules";
+import { isAdminUser, isPhysicianUser } from "@/lib/api/admin";
+import { BODY_IMAGE_SCREEN_RETAKE_DAYS, DOCTOR_LAYER } from "@/lib/config/plan";
+import { hasActiveDoctorRow, reviewRecommendation } from "@/lib/doctor/queue";
+import { bodyImageScreenResult, deliverableItems, doctorLayerState, doctorStepCard, screenRetakePolicy } from "@/lib/doctor/rules";
 import { DELIVERABLE_STATUSES, DOCTOR_STATUSES, isAllowedSourceUrl, validateDoctorItems, type DoctorItem } from "@/lib/doctor/types";
+import { FakePostgrest } from "@/tests/helpers/fakePostgrest";
 
 const item = (over: Partial<DoctorItem> = {}): DoctorItem => ({ methodId: "m_sample_doctor_topical", area: "skin", rationale: "Bu konuda karar muayenede hekimindir; cilt yüzeyi için değerlendirme.", sources: ["https://www.titck.gov.tr/kubkt"], ...over });
 
@@ -63,5 +66,44 @@ describe("doktor katmanı (KB Ç3/Ç5, §6.1, §6.4; PLAN 4f; AUP high-risk)", (
     expect(card.tier).toBe("doctor");
     expect(card.title).toBe("m_sample_doctor_topical");
     expect(card.evidence.source).toBe("https://www.titck.gov.tr/kubkt");
+  });
+
+  it("tarama 'risk' yapışkandır: süre dolmadan yeniden alınamaz (risk → ok sessizce düşmez); 'ok' ya da hiç yoksa serbest", () => {
+    const at = Date.parse("2026-11-04T10:00:00.000Z");
+    expect(screenRetakePolicy({ result: null, screenedAt: null }, at)).toEqual({ allowed: true, retakeAt: null });
+    expect(screenRetakePolicy({ result: "ok", screenedAt: "2026-11-04T09:00:00.000Z" }, at)).toEqual({ allowed: true, retakeAt: null });
+    const risk = screenRetakePolicy({ result: "risk", screenedAt: "2026-11-04T09:00:00.000Z" }, at);
+    expect(risk.allowed).toBe(false);
+    expect(risk.retakeAt).toBe(new Date(Date.parse("2026-11-04T09:00:00.000Z") + BODY_IMAGE_SCREEN_RETAKE_DAYS * 86_400_000).toISOString());
+    expect(screenRetakePolicy({ result: "risk", screenedAt: "2026-11-04T09:00:00.000Z" }, at + (BODY_IMAGE_SCREEN_RETAKE_DAYS + 1) * 86_400_000).allowed).toBe(true);
+    expect(screenRetakePolicy({ result: "risk", screenedAt: null }, at)).toEqual({ allowed: false, retakeAt: null });
+  });
+
+  it("hekim onayı: bir öğe bile kurala takılırsa HİÇBİR ŞEY yazılmaz (ok:false + issues); temiz öğelerle physician_reviewed", async () => {
+    const db = new FakePostgrest();
+    db.tables.doctor_recommendations = [{ id: "d1", user_id: "u", analysis_id: "a", status: "draft", ai_items: [item()], physician_items: null, physician_id: null, reviewed_at: null }];
+    const known = new Set(["m_sample_doctor_topical", "m2"]);
+    const partial = await reviewRecommendation(db.client, { id: "d1", decision: "physician_reviewed", physicianId: "doc", items: [item({ rationale: "Günde 2 kez 10 mg" }), item({ methodId: "m2" })], knownMethodIds: known });
+    expect(partial).toEqual({ ok: false, issues: [{ index: 0, issue: "dose" }] });
+    expect(db.tables.doctor_recommendations[0]).toMatchObject({ status: "draft", physician_items: null, physician_id: null });
+    const clean = await reviewRecommendation(db.client, { id: "d1", decision: "physician_reviewed", physicianId: "doc", items: [item(), item({ methodId: "m2" })], knownMethodIds: known });
+    expect(clean).toEqual({ ok: true, issues: [] });
+    expect(db.tables.doctor_recommendations[0]).toMatchObject({ status: "physician_reviewed", physician_id: "doc" });
+    expect((db.tables.doctor_recommendations[0]!.physician_items as DoctorItem[]).map((i) => i.methodId)).toEqual(["m_sample_doctor_topical", "m2"]);
+    // tek taslak: reddedilmemiş satır varken yeni taslak üretilmez
+    expect(await hasActiveDoctorRow(db.client, "u", "a")).toBe(true);
+    db.tables.doctor_recommendations[0]!.status = "rejected";
+    expect(await hasActiveDoctorRow(db.client, "u", "a")).toBe(false);
+  });
+
+  it("hekim yetkisi yalnız PHYSICIAN_EMAILS; ADMIN_EMAILS (ops) hekim değildir; anonim asla", () => {
+    const env = { ADMIN_EMAILS: "ops@aura.app", PHYSICIAN_EMAILS: "Dr.Ayse@klinik.tr, hekim2@klinik.tr" };
+    expect(isPhysicianUser({ email: "dr.ayse@klinik.tr" }, env)).toBe(true);
+    expect(isPhysicianUser({ email: "hekim2@klinik.tr" }, env)).toBe(true);
+    expect(isPhysicianUser({ email: "ops@aura.app" }, env)).toBe(false);
+    expect(isAdminUser({ email: "ops@aura.app" }, env)).toBe(true);
+    expect(isAdminUser({ email: "dr.ayse@klinik.tr" }, env)).toBe(false);
+    expect(isPhysicianUser({ email: "dr.ayse@klinik.tr", is_anonymous: true }, env)).toBe(false);
+    expect(isPhysicianUser({ email: "dr.ayse@klinik.tr" }, { ADMIN_EMAILS: "dr.ayse@klinik.tr" })).toBe(false);
   });
 });

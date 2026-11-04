@@ -1,4 +1,4 @@
-import { BODY_IMAGE_SCREEN_QUESTIONS, BODY_IMAGE_SCREEN_RISK_YES_COUNT, type BodyImageScreenResult } from "@/lib/config/plan";
+import { BODY_IMAGE_SCREEN_QUESTIONS, BODY_IMAGE_SCREEN_RETAKE_DAYS, BODY_IMAGE_SCREEN_RISK_YES_COUNT, type BodyImageScreenResult } from "@/lib/config/plan";
 import type { DoctorLayerState, StepCard } from "@/lib/coach/planTypes";
 import type { MethodRecord } from "@/lib/coach/knowledge";
 import { DELIVERABLE_STATUSES, DoctorItems, type DoctorItem, type DoctorStatus } from "./types";
@@ -12,6 +12,19 @@ export type DoctorRowLike = { status: DoctorStatus; physician_items: unknown; ai
 export function bodyImageScreenResult(answers: Readonly<Record<string, boolean>>): BodyImageScreenResult {
   const yes = BODY_IMAGE_SCREEN_QUESTIONS.filter((q) => answers[q] === true).length;
   return yes >= BODY_IMAGE_SCREEN_RISK_YES_COUNT ? "risk" : "ok";
+}
+
+/**
+ * Tarama yeniden alınabilir mi (saf): önceki sonuç "risk" ise BODY_IMAGE_SCREEN_RETAKE_DAYS dolmadan yeni gönderim kabul
+ * edilmez (risk → ok sessizce düşmez; sayfa yenileyip dört "hayır" ile katmanı açmak mümkün değildir). "ok" ya da hiç
+ * taranmamışsa serbest. Tarih yoksa risk kalıcı sayılır. Dönen retakeAt: ne zaman yeniden alınabileceği (ISO) ya da null.
+ */
+export function screenRetakePolicy(prev: { result: BodyImageScreenResult | null; screenedAt: string | null }, nowMs: number): { allowed: boolean; retakeAt: string | null } {
+  if (prev.result !== "risk") return { allowed: true, retakeAt: null };
+  const at = prev.screenedAt ? Date.parse(prev.screenedAt) : Number.NaN;
+  if (!Number.isFinite(at)) return { allowed: false, retakeAt: null };
+  const retake = at + BODY_IMAGE_SCREEN_RETAKE_DAYS * 86_400_000;
+  return { allowed: nowMs >= retake, retakeAt: new Date(retake).toISOString() };
 }
 
 export type DoctorStateInput = {

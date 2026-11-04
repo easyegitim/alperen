@@ -47,7 +47,7 @@ describe("plan seçimi şeması ve istemi (PLAN 4e; CONTRACTS_V2 S2.1 kural 1; S
       photoFacts: ["Saç uçları dağınık"],
       improveFirst: [{ stepId: "st_spf", step: "Günlük SPF" }],
       faceShape: { primary: "square", nameTr: "Kare", descriptionTr: "Çene hattı belirgin." },
-      questionnaire: { goals: ["skin"], goalDirection: "sharper_mature", budget: "1000_2500", minutesPerDay: 10, sportDays: "2_3", work: "desk", hairLengthPref: "short", beardLengthPref: "stubble", skinType: "combination", glasses: false, headCovering: false },
+      questionnaire: { goals: ["skin"], goalDirection: "sharper_mature", budget: "1000_2500", oneTimeBudget: "none", presentation: "male", minutesPerDay: 10, sportDays: "2_3", work: "desk", hairLengthPref: "short", beardLengthPref: "stubble", skinType: "combination", glasses: false, headCovering: false },
       allowedAreas: ["skin", "hair"],
       records,
     });

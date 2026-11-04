@@ -3,7 +3,7 @@ import { CHEEK_REF, IDX } from "@/lib/face/indices";
 import { GLOW_UP_GATE } from "@/lib/config/tryon";
 import { buildProtectMask, featurePolygons, midCheekPolygons, protectOpacity, rasterizeMask, skinRegionMask } from "@/lib/tryon/mask";
 import { compositePixels } from "@/lib/tryon/pixels";
-import { MASK_REGIONS, maskRegionFor } from "@/lib/tryon/types";
+import { MASK_REGIONS, glowUpSkinActive, maskRegionFor } from "@/lib/tryon/types";
 import { syntheticFace, withContours } from "../helpers/syntheticFace";
 
 const W = 640, H = 700;
@@ -34,6 +34,19 @@ describe("bölge maskeleri v2 (PLAN 5a/5d; CONTRACTS_V2 S2.6)", () => {
     expect(maskRegionFor("style", { beard: "clean_shaven" })).toBe("features_cheeks");
     expect(maskRegionFor("style", { hair: "buzz_cut" })).toBe("below_brows");
     expect(maskRegionFor("combo", { hair: "buzz_cut", beard: "goatee", color: "jet_black" })).toBe("features_cheeks");
+  });
+
+  it("glow_up: cilt katmanı KAPALIYSA yüz saç/sakal denemesi gibi geri yazılır (sakal → features_cheeks, yoksa below_brows); doku kapısı yalnız cilt açıkken", () => {
+    expect(maskRegionFor("glow_up", { hair: "buzz_cut" }, ["hair"])).toBe("below_brows");
+    expect(maskRegionFor("glow_up", { beard: "short_boxed" }, ["beard"])).toBe("features_cheeks");
+    expect(maskRegionFor("glow_up", { hair: "buzz_cut", beard: "short_boxed" }, ["hair", "beard"])).toBe("features_cheeks");
+    expect(maskRegionFor("glow_up", { hair: "buzz_cut" }, ["hair", "skin"])).toBe("features_only");
+    expect(maskRegionFor("glow_up", {}, ["skin"])).toBe("features_only");
+    expect(maskRegionFor("glow_up", {}, [])).toBe("features_only"); // boş = hepsi
+    expect(glowUpSkinActive("glow_up", ["hair"])).toBe(false);
+    expect(glowUpSkinActive("glow_up", ["skin"])).toBe(true);
+    expect(glowUpSkinActive("glow_up")).toBe(true);
+    expect(glowUpSkinActive("combo", ["skin"])).toBe(false);
   });
 
   it("features_only: göz, burun, dudak korunur; yanak, alın, çene, boyun modele kalır", () => {

@@ -10,13 +10,33 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { postJson } from "@/lib/api/client";
 import { BODY_IMAGE_SCREEN_QUESTIONS, type BodyImageScreenQuestion, type BodyImageScreenResult } from "@/lib/config/plan";
 
-type Props = { onResult: (r: BodyImageScreenResult) => void; expertNetworkEnabled: boolean };
+type Props = { onResult: (r: BodyImageScreenResult) => void; expertNetworkEnabled: boolean; analysisId?: string };
+
+/** "risk" sonucu (KB §6.4): doktor katmanı kapalı, uzmanla konuşma önerisi; teşhis değildir. Tarama sayfası ve katman aynı metni gösterir. */
+export function BodyImageRiskNotice({ expertNetworkEnabled }: { expertNetworkEnabled: boolean }) {
+  const t = useTranslations("doctor.screen");
+  return (
+    <div className="space-y-3 rounded-2xl border border-dashed p-4">
+      <h3 className="flex items-center gap-2 text-[15px] font-semibold">
+        <HeartHandshake className="size-4 text-brand" aria-hidden="true" />
+        {t("riskTitle")}
+      </h3>
+      <p className="text-[13px] leading-relaxed text-muted-foreground">{t("riskBody")}</p>
+      <p className="text-[11px] text-muted-foreground">{t("riskNote")}</p>
+      {expertNetworkEnabled ? (
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/uzman?alan=psikolog">{t("talkToExpert")}</Link>
+        </Button>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Beden algısı taraması (KB §6.4, R2-Ö4; PLAN 4f): 4 evet/hayır sorusu. YALNIZ sonuç sunucuya gider ve saklanır; cevaplar
  * ne saklanır ne analitiğe gider. Riskli cevapta doktor katmanı kapanır, uzmanla konuşma önerisi çıkar. Teşhis değildir.
  */
-export function BodyImageScreen({ onResult, expertNetworkEnabled }: Props) {
+export function BodyImageScreen({ onResult, expertNetworkEnabled, analysisId }: Props) {
   const t = useTranslations("doctor.screen");
   const [answers, setAnswers] = useState<Partial<Record<BodyImageScreenQuestion, boolean>>>({});
   const [busy, setBusy] = useState(false);
@@ -27,7 +47,7 @@ export function BodyImageScreen({ onResult, expertNetworkEnabled }: Props) {
     if (!complete) return;
     setBusy(true);
     try {
-      const r = await postJson<{ result: BodyImageScreenResult }>("/api/doctor/screen", { answers });
+      const r = await postJson<{ result: BodyImageScreenResult }>("/api/doctor/screen", { answers, ...(analysisId ? { analysisId } : {}) });
       if (!r) throw new Error("empty");
       setResult(r.result);
       onResult(r.result);
@@ -38,23 +58,7 @@ export function BodyImageScreen({ onResult, expertNetworkEnabled }: Props) {
     }
   }
 
-  if (result === "risk") {
-    return (
-      <div className="space-y-3 rounded-2xl border border-dashed p-4">
-        <h3 className="flex items-center gap-2 text-[15px] font-semibold">
-          <HeartHandshake className="size-4 text-brand" aria-hidden="true" />
-          {t("riskTitle")}
-        </h3>
-        <p className="text-[13px] leading-relaxed text-muted-foreground">{t("riskBody")}</p>
-        <p className="text-[11px] text-muted-foreground">{t("riskNote")}</p>
-        {expertNetworkEnabled ? (
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/uzman?alan=psikolog">{t("talkToExpert")}</Link>
-          </Button>
-        ) : null}
-      </div>
-    );
-  }
+  if (result === "risk") return <BodyImageRiskNotice expertNetworkEnabled={expertNetworkEnabled} />;
   if (result === "ok") {
     return (
       <div className="space-y-1 rounded-2xl border border-dashed p-4">

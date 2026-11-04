@@ -1761,11 +1761,12 @@
         "run": "İyileşmiş halimi göster",
         "notForAds": "Bu görsel reklamda kullanılmaz.",
         "needsAnalysis": "İyileşmiş halin için önce bir analiz gerekir.",
-        "fromCatalog": "Planın henüz hazır değil; adımlar katalogdan seçilir.",
         "layersTitle": "Hangi adımlar uygulansın?",
         "stepsTitle": "Uygulanacak adımlar",
         "noLayer": "En az bir katman seç.",
-        "eyeLine": "Göz hizası"
+        "eyeLine": "Göz hizası",
+        "planRequired": "İyileşmiş halin plan adımlarından üretilir. Önce planını aç; adımlar hazır olunca burada görünür.",
+        "planOpen": "Planı aç"
       },
       "qc": {
         "checking": "Sonuç kontrol ediliyor…",
@@ -2044,7 +2045,8 @@
         "showBarber": "Berbere göster",
         "perceptionNote": "Bu alan bakımla değişmez; saç, sakal ve kaş seçimleri algıyı etkiler.",
         "frequencyLabel": "Sıklık",
-        "minutesLabel": "Süre"
+        "minutesLabel": "Süre",
+        "rationale": "Neden sende"
       },
       "evidence": {
         "many_studies": "Çok sayıda çalışmada denendi",
@@ -2111,12 +2113,11 @@
         "aiGenerated": "Bu plan yapay zekâ ile hazırlandı; öneriler katalogdan seçildi.",
         "cosmeticProcedures": "Hukuki sebeplerden dolayı tıbbi kozmetik operasyonlarının puana olacak etkisini belirtemiyoruz. Dilerseniz bu konuda uzmanımızla görüşebilirsiniz.",
         "changeTakesWeeks": "Değişim haftalar sürer; ışık ve açı skoru etkiler.",
-        "under18Limits": "18 yaş altına doktor katmanı, yağ oranı ve oruç önerileri gösterilmez."
+        "under18Limits": "18 yaş altına doktor katmanı, yağ oranı ve oruç önerileri gösterilmez.",
+        "deterministicFallback": "Bu planın seçimi yapay zekâdan alınamadı; adımlar kural tabanlı olarak katalogdan seçildi."
       },
       "barber": {
         "title": "Berber kartı",
-        "front": "Önden",
-        "side": "Yandan",
         "sides": "Yanlar: {guard} numara",
         "top": "Üst: {cm} cm",
         "beardLine": "Sakal hattı: {line}",
@@ -2131,7 +2132,8 @@
       },
       "regen": {
         "cta": "Planı yeniden üret",
-        "note": "Yeniden üretim ücretlidir ya da haktan düşer."
+        "note": "Yeniden üretim ücretlidir ya da haktan düşer.",
+        "busy": "Plan yeniden üretiliyor…"
       },
       "glowUpCta": "İyileşmiş halini gör",
       "empty": "Henüz plan yok; önce analizin tamamlanmalı.",
@@ -2164,9 +2166,11 @@
         "info": "Saç derisi sağlığı için düzenli temizlik ve nazik ürünler plana eklendi. Bu konuda karar muayenede hekimindir; dilersen uzmanımızla görüşebilirsin.",
         "doctor": "Doktor katmanına git",
         "expert": "Saç sağlığı uzmanı bul",
-        "notMedical": "Teşhis değildir; tıbbi tavsiye değildir."
+        "notMedical": "Teşhis değildir; tıbbi tavsiye değildir.",
+        "infoGeneral": "Saç derisi sağlığı için düzenli temizlik ve nazik ürünler iyi gelir. Bu konuda karar muayenede hekimindir; dilersen uzmanımızla görüşebilirsin."
       },
-      "tabsAria": "Plan alanları"
+      "tabsAria": "Plan alanları",
+      "fallbackNote": "Yapay zekâ seçimi şu an alınamadı; adımlar hedeflerine ve kısıtlarına göre kural tabanlı seçildi. Daha sonra yeniden üretebilirsin."
     }
   },
   "doctor": {

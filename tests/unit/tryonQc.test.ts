@@ -168,11 +168,27 @@ describe("generateWithQc: en çok 2 yeniden üretim; geçmeyen görsel dönmez (
     expect(r).toMatchObject({ outcome: "qc_failed", regenCount: 0 });
     expect(n).toBe(1);
   });
-  it("kontrol kapalı ya da yapılamadı → unchecked: görsel döner, qc null (istemci sapma kontrolü yine çalışır)", async () => {
+  it("kontrol KAPALI (TRYON_QC=off) → unchecked: görsel döner, qc null (yalnız geliştirme; istemci sapma kontrolü yine çalışır)", async () => {
     const off = await generateWithQc({ generate: async () => img(1), qc: null, qcRequest: qcReq, maxRegen: 2 });
     expect(off).toMatchObject({ outcome: "unchecked", verdict: null, result: { imageBase64: "IMG1" } });
-    const broken = await generateWithQc({ generate: async () => img(1), qc: fakeQc([null]), qcRequest: qcReq, maxRegen: 2 });
-    expect(broken).toMatchObject({ outcome: "unchecked", verdict: null, qcReason: "transient", regenCount: 0 });
+  });
+
+  it("kontrol AÇIK ama yapılamadı → bir kez daha sorulur; yine olmazsa qc_unavailable: görsel GÖSTERİLMEZ (kapı kapalı, hak iade)", async () => {
+    const broken = fakeQc([null]);
+    const r = await generateWithQc({ generate: async () => img(1), qc: broken, qcRequest: qcReq, maxRegen: 2 });
+    expect(r).toMatchObject({ outcome: "qc_unavailable", verdict: null, result: null, qcReason: "transient", regenCount: 0 });
+    expect(broken.calls).toBe(2);
+    // ilk sorgu geçici hata, ikincisi geçerse görsel döner (yeniden üretim yok)
+    const flaky = fakeQc([null, {}]);
+    const ok = await generateWithQc({ generate: async () => img(1), qc: flaky, qcRequest: qcReq, maxRegen: 2 });
+    expect(ok).toMatchObject({ outcome: "pass", regenCount: 0, result: { imageBase64: "IMG1" } });
+    expect(flaky.calls).toBe(2);
+    // süre bütçesi bittiyse tekrar sorulmaz
+    let t = 0;
+    const late = fakeQc([null]);
+    const r2 = await generateWithQc({ generate: async () => img(1), qc: late, qcRequest: qcReq, maxRegen: 2, budgetMs: 500, now: () => (t += 700) });
+    expect(r2.outcome).toBe("qc_unavailable");
+    expect(late.calls).toBe(1);
   });
   it("üretim hatası döngüden dışarı fırlar (rota status=failed yazar, kota iade)", async () => {
     await expect(generateWithQc({ generate: async () => { throw new Error("boom"); }, qc: fakeQc([{}]), qcRequest: qcReq, maxRegen: 2 })).rejects.toThrow("boom");

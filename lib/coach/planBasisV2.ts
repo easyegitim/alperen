@@ -62,6 +62,7 @@ export function constraintsFromContext(ctx: PlanContextV2): KnowledgeConstraints
     jawHealth: exerciseEligibleV2(q) ? "none" : "issue",
     beardPreference: beardAllowedV2(ctx) ? "some" : "none",
     budgetBand: q.budget,
+    oneTimeBudgetBand: q.oneTimeBudget,
     timeBand: q.minutesPerDay,
     under18: isUnder18(ctx.ageBand),
     bodyFatAllowed: body.bodyFatAllowed,

@@ -4,8 +4,8 @@ import { useTranslations } from "next-intl";
 import { PLAN_PHASES } from "@/lib/config/plan";
 import type { PlanV2, StepCard } from "@/lib/coach/planTypes";
 
-/** Fazlar (KB §6.1): 0–4 hafta · 1–3 ay · 3–6 ay; her fazda adım adları (kartlara bağlantı). */
-export function PlanPhases({ phases, steps }: { phases: PlanV2["phases"]; steps: StepCard[] }) {
+/** Fazlar (KB §6.1): 0–4 hafta · 1–3 ay · 3–6 ay; her fazda adım adları (kartlara bağlantı; onJump "Tümü" sekmesine geçirir). */
+export function PlanPhases({ phases, steps, onJump }: { phases: PlanV2["phases"]; steps: StepCard[]; onJump?: (stepId: string) => void }) {
   const t = useTranslations("plan.v2");
   const byId = new Map(steps.map((s) => [s.id, s]));
   return (
@@ -25,7 +25,11 @@ export function PlanPhases({ phases, steps }: { phases: PlanV2["phases"]; steps:
               <ul className="mt-2 flex flex-wrap gap-1.5">
                 {phases[ph].map((id) => (
                   <li key={id}>
-                    <a href={`#step-${id}`} className="inline-flex min-h-8 items-center rounded-full bg-muted px-3 text-xs font-medium hover:bg-accent">
+                    <a
+                      href={`#step-${id}`}
+                      onClick={onJump ? (e) => { e.preventDefault(); onJump(id); } : undefined}
+                      className="inline-flex min-h-8 items-center rounded-full bg-muted px-3 text-xs font-medium hover:bg-accent"
+                    >
                       {byId.get(id)?.title ?? id}
                     </a>
                   </li>

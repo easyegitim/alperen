@@ -12,8 +12,8 @@ describe("scripts/import-methods (PLAN 4e / Sprint 3; KB Ç2 'uydurma yöntem yo
     const r = importMethodsTsv(METHODS, "methods-sample.tsv", "2026-11-04T00:00:00.000Z");
     expect(r.missingColumns).toEqual([]);
     expect(r.file).not.toBeNull();
-    expect(r.imported).toBe(8);
-    expect(r.skipped.map((s) => s.reason).sort()).toEqual(["area", "evidence_grade"]);
+    expect(r.imported).toBe(9);
+    expect(r.skipped.map((s) => s.reason).sort()).toEqual(["area", "evidence_grade", "safety:drugs", "source_url", "tryon_preset_id", "weight_content"]);
     expect(r.duplicates).toEqual(["m_sample_spf_tinted"]);
     expect(MethodsFile.safeParse(r.file).success).toBe(true);
     const spf = r.file!.records.find((x) => x.id === "m_sample_spf_tinted")!;
@@ -28,6 +28,38 @@ describe("scripts/import-methods (PLAN 4e / Sprint 3; KB Ç2 'uydurma yöntem yo
     const walk = r.file!.records.find((x) => x.id === "m_sample_posture_walk")!;
     expect(walk.contraindications).toEqual(["bmi_below_25", "under_18", "restriction_signal"]);
     expect(walk.costTryRange).toEqual({ min: 0, max: 0 });
+    // alan varsayılanı: boş kontrendikasyon sütunlu saç satırı K9/Ç17 etiketlerini kodla alır; sakal/egzersiz de aynı
+    expect(r.file!.records.find((x) => x.id === "m_sample_hair_no_contra")!.contraindications).toEqual(["head_covering", "head_covering_unknown"]);
+    expect(r.file!.records.find((x) => x.id === "m_sample_barber_lineup")!.contraindications).toEqual(["female_presentation", "no_beard_preference"]);
+    expect(r.file!.records.find((x) => x.id === "m_sample_brow_shape_expert")!.contraindications).toEqual([]);
+    // düşen satırların hiçbiri dosyaya girmez; tryon_preset_id yalnız katalogdaki (gizli olmayan) stil
+    expect(JSON.stringify(r.file)).not.toMatch(/Retinoid|foo_style|ders kitabı|kalori/);
+    expect(r.file!.records.find((x) => x.id === "m_sample_barber_lineup")!.tryonPresetId).toBe("stubble_heavy");
+  });
+
+  it("satır kuralları: kaynak yalnız https; bilinmeyen/gizli preset; kullanıcı kanalında ilaç/işlem/teşhis adı; K8 etiketi olmayan kalori içeriği", () => {
+    const base = { id: "m_x", area: "skin", title_tr: "X", summary_tr: "y", tier: "diy", evidence_grade: "B", cost_band: "low", frequency_per: "week", frequency_times: "2", minutes_per_day: "3", difficulty: "1", impact: "2", effort: "1" };
+    const reason = (row: Record<string, string>) => {
+      const r = rowToRecord(row, 2, "f");
+      return r.ok ? "ok" : r.reason;
+    };
+    expect(reason({ ...base, source_url: "javascript:alert(1)" })).toBe("source_url");
+    expect(reason({ ...base, source_url: "http://example.com/x" })).toBe("source_url");
+    expect(reason({ ...base, source_url: "https://doi.org/10.1000/x" })).toBe("ok");
+    expect(reason({ ...base, area: "hair", tryon_preset_id: "foo" })).toBe("tryon_preset_id");
+    expect(reason({ ...base, area: "hair", tryon_preset_id: "buzz_cut" })).toBe("ok");
+    expect(reason({ ...base, title_tr: "Botoks alternatifi" })).toBe("safety:medical_procedure");
+    expect(reason({ ...base, summary_tr: "Rozasea için" })).toBe("safety:diagnosis");
+    expect(reason({ ...base, user_label_tr: "Minoksidil losyonu" })).toBe("safety:drugs");
+    expect(reason({ ...base, summary_tr: "Günde 2 kez, 5 dakika" })).toBe("ok"); // rakam serbest
+    // doktor katmanı ayrı kanal: ilaç adı taşıyabilir (hekim kuyruğu doğrular)
+    expect(reason({ ...base, tier: "doctor", title_tr: "Retinoid (hekim kararı)" })).toBe("ok");
+    expect(reason({ ...base, area: "habit", summary_tr: "Haftada yarım kilo ver" })).toBe("weight_content");
+    expect(reason({ ...base, area: "habit", summary_tr: "Haftada yarım kilo ver", contraindications: "bmi_below_25;under_18" })).toBe("ok");
+    expect(reason({ ...base, area: "habit", summary_tr: "Günlük kalori açığı", contraindications: "bmi_below_25" })).toBe("safety:calorie"); // kalori kullanıcı kanalında hiç yok
+    expect(reason({ ...base, area: "exercise", contraindications: "" })).toBe("ok");
+    const ex = rowToRecord({ ...base, area: "exercise" }, 2, "f");
+    expect(ex.ok && ex.record.contraindications).toEqual(["jaw_health_issue"]);
   });
 
   it("eksik zorunlu sütunda durur ve raporlar; başlık normalizasyonu", () => {
@@ -71,6 +103,9 @@ describe("scripts/import-methods (PLAN 4e / Sprint 3; KB Ç2 'uydurma yöntem yo
     const base = { headCovering: false as boolean | null, presentation: "male" as const, jawHealth: "none" as const, beardPreference: "some" as const, budgetBand: "1000_2500" as const, timeBand: 20 as const, under18: false, bodyFatAllowed: true, restrictionSignal: false, glasses: false, doctorLayer: false };
     const out = await src.retrieve({ observations: ["gözenek görünümü ve parlama"], areas: ["skin"], goals: ["skin"], constraints: base }, 10);
     expect(out.some((r) => r.id === "m_sample_niacin_serum")).toBe(true);
+    // TSV etiketleri ("spf", "ton", "sac derisi") gözlemle eşleşir ve sıralamayı öne çeker
+    const tagged = await src.retrieve({ observations: ["Saç derisi kuru görünüyor", "SPF kullanımı düzensiz; ton farkı var"], areas: ["hair", "skin"], goals: ["general"], constraints: base }, 6);
+    expect(tagged.slice(0, 4).map((r) => r.id)).toEqual(expect.arrayContaining(["m_sample_scalp_massage", "m_sample_spf_tinted"]));
     // doctor katmanı kaydı plan retrieve'inde asla; yalnız doctorLayer:true ile
     expect(out.some((r) => r.tier === "doctor")).toBe(false);
     const withDoctor = await src.retrieve({ observations: [], areas: ["skin"], goals: ["skin"], constraints: { ...base, doctorLayer: true } }, 40);

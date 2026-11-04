@@ -27,12 +27,18 @@ Kesin kurallar:
 8. Hedef yönüne uy: "sharper_mature" kesim ve sakal hattını belirginleştiren stiller; "softer_younger" yumuşak doku ve
    hacim; "as_is_groomed" mevcut stili tazeleyen düzen adımları.
 9. Kullanıcının günlük süresine ve bütçe bandına sığmayan adımları seçme; listede her kaydın dakika ve maliyet bandı var.
+   Tek seferlik adımlar (kesim, uzman, klinik) için "oneTimeBudget" bandı geçerlidir; "none" ise aylık bandı aşan tek
+   seferlik adım seçme. "presentation" sunumuna uymayan saç/sakal stili seçme.
 10. Yalnız verilen JSON şemasına uygun çıktı üret.`;
 
 export type PlanPromptQuestionnaire = {
   goals: string[];
   goalDirection: GoalDirection;
   budget: string;
+  /** Tek seferlik uzman/klinik bütçe bandı (none/unknown dahil); kesim ve uzman adımları buna sığmalı. */
+  oneTimeBudget: string;
+  /** Sunum (profil): sakal/stil seçimi için; liste zaten kodla süzülmüş gelir. */
+  presentation: "male" | "female" | "unspecified";
   minutesPerDay: number;
   sportDays: string;
   work: string;

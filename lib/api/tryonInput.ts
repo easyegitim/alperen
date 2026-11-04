@@ -48,6 +48,7 @@ export const TryonInputV2Raw = z
       const p = PRESET_BY_ID.get(id);
       if (!p) ctx.addIssue({ code: "custom", message: `unknown_preset_${slot}` });
       else if (p.kind !== slot) ctx.addIssue({ code: "custom", message: `preset_kind_mismatch_${slot}` });
+      else if (p.hidden) ctx.addIssue({ code: "custom", message: `hidden_preset_${slot}` }); // sürüm kapısında gizlenen stil (KB §7.3/4) denenmez
     }
     const parts = countParts(presets);
     if (mode === "style" && parts !== 1) ctx.addIssue({ code: "custom", message: "style_needs_one_preset" });
