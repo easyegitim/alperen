@@ -31,7 +31,9 @@ describe("kataloglar (SPEC 9.3, 10.2)", () => {
   it("8 egzersiz SPEC 9.5 id'leriyle; cilt adımlarında marka yok; 7 alışkanlık", () => {
     expect(EXERCISES.map((e) => e.id)).toEqual(["ex_masseter_gum", "ex_chin_tuck", "ex_neck_stretch", "ex_cheek_puff", "ex_fish_face", "ex_jaw_release", "ex_face_massage", "ex_brow_relax"]);
     expect(SKIN_STEPS.length).toBeGreaterThanOrEqual(10);
-    expect(HABITS).toHaveLength(7);
+    // SPEC 9.3 yedi alışkanlık + Sprint 2 genişletmesi (PLAN 4e): beş hijyen/duruş alışkanlığı
+    expect(HABITS).toHaveLength(12);
+    for (const id of ["hb_water", "hb_sleep", "hb_sun", "hb_walk", "hb_protein", "hb_strength", "hb_salt_alcohol"]) expect(HABITS.some((h) => h.id === id), id).toBe(true);
   });
   it("her yüz şekli için en az 3 saç ve 3 sakal önerisi var", () => {
     for (const s of Object.values(FACE_SHAPES)) {

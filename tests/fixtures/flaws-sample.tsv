@@ -1,0 +1,4 @@
+flaw_id	region	internal_name_tr	user_label_tr	tags	method_ids	notes_internal
+f_sample_tone	skin	Yanak ton dengesizliği (iç ad)	Ton farkı	ton;kizariklik	m_sample_spf_tinted;m_sample_niacin_serum	ORNEK
+f_sample_density	hair	Tepe seyrekliği (iç ad)	Saç yoğunluğu	dokulme	m_sample_scalp_massage	ORNEK
+f_sample_bad	nowhere	Geçersiz bölge	Düşmeli		m_sample_spf_tinted	ORNEK — hatali
