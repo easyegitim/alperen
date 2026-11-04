@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { renderContracts } from "@/lib/billing/contracts";
 import { syncSubscriptionFromIyzico } from "@/lib/billing/store";
+import { markPurchaseFailed, markPurchasePaid } from "@/lib/billing/purchases";
 import { parseRemoteSubscription, retrieveOneTimeCheckout, retrieveSubscriptionCheckout } from "@/lib/billing/subscriptions";
 import { periodEndFor } from "@/lib/billing/sync";
 import { APP_NAME, APP_URL } from "@/lib/config/app";
@@ -29,6 +30,25 @@ export async function POST(req: Request) {
   const back = async (status: "ok" | "failed" | "pending") => redirectResult(status, await returnAnalysisFor(admin, userId, payload.analysisId));
 
   try {
+    if (payload.plan === "one_time_report") {
+      // KB P#21 / CONTRACTS_V2 §2.3/2: hak purchases satırından; paid yalnız iyzico'dan çekilen durumla yazılır.
+      if (!payload.purchaseId) return redirectResult("failed", payload.analysisId, "one_time_report");
+      const r = await retrieveOneTimeCheckout(token);
+      if (r.paymentStatus !== "SUCCESS") {
+        await markPurchaseFailed(admin, payload.purchaseId);
+        return redirectResult("failed", payload.analysisId, "one_time_report");
+      }
+      await markPurchasePaid(admin, payload.purchaseId, payload.analysisId ?? null);
+      await admin.from("payment_events").update({ processed_at: new Date().toISOString() }).eq("event_key", `checkout:${token}`);
+      const { data: u } = await admin.auth.admin.getUserById(userId);
+      const email = u.user?.email;
+      const priceTry = typeof (ev?.payload as { priceTry?: unknown } | null)?.priceTry === "number" ? ((ev?.payload as { priceTry: number }).priceTry) : undefined;
+      if (email) {
+        const c = await renderContracts({ plan: "one_time_report", priceTry, buyerName: email, buyerEmail: email, buyerAddress: "" });
+        await sendEmail({ to: email, subject: `${APP_NAME} — Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme Formu`, html: c.html }).catch(() => undefined);
+      }
+      return redirectResult("ok", payload.analysisId, "one_time_report");
+    }
     if (payload.plan === "week_pass") {
       const r = await retrieveOneTimeCheckout(token);
       if (r.paymentStatus !== "SUCCESS") return back("failed");
@@ -88,9 +108,10 @@ async function returnAnalysisFor(admin: ReturnType<typeof createAdminClient>, us
   }
 }
 
-function redirectResult(status: "ok" | "failed" | "pending", analysisId?: string) {
+function redirectResult(status: "ok" | "failed" | "pending", analysisId?: string, product?: "one_time_report") {
   const url = new URL("/premium/sonuc", APP_URL);
   url.searchParams.set("status", status);
   if (analysisId) url.searchParams.set("analysis", analysisId);
+  if (product) url.searchParams.set("product", product);
   return NextResponse.redirect(url, 302);
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
 
-/** Google ile hesap bağlama (linkIdentity) sonrası PKCE kodunu oturuma çevirir. */
+/** Google/Apple girişi (signInWithOAuth) ve eski anonim bağlama (linkIdentity) sonrası PKCE kodunu oturuma çevirir. */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -18,7 +18,9 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/hesap?auth_error=1`);
+  // Giriş ekranından gelen deneme hataya düşerse aynı ekrana döner (v2 /baslangic/giris); eski bağlama yolu /hesap.
+  const back = next.startsWith("/baslangic/") ? next : "/hesap";
+  return NextResponse.redirect(`${origin}${back}?auth_error=1`);
 }
 
 /** Yalnız site içi, kök ile başlayan yollar; açık yönlendirme engellenir. */

@@ -1,7 +1,7 @@
 // SPEC 8.1 ağırlıklar, 8.4 kalibrasyon v0, 8.5 potansiyel tavanları. Kodda sabit değil; burada ve env'de.
-import type { SubKey } from "./teaser";
+import type { SubKey, SubKeyV1 } from "./teaser";
 
-export const SUB_WEIGHTS: Record<SubKey, number> = {
+export const SUB_WEIGHTS: Record<SubKeyV1, number> = {
   harmony: 0.25,
   eyes: 0.15,
   jawline: 0.15,
@@ -18,6 +18,7 @@ export const SUB_KIND: Record<SubKey, "structural" | "partial" | "modifiable"> =
   skin: "modifiable",
   hair: "modifiable",
   grooming: "modifiable",
+  brows: "modifiable",
 };
 
 /** hybrid.v1 satırlarının rozeti (engine spec §1.2, sözleşme C16): çene hattı h1'de tamamen geometriktir. SUB_KIND (eski) değişmez. */
@@ -28,6 +29,7 @@ export const SUB_KIND_HYBRID: Record<SubKey, "structural" | "partial" | "modifia
   skin: "modifiable",
   hair: "modifiable",
   grooming: "modifiable",
+  brows: "modifiable",
 };
 
 /** Herkes için aynı, yayımlanan referans noktası (UI spec S5; = CALIBRATION_V0.target). Yüzdelik veya ortalama değildir. */
@@ -47,7 +49,7 @@ export const CALIBRATION_V0 = {
   min: 1.0,
   max: 9.8,
   /** Alt skorlar için anahtar bazlı farklı değerler (yoksa genel). */
-  perSub: {} as Partial<Record<SubKey, { rawMean: number; scale: number }>>,
+  perSub: {} as Partial<Record<SubKeyV1, { rawMean: number; scale: number }>>,
 } as const;
 
 export const POTENTIAL = {
@@ -75,8 +77,11 @@ export function getScoringEnv(env: Record<string, string | undefined> = process.
   return { scoreModel, fallbackModel: fallbackModel.trim() || null, calibrationVersion };
 }
 
-/** Skor motoru anahtarı (engine spec §9.1). Kod varsayılanı "legacy": dağıtım davranışı değiştirmez. */
-export const SCORE_ENGINES = ["legacy", "hybrid.v1"] as const;
+/**
+ * Skor motoru anahtarı (engine spec §9.1). Kod varsayılanı "legacy": dağıtım davranışı değiştirmez.
+ * "hybrid.v2": Claude puan cetveli + ortanca-3 + kalibrasyon h2 (CONTRACTS_V2.md §4; lib/config/engine.h2.server.ts).
+ */
+export const SCORE_ENGINES = ["legacy", "hybrid.v1", "hybrid.v2"] as const;
 export type ScoreEngine = (typeof SCORE_ENGINES)[number];
 export const DEFAULT_SCORE_ENGINE: ScoreEngine = "legacy";
 
@@ -102,7 +107,7 @@ export function scoreEngineBlocked(
 ): boolean {
   if (env.VERCEL_ENV !== "production") return false;
   const wantsClaude =
-    path === "score" ? getScoreEngine(env) === "hybrid.v1" : env.AI_COACH_PROVIDER?.trim() === "claude";
+    path === "score" ? getScoreEngine(env) !== "legacy" : env.AI_COACH_PROVIDER?.trim() === "claude";
   if (!wantsClaude) return false;
   return readiness.norms !== "fitted" || readiness.categories !== "fitted" || readiness.legal !== "approved";
 }

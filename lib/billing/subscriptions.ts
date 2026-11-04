@@ -87,8 +87,8 @@ export function parseRemoteSubscription(data: Record<string, unknown> | undefine
   };
 }
 
-// ---- week_pass (AÇIK, FEATURE_WEEK_PASS): standart Checkout Form, tek seferlik, otomatik yenilenmez.
-export function initializeOneTimeCheckout(params: { buyer: Buyer; userId: string; conversationId: string; callbackUrl: string; priceTry: number; name: string; ip: string }) {
+// ---- Tek seferlik ödeme: week_pass (AÇIK, FEATURE_WEEK_PASS) ve one_time_report (KB P#21). Standart Checkout Form, otomatik yenilenmez.
+export function initializeOneTimeCheckout(params: { buyer: Buyer; userId: string; conversationId: string; callbackUrl: string; priceTry: number; name: string; ip: string; itemId?: string }) {
   const addr = { contactName: `${params.buyer.name} ${params.buyer.surname}`, city: params.buyer.city, country: "Turkey", address: params.buyer.address, zipCode: params.buyer.zipCode };
   const price = params.priceTry.toFixed(1);
   return iyzicoRequest<CheckoutInit>("POST", "/payment/iyzipos/checkoutform/initialize/auth/ecom", {
@@ -115,7 +115,7 @@ export function initializeOneTimeCheckout(params: { buyer: Buyer; userId: string
     },
     shippingAddress: addr,
     billingAddress: addr,
-    basketItems: [{ id: "week_pass", name: params.name, category1: "Dijital hizmet", itemType: "VIRTUAL", price }],
+    basketItems: [{ id: params.itemId ?? "week_pass", name: params.name, category1: "Dijital hizmet", itemType: "VIRTUAL", price }],
   });
 }
 

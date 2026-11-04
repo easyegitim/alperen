@@ -3,21 +3,30 @@ import { withGuard } from "@/lib/api/guard";
 import { getPremiumStatus } from "@/lib/api/premium";
 import { getTeaserConfig } from "@/lib/config/teaser";
 import { createAdminClient } from "@/lib/db/admin";
+import { getAccessV2 } from "@/lib/billing/purchases";
 import { toClientAnalysis, type AnalysisRow } from "@/lib/score/present";
-import { selectAnalysisRows } from "@/lib/score/rowColumns";
+import { isV2Row, loadRowById, presentV2 } from "../v2";
 
 export const runtime = "nodejs";
 
-/** GET /api/analyses/[id] → ClientAnalysis (sahiplik; teaser kırpması). Başkasının id'si → 404. */
+/**
+ * GET /api/analyses/[id] (sahiplik; başkasının id'si → 404).
+ *  - hybrid.v2 satırı (engine_version hybrid.v2 ya da device_only/queued/running): ClientAnalysisV2 + AccessV2 kilit kuralları.
+ *  - eski satır (legacy, hybrid.v1): ClientAnalysis v1 + teaser kırpması (değişmedi).
+ */
 export const GET = withGuard({}, async ({ req, user, supabase }) => {
   const id = new URL(req.url).pathname.split("/").pop() ?? "";
   if (!z.uuid().safeParse(id).success) return notFound();
   const admin = createAdminClient();
-  const { data } = await selectAnalysisRows((cols) => admin.from("analyses").select(cols).eq("id", id).eq("user_id", user.id).maybeSingle());
-  if (!data) return notFound();
+  const row = await loadRowById(admin, user.id, id);
+  if (!row) return notFound();
+  if (isV2Row(row)) {
+    const access = await getAccessV2(admin, user.id, row.id);
+    return Response.json(await presentV2(admin, user.id, row, access));
+  }
   const { premium } = await getPremiumStatus(supabase, user.id);
   const teaser = getTeaserConfig();
-  return Response.json(toClientAnalysis(data as AnalysisRow, premium, teaser.mode, teaser.subscore));
+  return Response.json(toClientAnalysis(row as AnalysisRow, premium, teaser.mode, teaser.subscore));
 });
 
 function notFound(): Response {

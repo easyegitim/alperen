@@ -177,7 +177,7 @@ Alt gezinme (giriş sonrası): **Analiz · Plan · Dene · Rutin · İlerleme**.
 - Kırmızı yalnız hata mesajlarında. Skorlar nötr renk skalasıyla gösterilir.
 - Her skor ekranında sabit not: "Bu skor yapay zekânın fotoğraf üzerinden tahminidir; ışık ve açıyla değişebilir, kişisel değerini ölçmez."
 - Her raporun sonunda: "Tıbbi tavsiye değildir."
-- Her AI görselinde: "Yapay zekâ ile oluşturuldu."
+- Her AI görselinde: "Aura ile oluşturuldu · YZ simülasyonu" (KB K16; eski: "Yapay zekâ ile oluşturuldu.").
 
 ---
 
@@ -851,7 +851,7 @@ Photorealistic, natural result that a barber or colorist could achieve in one vi
 - Alternatif sağlayıcı (aynı arayüz): fal.ai üzerinde maskeli inpainting (FLUX). Maske istemcide segmenter'ın saç sınıfından genişletilerek üretilir. Faz 10'da 30 test fotoğrafında sağlayıcılar karşılaştırılır (`scripts/compare-tryon.ts`, çıktılar yerelde HTML galeri).
 - Route: `export const maxDuration = 60`; istemci 45 sn'de zaman aşımı gösterir.
 - Kota yalnız başarılı sonuçta kullanılmış sayılır.
-- Sonuçta sabit "Yapay zekâ ile oluşturuldu" etiketi; indirilen görsele de gömülür.
+- Sonuçta sabit "Aura ile oluşturuldu · YZ simülasyonu" etiketi; indirilen görsele de gömülür.
 
 ---
 
@@ -1202,7 +1202,33 @@ Yalnız service role'ün okuyabildiği view'lar: günlük analiz/rapor/deneme sa
 
 **`0009_engine_hybrid.sql`** (yerel; staging/production'a gönderim onay ister): `analyses.engine_version` (null = eski), `analyses.signals` (jsonb; oylar ve türetilmiş açıklama/öncelik; görsel ve landmark yok), `analyses.ai_usage` ve `coach_reports.ai_usage` (jsonb; çağrı, token, `estUsd`). `ops.daily_ai_cost` aynı sütunlarla yeniden kurulur: satırda `estUsd` varsa o, yoksa eski sabit tahmin. RLS değişmez (tarayıcı politikası yok).
 
-Tip üretimi: her migration sonrası `pnpm db:types`. Tablo tipleri elle yazılmaz.
+**`0010_v2_core.sql`** (yerel; staging/production'a gönderim onay ister; ayrıntı `docs/decisions/CONTRACTS_V2.md` §5): `profiles.age_band` (under_18 | 18_24 | 25_34 | 35_49 | 50_plus), `profiles.under_18` (generated, = age_band = 'under_18'), `profiles.presentation` (male | female | unspecified; `questionnaire.presentation` yerine tek kaynak, eski kayıtlar bir kez taşınır), `profiles.face_shape_override`; `analyses.status` kümesi (device_only | queued | running | processing | completed | failed), `analyses.sections_ready` (jsonb, `[]`), `set_key`, `device_result`, `score_range`, `percentile`, `runs` (yalnız sayı; istemciye gitmez). Yeni tablolar (RLS: sahip okur, yazma yalnız service role): `analysis_sets` (set hash önbelleği, 1 yıl), `offers` (sunucu süreli teklif), `referrals` (davet kilidi, `referee_id` tekil), `purchases` (ürün satın alımları; tek seferlik rapor `analysis_id` ile bağlanır). `reserve_analysis` imzası `p_status text default 'processing'` alır: `device_only` satırlar kotaya sayılmaz ve kotaya takılmaz; kota yalnız queued/running/processing/completed sayar. Yeni `promote_analysis(p_user, p_analysis_id, p_limit, p_since)`: ödeme sonrası device_only satırı aynı kimlikle `queued` yapar, kota burada sayılır. `fail_stuck_jobs` queued/running için 2 saat; `purge_expired_analysis_sets` günlük cron.
+
+```sql
+create function public.reserve_analysis(
+  p_user uuid, p_client_request_id uuid, p_limit int, p_since timestamptz, p_status text default 'processing'
+) returns uuid language plpgsql security definer set search_path = public as $$
+declare existing uuid; used int; new_id uuid;
+begin
+  if p_status not in ('device_only','queued','processing') then
+    raise exception 'reserve_analysis: invalid initial status %', p_status;
+  end if;
+  perform pg_advisory_xact_lock(hashtext(p_user::text || ':analysis'));
+  select id into existing from analyses where user_id = p_user and client_request_id = p_client_request_id;
+  if existing is not null then return existing; end if;           -- idempotency
+  if p_status <> 'device_only' then
+    select count(*) into used from analyses
+      where user_id = p_user and status in ('queued','running','processing','completed') and created_at >= p_since;
+    if used >= p_limit then return null; end if;
+  end if;
+  insert into analyses (user_id, client_request_id, status) values (p_user, p_client_request_id, p_status) returning id into new_id;
+  return new_id;
+end $$;
+```
+
+Sunucu çağrısı (v2): ödeme öncesi `p_status = 'device_only'` (limit önemsiz); ödeme sonrası `promote_analysis` ile tek seferlik raporda `p_limit = 1, p_since = '-infinity'` (purchases kaydına bağlanır), abonelikte `p_limit = 1, p_since = now() - 7 gün`.
+
+Tip üretimi: her migration sonrası `pnpm db:types`. Tablo tipleri elle yazılmaz; 0010 uygulanana kadar `lib/db/types.ts` içindeki el yazımı ayna (yalnız yeni sütun ve tablolar) geçicidir ve `pnpm db:types` ile üzerine yazılır.
 
 ---
 
@@ -1758,7 +1784,7 @@ F11. SPEC 10'u tamamen oku.
    lib/tryon/composite.ts (SPEC 10.4 adım 4–5), hepsi worker'da.
 4. SPEC 10.5 kontrolleri; başarısızsa /drift çağrısı ve mesaj.
 5. /dene: "Sana önerilen" + filtreler, ilk kullanım rıza ekranı, kalan hak, 10–20 sn bekleme ekranı,
-   önce/sonra kaydırıcı, "Yapay zekâ ile oluşturuldu" etiketi, etiketli indirme, "uygunsuz içerik bildir".
+   önce/sonra kaydırıcı, "Aura ile oluşturuldu · YZ simülasyonu" etiketi, etiketli indirme, "uygunsuz içerik bildir".
 6. scripts/compare-tryon.ts: rızalı yerel fotoğraflarda sağlayıcı/model karşılaştırma HTML galerisi.
 7. Birim testleri: align (bilinen dönüşümü geri bulur), mask (poligon ve sınırlar).
 Bitiş: 30 test fotoğrafında korunan bölgede piksel farkı 0; hizalama artığı < 0,04 olan oran ≥ %90; p95 < 20 sn.

@@ -1,104 +1,146 @@
 "use client";
 
-import { CalendarDays, ChevronDown, ShieldX } from "lucide-react";
+import { CalendarDays, Check, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
-import { postJson } from "@/lib/api/client";
-import { createClient } from "@/lib/db/browser";
+import { ApiClientError, postJson } from "@/lib/api/client";
+import { AGE_BANDS, type AgeBand } from "@/lib/onboarding/age";
+import { writeDraft } from "@/lib/onboarding/draft";
+import { cn } from "@/lib/utils";
 
-type Props = { years: number[]; nextPath: string };
+type Props = {
+  /** Umax tarzı serbest liste (KB P#1). under_18 bayrak kapalıyken seçilince "yakında" ekranı (PLAN Ç-G). */
+  under18Enabled: boolean;
+  /** Oturum varsa seçim hemen sunucuya yazılır; yoksa sessionStorage taslağına girer ve girişten sonra yazılır. */
+  signedIn: boolean;
+  initial?: AgeBand | null;
+  nextPath: string;
+};
 
-/** SPEC 4.1 adım 3: doğum yılı; 18 altı → engel ekranı, oturum kapanır (sunucuda). */
-export function AgeGate({ years, nextPath }: Props) {
+/** KB §3.1 adım 1: yaş bandı. Yaş sınırı yok; 18 altı bandı bayrakla açılır. Doğum yılı artık sorulmaz. */
+export function AgeGate({ under18Enabled, signedIn, initial, nextPath }: Props) {
   const t = useTranslations("onboarding.age");
   const router = useRouter();
-  const [birthYear, setBirthYear] = useState<string>("");
+  const [band, setBand] = useState<AgeBand | null>(initial ?? null);
   const [busy, setBusy] = useState(false);
-  const [blocked, setBlocked] = useState(false);
+  const [soon, setSoon] = useState(false);
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!birthYear) return;
+  async function submit() {
+    if (!band) return;
+    if (band === "under_18" && !under18Enabled) {
+      track("onboarding_step_completed", { step: "age_under18_soon" });
+      setSoon(true);
+      return;
+    }
     setBusy(true);
     try {
-      const res = await postJson<{ isAdult: boolean }>("/api/onboarding/age", { birthYear: Number(birthYear) });
-      if (!res?.isAdult) {
-        track("age_blocked");
-        try {
-          await createClient().auth.signOut();
-        } catch {
-          // sunucu zaten oturumu kapattı
+      writeDraft({ ageBand: band });
+      if (signedIn) {
+        // FEATURE_UNDER_18 açıkken sunucu 18 altını kabul eder (is_adult=false) ama uygulama kapıları (requireAdult) bu
+        // sprintte kapalıdır: cinsiyet → giriş → izinler → yaş döngüsüne sokmak yerine "yakında" ekranı gösterilir.
+        const res = await postJson<{ isAdult?: boolean }>("/api/onboarding/age", { ageBand: band });
+        if (res?.isAdult === false) {
+          track("onboarding_step_completed", { step: "age_under18_soon" });
+          setSoon(true);
+          return;
         }
-        setBlocked(true);
-        return;
       }
+      track("onboarding_step_completed", { step: "age" });
       router.push(nextPath);
-    } catch {
-      toast.error(t("error"));
+    } catch (e) {
+      if (e instanceof ApiClientError && e.code === "FEATURE_DISABLED") setSoon(true);
+      else toast.error(t("error"));
     } finally {
       setBusy(false);
     }
   }
 
-  if (blocked) {
+  if (soon) {
     return (
       <div className="space-y-6 rounded-2xl border bg-card bg-hero-glow p-6 text-center shadow-card">
         <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand-soft text-brand" aria-hidden="true">
-          <ShieldX className="size-6" />
+          <Clock className="size-6" />
         </span>
         <div className="space-y-2">
-          <h1 className="text-xl font-bold tracking-tight">{t("blockedTitle")}</h1>
-          <p className="text-sm text-muted-foreground">{t("blockedBody")}</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("under18SoonTitle")}</h1>
+          <p className="text-sm text-muted-foreground">{t("under18SoonBody")}</p>
         </div>
-        <Button asChild variant="outline" className="w-full">
-          <Link href="/">{t("backHome")}</Link>
-        </Button>
+        <div className="grid gap-2">
+          <Button variant="outline" className="w-full" onClick={() => setSoon(false)}>
+            {t("changeBand")}
+          </Button>
+          <Button asChild variant="ghost" className="w-full">
+            <Link href="/">{t("backHome")}</Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="space-y-6">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submit();
+      }}
+      className="space-y-6"
+    >
       <div className="space-y-4">
         <span className="grid size-14 place-items-center rounded-2xl bg-brand-soft text-brand" aria-hidden="true">
           <CalendarDays className="size-6" />
         </span>
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("description")}</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("bandTitle")}</h1>
+          <p className="text-sm text-muted-foreground">{t("bandDescription")}</p>
         </div>
       </div>
-      <label className="block space-y-2">
-        <span className="text-sm font-semibold">{t("label")}</span>
-        <span className="relative block">
-          <select
-            name="birthYear"
-            required
-            value={birthYear}
-            onChange={(e) => setBirthYear(e.target.value)}
-            className="num h-14 w-full appearance-none rounded-xl border border-input bg-card px-4 pr-10 text-lg font-semibold shadow-card focus-visible:border-brand"
-          >
-            <option value="" disabled>
-              {t("placeholder")}
-            </option>
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute top-1/2 right-4 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-        </span>
-      </label>
-      <Button type="submit" className="w-full" size="lg" disabled={!birthYear || busy}>
+      <fieldset className="space-y-2">
+        <legend className="sr-only">{t("bandTitle")}</legend>
+        {AGE_BANDS.map((b) => {
+          const selected = band === b;
+          const soonBand = b === "under_18" && !under18Enabled;
+          return (
+            <label
+              key={b}
+              className={cn(
+                "flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3 shadow-card transition-colors",
+                selected ? "border-brand/60 bg-brand-soft/40" : "hover:bg-accent",
+              )}
+            >
+              <span className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="ageBand"
+                  value={b}
+                  checked={selected}
+                  onChange={() => setBand(b)}
+                  className="sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "grid size-5 place-items-center rounded-full border-2 transition-colors",
+                    selected ? "border-brand bg-brand text-primary-foreground" : "border-muted-foreground/50",
+                  )}
+                >
+                  {selected ? <Check className="size-3" strokeWidth={3} /> : null}
+                </span>
+                <span className="num text-[15px] font-semibold">{t(`bands.${b}`)}</span>
+              </span>
+              {soonBand ? <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">{t("soonTag")}</span> : null}
+            </label>
+          );
+        })}
+      </fieldset>
+      <Button type="submit" className="w-full" size="lg" disabled={!band || busy}>
         {t("continue")}
       </Button>
-      <p className="text-[11px] leading-relaxed text-muted-foreground">{t("note")}</p>
+      <p className="text-[11px] leading-relaxed text-muted-foreground">{t("bandNote")}</p>
     </form>
   );
 }

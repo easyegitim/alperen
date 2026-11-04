@@ -59,7 +59,7 @@ Pazarlama, fiyatlar, yasal, admin: yalnız web.
 
 - `GET /api/tryon/status` (premium, rıza, önerilenler, kota, sunum) ve `POST /api/tryon` aynen. Selfie oturum boyunca önbellekte (`features/capture/sessionSelfie`; `/tara?purpose=tryon`), 1024 px C kırpımı `expo-image-manipulator` ile.
 - Kompozit `src/native/tryon.ts`: G'de yüz bulma → benzerlik dönüşümü (Skia matrisi) → `readPixels` → `lib/tryon/pixels.ts` saf çekirdek (web worker ile aynı maske/ton/karışım) → `Skia.Image.MakeImage` → JPEG → kompozitte yeniden yüz bulma ve geometri sapması (`geometryDrift`, ≤ %3). Başarısızlıkta sonuç gösterilmez, `/api/tryon/[id]/drift` ile kota iade edilir.
-- İndirme: "Yapay zekâ ile oluşturuldu" etiketi Skia ile gömülür, sistem paylaşım sayfası açılır.
+- İndirme: "Aura ile oluşturuldu · YZ simülasyonu" etiketi (`common.aiGenerated`) Skia ile gömülür, sistem paylaşım sayfası açılır.
 
 ## M6. Ödeme (RevenueCat) — SPEC 15.4'ün ayrıntısı
 

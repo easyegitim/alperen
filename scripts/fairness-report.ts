@@ -26,7 +26,7 @@ import { ObservationOutput, type Observation } from "../lib/ai/observationSchema
 import { OBSERVE_PROMPT_VERSION } from "../lib/ai/prompts/observe.v2";
 import { buildScorePrompt } from "../lib/ai/prompts/score.v1";
 import { SCORE_OUTPUT_JSON_SCHEMA, ScoreOutput } from "../lib/ai/scoreSchema";
-import { SUB_KEYS, type SubKey } from "../lib/config/teaser";
+import { SUB_KEYS, type SubKeyV1 } from "../lib/config/teaser";
 import type { GeometryResult } from "../lib/face/types";
 import { aggregateScores } from "../lib/score/aggregate";
 import { calibrate } from "../lib/score/calibration";
@@ -55,7 +55,7 @@ export type HybridRow = {
   groups: Record<string, string>;
   overall: number;
   potential: number;
-  subscores: Record<SubKey, number>;
+  subscores: Record<SubKeyV1, number>;
   /** Değerlendirilmeyen bakım alanları (o alanın ortalamasına girmez). */
   notAssessed: string[];
   components: { key: string; status: "measured" | "not_measured"; pen: number }[];

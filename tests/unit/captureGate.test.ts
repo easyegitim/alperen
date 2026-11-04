@@ -3,28 +3,24 @@ import { classifyFaceShape } from "@/lib/face/faceShape";
 import { checkServerCapture, withServerFaceShape } from "@/lib/score/engine/captureGate";
 import { GEO, geo } from "../helpers/engineFixtures";
 
-describe("sunucu çekim kapısı (engine spec §3.6)", () => {
+describe("sunucu çekim kapısı v2 (KB R1-E12/E14: yalnız 'yüz yok' durdurur)", () => {
   it("iyi çekim geçer", () => {
     expect(checkServerCapture(GEO).ok).toBe(true);
   });
 
-  it("poz sınırları: |yaw| > 12, |pitch| > 15, |roll| > 10 reddedilir; sınırda geçer", () => {
-    expect(checkServerCapture(geo({ quality: { yaw: 12, pitch: -15, roll: 10 } })).ok).toBe(true);
-    expect(checkServerCapture(geo({ quality: { yaw: -12.1 } }))).toEqual({ ok: false, reason: "pose" });
-    expect(checkServerCapture(geo({ quality: { pitch: 15.5 } }))).toEqual({ ok: false, reason: "pose" });
-    expect(checkServerCapture(geo({ quality: { roll: -11 } }))).toEqual({ ok: false, reason: "pose" });
-    expect(checkServerCapture(geo({ quality: { yaw: Number.NaN } }))).toEqual({ ok: false, reason: "pose" });
+  it("poz, ışık ve netlik artık reddetmez (istemcide uyarı pop-up'ı; kullanıcı 'Evet' dediyse kabul)", () => {
+    expect(checkServerCapture(geo({ quality: { yaw: 40, pitch: -25, roll: 20 } })).ok).toBe(true);
+    expect(checkServerCapture(geo({ quality: { brightness: 30, sharpness: 5 } })).ok).toBe(true);
+    expect(checkServerCapture(geo({ quality: { yaw: Number.NaN } })).ok).toBe(true);
   });
 
-  it("brightness 0 ve sharpness 0 bilinmiyor sayılır (geçer); 50 ve 30 reddedilir", () => {
-    expect(checkServerCapture(geo({ quality: { brightness: 0, sharpness: 0 } })).ok).toBe(true);
-    expect(checkServerCapture(geo({ quality: { brightness: 50 } }))).toEqual({ ok: false, reason: "light" });
-    expect(checkServerCapture(geo({ quality: { brightness: 230 } }))).toEqual({ ok: false, reason: "light" });
-    expect(checkServerCapture(geo({ quality: { brightness: 55, sharpness: 35 } })).ok).toBe(true);
-    expect(checkServerCapture(geo({ quality: { sharpness: 30 } }))).toEqual({ ok: false, reason: "blur" });
+  it("yüz yok: oranlar sonlu değilse veya pozitif değilse NO_FACE (hak düşmez)", () => {
+    expect(checkServerCapture(geo({ metrics: { lengthRatio: Number.NaN } }))).toEqual({ ok: false, reason: "no_face" });
+    expect(checkServerCapture(geo({ metrics: { jawRatio: 0 } }))).toEqual({ ok: false, reason: "no_face" });
+    expect(checkServerCapture(geo({ metrics: { thirds: { upper: null, middle: Number.POSITIVE_INFINITY, lower: 0.5 } } }))).toEqual({ ok: false, reason: "no_face" });
   });
 
-  it("yanlış yüz şekli reddedilmez, sunucu hesabıyla değiştirilir (face_shape ve geometry.faceShape aynı)", () => {
+  it("yanlış yüz şekli reddedilmez, sunucu hesabıyla (fs-v2) değiştirilir (face_shape ve geometry.faceShape aynı)", () => {
     const tampered = { ...GEO, faceShape: { primary: "diamond" as const, confidence: 1 } };
     const r = checkServerCapture(tampered);
     expect(r.ok).toBe(true);

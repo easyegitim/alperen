@@ -1,27 +1,34 @@
 /**
  * Gizlilik testi (CLAUDE.md, zorunlu; Faz 7'den itibaren her faz sonunda). Tüm ağ trafiğini izler.
+ * v2 (KB §3.1, CONTRACTS_V2 §8): anonim oturum kalktı; test kullanıcısı auth.admin.createUser ile açılır ve sonunda
+ * silinir. Ödeme öncesi akışta görsel GÖNDERİLMEZ (device_only); gönderildiği gün yalnız POST /api/analyses alabilir.
  *
  * Gereksinimler (yoksa test hemen BAŞARISIZ olur; atlanmaz):
  *   PRIVACY_E2E=1                       → playwright.config.ts "privacy" projesini ekler
- *   Sunucu gerçek (yerel) Supabase ile çalışıyor; Turnstile site anahtarı boş (captcha kapalı)
+ *   Sunucu gerçek (yerel) Supabase ile çalışıyor (migration 0010–0012 uygulanmış); NEXT_PUBLIC_SUPABASE_URL,
+ *   (Ödeme öncesi device_only yol SCORE_ENGINE'den bağımsızdır; POST /api/analyses 200 değilse test yanıtı açıkça raporlar.)
+ *   NEXT_PUBLIC_SUPABASE_ANON_KEY ve SUPABASE_SERVICE_ROLE_KEY ortamda (test kullanıcısı için)
  *   PRIVACY_FACE_VIDEO=/sifreli/disk/face.y4m → Chrome sahte kamera kaynağı (rızalı yüz; depoya konmaz)
- *   GEMINI_API_KEY tanımlı (ücretli; onayla); SCORE_ENGINE=hybrid.v1 ile koşuluyorsa ANTHROPIC_API_KEY de (ücretli; onayla)
  */
 import { expect, test, type Request } from "@playwright/test";
+import { createTestUser, env } from "./helpers/testUser";
 
 type LockedJson = { value: unknown; locked: boolean };
-/** /api/analyses yanıtındaki ClientAnalysis'in kilitle ilgili alanları (lib/score/present.ts). */
+/** /api/analyses yanıtındaki ClientAnalysisV2'nin kilitle ilgili alanları (lib/score/present.ts). */
 type AnalysisJson = {
+  stage?: string;
   overall?: LockedJson;
   potential?: LockedJson;
-  potentialDelta?: LockedJson;
   improveFirst?: LockedJson;
+  report?: LockedJson;
   subscores?: Record<string, LockedJson>;
-  explain?: Record<string, LockedJson>;
-  notAssessed?: { sub: string; reason: string }[];
+  explanations?: Record<string, LockedJson>;
+  device?: unknown;
 };
 
 const IMAGE_SINKS = ["/api/analyses", "/api/tryon"];
+/** Kilitli v2 yanıtında asla olmaması gerekenler (presentV2.test LEAK ile aynı ruh). */
+const LEAK = /"range":\[|"runs"|"set_key"|"signals"|"raw"/;
 
 function hasImagePayload(req: Request): boolean {
   const ct = req.headers()["content-type"] ?? "";
@@ -32,110 +39,125 @@ function hasImagePayload(req: Request): boolean {
 
 test.describe("Gizlilik (tüm ağ trafiği)", () => {
   test.beforeAll(() => {
-    for (const k of ["PRIVACY_E2E", "PRIVACY_FACE_VIDEO"]) {
+    for (const k of ["PRIVACY_E2E", "PRIVACY_FACE_VIDEO", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) {
       if (!process.env[k]) throw new Error(`${k} gerekli — tests/e2e/privacy.spec.ts başlığına bak.`);
     }
   });
 
-  test("görsel yalnız /api/analyses ve /api/tryon'a gider; gövdede landmark yok; kilitli değerler yanıtta yok", async ({ page, context }) => {
-    const requests: Request[] = [];
-    page.on("request", (r) => requests.push(r));
-    const analysisResponses: unknown[] = [];
-    page.on("response", async (res) => {
-      if (/\/api\/analyses(\/|$)/.test(new URL(res.url()).pathname) && res.ok()) analysisResponses.push(await res.json().catch(() => null));
-    });
+  test("ödeme öncesi akış: görsel gönderilmez; gövdede landmark yok; kilitli değerler yanıtta yok; görsel giderse yalnız izinli uçlara", async ({ page, context, baseURL }) => {
+    const user = await createTestUser(context, baseURL ?? "http://localhost:3000", "privacy");
+    try {
+      const requests: Request[] = [];
+      page.on("request", (r) => requests.push(r));
+      const analysisResponses: unknown[] = [];
+      const analysisBodies: string[] = [];
+      const analysisFailures: string[] = [];
+      page.on("response", async (res) => {
+        if (/\/api\/analyses(\/|$)/.test(new URL(res.url()).pathname) && !res.ok()) analysisFailures.push(`${res.status()} ${await res.text().catch(() => "")}`);
+        if (/\/api\/analyses(\/|$)/.test(new URL(res.url()).pathname) && res.ok()) {
+          const text = await res.text().catch(() => "");
+          analysisBodies.push(text);
+          try {
+            analysisResponses.push(JSON.parse(text));
+          } catch {
+            analysisResponses.push(null);
+          }
+        }
+      });
 
-    await page.goto("/");
-    await page.getByRole("button", { name: "Analizini başlat" }).first().click();
-    await expect(page).toHaveURL(/\/baslangic\/yas/);
-    await page.getByLabel("Doğum yılın").selectOption("1990");
-    await page.getByRole("button", { name: "Devam" }).click();
+      // 1) Yaş bandı → cinsiyet (oturum var: hemen yazılır) → rızalar → fotoğraflar
+      await page.goto("/baslangic/yas");
+      await page.getByRole("radio", { name: "25–34" }).check({ force: true });
+      await page.getByRole("button", { name: "Devam" }).click();
+      await expect(page).toHaveURL(/\/baslangic\/cinsiyet/);
+      await page.getByRole("radio", { name: "Erkek" }).check({ force: true });
+      await page.getByRole("button", { name: "Devam" }).click();
 
-    await expect(page).toHaveURL(/\/baslangic\/izinler/);
-    const box = page.locator("[tabindex='0']").first();
-    await box.evaluate((el) => el.scrollTo(0, el.scrollHeight));
-    await page.getByRole("button", { name: "Okudum" }).click();
-    for (const id of ["biometric_processing", "photo_ai_analysis", "cross_border_transfer"]) await page.locator(`#consent-${id}`).click();
-    await page.getByRole("button", { name: "Devam" }).click();
+      await expect(page).toHaveURL(/\/baslangic\/izinler/);
+      const box = page.locator("[tabindex='0']").first();
+      await box.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+      await page.getByRole("button", { name: "Okudum" }).click();
+      for (const id of ["biometric_processing", "photo_ai_analysis", "cross_border_transfer"]) await page.locator(`#consent-${id}`).click();
+      await page.getByRole("button", { name: "Devam" }).click();
 
-    await expect(page).toHaveURL(/\/baslangic\/anket/);
-    // Anket: her adımda ilk seçeneği işaretle, ileri
-    for (let i = 0; i < 10; i++) {
-      const radios = page.getByRole("radio");
-      if ((await radios.count()) > 0) {
-        for (const group of await page.locator("[role=radiogroup]").all()) await group.getByRole("radio").first().click();
+      // 2) Çekim: 1/2 ön (otomatik) → 2/2 yan profil (deklanşör) → özet → cihaz analizi
+      await expect(page).toHaveURL(/\/tara/, { timeout: 15_000 });
+      await page.getByRole("button", { name: "Kamerayı aç" }).click();
+      const yes = page.getByRole("button", { name: "Evet" });
+      await Promise.race([page.getByRole("button", { name: "Bu fotoğrafı kullan" }).waitFor({ timeout: 60_000 }), yes.waitFor({ timeout: 60_000 })]);
+      if (await yes.isVisible().catch(() => false)) await yes.click();
+      await page.getByRole("button", { name: "Bu fotoğrafı kullan" }).click();
+      await page.getByRole("button", { name: "Kamerayı aç" }).click();
+      await page.getByRole("button", { name: "Çek" }).click({ timeout: 30_000 });
+      await page.getByRole("button", { name: "Bu fotoğrafı kullan" }).click({ timeout: 60_000 });
+      await page.getByRole("button", { name: "Analizi başlat" }).click({ timeout: 30_000 });
+      await expect.poll(() => analysisResponses.length + analysisFailures.length, { timeout: 90_000 }).toBeGreaterThan(0);
+      expect(analysisFailures, `POST /api/analyses başarısız (ön koşul: sunucu + migration; gövde: ${analysisFailures[0] ?? ""})`).toEqual([]);
+      await expect(page).toHaveURL(/\/analiz\/[0-9a-f-]{36}/, { timeout: 90_000 });
+
+      // 3) Ödeme öncesi hiçbir isteğe görsel girmez; girerse yalnız izinli uçlara
+      const imageReqs = requests.filter(hasImagePayload);
+      for (const r of imageReqs) {
+        const path = new URL(r.url()).pathname;
+        expect(IMAGE_SINKS.some((s) => path.startsWith(s)), `${path} görsel almamalı`).toBe(true);
       }
-      const checks = page.getByRole("checkbox");
-      if ((await checks.count()) > 0 && (await page.getByRole("checkbox", { checked: true }).count()) === 0) await checks.first().click();
-      const skip = page.getByRole("button", { name: "Bu adımı atla" });
-      if (await skip.isVisible().catch(() => false)) await skip.click();
-      const next = page.getByRole("button", { name: /^(İleri|Bitir)$/ });
-      await next.click();
-    }
-
-    await expect(page).toHaveURL(/\/tara/, { timeout: 15_000 });
-    await page.getByRole("button", { name: "Kamerayı aç" }).click();
-    await page.getByRole("button", { name: "Bu fotoğrafı kullan" }).click({ timeout: 60_000 });
-    await page.getByRole("button", { name: "Analizi başlat" }).click();
-    await expect(page).toHaveURL(/\/analiz\/[0-9a-f-]{36}/, { timeout: 90_000 });
-
-    // 1) Görsel içeren gövdeler yalnız izinli uçlara
-    const imageReqs = requests.filter(hasImagePayload);
-    expect(imageReqs.length).toBeGreaterThan(0);
-    for (const r of imageReqs) {
-      const path = new URL(r.url()).pathname;
-      expect(IMAGE_SINKS.some((s) => path.startsWith(s)), `${path} görsel almamalı`).toBe(true);
-    }
-    // PostHog, Sentry, Supabase, Resend, Turnstile vb. hiçbirine görsel gitmedi
-    for (const r of requests) {
-      const host = new URL(r.url()).host;
-      if (/posthog|sentry|supabase|resend|cloudflare|turnstile/.test(host)) expect(hasImagePayload(r), `${host} görsel aldı`).toBe(false);
-    }
-
-    // 2) /api/analyses gövdesinde 478 noktalık dizi yok; yalnız GeometryResult
-    const post = requests.find((r) => r.method() === "POST" && new URL(r.url()).pathname === "/api/analyses");
-    expect(post).toBeTruthy();
-    const body = JSON.parse(post!.postData() ?? "{}") as { geometry?: Record<string, unknown>; image?: string };
-    expect(body.geometry?.version).toBe("geo-v1");
-    expect(JSON.stringify(body.geometry)).not.toMatch(/landmarks|"x":/);
-    expect(body.image?.startsWith("/9j/")).toBe(true);
-
-    // 3) Analitik/hata olaylarında görsel, skor, metrik, e-posta yok (PostHog/Sentry istekleri)
-    for (const r of requests.filter((q) => /posthog|sentry/.test(new URL(q.url()).host))) {
-      const b = r.postData() ?? "";
-      expect(b).not.toMatch(/\/9j\/|lengthRatio|overall|@/);
-    }
-
-    // 4) Ücretsiz hesapta API yanıtlarında kilitli değerler yok (UI spec §1.2 ve engine spec §8: tek birleşik liste)
-    for (const res of analysisResponses as AnalysisJson[]) {
-      if (!res?.overall) continue;
-      if (res.overall.locked) expect(res.overall.value).toBeNull();
-      if (res.potential?.locked) expect(res.potential.value).toBeNull();
-      if (res.potentialDelta?.locked) expect(res.potentialDelta.value).toBeNull();
-      if (res.improveFirst?.locked) expect(res.improveFirst.value).toBeNull();
-      for (const [k, e] of Object.entries(res.explain ?? {})) if (e.locked) expect(e.value, `explain.${k}`).toBeNull();
-      for (const [k, s] of Object.entries(res.subscores ?? {})) {
-        if (s.locked) expect(s.value, `subscores.${k}`).toBeNull();
-        // "Değerlendirilmedi" + bilinen referans değeri kilitli değeri ele verir: kilitli alt skor için not_visible yok
-        if (s.locked) expect(res.notAssessed?.some((n) => n.sub === k && n.reason === "not_visible") ?? false, `notAssessed.${k}`).toBe(false);
+      for (const r of requests) {
+        const host = new URL(r.url()).host;
+        if (/posthog|sentry|supabase|resend|cloudflare|turnstile/.test(host)) expect(hasImagePayload(r), `${host} görsel aldı`).toBe(false);
       }
-    }
-    const html = await page.content();
-    expect(html).not.toMatch(/"potential":\{"value":\d/);
-    expect(html).not.toMatch(/"potentialDelta":\{"value":\d|"improveFirst":\{"value":\[/);
-    // Hiçbir hosta giden gövdede landmark dizisi yok
-    for (const r of requests) expect(r.postData() ?? "", new URL(r.url()).host).not.toMatch(/"landmarks"/);
-    // Analitik/hata olaylarında kaldıraç anahtarı yok
-    for (const r of requests.filter((q) => /posthog|sentry/.test(new URL(q.url()).host))) expect(r.postData() ?? "").not.toMatch(/lv_/);
 
-    // 5) Supabase istemcisiyle analyses / coach_reports okunamıyor
-    const cookies = await context.cookies();
-    const rows = await page.evaluate(async (cookieNames) => {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      void cookieNames;
-      const res = await fetch(`${url}/rest/v1/analyses?select=id`, { headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" } });
-      return res.status;
-    }, cookies.map((c) => c.name));
-    expect([401, 200]).toContain(rows); // 200 ise RLS boş dizi döndürür; 401 anon key ile yetkisiz
+      // 4) POST /api/analyses: mode device_only, görsel yok, yalnız GeometryResult; 478 nokta yok
+      const post = requests.find((r) => r.method() === "POST" && new URL(r.url()).pathname === "/api/analyses");
+      expect(post).toBeTruthy();
+      const body = JSON.parse(post!.postData() ?? "{}") as { mode?: string; geometry?: Record<string, unknown>; image?: string; images?: unknown[]; sourceHashes?: unknown };
+      expect(body.mode).toBe("device_only");
+      expect(body.image).toBeUndefined();
+      expect(body.images ?? []).toEqual([]);
+      expect(body.geometry?.version).toBe("geo-v1");
+      expect(JSON.stringify(body.geometry)).not.toMatch(/landmarks|"x":/);
+      expect(post!.postData() ?? "").not.toMatch(/\/9j\//);
+
+      // 5) Analitik/hata olaylarında görsel, skor, metrik, e-posta yok (PostHog/Sentry istekleri)
+      for (const r of requests.filter((q) => /posthog|sentry/.test(new URL(q.url()).host))) {
+        const b = r.postData() ?? "";
+        expect(b).not.toMatch(/\/9j\/|lengthRatio|overall|@|[0-9a-f]{64}/);
+      }
+
+      // 6) Kilitli v2 yanıtı: skor, aralık, alt skor, potansiyel, rapor yok; yalnız cihaz alanları
+      expect(analysisResponses.length).toBeGreaterThan(0);
+      for (const text of analysisBodies) expect(text).not.toMatch(LEAK);
+      for (const res of analysisResponses as AnalysisJson[]) {
+        if (!res?.overall) continue;
+        expect(res.stage).toBe("device_only");
+        expect(res.overall.locked).toBe(true);
+        expect(res.overall.value).toBeNull();
+        expect(res.potential?.locked).toBe(true);
+        expect(res.potential?.value).toBeNull();
+        expect(res.improveFirst?.value).toBeNull();
+        expect(res.report?.value).toBeNull();
+        for (const [k, s] of Object.entries(res.subscores ?? {})) expect(s.value, `subscores.${k}`).toBeNull();
+        for (const [k, e] of Object.entries(res.explanations ?? {})) expect(e.value, `explanations.${k}`).toBeNull();
+        expect(res.device).toBeTruthy();
+      }
+      const html = await page.content();
+      expect(html).not.toMatch(/"potential":\{"value":\d|"overall":\{"value":\{/);
+      expect(html).not.toMatch(/"improveFirst":\{"value":\[/);
+      // Hiçbir hosta giden gövdede landmark dizisi yok
+      for (const r of requests) expect(r.postData() ?? "", new URL(r.url()).host).not.toMatch(/"landmarks"/);
+
+      // 7) Supabase istemcisiyle (anon key + kullanıcının kendi oturum JWT'si) analyses / coach_reports / analysis_sets
+      //    okunamıyor: tarayıcı politikası yok → 401 ya da boş dizi. purchases okunabilir ama skor taşımaz; yine de boş olmalı.
+      const supaUrl = env("NEXT_PUBLIC_SUPABASE_URL");
+      const anonKey = env("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+      for (const table of ["analyses", "coach_reports", "analysis_sets", "purchases"]) {
+        const res = await page.request.get(`${supaUrl}/rest/v1/${table}?select=*`, { headers: { apikey: anonKey, Authorization: `Bearer ${user.accessToken}` } });
+        const bodyText = await res.text();
+        expect([401, 200, 404], `${table} durum ${res.status()}`).toContain(res.status());
+        if (res.status() === 200) expect(JSON.parse(bodyText), `${table} RLS ile boş dizi dönmeli`).toEqual([]);
+        expect(bodyText).not.toMatch(/"overall"|"subscores"|"scores"|"report"/);
+      }
+    } finally {
+      await user.cleanup();
+    }
   });
 });

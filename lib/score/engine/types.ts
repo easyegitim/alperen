@@ -4,7 +4,7 @@ import type { ScoreOutput } from "@/lib/ai/scoreSchema";
 import type { Observation } from "@/lib/ai/observationSchema";
 import type { SampleReason } from "@/lib/ai/anthropic";
 import type { ComponentKey, ItemKey, StructSub } from "@/lib/config/engine.server";
-import type { SubKey } from "@/lib/config/teaser";
+import type { SubKeyV1 } from "@/lib/config/teaser";
 import type { ClientSignals, ModSub } from "@/lib/score/contract";
 import type { Questionnaire } from "@/lib/questionnaire";
 
@@ -46,13 +46,13 @@ export type SignalsV1 = ClientSignals & {
   promptVersion: "observe.v2";
   norms: string;
   modGain: number;
-  weights: Record<SubKey, number>;
+  weights: Record<SubKeyV1, number>;
   samples: { ok: number; failed: number; reasons: SampleReason[]; fallbackServed: number; earlyStop: boolean; attempts: number };
   obs: Observation;
   agreement: number;
   components: ComponentSignal[];
   items: ItemSignal[];
-  raw: Record<SubKey, number>;
+  raw: Record<SubKeyV1, number>;
   gains: Record<ModSub, number>;
 };
 
@@ -62,8 +62,8 @@ export type LegacyGains = ScoreOutput["achievableGain"];
 /** Satıra yazılacak sonuç (iz E bunu ScoredAnalysis'e çevirir). */
 export type HybridScored = {
   /** Kalibre (h1), hiçbiri null değil; hariç saç = referans 5,5. */
-  subscores: Record<SubKey, number>;
-  rawSubscores: Record<SubKey, number>;
+  subscores: Record<SubKeyV1, number>;
+  rawSubscores: Record<SubKeyV1, number>;
   rawOverall: number;
   overall: number;
   potential: number;

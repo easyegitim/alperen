@@ -1,6 +1,6 @@
 // SPEC 8.4. Kalibrasyon herkes için aynıdır; ödeme/plan/kampanya girdisi YOKTUR (D03).
 import { CALIBRATION_H1, CALIBRATION_V0 } from "@/lib/config/scoring";
-import type { SubKey } from "@/lib/config/teaser";
+import type { SubKey, SubKeyV1 } from "@/lib/config/teaser";
 
 /** h1 (engine spec §5.1): hybrid.v1 için kimlik + kenetleme; referans profil 5,5 verir. */
 export type CalibrationVersion = "v0" | "v1" | "h1";
@@ -13,7 +13,8 @@ export const round1 = (v: number) => Math.round(v * 10) / 10;
 
 export function calibrateV0(raw: number, sub?: SubKey): number {
   const c = CALIBRATION_V0;
-  const p = (sub && c.perSub[sub]) || { rawMean: c.rawMean, scale: c.scale };
+  // v0 yalnız legacy altılısı için ayarlanır; v2 anahtarı (brows) genel değerlere düşer.
+  const p = (sub && c.perSub[sub as SubKeyV1]) || { rawMean: c.rawMean, scale: c.scale };
   return clamp(c.target + (raw - p.rawMean) * p.scale, c.min, c.max);
 }
 

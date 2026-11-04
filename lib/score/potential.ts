@@ -1,12 +1,12 @@
 // SPEC 8.5 potansiyel skor. Saf fonksiyon.
 import { POTENTIAL, SUB_WEIGHTS } from "@/lib/config/scoring";
-import { SUB_KEYS, type SubKey } from "@/lib/config/teaser";
+import { SUB_KEYS, type SubKeyV1 } from "@/lib/config/teaser";
 import type { ScoreOutput } from "@/lib/ai/scoreSchema";
 import { round1 } from "./calibration";
 
 export type PotentialInput = {
   /** Ham (kalibre edilmemiş) alt skorlar. */
-  rawSubscores: Record<SubKey, number>;
+  rawSubscores: Record<SubKeyV1, number>;
   gains: ScoreOutput["achievableGain"];
   /** Kalibre genel skor. */
   overall: number;
@@ -17,7 +17,7 @@ export type PotentialInput = {
   linkedActions?: Partial<Record<keyof ScoreOutput["achievableGain"], string[]>>;
   calibrate: (raw: number) => number;
   /** hybrid.v1: satırın ağırlıkları (WEIGHTS_H1 veya saç hariç seti). Verilmezse SUB_WEIGHTS. */
-  weights?: Record<SubKey, number>;
+  weights?: Record<SubKeyV1, number>;
   /** hybrid.v1: skin/hair/grooming tavanları (POTENTIAL_H1.caps). Verilmezse POTENTIAL.caps. Çene hattı jawlineCap() ile kalır. */
   caps?: Partial<Record<"skin" | "hair" | "grooming", number>>;
 };
@@ -26,7 +26,7 @@ export function jawlineCap(bodyFatContextAllowed: boolean, beardOption: boolean)
   return bodyFatContextAllowed || beardOption ? POTENTIAL.caps.jawline : POTENTIAL.jawlineCapWithoutLever;
 }
 
-export function effectiveGain(key: SubKey, input: PotentialInput): number {
+export function effectiveGain(key: SubKeyV1, input: PotentialInput): number {
   if (key === "harmony" || key === "eyes") return 0;
   const g = input.gains[key];
   if (input.linkedActions && (input.linkedActions[key]?.length ?? 0) === 0) return 0;

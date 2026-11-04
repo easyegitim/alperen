@@ -27,8 +27,16 @@ test.describe("Yasal sayfalar ve çerez banner'ı (F16)", () => {
     await expect(page.getByRole("dialog", { name: "Çerez tercihi" })).toHaveCount(0);
   });
 
-  test("onboarding ekranları oturumsuz açılışa döner (F03)", async ({ page }) => {
-    for (const path of ["/baslangic/yas", "/baslangic/izinler", "/baslangic/anket", "/tara", "/silme", "/hesap"]) {
+  test("onboarding ekranları oturumsuz: yaş/cinsiyet/giriş açılır, gerisi kapıya döner (F03, KB §3.1)", async ({ page }) => {
+    // v2: yaş → cinsiyet → hesap (Google/Apple) girişten önce gelir; bu üçü oturumsuz açılır.
+    for (const path of ["/baslangic/yas", "/baslangic/cinsiyet", "/baslangic/giris"]) {
+      await page.goto(path);
+      await expect(page).toHaveURL(new RegExp(`${path}$`));
+    }
+    // Rızalar oturum ister → giriş ekranı; uygulama ekranları açılışa döner.
+    await page.goto("/baslangic/izinler");
+    await expect(page).toHaveURL(/\/baslangic\/giris$/);
+    for (const path of ["/baslangic/anket", "/tara", "/silme", "/hesap"]) {
       await page.goto(path);
       await expect(page).toHaveURL(/\/$/);
     }

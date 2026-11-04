@@ -1,14 +1,17 @@
 import "server-only";
 
 import type Anthropic from "@anthropic-ai/sdk";
-import type { BetaMessage, MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import type { BetaContentBlockParam, BetaMessage, MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { GoogleGenAI } from "@google/genai";
 import { ApiError } from "@/lib/api/errors";
-import { ZERO_USAGE, estUsdByModel, getAiEnv, type AiEnv, type TokenUsage } from "@/lib/config/ai.server";
+import { ZERO_USAGE, estUsdByModel, getAiEnv, type AiEnv, type ModelUsage, type TokenUsage } from "@/lib/config/ai.server";
 import { COACH } from "@/lib/config/engine.server";
 import { SCORE_CALL_TIMEOUT_MS, SCORE_RETRIES, SCORE_RETRY_BASE_MS, getScoringEnv } from "@/lib/config/scoring";
 import { classifyAnthropicError, getAnthropic, readJsonText, readUsage, readUsageByModel, servedByFallback, summarizeAnthropicError, toAnthropicJsonSchema } from "./anthropic";
-import { SERVER_FALLBACK_BETA } from "./observeProvider";
+import type { ViewKey } from "@/lib/face/views";
+import { SERVER_FALLBACK_BETA, SampleError } from "./observeProvider";
+import { SCORE_V2_SYSTEM } from "./prompts/score.v2";
+import { ScoreOutputV2, normalizeScoreOutputV2 } from "./scoreSchema.v2";
 import { aiErrorSummary, isTransientAiError, withTransientRetry } from "./retry";
 import { COACH_REPORT_JSON_SCHEMA, CoachReport } from "./reportSchema";
 import { SCORE_OUTPUT_JSON_SCHEMA, ScoreOutput } from "./scoreSchema";
@@ -258,3 +261,117 @@ export function getReportProvider(env: AiEnv = getAiEnv()): ReportProvider {
 }
 
 export type { CoachReport };
+
+// ---------------------------------------------------------------------------------------------------------------------
+// hybrid.v2: Claude puan cetveli (PLAN_V2 3c; CONTRACTS_V2 §4). Tüm açılar tek kullanıcı mesajında, etiketli; sistem
+// istemi önbellekli; efor varsayılan medium; yanıt JSON şemasıyla. Tek çağrı = tek çalıştırma; ortanca ve yeniden
+// deneme lib/score/engine/consensus.ts'te. Görsel yalnız bu çağrı süresince bellekte; istem/görsel/çıktı loglanmaz.
+
+/** Görünüm etiketli base64 JPEG (data: öneki olmadan). */
+export type LabeledImage = { view: ViewKey; data: string };
+
+export type ScoreSampleV2 = { out: ScoreOutputV2; model: string; fallbackServed: boolean; usage: TokenUsage; usageByModel?: ModelUsage[] };
+
+export interface ScoringProviderV2 {
+  readonly model: string;
+  /** Bir cetvel çalıştırması. Hata her zaman SampleError olarak fırlatılır (neden: timeout/transient/refusal/max_tokens/schema/fatal). */
+  scoreOnce(images: readonly LabeledImage[], userText: string, signal: AbortSignal, timeoutMs: number): Promise<ScoreSampleV2>;
+}
+
+/**
+ * Düşünme + ~3–4k tokenlık Türkçe JSON (7 alt skor × 5 satır + 9 bölge). Opus 5.5'te düşünme kapatılamaz ve aynı bütçeyi
+ * paylaşır; medium eforda altı görselle 10k aşılabiliyordu (stop_reason max_tokens → ücretli çalıştırma boşa). 16k:
+ * çağrıya açık timeout verildiğinden SDK'nın akışsız sınırı devreye girmez. Aşılırsa output_tokens loglanır (ayar için).
+ */
+export const SCORE_V2_MAX_TOKENS = 16_000;
+
+/** Claude'a giden cetvel şeması: enum ve required korunur; sayısal/dizi sınırları sunucuda normalizeScoreOutputV2 ile kenetlenir. */
+export const SCORE_V2_JSON_SCHEMA = toAnthropicJsonSchema(ScoreOutputV2);
+
+const VIEW_LABEL_EN: Record<ViewKey, string> = {
+  front: "front view",
+  profile_left: "left side profile",
+  profile_right: "right side profile",
+  left45: "left 45-degree half profile",
+  right45: "right 45-degree half profile",
+  hairline: "hairline (forehead) view",
+};
+
+function parseScoreV2(text: string | null, meta: { usage: TokenUsage; usageByModel?: ModelUsage[]; model: string }): ScoreOutputV2 {
+  if (!text) throw new SampleError("schema", { ...meta, detail: "no text" });
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new SampleError("schema", { ...meta, detail: "json" });
+  }
+  const r = ScoreOutputV2.safeParse(json);
+  if (!r.success) throw new SampleError("schema", { ...meta, detail: "safeParse" });
+  return normalizeScoreOutputV2(r.data);
+}
+
+export class ClaudeScoringProvider implements ScoringProviderV2 {
+  readonly model: string;
+  private readonly env: AiEnv;
+  private readonly client?: Anthropic;
+  private readonly maxTokens: number;
+
+  /** client yalnız testte verilir (gerçek SDK + sahte fetch); üretimde getAnthropic() tekili kullanılır. */
+  constructor(opts: { env?: AiEnv; client?: Anthropic; maxTokens?: number } = {}) {
+    this.env = opts.env ?? getAiEnv();
+    this.model = this.env.claudeScoreModel;
+    this.client = opts.client;
+    this.maxTokens = opts.maxTokens ?? SCORE_V2_MAX_TOKENS;
+  }
+
+  /** İstek gövdesi: her görselin önünde İngilizce etiket, sonda bağlam metni. temperature/top_p/top_k, thinking, tool_choice, prefill yok. */
+  buildParams(images: readonly LabeledImage[], userText: string): MessageCreateParamsNonStreaming {
+    const content: BetaContentBlockParam[] = [];
+    images.forEach((img, i) => {
+      content.push({ type: "text", text: `Photo ${i + 1}: ${VIEW_LABEL_EN[img.view]}` });
+      content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: img.data } });
+    });
+    content.push({ type: "text", text: userText });
+    const params: MessageCreateParamsNonStreaming = {
+      model: this.model,
+      max_tokens: this.maxTokens,
+      system: [{ type: "text", text: SCORE_V2_SYSTEM, cache_control: { type: "ephemeral", ttl: this.env.cacheTtl } }],
+      messages: [{ role: "user", content }],
+      output_config: { effort: this.env.claudeScoreEffort, format: { type: "json_schema", schema: SCORE_V2_JSON_SCHEMA } },
+    };
+    if (this.env.claudeFallbacks === "default") {
+      params.betas = [SERVER_FALLBACK_BETA];
+      params.fallbacks = "default";
+    }
+    return params;
+  }
+
+  async scoreOnce(images: readonly LabeledImage[], userText: string, signal: AbortSignal, timeoutMs: number): Promise<ScoreSampleV2> {
+    let anthropic: Anthropic;
+    try {
+      anthropic = this.client ?? getAnthropic();
+    } catch (e) {
+      throw new SampleError("fatal", { detail: e instanceof ApiError ? e.message : "client" });
+    }
+    let res: BetaMessage;
+    try {
+      res = await anthropic.beta.messages.create(this.buildParams(images, userText), { signal, timeout: timeoutMs });
+    } catch (e) {
+      const reason = classifyAnthropicError(e, signal);
+      const status = typeof e === "object" && e !== null && "status" in e && typeof e.status === "number" ? e.status : undefined;
+      throw new SampleError(reason, { status, detail: summarizeAnthropicError(e) });
+    }
+    const meta = { usage: readUsage(res), usageByModel: readUsageByModel(res), model: res.model };
+    if (res.stop_reason === "refusal") throw new SampleError("refusal", { ...meta, category: res.stop_details?.category ?? null });
+    if (res.stop_reason === "max_tokens") {
+      console.warn(`[ai] score claude max_tokens output=${meta.usage.output} limit=${this.maxTokens}`);
+      throw new SampleError("max_tokens", meta);
+    }
+    const out = parseScoreV2(readJsonText(res).text, meta);
+    return { out, model: res.model, fallbackServed: servedByFallback(res), usage: meta.usage, usageByModel: meta.usageByModel };
+  }
+}
+
+export function getScoringProviderV2(env: AiEnv = getAiEnv()): ScoringProviderV2 {
+  return new ClaudeScoringProvider({ env });
+}

@@ -24,6 +24,11 @@ export type GeometryResult = {
     lowerToMiddle: number;
     thirds: { upper: number | null; middle: number; lower: number };
     hairlineFound: boolean;
+    /**
+     * fs-v2 (KB §4.10, PLAN 1d): saç çizgisi → çene ucu uzunluğu ÷ elmacık genişliği; saç çizgisi bulunmadıysa null
+     * (yüz şekli o zaman 10→152 uzunluğunu MESH_TOP_TO_HAIRLINE katsayısıyla ölçekler). Eski istemciler göndermez.
+     */
+    faceLengthRatio?: number | null;
     /** hybrid.v1 ek metrikleri (engine spec §1.2, C1). İsteğe bağlı: eski istemciler göndermez; sürüm "geo-v1" kalır. */
     ipdRatio?: number | null;
     eyeMouthRatio?: number | null;

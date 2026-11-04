@@ -1,7 +1,7 @@
 ---
 title: Kullanım Koşulları
-version: 2026-10-09.1
-updatedAt: 2026-10-09
+version: 2026-11-04.1
+updatedAt: 2026-11-04
 approved: false
 ---
 
@@ -10,7 +10,7 @@ approved: false
 1. **Yaş.** Hizmet yalnız 18 yaş ve üzeri kişiler içindir. 18 yaşından küçükseniz hizmeti kullanamazsınız.
 2. **Skorun niteliği.** Görünüm skoru yapay zekânın tek bir fotoğraf üzerinden yaptığı bir tahmindir; ışık, açı ve ifadeyle değişebilir. Kişisel değerinizi ölçmez; tıbbi, psikolojik veya hukuki bir değerlendirme değildir.
 3. **Tıbbi tavsiye değildir.** Uygulama teşhis koymaz; ilaç, takviye, cerrahi veya estetik işlem önermez. Sağlıkla ilgili her konuda bir hekime danışın. Egzersiz önerileri kas tonusu ve duruşa yöneliktir; ağrı olursa bırakın.
-4. **Yapay zekâ görselleri.** Sanal deneme görselleri temsilidir; gerçek sonuç kuaför veya berberin uygulamasına bağlıdır. Görseller "Yapay zekâ ile oluşturuldu" etiketi taşır.
+4. **Yapay zekâ görselleri.** Sanal deneme görselleri temsilidir; gerçek sonuç kuaför veya berberin uygulamasına bağlıdır. Görseller "Aura ile oluşturuldu · YZ simülasyonu" etiketi taşır.
 5. **Tek yüz ve kendi fotoğrafınız.** Yalnız kendi yüzünüzü analiz edebilirsiniz; başkalarının fotoğrafını yüklemek yasaktır.
 6. **Hesap.** Anonim başlayabilir, ödemeden önce e-posta veya Google ile hesabınızı kalıcı yaparsınız. Hesabınızı istediğiniz zaman silebilirsiniz.
 7. **Abonelik.** Fiyatlar, yenileme ve iptal koşulları Fiyatlar sayfasında ve Mesafeli Satış Sözleşmesi'nde yer alır.

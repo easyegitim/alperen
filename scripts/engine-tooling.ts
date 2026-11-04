@@ -10,7 +10,7 @@
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { ObservationOutput, type Observation } from "../lib/ai/observationSchema";
-import { SUB_KEYS, type SubKey } from "../lib/config/teaser";
+import { SUB_KEYS, type SubKeyV1 } from "../lib/config/teaser";
 import type { GeometryResult } from "../lib/face/types";
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -152,9 +152,9 @@ export function fieldKappas(a: Observation[], b: Observation[]): Record<string, 
  * Bakım alt skorları referans etrafında MOD_GAIN ile doğrusaldır (§4.1: sub = 5,5 + I + κ(D − I), D ve I ∝ MOD_GAIN).
  * Saklanan ham alt skorlar ve satır ağırlıklarıyla yeni g için genel skor; yapısal alt skorlar değişmez.
  */
-export function rescoreAtModGain(raw: Record<SubKey, number>, weights: Record<SubKey, number>, g: number, current = 1, reference = 5.5): number {
+export function rescoreAtModGain(raw: Record<SubKeyV1, number>, weights: Record<SubKeyV1, number>, g: number, current = 1, reference = 5.5): number {
   const scale = g / current;
-  const mod = new Set<SubKey>(["skin", "hair", "grooming"]);
+  const mod = new Set<SubKeyV1>(["skin", "hair", "grooming"]);
   const overall = SUB_KEYS.reduce((s, k) => s + weights[k] * (mod.has(k) ? reference + scale * (raw[k] - reference) : raw[k]), 0);
   return Math.round(Math.min(9.8, Math.max(1, overall)) * 10) / 10;
 }

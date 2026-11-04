@@ -103,7 +103,7 @@ export async function compositeTryonNative(cUri: string, landmarksC: Point[], gB
   }
 }
 
-/** "Yapay zekâ ile oluşturuldu" etiketini gömer (SPEC 10.7 indirme/paylaşma). */
+/** YZ etiketini (common.aiGenerated: "Aura ile oluşturuldu · YZ simülasyonu") gömer (SPEC 10.7 indirme/paylaşma). */
 export async function stampAiLabelBase64(uri: string, label: string): Promise<string> {
   const img = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(uri));
   if (!img) throw new Error("canvas");

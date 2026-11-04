@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowUpRight, Lock, Maximize2 } from "lucide-react";
+import { ArrowUpRight, Lock, Maximize2, ScanFace } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, type ReactNode } from "react";
 import { GeometryOverlay, type OverlayLayerKey, type OverlaySource } from "@/components/analysis/GeometryOverlay";
+import { LandmarkPortrait } from "@/components/analysis/LandmarkPortrait";
 import { LockedValue, fmtScore } from "@/components/analysis/LockedValue";
 import { OverlayDialog } from "@/components/analysis/OverlayDialog";
 import { ReferenceScale } from "@/components/analysis/ReferenceScale";
@@ -167,6 +168,66 @@ export function ScoreHero({
         </div>
       </Card>
       <OverlayDialog open={overlayOpen} onOpenChange={setOverlayOpen} source={source} notMeasured={notMeasured} />
+    </section>
+  );
+}
+
+// ─── v2 kilitli hero (KB §3.3: P#6, P#7, P#8, P#9) ──────────────────────────────────────────────────────────────────
+
+/**
+ * Ödeme öncesi: yuvarlak portre (noktalı) üstte; genel skor halkası herkeste aynı süs yayı + kilit (skoru ele vermez);
+ * potansiyel kilitli; yüz şekli ön değerlendirmesi (cihaz sonucu) açık ve en yakın ikinci şekille.
+ */
+export function ScoreHeroLocked({
+  faceShape,
+  source,
+  onLocked,
+}: {
+  faceShape: { primary: string; secondary?: string } | null;
+  source: OverlaySource | null;
+  onLocked: (t: PaywallTrigger) => void;
+}) {
+  const t = useTranslations("analysis");
+  const tg = useTranslations("geometry");
+  return (
+    <section aria-labelledby="hero-title">
+      <Card className="bg-hero-glow gap-0 overflow-hidden pt-6 pb-0">
+        <div className="flex flex-col items-center gap-4 px-5">
+          <LandmarkPortrait source={source} />
+          <h2 id="hero-title" className="eyebrow">
+            {t("overallTitle")}
+          </h2>
+          <ScoreRing value={null} size={176}>
+            <LockedValue v={{ value: null, locked: true }} big onTap={() => onLocked("score_main")} aria={t("locked.ringAria")} />
+          </ScoreRing>
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onLocked("score_potential")}
+              aria-label={t("lockedAriaFor", { name: t("hero.potentialLockedName") })}
+              className="border-brand-gradient inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-transform hover:scale-[1.02]"
+            >
+              <ArrowUpRight className="size-4 text-brand" aria-hidden="true" />
+              <span aria-hidden="true" className="num">
+                {t("hero.potentialLocked")}
+              </span>
+              <Lock className="size-3.5 text-muted-foreground" aria-hidden="true" />
+            </button>
+            <p className="text-xs text-muted-foreground">{t("hero.potentialCaption")}</p>
+          </div>
+          <p className="text-center text-[11px] leading-relaxed text-muted-foreground">{t("scoreNote")}</p>
+        </div>
+        <div className="mt-5 flex items-center gap-4 border-t bg-muted/40 px-5 py-4">
+          <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+            <ScanFace className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="eyebrow">{t("locked.faceShapePrelim")}</p>
+            <p className="text-xl font-semibold tracking-tight">{faceShape ? tg(`shapes.${faceShape.primary}`) : "–"}</p>
+            {faceShape?.secondary ? <p className="text-sm text-muted-foreground">{tg("nearTo", { other: tg(`shapes.${faceShape.secondary}`) })}</p> : null}
+          </div>
+        </div>
+      </Card>
     </section>
   );
 }

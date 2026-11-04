@@ -16,9 +16,27 @@ export type AnalyticsEvents = {
   analysis_completed: { tier: "free" | "premium" };
   analysis_failed: { reason: string };
   paywall_viewed: { trigger: string; teaserMode: string };
-  account_linked: { method: "email" | "google" };
+  account_linked: { method: "email" | "google" | "apple" };
+  // v2 ödeme öncesi akış (CONTRACTS_V2 §8): yalnız adım adları, açı adları ve sayılar; bant, cinsiyet, e-posta, skor yok.
+  sign_in_started: { method: "google" | "apple" | "email" };
+  onboarding_step_completed: { step: "age" | "age_under18_soon" | "gender" | "account" | "consents" };
+  /** view: ViewKey; source: kamera/galeri. */
+  capture_view_captured: { view: string; source: "camera" | "gallery" };
+  /** Galeriden çoklu seçim: kaç dosya seçildi, kaçı bir açıya yerleşti. */
+  capture_gallery_batch: { selected: number; assigned: number };
+  /** Kalite pop-up'ı (KB R1-E12): yalnız cevap. */
+  capture_quality_prompt: { answer: "yes" | "no" };
+  /** Cihaz analizi gönderildi: açı adları virgülle (ör. "front,profile_left"), sayı. */
+  device_analysis_submitted: { views: string; count: number; hashed: boolean };
+  device_analysis_completed: undefined;
+  /** Ödeme sonrası fotoğraf seti gönderildi (POST /api/analyses/[id]/run): açı adları ve sayı; resume = çekime dönüş. */
+  full_analysis_submitted: { views: string; count: number; hashed: boolean; resume: boolean };
+  referral_code_viewed: undefined;
+  referral_claimed: { ok: boolean };
   checkout_started: { plan: string };
   subscription_activated: { plan: string };
+  /** F14 v2: tek seferlik rapor ödemesi sunucuda doğrulandı (ürün adı; analiz kimliği, fiyat yok). */
+  purchase_completed: { product: string };
   subscription_canceled: { plan: string };
   report_viewed: undefined;
   tryon_started: { presetKind: "hair" | "beard" | "color" };
@@ -33,7 +51,7 @@ export type AnalyticsEvents = {
   overlay_opened: { source: "photo" | "schematic" };
   method_viewed: { from: MethodFrom };
   paywall_step_viewed: { step: "plans"; trigger: string };
-  paywall_plan_selected: { plan: "weekly" | "monthly" | "yearly" | "week_pass" };
+  paywall_plan_selected: { plan: "weekly" | "monthly" | "yearly" | "week_pass" | "one_time_report" };
   paywall_dismissed: { step: "benefits" | "plans" };
   capture_manual_offered: undefined;
   /** issue: QualityIssue kodu. */

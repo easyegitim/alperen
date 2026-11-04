@@ -29,3 +29,20 @@ export async function selectAnalysisRows(run: (columns: string) => PromiseLike<A
   if (!isMissingColumnError(full.error)) return full;
   return run(LEGACY_ANALYSIS_ROW_COLUMNS);
 }
+
+/**
+ * hybrid.v2 satırı (migration 0010; CONTRACTS_V2.md §5). `runs` (çalıştırma başına ham vektörler) ve `ai_usage`
+ * istemci yoluna seçilmez; rapor coach_reports'tan ayrı okunur (present.ts AnalysisRowV2.report).
+ */
+export const ANALYSIS_ROW_COLUMNS_V2 =
+  `${ANALYSIS_ROW_COLUMNS}, device_result, score_range, percentile, sections_ready, set_key` as const;
+
+/**
+ * v2 satır okuması: önce 0010 sütunları, "sütun yok" hatasında 0009 listesi, sonra eski liste (W1). 0010 uygulanmamış
+ * ortamda v2 alanları undefined kalır; present.ts cihaz sonucunu geometriden türetir (sahte değer yok).
+ */
+export async function selectAnalysisRowsV2(run: (columns: string) => PromiseLike<AnalysisRowsResult>): Promise<AnalysisRowsResult> {
+  const v2 = await run(ANALYSIS_ROW_COLUMNS_V2);
+  if (!isMissingColumnError(v2.error)) return v2;
+  return selectAnalysisRows(run);
+}

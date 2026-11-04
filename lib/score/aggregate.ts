@@ -2,10 +2,10 @@
 import { ApiError } from "@/lib/api/errors";
 import type { GainKey, ScoreOutput } from "@/lib/ai/scoreSchema";
 import { SUB_WEIGHTS } from "@/lib/config/scoring";
-import { SUB_KEYS, type SubKey } from "@/lib/config/teaser";
+import { SUB_KEYS, type SubKeyV1 } from "@/lib/config/teaser";
 
 export type Aggregated = {
-  rawSubscores: Record<SubKey, number>;
+  rawSubscores: Record<SubKeyV1, number>;
   rawOverall: number;
   gains: ScoreOutput["achievableGain"];
   observations: ScoreOutput["observations"];
@@ -20,7 +20,7 @@ export function median(values: number[]): number {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
-export function weightedOverall(sub: Record<SubKey, number>): number {
+export function weightedOverall(sub: Record<SubKeyV1, number>): number {
   return SUB_KEYS.reduce((sum, k) => sum + SUB_WEIGHTS[k] * sub[k], 0);
 }
 
@@ -36,7 +36,7 @@ export function aggregateScores(results: PromiseSettledResult<ScoreOutput>[]): A
   }
   const usable = ok.filter((r) => !r.flags.multiplePeopleOrNotAFace);
 
-  const rawSubscores = Object.fromEntries(SUB_KEYS.map((k) => [k, median(usable.map((r) => r.subscores[k]))])) as Record<SubKey, number>;
+  const rawSubscores = Object.fromEntries(SUB_KEYS.map((k) => [k, median(usable.map((r) => r.subscores[k]))])) as Record<SubKeyV1, number>;
   const rawOverall = weightedOverall(rawSubscores);
 
   // Metin alanları: ham genel skoru medyana en yakın olan çağrıdan.

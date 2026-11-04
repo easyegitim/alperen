@@ -79,7 +79,9 @@ function strictNode(node: unknown, at: string): Json {
 
 /** Zod şemasından Claude yapılandırılmış çıktı şeması (output_config.format.schema). enum'lar korunur. */
 export function toAnthropicJsonSchema(schema: z.ZodType): Record<string, unknown> {
-  return strictNode(z.toJSONSchema(schema), "$");
+  // reused: "ref" — tekrar eden alt şemalar (ör. 7 alt skorun ortak SubAssessment'ı) satır içi kopyalanmak yerine $defs'e
+  // çıkarılır; aksi hâlde derlenen gramer API sınırını aşıyor (400 "compiled grammar is too large", 4 Kas canlı duman testi).
+  return strictNode(z.toJSONSchema(schema, { reused: "ref" }), "$");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

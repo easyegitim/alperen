@@ -1,25 +1,24 @@
 import "server-only";
 
-import { SERVER_CAPTURE_GATE } from "@/lib/config/engine.server";
 import { classifyFaceShape } from "@/lib/face/faceShape";
 import type { GeometryResult } from "@/lib/face/types";
 
-// engine spec §3.6: reserve_analysis'ten ÖNCE çalışan sunucu çekim kapısı (hak düşmez; rota CAPTURE_QUALITY 422 döner).
-// İstemci kapısından geniştir; yalnız kurcalanmış veya eski çekimleri durdurur. brightness ten rengine bağlı yüz kırpımı
-// parlaklığıdır: yalnız kapıdır, hiçbir skora girmez. 0 = bilinmiyor (eski istemci / ölçüm yok). Üçte bir toplamı veya
-// L2M yeniden türetme kontrolü YOK (geçerli çekimleri reddederdi). Yüz şekli yeniden hesaplanır, asla reddedilmez.
+// Sunucu çekim kapısı, v2 (KB R1-E12/E14, PLAN 1d): ışık, netlik ve poz artık reddetmez (istemcide uyarı pop-up'ı;
+// kullanıcı "Evet" dediyse çekim kabul edilir). Sunucu yalnız "yüz yok" durumunu durdurur: geometri oranları sonlu
+// değilse ya da ölçek bozuksa (kurcalanmış/boş istemci) NO_FACE. reserve_analysis'ten ÖNCE çalışır; hak düşmez.
+// Yüz şekli sunucuda aynı fs-v2 fonksiyonuyla yeniden hesaplanır (face_shape sütunu ve device_result tek kaynak).
 
-export type CaptureGateResult = { ok: true; faceShape: GeometryResult["faceShape"] } | { ok: false; reason: "pose" | "light" | "blur" };
+export type CaptureGateResult = { ok: true; faceShape: GeometryResult["faceShape"] } | { ok: false; reason: "no_face" };
+
+const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
 export function checkServerCapture(g: GeometryResult): CaptureGateResult {
-  const q = g.quality;
-  const G = SERVER_CAPTURE_GATE;
-  const finite = (v: number) => Number.isFinite(v);
-  if (!finite(q.yaw) || !finite(q.pitch) || !finite(q.roll)) return { ok: false, reason: "pose" };
-  if (Math.abs(q.yaw) > G.yawMax || Math.abs(q.pitch) > G.pitchMax || Math.abs(q.roll) > G.rollMax) return { ok: false, reason: "pose" };
-  if (q.brightness > 0 && (q.brightness < G.brightness[0] || q.brightness > G.brightness[1])) return { ok: false, reason: "light" };
-  if (q.sharpness > 0 && q.sharpness < G.sharpnessMin) return { ok: false, reason: "blur" };
-  return { ok: true, faceShape: classifyFaceShape(g.metrics) };
+  const m = g.metrics;
+  const core = [m.lengthRatio, m.jawRatio, m.foreheadRatio, m.fwhr, m.canthalTiltDeg, m.lowerToMiddle, m.thirds.middle, m.thirds.lower];
+  if (!core.every(finite)) return { ok: false, reason: "no_face" };
+  // Oranlar pozitif olmalı (yüz yoksa istemci bunları üretemez); şema zaten aralık uygular, burası son savunma.
+  if (m.lengthRatio <= 0 || m.jawRatio <= 0 || m.foreheadRatio <= 0 || m.fwhr <= 0) return { ok: false, reason: "no_face" };
+  return { ok: true, faceShape: classifyFaceShape(m) };
 }
 
 /** Rotanın satıra yazacağı geometri: geometry.faceShape sunucu hesabıyla değiştirilir (face_shape sütunuyla aynı). */

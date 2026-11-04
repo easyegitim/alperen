@@ -70,11 +70,12 @@ describe("prepareScoring (reserve_analysis öncesi)", () => {
     expect(prepareScoring(GEO, { ...HYBRID, VERCEL_ENV: "preview" }).engine).toBe("hybrid.v1");
   });
 
-  it("sunucu çekim kapısı → CAPTURE_QUALITY (poz, ışık, bulanıklık)", () => {
-    expectApiError(() => prepareScoring(geo({ quality: { yaw: 13 } }), HYBRID), "CAPTURE_QUALITY");
-    expectApiError(() => prepareScoring(geo({ quality: { pitch: -16 } }), HYBRID), "CAPTURE_QUALITY");
-    expectApiError(() => prepareScoring(geo({ quality: { brightness: 50 } }), HYBRID), "CAPTURE_QUALITY");
-    expectApiError(() => prepareScoring(geo({ quality: { sharpness: 30 } }), HYBRID), "CAPTURE_QUALITY");
+  it("sunucu çekim kapısı v2 (KB R1-E12/E14): poz, ışık, bulanıklık reddetmez; yalnız yüz yok → CAPTURE_QUALITY (capture_no_face)", () => {
+    expect(prepareScoring(geo({ quality: { yaw: 13 } }), HYBRID).engine).toBe("hybrid.v1");
+    expect(prepareScoring(geo({ quality: { pitch: -16 } }), HYBRID).engine).toBe("hybrid.v1");
+    expect(prepareScoring(geo({ quality: { brightness: 50 } }), HYBRID).engine).toBe("hybrid.v1");
+    expect(prepareScoring(geo({ quality: { sharpness: 30 } }), HYBRID).engine).toBe("hybrid.v1");
+    expectApiError(() => prepareScoring(geo({ metrics: { lengthRatio: Number.NaN } }), HYBRID), "CAPTURE_QUALITY");
   });
 
   it("brightness/sharpness 0 = bilinmiyor → geçer; faceShape sunucuda yeniden hesaplanır, reddedilmez", () => {
@@ -166,8 +167,8 @@ describe("scoreAnalysis dağıtımı", () => {
     expect(usage).not.toBeNull();
   });
 
-  it("hybrid.v1 doğrudan çağrıda da çekim kapısı uygulanır", async () => {
-    await expect(scoreAnalysis(IMG, geo({ quality: { roll: 11 } }), ACTX, { engine: "hybrid.v1", observationProvider: new FakeProvider([ok(REF_OBS)]) })).rejects.toMatchObject({
+  it("hybrid.v1 doğrudan çağrıda da çekim kapısı uygulanır (yüz yok)", async () => {
+    await expect(scoreAnalysis(IMG, geo({ metrics: { jawRatio: Number.NaN } }), ACTX, { engine: "hybrid.v1", observationProvider: new FakeProvider([ok(REF_OBS)]) })).rejects.toMatchObject({
       code: "CAPTURE_QUALITY",
     });
   });

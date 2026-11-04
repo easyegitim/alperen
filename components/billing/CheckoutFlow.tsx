@@ -3,7 +3,7 @@
 import { BadgeCheck, Check, CreditCard, Lock, ReceiptText, RefreshCw, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { LinkAccount } from "@/components/auth/LinkAccount";
 import { Button } from "@/components/ui/button";
@@ -12,19 +12,39 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { track } from "@/lib/analytics";
 import { ApiClientError, postJson } from "@/lib/api/client";
-import { DEFAULT_PLAN_ID, PLANS, SUBSCRIPTION_PLAN_IDS, formatTry, weeklyEquivalentTry, type SubscriptionPlanId } from "@/lib/config/plans";
+import type { OfferResponse } from "@/lib/billing/offer";
+import { PLANS, formatTry, type ProductId } from "@/lib/config/plans";
 import { cn } from "@/lib/utils";
+import { OfferCountdown } from "@/components/paywall/OfferCountdown";
+import { productViews, type ProductView } from "@/components/paywall/PaywallSheet";
 import { PlanBody, PlanCheck, PlanRibbon, planCardClass } from "@/components/billing/PlanOption";
 
-type PlanChoice = SubscriptionPlanId | "week_pass";
-type Props = { isAnonymous: boolean; initialPlan: PlanChoice; weekPassEnabled: boolean; alreadyPremium: boolean; analysisId?: string };
+type PlanChoice = ProductId | "week_pass";
+type Props = {
+  isAnonymous: boolean;
+  /** Sunucunun hesapladığı ürün görünümleri (fiyat, tanıtım); yer tutucu fiyatla (null) satış yapılmaz. */
+  products: ProductView[];
+  initialProduct: PlanChoice;
+  weekPassEnabled: boolean;
+  alreadyPremium: boolean;
+  analysisId?: string;
+  /** Sunucu süreli teklif (KB P#18); null = teklif yok. */
+  offer: OfferResponse | null;
+};
 
-/** SPEC 15.2: plan → hesap bağlama (anonimse) → fatura formu + 2 onay → iyzico formu. Kart bilgisi iyzico formunda girilir. */
-export function CheckoutFlow({ isAnonymous, initialPlan, weekPassEnabled, alreadyPremium, analysisId }: Props) {
+/** SPEC 15.2 / KB §3.4: ürün → hesap bağlama (anonimse) → fatura formu + 2 onay → iyzico formu. Kart bilgisi iyzico formunda girilir. */
+export function CheckoutFlow({ isAnonymous, products: initialProducts, initialProduct, weekPassEnabled, alreadyPremium, analysisId, offer }: Props) {
   const t = useTranslations("checkout");
-  const tp = useTranslations("pricing");
-  const tw = useTranslations("paywall");
-  const [plan, setPlan] = useState<PlanChoice>(initialPlan);
+  const tv = useTranslations("paywall.v2");
+  const [plan, setPlan] = useState<PlanChoice>(initialProduct);
+  const [skewMs] = useState(() => (offer ? new Date(offer.serverNow).getTime() - Date.now() : 0));
+  // Sayaç 0'a inince tanıtım fiyatı ekrandan düşer: kartlar ve "Devam · ₺" düğmesi sunucunun o an tahsil edeceği normal
+  // fiyatı gösterir (KB P#18: gösterilen fiyat gerçek fiyattır; checkout fiyatı gönderim anında yeniden hesaplar).
+  const [offerEnded, setOfferEnded] = useState(false);
+  const onOfferEnded = useCallback(() => setOfferEnded(true), []);
+  const products = offerEnded && offer ? productViews(offer, false) : initialProducts;
+  const selected = products.find((p) => p.id === plan);
+  const amount: number | null = plan === "week_pass" ? PLANS.week_pass.priceTry : (selected?.priceTry ?? null);
   const [linked, setLinked] = useState(!isAnonymous);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ name: "", surname: "", gsmNumber: "", identityNumber: "", city: "", address: "" });
@@ -56,7 +76,7 @@ export function CheckoutFlow({ isAnonymous, initialPlan, weekPassEnabled, alread
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!terms || !waiver) return;
+    if (!terms || !waiver || amount == null) return;
     setBusy(true);
     try {
       track("checkout_started", { plan });
@@ -113,19 +133,20 @@ export function CheckoutFlow({ isAnonymous, initialPlan, weekPassEnabled, alread
     <div className="space-y-5">
       <Stepper current={current} />
       <section aria-labelledby="plan-h" className="space-y-2.5">
-        <h2 id="plan-h" className="eyebrow">{t("choosePlan")}</h2>
+        <h2 id="plan-h" className="eyebrow">{t("chooseProduct")}</h2>
+        {offer ? <OfferCountdown offer={offer} skewMs={skewMs} onEnded={onOfferEnded} /> : null}
         <div className="grid gap-2.5">
-          {SUBSCRIPTION_PLAN_IDS.map((id) => (
+          {products.map((p) => (
             <PlanButton
-              key={id}
-              selected={plan === id}
-              onSelect={() => setPlan(id)}
-              featuredLabel={id === DEFAULT_PLAN_ID ? tw("bestValue") : null}
-              name={tp(`plans.${id}.name`)}
-              price={formatTry(PLANS[id].priceTry)}
-              per={`/ ${tp(PER_KEY[id])}`}
-              detail={id === "weekly" ? null : tp("weeklyEquivalent", { amount: formatTry(weeklyEquivalentTry(id)) })}
-              badge={id !== "weekly" ? tp(`plans.${id}.badge`) : null}
+              key={p.id}
+              selected={plan === p.id}
+              onSelect={() => setPlan(p.id)}
+              featuredLabel={null}
+              name={tv(`products.${p.id}.name`)}
+              price={p.priceTry == null ? "–" : formatTry(p.priceTry)}
+              per={p.id === "one_time_report" || p.priceTry == null ? undefined : tv(`perPeriod.${p.id}`)}
+              detail={p.id === "one_time_report" && analysisId ? tv("thisAnalysisNote") : tv(`products.${p.id}.note`)}
+              badge={p.priceTry == null ? tv("pricePending") : p.struckTry != null ? tv("regularStruck", { price: formatTry(p.struckTry), promo: formatTry(p.priceTry) }) : null}
             />
           ))}
           {weekPassEnabled ? (
@@ -197,11 +218,11 @@ export function CheckoutFlow({ isAnonymous, initialPlan, weekPassEnabled, alread
               </label>
               <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
                 <RefreshCw aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-                <span>{t("renewalNote")}</span>
+                <span>{plan === "one_time_report" || plan === "week_pass" ? tv("oneTimeNote") : t("renewalNote")}</span>
               </p>
-              <Button type="submit" size="lg" className="w-full" disabled={!terms || !waiver || busy}>
+              <Button type="submit" size="lg" className="w-full" disabled={!terms || !waiver || busy || amount == null}>
                 <Lock aria-hidden="true" />
-                {t("continue", { amount: formatTry(PLANS[plan].priceTry) })}
+                {amount == null ? t("pricePendingCta") : t("continue", { amount: formatTry(amount) })}
               </Button>
               <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
                 <ShieldCheck aria-hidden="true" className="size-3.5" />
@@ -216,7 +237,6 @@ export function CheckoutFlow({ isAnonymous, initialPlan, weekPassEnabled, alread
 }
 
 const INPUT = "h-11 rounded-xl bg-background/60 text-[15px]";
-const PER_KEY: Record<SubscriptionPlanId, "perWeek" | "perMonth" | "perYear"> = { weekly: "perWeek", monthly: "perMonth", yearly: "perYear" };
 const STEPS = ["plan", "account", "billing", "pay"] as const;
 type Step = (typeof STEPS)[number];
 

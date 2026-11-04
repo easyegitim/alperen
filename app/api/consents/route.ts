@@ -2,6 +2,7 @@ import { z } from "zod";
 import { offersAnalysisDeletion } from "@/lib/account/consents";
 import { ApiError } from "@/lib/api/errors";
 import { noContent, withGuard } from "@/lib/api/guard";
+import { markBoundPurchasesConsumed } from "@/lib/billing/purchases";
 import { CONSENT_DOC, CONSENT_TYPES } from "@/lib/consent";
 import { createAdminClient } from "@/lib/db/admin";
 import { getLegalVersion } from "@/lib/legal/docs";
@@ -28,14 +29,20 @@ export const POST = withGuard({ schema: Input }, async ({ user, supabase, input 
     .insert({ user_id: user.id, type: input.type, granted: input.granted, text_version: input.textVersion });
   if (error) throw new Error("rıza kaydedilemedi");
 
-  // Geri alma etkisi: yalnız biometric_processing + deleteAnalyses (varsayılan evet) → analyses ve coach_reports silinir.
-  // analyses'e tarayıcı politikası yoktur; silme service role ile ve yalnız bu kullanıcının satırlarında.
+  // Geri alma etkisi: yalnız biometric_processing + deleteAnalyses (varsayılan evet) → analyses, coach_reports ve
+  // fotoğraflardan türetilmiş set önbelleği (analysis_sets: skor + rapor, KB Ç11/K21) silinir. Tabloların tarayıcı
+  // politikası yoktur; silme service role ile ve yalnız bu kullanıcının satırlarında. Bağlı tek seferlik satın almalar
+  // tüketilmiş kalır (analysis_id FK "set null" olsa da consumed_at dolu; bir satın alma = bir rapor).
   if (offersAnalysisDeletion(input.type, input.granted) && input.deleteAnalyses !== false) {
     const admin = createAdminClient();
+    await markBoundPurchasesConsumed(admin, user.id);
     const { error: e1 } = await admin.from("coach_reports").delete().eq("user_id", user.id);
     if (e1) throw new Error("raporlar silinemedi");
     const { error: e2 } = await admin.from("analyses").delete().eq("user_id", user.id);
     if (e2) throw new Error("analizler silinemedi");
+    const { error: e3 } = await admin.from("analysis_sets").delete().eq("user_id", user.id);
+    // 0010 uygulanmamış ortamda tablo yoktur; diğer hatalar gerçek.
+    if (e3 && !["42P01", "PGRST205"].includes(e3.code ?? "")) throw new Error("set önbelleği silinemedi");
   }
   return noContent();
 });

@@ -22,3 +22,17 @@ export function selectableBirthYears(currentYear: number = currentYearIstanbul()
   for (let y = currentYear; y >= MIN_BIRTH_YEAR; y--) years.push(y);
   return years;
 }
+
+// ── v2: yaş bandı (KB P#1/Ç1, CONTRACTS_V2 §5) ───────────────────────────────────────────────────────────────────────
+/** Umax tarzı serbest liste; under_18 FEATURE_UNDER_18 kapalıyken "yakında" ekranına düşer (PLAN Ç-G). */
+export const AGE_BANDS = ["under_18", "18_24", "25_34", "35_49", "50_plus"] as const;
+export type AgeBand = (typeof AGE_BANDS)[number];
+
+export function isAgeBand(v: unknown): v is AgeBand {
+  return typeof v === "string" && (AGE_BANDS as readonly string[]).includes(v);
+}
+
+/** is_adult = band under_18 değil (sunucu yazar; under_18 sütunu generated). */
+export function isAdultByAgeBand(band: AgeBand): boolean {
+  return band !== "under_18";
+}

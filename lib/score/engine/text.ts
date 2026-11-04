@@ -2,7 +2,7 @@ import "server-only";
 
 import type { Observation } from "@/lib/ai/observationSchema";
 import { CATEGORY_DELTAS, REF_CATEGORY, SCORED_ITEMS, type ComponentKey, type ItemKey } from "@/lib/config/engine.server";
-import type { SubKey } from "@/lib/config/teaser";
+import type { SubKeyV1 } from "@/lib/config/teaser";
 import {
   CAPTURE_HINTS,
   type CaptureHint,
@@ -133,8 +133,8 @@ const MOD_EXPLAIN: Partial<Record<ItemKey, ModExplainKey>> = {
  * Alt skor başına açıklama öğeleri (contract.ts biçimi). Yapısal: yalnız measured / not_measured (yüzü yargılayan
  * durum yok). Geliştirilebilir: best / partial / unclear; uygulanmaz öğe ve evenness listelenmez; hariç saç yazılmaz.
  */
-export function composeExplain(mod: ModifiableResult, struct: StructuralResult): Partial<Record<SubKey, ExplainItem[]>> {
-  const out: Partial<Record<SubKey, ExplainItem[]>> = {};
+export function composeExplain(mod: ModifiableResult, struct: StructuralResult): Partial<Record<SubKeyV1, ExplainItem[]>> {
+  const out: Partial<Record<SubKeyV1, ExplainItem[]>> = {};
   for (const c of struct.components) {
     (out[c.sub] ??= []).push({ key: STRUCT_EXPLAIN[c.key], status: c.status });
   }
