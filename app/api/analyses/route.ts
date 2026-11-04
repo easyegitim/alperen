@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/api/errors";
 import { withGuard } from "@/lib/api/guard";
-import { AnalysisInput, decodeJpeg } from "@/lib/api/analysesInput";
+import { AnalysisInputSchema, decodeJpeg } from "@/lib/api/analysesInput";
 import { getPremiumStatus } from "@/lib/api/premium";
 import { isUnlimitedQuota } from "@/lib/api/quota";
 import { effectiveLimit } from "@/lib/billing/entitlement";
@@ -23,9 +23,13 @@ export const maxDuration = 60;
  * Görsel bellekte işlenir, AI sağlayıcısına iletilir, hiçbir yere yazılmaz/loglanmaz.
  */
 export const POST = withGuard(
-  { schema: AnalysisInput, requireAdult: true, requireConsents: REQUIRED_ANALYSIS_CONSENTS },
+  { schema: AnalysisInputSchema, requireAdult: true, requireConsents: REQUIRED_ANALYSIS_CONSENTS },
   async ({ user, supabase, input }) => {
-    const decoded = decodeJpeg(input.image);
+    // v2 gövdesi (images[]/mode) şemada kabul edilir (CONTRACTS_V2 §2); motor ve arka plan işi Faz 3'te (F07) bağlanır.
+    // O zamana kadar yalnız eski tek selfie yolu çalışır; v2 isteği açık hata alır (sahte başarı yok).
+    const front = input.images.find((i) => i.view === "front");
+    if (!input.legacy || !front) throw new ApiError("BAD_INPUT", "Çoklu açı analizi henüz açık değil.");
+    const decoded = decodeJpeg(front.data);
     if ("error" in decoded) {
       throw new ApiError(decoded.error, decoded.error === "IMAGE_TOO_LARGE" ? "Görsel 600 KB'ı aşıyor." : "Görsel JPEG değil.");
     }
@@ -76,7 +80,7 @@ export const POST = withGuard(
 
     let aiUsage: AiUsage | null = null;
     try {
-      const scored = await scoreAnalysis(input.image, prepared.geometry, ctx, {
+      const scored = await scoreAnalysis(front.data, prepared.geometry, ctx, {
         engine: prepared.engine,
         onUsage: (u) => {
           aiUsage = u;

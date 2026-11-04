@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AnalysisInput, decodeJpeg } from "@/lib/api/analysesInput";
+import { AnalysisInputRaw as AnalysisInput, decodeJpeg } from "@/lib/api/analysesInput";
 
 const jpegBytes = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 1)]);
 const geometry = {

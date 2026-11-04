@@ -24,11 +24,11 @@ export const NEUTRAL_PROVIDER_NAME = "yapay zekâ";
 export function getPublicEngineInfo(env: Record<string, string | undefined> = process.env): PublicEngineInfo {
   const engine = getScoreEngine(env);
   const named = isFeatureEnabled("providerNames", env);
-  const analysisProvider = engine === "hybrid.v1" ? "Anthropic (Claude)" : "Google (Gemini)";
+  const analysisProvider = engine === "legacy" ? "Google (Gemini)" : "Anthropic (Claude)";
   const tryonProvider = (env.TRYON_PROVIDER || "gemini") === "fal" ? "fal.ai" : "Google (Gemini)";
   return {
     engine,
-    calibrationVersion: engine === "hybrid.v1" ? "h1" : getScoringEnv(env).calibrationVersion,
+    calibrationVersion: engine === "hybrid.v1" ? "h1" : engine === "hybrid.v2" ? "h2" : getScoringEnv(env).calibrationVersion,
     analysisProvider: named ? analysisProvider : NEUTRAL_PROVIDER_NAME,
     tryonProvider: named ? tryonProvider : NEUTRAL_PROVIDER_NAME,
     structuralSharePct: engine === "hybrid.v1" ? HYBRID_STRUCTURAL_SHARE_PCT : null,

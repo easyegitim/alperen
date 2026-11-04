@@ -127,7 +127,7 @@ export function geometryDrift(
   return { length: Math.abs(length), jaw: Math.abs(jaw), ok: driftOk({ length, jaw }, policy) };
 }
 
-/** "Yapay zekâ ile oluşturuldu" etiketini görsele gömer (SPEC 10.7 indirme). */
+/** YZ etiketini (common.aiGenerated: "Aura ile oluşturuldu · YZ simülasyonu") görsele gömer (SPEC 10.7 indirme). */
 export async function stampAiLabel(image: ImageBitmap, label: string): Promise<Blob> {
   const canvas = new OffscreenCanvas(image.width, image.height);
   const ctx = canvas.getContext("2d");

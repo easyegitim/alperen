@@ -3,6 +3,8 @@
 import { describe, expect, it } from "vitest";
 import tr from "@/messages/tr.json";
 import { normalizeTr } from "@/lib/ai/safety";
+import { SUB_KEYS_V2 } from "@/lib/config/teaser";
+import { VIEW_KEYS } from "@/lib/face/views";
 import { CAPTURE_HINTS, LEVER_KEYS, MOD_EXPLAIN_KEYS, NOT_ASSESSED_REASONS, STRUCTURAL_EXPLAIN_KEYS } from "@/lib/score/contract";
 
 type Tree = { [k: string]: string | Tree };
@@ -101,11 +103,31 @@ const WALKED = [
   "progress.trendEmptyBody",
   "progress.trendNextSlot",
   "method",
+  // v2 (CONTRACTS_V2.md §7): KB'nin karara bağladığı metinler ve ayrılan ad alanları
+  "common.aiGenerated",
+  "auth.signIn",
+  "onboarding.age.bands",
+  "onboarding.gender",
+  "camera.views",
+  "camera.qualityPrompt",
+  "analysis.sub.brows",
+  "analysis.scoreNote",
+  "analysis.competitorsNote",
+  "analysis.rangeLabel",
+  "analysis.percentile",
+  "analysis.noChange",
+  "analysis.explain5",
+  "analysis.locked",
+  "analysis.faceShapeV2",
+  "analysis.stage",
+  "paywall.v2",
 ];
 const walked = WALKED.flatMap(leaves);
 
 // "kötüye kullanım" (hukuki terim, method.data.photo) yargı değildir; yalnız bu kalıp muaf.
-const BANNED = /cirkin|kotu(?!ye kullanim)|kusur|zayif|problem|sorun|\bpsl\b|\bmog|chad|incel|yuzdelik dilim|ortalama/;
+// "sonuç zayıf olabilir" (KB §3.1 kalite pop-up'ı) fotoğrafı tarif eder; "iyi ya da kötü anlamı taşımaz" (KB P§1 oran
+// notu) yargının yokluğunu söyler. Yalnız bu iki KARAR kalıbı muaf.
+const BANNED = /cirkin|kotu(?!ye kullanim| anlami tasimaz)|kusur|zayif(?! olabilir)|problem|sorun|\bpsl\b|\bmog|chad|incel|yuzdelik dilim|ortalama/;
 const UNPUBLISHED_METHOD_CLAIM = /diger alanlardan hesapla|notr deger|uc degerlere gitmez|temkinli degerlendirilir/;
 const ASKS_TO_SHOW_HAIR = /sacinin ust kismi|basini ac|sacini goster/;
 
@@ -149,6 +171,24 @@ describe("tr.json ton koruması (yeni ve değişen metinler)", () => {
 
   it("hiçbir metin saçı göstermeyi, başı açmayı istemez", () => {
     for (const [path, v] of [...walked, ...leaves("camera.warnings")]) expect(normalizeTr(v), path).not.toMatch(ASKS_TO_SHOW_HAIR);
+  });
+
+  it("KB'nin karara bağladığı metinler birebir (CONTRACTS_V2 §7)", () => {
+    expect(at("common.aiGenerated")).toBe("Aura ile oluşturuldu · YZ simülasyonu");
+    expect(at("camera.qualityPrompt.body")).toBe("Işık yetersiz ya da fotoğraf bulanık; sonuç zayıf olabilir. Yine de devam edilsin mi?");
+    expect(at("camera.qualityPrompt.yes")).toBe("Evet");
+    expect(at("camera.qualityPrompt.no")).toBe("Hayır");
+    expect(at("analysis.locked.ratiosNote")).toBe("Bu oranlar yalnız tarif eder; iyi ya da kötü anlamı taşımaz. Skorlamaya bağlam olarak gider.");
+    expect(at("analysis.scoreNote")).toBe("Bu skor yapay zekânın fotoğraf üzerinden tahminidir; ışık ve açıyla değişebilir, kişisel değerini ölçmez.");
+    expect(at("analysis.percentile")).toBe("İnsanların %{p}'inden yüksek");
+    expect(keysOf("onboarding.age.bands")).toEqual(["18_24", "25_34", "35_49", "50_plus", "under_18"]);
+    expect(keysOf("onboarding.gender.options")).toEqual(["female", "male", "unspecified"]);
+    expect(keysOf("analysis.sub")).toEqual([...SUB_KEYS_V2].sort());
+    expect(keysOf("camera.views").filter((k) => (VIEW_KEYS as readonly string[]).includes(k)).sort()).toEqual([...VIEW_KEYS].sort());
+    expect(keysOf("analysis.explain5", "structuralNote")).toEqual(["confidenceNote", "held", "lookedAt", "lowered", "raise"]);
+    // "ücretsiz" sözü paywall'da yok (KB R2-Ö5); Yapısal/Geliştirilebilir rozetleri v2 ekranında kullanılmaz
+    for (const [path, v] of leaves("paywall.v2")) expect(normalizeTr(v), path).not.toMatch(/ucretsiz|bedava/);
+    expect(JSON.stringify(tr)).not.toContain("Yapay zekâ ile oluşturuldu");
   });
 
   it("e2e metinleri korunur (UI spec §8.4)", () => {

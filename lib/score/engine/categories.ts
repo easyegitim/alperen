@@ -14,7 +14,7 @@ import {
   WEIGHTS_H1_HAIR_EXCLUDED,
   type ItemKey,
 } from "@/lib/config/engine.server";
-import type { SubKey } from "@/lib/config/teaser";
+import type { SubKeyV1 } from "@/lib/config/teaser";
 import { MOD_SUBS, type ModSub, type NotAssessed } from "@/lib/score/contract";
 import type { HybridContext, ItemSignal } from "./types";
 
@@ -29,7 +29,7 @@ export type ModifiableResult = {
   /** Skorda kullanılan etkin kategori (zorlanmış unclear / not_applicable dahil). */
   effective: Record<ItemKey, string>;
   notAssessed: NotAssessed[];
-  weights: Record<SubKey, number>;
+  weights: Record<SubKeyV1, number>;
   /** Güven çarpanı; 0 → fotoğraf nedeniyle değerlendirilmedi. */
   kappa: Record<ModSub, number>;
   hairExcluded: boolean;

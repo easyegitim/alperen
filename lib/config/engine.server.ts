@@ -3,7 +3,7 @@ import "server-only";
 import type { LeverItemKey } from "@/content/levers";
 import type { Observation } from "@/lib/ai/observationSchema";
 import { OBSERVE_MAX_TOKENS, type EngineStatus } from "@/lib/config/ai.server";
-import type { SubKey } from "@/lib/config/teaser";
+import type { SubKeyV1 } from "@/lib/config/teaser";
 import type { ModSub } from "@/lib/score/contract";
 
 // hybrid.v1 motor yapılandırması (engine spec §1.1, §3–6). Yalnız sunucu: bantlar, ağırlıklar, deltalar, kapılar ve
@@ -22,9 +22,9 @@ export const ENGINE_STATUS: EngineStatus = { norms: "provisional", categories: "
 export const ENGINE_NORMS_ID = "prior-2026-10";
 
 /** §5.1: 0,40 yapı (yalnız ceza) + 0,60 geliştirilebilir alanlar. */
-export const WEIGHTS_H1: Record<SubKey, number> = { harmony: 0.15, eyes: 0.1, jawline: 0.15, skin: 0.2, hair: 0.2, grooming: 0.2 };
+export const WEIGHTS_H1: Record<SubKeyV1, number> = { harmony: 0.15, eyes: 0.1, jawline: 0.15, skin: 0.2, hair: 0.2, grooming: 0.2 };
 /** §4.4: saç hariç (beyan edilen başörtüsü veya başta görünür saç yok). Saç ağırlığı yalnız cilt ve bakıma gider; yapı 0,40 kalır. */
-export const WEIGHTS_H1_HAIR_EXCLUDED: Record<SubKey, number> = { harmony: 0.15, eyes: 0.1, jawline: 0.15, skin: 0.3, hair: 0, grooming: 0.3 };
+export const WEIGHTS_H1_HAIR_EXCLUDED: Record<SubKeyV1, number> = { harmony: 0.15, eyes: 0.1, jawline: 0.15, skin: 0.3, hair: 0, grooming: 0.3 };
 
 /** Referans profilin her alt skoru ve geneli. amp: yapısal alt skor ∈ [5,5 − amp, 5,5]. */
 export const STRUCT = { reference: 5.5, amp: 2.0 } as const;

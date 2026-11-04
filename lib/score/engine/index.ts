@@ -6,7 +6,7 @@ import { SampleError, getObservationProvider, type ObservationProvider, type Obs
 import { ApiError } from "@/lib/api/errors";
 import { ZERO_USAGE, assertEngineReady, estUsd, getAiEnv, type ModelUsage, type TokenUsage } from "@/lib/config/ai.server";
 import { ENGINE, ENGINE_NORMS_ID, ENGINE_STATUS, MOD_GAIN, OBSERVE, POTENTIAL_H1 } from "@/lib/config/engine.server";
-import { SUB_KEYS, type SubKey } from "@/lib/config/teaser";
+import { SUB_KEYS, type SubKeyV1 } from "@/lib/config/teaser";
 import type { GeometryResult } from "@/lib/face/types";
 import { calibrate } from "@/lib/score/calibration";
 import { computePotential } from "@/lib/score/potential";
@@ -288,11 +288,11 @@ function summarizeUsage(calls: number, attempts: number, byModel: Map<string, To
 export function scoreFromVotes(geometry: GeometryResult, ctx: HybridContext, final: Observation) {
   const struct = scoreStructural(geometry, { beardOverJaw: final.grooming.facialHair === "short_beard" || final.grooming.facialHair === "full_beard" });
   const mod = scoreModifiable(final, ctx);
-  const raw: Record<SubKey, number> = { ...struct.subs, ...mod.subs };
+  const raw: Record<SubKeyV1, number> = { ...struct.subs, ...mod.subs };
   const weights = mod.weights;
   const rawOverall = SUB_KEYS.reduce((s, k) => s + weights[k] * raw[k], 0);
   const overall = calibrate(rawOverall, "h1");
-  const subscores = Object.fromEntries(SUB_KEYS.map((k) => [k, calibrate(raw[k], "h1")])) as Record<SubKey, number>;
+  const subscores = Object.fromEntries(SUB_KEYS.map((k) => [k, calibrate(raw[k], "h1")])) as Record<SubKeyV1, number>;
   const { gains, perItem, subGains } = deriveGains(final, mod, leverLabel);
   const potential = computePotential({
     rawSubscores: raw,
@@ -304,7 +304,7 @@ export function scoreFromVotes(geometry: GeometryResult, ctx: HybridContext, fin
     caps: POTENTIAL_H1.caps,
     calibrate: (r) => calibrate(r, "h1"),
   });
-  const rawRounded = Object.fromEntries(SUB_KEYS.map((k) => [k, Math.round(raw[k] * 1000) / 1000])) as Record<SubKey, number>;
+  const rawRounded = Object.fromEntries(SUB_KEYS.map((k) => [k, Math.round(raw[k] * 1000) / 1000])) as Record<SubKeyV1, number>;
   return {
     subscores,
     rawRounded,

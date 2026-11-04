@@ -4,15 +4,36 @@ import { z } from "zod";
 export const TEASER_MODES = ["shape_plus_one", "overall_only", "shape_only"] as const;
 export type TeaserMode = (typeof TEASER_MODES)[number];
 
-export const SUB_KEYS = ["harmony", "eyes", "jawline", "skin", "hair", "grooming"] as const;
-export type SubKey = (typeof SUB_KEYS)[number];
+/** legacy ve hybrid.v1 motorlarının 6 alt skoru (SPEC 8.1). Bu motorların şemaları ve ağırlıkları yalnız bu listeyi kullanır. */
+export const SUB_KEYS_V1 = ["harmony", "eyes", "jawline", "skin", "hair", "grooming"] as const;
+export type SubKeyV1 = (typeof SUB_KEYS_V1)[number];
+
+/** hybrid.v2 (KB §4.11, R1-W5): kaşlar ayrı alt skor. Sıra = ekran sırası. */
+export const SUB_KEYS_V2 = [...SUB_KEYS_V1, "brows"] as const;
+export type SubKeyV2 = (typeof SUB_KEYS_V2)[number];
+
+/**
+ * Alt skor anahtarı (tüm motorlar): v1 altılısı + "brows". Record<SubKey, …> her sabitte kaş girdisi ister;
+ * eski satırlarda kaş değeri yoktur ve present.ts bunu "değerlendirilmedi" (null, kilitsiz) olarak sunar.
+ */
+export type SubKey = SubKeyV2;
+
+/**
+ * Geriye uyumlu liste: eski motor kodu, teaser ve mevcut arayüz 6 anahtar üzerinden döner. hybrid.v2 arayüzü
+ * SUB_KEYS_V2 kullanır (CONTRACTS_V2.md §3).
+ */
+export const SUB_KEYS: readonly SubKeyV1[] = SUB_KEYS_V1;
+
+export function isSubKey(v: string): v is SubKey {
+  return (SUB_KEYS_V2 as readonly string[]).includes(v);
+}
 
 const TeaserEnv = z.object({
   TEASER_MODE: z.enum(TEASER_MODES).default("shape_plus_one"),
-  TEASER_SUBSCORE: z.enum(SUB_KEYS).default("skin"),
+  TEASER_SUBSCORE: z.enum(SUB_KEYS_V1).default("skin"),
 });
 
-export type TeaserConfig = { mode: TeaserMode; subscore: SubKey };
+export type TeaserConfig = { mode: TeaserMode; subscore: SubKeyV1 };
 
 /** Geçersiz veya eksik değerde varsayılana düşer; asla fırlatmaz. */
 export function getTeaserConfig(env: Record<string, string | undefined> = process.env): TeaserConfig {

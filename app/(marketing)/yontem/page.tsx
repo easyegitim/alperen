@@ -8,7 +8,7 @@ import { MethodViewTracker } from "@/components/marketing/MethodViewTracker";
 import { getPublicEngineInfo } from "@/lib/ai/disclosure.server";
 import { FAIRNESS_LAST_RUN, parseMethodFrom } from "@/lib/config/method";
 import { CALIBRATION_REFERENCE, SUB_KIND_HYBRID } from "@/lib/config/scoring";
-import { SUB_KEYS, type SubKey } from "@/lib/config/teaser";
+import { SUB_KEYS, type SubKeyV1 } from "@/lib/config/teaser";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("method");
@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /** Yapısal alanlar cihazdaki geometriden, geliştirilebilir alanlar görünür ayrıntı kategorilerinden (UI spec §5.2, C2). */
-const SOURCE: Record<SubKey, "device" | "ai"> = { harmony: "device", eyes: "device", jawline: "device", skin: "ai", hair: "ai", grooming: "ai" };
+const SOURCE: Record<SubKeyV1, "device" | "ai"> = { harmony: "device", eyes: "device", jawline: "device", skin: "ai", hair: "ai", grooming: "ai" };
 const DATA_KEYS = ["landmarks", "geometry", "photo", "tryon", "progress", "analytics"] as const;
 const LIMIT_KEYS = ["l1", "l2", "l3", "l4", "l5", "l6"] as const;
 

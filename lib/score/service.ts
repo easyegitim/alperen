@@ -8,7 +8,7 @@ import { ApiError } from "@/lib/api/errors";
 import { assertEngineReady, getAiEnv } from "@/lib/config/ai.server";
 import { ENGINE_STATUS } from "@/lib/config/engine.server";
 import { SCORE_CALLS, SCORE_CALL_TIMEOUT_MS, getScoringEnv } from "@/lib/config/scoring";
-import { SUB_KEYS, type SubKey } from "@/lib/config/teaser";
+import { SUB_KEYS, type SubKeyV1 } from "@/lib/config/teaser";
 import type { GeometryResult } from "@/lib/face/types";
 import { QuestionnaireSchema, deriveContext, type Questionnaire } from "@/lib/questionnaire";
 import { aggregateScores, type Aggregated } from "./aggregate";
@@ -28,8 +28,8 @@ export type ScoringContext = {
 };
 
 export type ScoredAnalysis = {
-  subscores: Record<SubKey, number>;
-  rawSubscores: Record<SubKey, number>;
+  subscores: Record<SubKeyV1, number>;
+  rawSubscores: Record<SubKeyV1, number>;
   rawOverall: number;
   overall: number;
   potential: number;
@@ -64,7 +64,7 @@ export async function scoreImage(
   const agg = aggregateScores(settled);
   const version = getScoringEnv().calibrationVersion as CalibrationVersion;
 
-  const subscores = Object.fromEntries(SUB_KEYS.map((k) => [k, calibrate(agg.rawSubscores[k], version, { sub: k })])) as Record<SubKey, number>;
+  const subscores = Object.fromEntries(SUB_KEYS.map((k) => [k, calibrate(agg.rawSubscores[k], version, { sub: k })])) as Record<SubKeyV1, number>;
   const overall = calibrate(agg.rawOverall, version);
   const potential = computePotential({
     rawSubscores: agg.rawSubscores,

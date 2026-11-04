@@ -1,6 +1,6 @@
 // Paywall tetikleyicileri ve analitik teaser kodları (UI spec S4, §8.2). Analitiğe giden değerler skor/metrik/e-posta
 // içermez: "overall", "lengthRatio", "@" veya "/9j/" geçmez (privacy.spec adım 3; tests/unit/paywallConfig.test.ts).
-import { SUB_KEYS, type TeaserMode } from "./teaser";
+import { SUB_KEYS_V2, type TeaserMode } from "./teaser";
 
 export const PAYWALL_TRIGGERS = [
   "score_main",
@@ -9,7 +9,8 @@ export const PAYWALL_TRIGGERS = [
   "measurements",
   "plan",
   "plan_page",
-  ...SUB_KEYS.map((k) => `sub_${k}` as const),
+  // v2: kaşlar (sub_brows) dahil; v1 ekranı yalnız ilk altısını üretir.
+  ...SUB_KEYS_V2.map((k) => `sub_${k}` as const),
 ] as const satisfies readonly string[];
 
 export type PaywallTrigger = (typeof PAYWALL_TRIGGERS)[number];

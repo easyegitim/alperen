@@ -33,7 +33,7 @@ export default async function AnalysisPage({ params }: PageProps<"/analiz/[id]">
     return (
       <div className="mx-auto w-full max-w-lg px-4 py-6">
         <h1 className="sr-only">{t("pageTitle")}</h1>
-        <ProcessingCard status={row.status} />
+        <ProcessingCard status={row.status === "failed" ? "failed" : "processing"} />
       </div>
     );
   }

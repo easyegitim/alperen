@@ -29,3 +29,10 @@ export async function selectAnalysisRows(run: (columns: string) => PromiseLike<A
   if (!isMissingColumnError(full.error)) return full;
   return run(LEGACY_ANALYSIS_ROW_COLUMNS);
 }
+
+/**
+ * hybrid.v2 satırı (migration 0010; CONTRACTS_V2.md §5). `runs` (çalıştırma başına ham vektörler) ve `ai_usage`
+ * istemci yoluna seçilmez; rapor coach_reports'tan ayrı okunur (present.ts AnalysisRowV2.report).
+ */
+export const ANALYSIS_ROW_COLUMNS_V2 =
+  `${ANALYSIS_ROW_COLUMNS}, device_result, score_range, percentile, sections_ready, set_key` as const;

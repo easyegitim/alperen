@@ -51,7 +51,9 @@ describe("toClientAnalysis (SPEC 14.1 / 5.3)", () => {
   it("shape_only: yalnız yüz şekli", () => {
     const c = toClientAnalysis(row, false, "shape_only", "skin");
     expect(c.overall.locked).toBe(true);
-    expect(Object.values(c.subscores).every((s) => s.locked)).toBe(true);
+    // v1 satırda brows yoktur: { null, locked:false } (değerlendirilmedi); v1 altılısı kilitli
+    for (const k of SUB_KEYS) expect(c.subscores[k].locked).toBe(true);
+    expect(c.subscores.brows).toEqual({ value: null, locked: false });
     expect(c.faceShape).toBe("oval");
   });
   it("premium: her şey açık", () => {
@@ -109,7 +111,7 @@ const hybrid = (sig: unknown = signals, over: Partial<AnalysisRow> = {}): Analys
 const withSignals = (patch: Partial<ClientSignals>) => hybrid({ ...signals, ...patch });
 
 /** Ücretsiz JSON'da asla bulunmaması gerekenler (kaldıraç, açık delta, öncelik listesi, kilitli açıklama öğeleri). */
-const FREE_LEAK = /lv_|"potentialDelta":\{"value":\d|"improveFirst":\{"value":\[|hairNeat|"brows"|symmetry/;
+const FREE_LEAK = /lv_|"potentialDelta":\{"value":\d|"improveFirst":\{"value":\[|hairNeat|"key":"brows"|symmetry/;
 
 describe("toClientAnalysis hybrid.v1: alanlar", () => {
   it("motor ve rozetler açık: hybrid'de çene hattı yapısal, eski satırda kısmen", () => {
@@ -121,7 +123,8 @@ describe("toClientAnalysis hybrid.v1: alanlar", () => {
     expect(l.engine).toBe("legacy");
     expect(l.kinds).toEqual(SUB_KIND);
     expect(l.kinds.jawline).toBe("partial");
-    expect(toClientAnalysis(hybrid(signals, { engine_version: "hybrid.v2" }), true, "shape_only", "skin").engine).toBe("legacy");
+    expect(toClientAnalysis(hybrid(signals, { engine_version: "hybrid.v2" }), true, "shape_only", "skin").engine).toBe("hybrid.v2");
+    expect(toClientAnalysis(hybrid(signals, { engine_version: "hybrid.v3" }), true, "shape_only", "skin").engine).toBe("legacy");
   });
 
   it("premium: her şey açık; potentialDelta = round1(potential − overall)", () => {

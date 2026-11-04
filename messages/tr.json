@@ -8,7 +8,7 @@
     "photoNotStored": "Fotoğrafın sunucuda saklanmaz.",
     "scoreDisclaimer": "Bu skor yapay zekânın fotoğraf üzerinden tahminidir; ışık ve açıyla değişebilir, kişisel değerini ölçmez.",
     "notMedicalAdvice": "Tıbbi tavsiye değildir.",
-    "aiGenerated": "Yapay zekâ ile oluşturuldu.",
+    "aiGenerated": "Aura ile oluşturuldu · YZ simülasyonu",
     "toggleTheme": "Açık ya da koyu temaya geç",
     "details": "Ayrıntılar",
     "close": "Kapat",
@@ -182,7 +182,18 @@
     "methodApple": "Apple",
     "appleContinue": "Apple ile bağla",
     "oauthHint": "Tarayıcı açılır; bağlandıktan sonra uygulamaya dönersin.",
-    "oauthCancelled": "Bağlama iptal edildi."
+    "oauthCancelled": "Bağlama iptal edildi.",
+    "signIn": {
+      "title": "Taramadan önce giriş yap",
+      "body": "Analizin ve sonuçların hesabına bağlı kalır; başka cihazdan da ulaşırsın.",
+      "google": "Google ile devam et",
+      "apple": "Apple ile devam et",
+      "email": "E-posta ile devam et",
+      "emailNote": "E-posta ile giriş seçeneği karar bekliyor.",
+      "legalNote": "Devam ederek Kullanım Koşulları'nı kabul etmiş olursun.",
+      "error": "Giriş tamamlanamadı. Tekrar dene.",
+      "cancelled": "Giriş iptal edildi."
+    }
   },
   "account": {
     "title": "Hesap",
@@ -348,7 +359,18 @@
       "error": "Kaydedilemedi. Tekrar dene.",
       "blockedTitle": "Bu hizmet 18 yaş ve üzeri içindir",
       "blockedBody": "Üzgünüz, şu an devam edemezsin. Oturumun kapatıldı; cihazında fotoğraf veya veri bırakılmadı.",
-      "backHome": "Ana sayfaya dön"
+      "backHome": "Ana sayfaya dön",
+      "bandTitle": "Yaş aralığın",
+      "bandDescription": "Yalnız yaş aralığını soruyoruz; doğum tarihini kaydetmiyoruz.",
+      "bands": {
+        "under_18": "18 altı",
+        "18_24": "18–24",
+        "25_34": "25–34",
+        "35_49": "35–49",
+        "50_plus": "50+"
+      },
+      "under18SoonTitle": "18 altı için yakında",
+      "under18SoonBody": "Bu yaş aralığı için hizmet henüz açık değil. Hazır olduğunda burada duyuracağız."
     },
     "consents": {
       "noticeMeta": "Sürüm {version} · {date}",
@@ -384,6 +406,16 @@
           "body": "Ürünü geliştirmek için anonim kullanım olayları (fotoğraf, skor veya e-posta içermez). İstediğin zaman kapatabilirsin."
         }
       }
+    },
+    "gender": {
+      "title": "Cinsiyetin",
+      "description": "Yalnız öneri ve örneklerin sana uyması için; skor herkese aynı ölçekle verilir.",
+      "options": {
+        "male": "Erkek",
+        "female": "Kadın",
+        "unspecified": "Belirtmek istemiyorum"
+      },
+      "continue": "Devam"
     }
   },
   "questionnaire": {
@@ -637,6 +669,47 @@
       "deviceShort": "478 yüz noktası telefonunda kalır; yalnız oranlar saklanır.",
       "sentShort": "Yüzünün kırpılmış kopyası rızanla {provider} sağlayıcısına gider; Aura saklamaz.",
       "limitsShort": "Skor kişisel değerini ölçmez; kimseyle kıyaslanmaz."
+    },
+    "views": {
+      "stepLabel": "{current} / {total} · {name}",
+      "optionalLabel": "İsteğe bağlı · sonucu güçlendirir",
+      "front": {
+        "name": "Ön",
+        "instruction": "Kameraya düz bak; yüz ışığa dönük, telefon kol boyu uzakta."
+      },
+      "profile_left": {
+        "name": "Sol profil",
+        "instruction": "Başını sağa çevir; sol yanağın kameraya baksın."
+      },
+      "profile_right": {
+        "name": "Sağ profil",
+        "instruction": "Başını sola çevir; sağ yanağın kameraya baksın."
+      },
+      "left45": {
+        "name": "Sol yarım profil",
+        "instruction": "Başını hafif sağa çevir; her iki gözün de görünsün.",
+        "optionalNote": "İsteğe bağlı; sakal ve çene hattı daha iyi değerlendirilir."
+      },
+      "right45": {
+        "name": "Sağ yarım profil",
+        "instruction": "Başını hafif sola çevir; her iki gözün de görünsün.",
+        "optionalNote": "İsteğe bağlı; sakal ve çene hattı daha iyi değerlendirilir."
+      },
+      "hairline": {
+        "name": "Saç çizgisi",
+        "instruction": "Saçını alından çek; alın ve saç çizgisi görünsün.",
+        "optionalNote": "İsteğe bağlı; saç önerileri için yararlı."
+      },
+      "profileRequiredNote": "Ön ve yan profil zorunlu; diğerleri isteğe bağlıdır.",
+      "addOptional": "İsteğe bağlı açı ekle",
+      "pickFromGallery": "Galeriden seç (birden çok)",
+      "done": "Fotoğraflar hazır"
+    },
+    "qualityPrompt": {
+      "title": "Fotoğraf zayıf olabilir",
+      "body": "Işık yetersiz ya da fotoğraf bulanık; sonuç zayıf olabilir. Yine de devam edilsin mi?",
+      "yes": "Evet",
+      "no": "Hayır"
     }
   },
   "geometry": {
@@ -713,7 +786,8 @@
       "jawline": "Çene hattı ve yüz hatları",
       "skin": "Cilt görünümü",
       "hair": "Saç",
-      "grooming": "Bakım"
+      "grooming": "Bakım",
+      "brows": "Kaşlar"
     },
     "kind": {
       "structural": "Yapısal",
@@ -723,7 +797,15 @@
     "locked": {
       "title": "Tam sonucunu aç",
       "body": "Genel skorun, potansiyel skorun, 6 alt skor, oranlar ve kişisel planın premiumda. Ödeme sonrası bu analiz hemen açılır.",
-      "cta": "Planları gör"
+      "cta": "Planları gör",
+      "ringAria": "Genel skor kilitli; herkeste aynı halka",
+      "subBarAria": "Alt skor kilitli; herkeste aynı çubuk",
+      "ratiosNote": "Bu oranlar yalnız tarif eder; iyi ya da kötü anlamı taşımaz. Skorlamaya bağlam olarak gider.",
+      "firstStepsTitle": "İlk adımların",
+      "planPreviewTitle": "Sana özel plan",
+      "faceShapePrelim": "Ön değerlendirme",
+      "deviceDone": "Analizin tamamlandı",
+      "unlockBody": "Genel skorun, potansiyelin, alt skorların, açıklamalar ve raporun ödemeyle açılır."
     },
     "statusProcessing": "Analiz işleniyor…",
     "statusFailed": "Bu analiz tamamlanamadı; hakkın düşmedi. Yeni bir çekim yapabilirsin.",
@@ -859,7 +941,9 @@
       }
     },
     "reveal": {
-      "ready": "Sonucun hazır."
+      "ready": "Sonucun hazır.",
+      "cardReady": "{name} hazır",
+      "waiting": "Hazırlanıyor…"
     },
     "obs": {
       "zone": {
@@ -934,7 +1018,36 @@
     "method": {
       "full": "Yöntemin tamamı"
     },
-    "scoreLocked": "Skor kilitli"
+    "scoreLocked": "Skor kilitli",
+    "scoreNote": "Bu skor yapay zekânın fotoğraf üzerinden tahminidir; ışık ve açıyla değişebilir, kişisel değerini ölçmez.",
+    "competitorsNote": "Aura'nın ölçeği, çoğu kişiye 7 ve üstü veren uygulamalardan daha sıkıdır; 5–6 arası yaygın bir sonuçtur.",
+    "rangeLabel": "Aralık {lo}–{hi}",
+    "percentile": "İnsanların %{p}'inden yüksek",
+    "noChange": "Değişim yok (±{band})",
+    "explain5": {
+      "lookedAt": "Neye baktık",
+      "held": "Puanı ne tuttu",
+      "lowered": "Puanı ne aşağı çekti",
+      "raise": "Ne yapılırsa artar",
+      "confidenceNote": "Güven notu",
+      "structuralNote": "Bu alan bakımla değişmez; saç, sakal ve kaş seçimleri algıyı etkiler."
+    },
+    "faceShapeV2": {
+      "prelim": "Ön değerlendirme (telefonunda)",
+      "detailed": "Detaylı sonuç",
+      "unsure": "Emin değiliz: iki sonuç ayrışıyor",
+      "agree": "Detaylı sonuç ön değerlendirmeyle uyuşuyor",
+      "notMe": "Bence değil",
+      "pickOwn": "Kendi seçimin",
+      "overrideNote": "Saç ve sakal önerileri seçtiğin şekle göre güncellenir."
+    },
+    "stage": {
+      "device_only": "Cihaz analizi tamam; tam sonuç ödemeyle açılır",
+      "queued": "Analiz sıraya alındı",
+      "running": "Analiz hazırlanıyor; kartlar hazır oldukça açılır",
+      "failed": "Analiz tamamlanamadı; hakkın düşmedi. Yeniden deneyebilirsin.",
+      "retry": "Yeniden dene"
+    }
   },
   "paywall": {
     "title": "Tam sonucunu aç",
@@ -993,7 +1106,51 @@
     },
     "details": "Ayrıntılar",
     "bestValue": "En avantajlı",
-    "pageLead": "Planını seç; sonucunun tamamı hemen açılsın."
+    "pageLead": "Planını seç; sonucunun tamamı hemen açılsın.",
+    "v2": {
+      "title": "Tam sonucunu aç",
+      "benefitsTitle": "Eline geçecekler",
+      "benefits": {
+        "b1": "Genel skor, aralığı ve potansiyelin",
+        "b2": "7 alt skor ve her birinin açıklaması",
+        "b3": "Bölge bölge rapor ve kişisel plan",
+        "b4": "60 saç, sakal ve renk stilini kendi yüzünde dene"
+      },
+      "illustrativeLabel": "İllüstratif",
+      "offerTitle": "Tanıtım fiyatı",
+      "offerEnds": "Teklif {time} sonra bitiyor",
+      "offerEnded": "Tanıtım süresi doldu; normal fiyat geçerli",
+      "products": {
+        "one_time_report": {
+          "name": "Tek seferlik rapor",
+          "note": "Bu analizin tam sonucu ve raporu"
+        },
+        "weekly": {
+          "name": "Haftalık",
+          "note": "Her 7 günde yeni analiz"
+        },
+        "monthly": {
+          "name": "Aylık",
+          "note": "Her 7 günde yeni analiz, bir ay boyunca"
+        },
+        "yearly": {
+          "name": "Yıllık",
+          "note": "Her 7 günde yeni analiz, bir yıl boyunca"
+        }
+      },
+      "pricePending": "Fiyat belirlenecek",
+      "regularPrice": "Normal fiyat {price}",
+      "promoPrice": "Tanıtım fiyatı {price}",
+      "cta": "Devam et",
+      "paidNote": "Analiz ücretlidir; ödeme sonrası sonuç kart kart açılır.",
+      "referral": {
+        "title": "5 davetle genel skorunu aç",
+        "body": "Davet ettiğin 5 kişi uygulamayı indirip fotoğraf yollarsa yalnız genel skorun açılır; potansiyel, alt skorlar ve rapor ödemeyle.",
+        "progress": "{done} / {total} davet tamamlandı",
+        "code": "Davet kodun",
+        "share": "Daveti paylaş"
+      }
+    }
   },
   "share": {
     "button": "Paylaşım kartı oluştur",
@@ -1174,7 +1331,7 @@
       "b1": "Selfie'nin 1024 piksellik yüz kırpımı, seçtiğin stil için yapay zekâ görsel modeline geçici olarak gönderilir.",
       "b2": "Sunucumuz görseli saklamaz; yalnız bellekte iletir.",
       "b3": "Yüzün telefonunda orijinal piksellerle geri yazılır; kontrol başarısızsa sonuç gösterilmez ve hakkın düşmez.",
-      "b4": "Sonuç görselleri yalnız telefonunda kalır; indirdiğinde 'Yapay zekâ ile oluşturuldu' etiketi gömülür.",
+      "b4": "Sonuç görselleri yalnız telefonunda kalır; indirdiğinde 'Aura ile oluşturuldu · YZ simülasyonu' etiketi gömülür.",
       "accept": "İzin veriyorum ve devam et",
       "eyebrow": "Bir kez sorulur"
     },
@@ -1212,7 +1369,7 @@
     "before": "Önce",
     "after": "Sonra",
     "beforeAlt": "Orijinal selfie",
-    "afterAlt": "Denenen stil (yapay zekâ ile oluşturuldu)",
+    "afterAlt": "Denenen stil (Aura ile oluşturuldu · YZ simülasyonu)",
     "sliderAria": "Önce/sonra karşılaştırma",
     "download": "İndir",
     "tryAnother": "Başka stil dene",
