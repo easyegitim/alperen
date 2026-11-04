@@ -192,7 +192,13 @@
       "emailNote": "E-posta ile giriş seçeneği karar bekliyor.",
       "legalNote": "Devam ederek Kullanım Koşulları'nı kabul etmiş olursun.",
       "error": "Giriş tamamlanamadı. Tekrar dene.",
-      "cancelled": "Giriş iptal edildi."
+      "cancelled": "Giriş iptal edildi.",
+      "choicesMissing": "Yaş aralığı ve cinsiyet seçimin bulunamadı. Baştan seçip devam et.",
+      "backToStart": "Başa dön",
+      "saveError": "Seçimlerin kaydedilemedi. Tekrar dene.",
+      "retry": "Tekrar dene",
+      "finishing": "Hesabın hazırlanıyor…",
+      "terms": "Metni oku"
     }
   },
   "account": {
@@ -347,7 +353,9 @@
       "label": "Başlangıç adımları",
       "age": "Yaş",
       "consents": "İzinler",
-      "profile": "Profil"
+      "profile": "Profil",
+      "gender": "Cinsiyet",
+      "account": "Hesap"
     },
     "age": {
       "title": "Kaç yaşındasın?",
@@ -370,14 +378,17 @@
         "50_plus": "50+"
       },
       "under18SoonTitle": "18 altı için yakında",
-      "under18SoonBody": "Bu yaş aralığı için hizmet henüz açık değil. Hazır olduğunda burada duyuracağız."
+      "under18SoonBody": "Bu yaş aralığı için hizmet henüz açık değil. Hazır olduğunda burada duyuracağız.",
+      "soonTag": "Yakında",
+      "changeBand": "Başka aralık seç",
+      "bandNote": "Yaş aralığın hesabında saklanır; öneriler ve örnekler buna göre seçilir. Fotoğraftan yaş tahmini ya da yüz tanıma yapılmaz."
     },
     "consents": {
       "noticeMeta": "Sürüm {version} · {date}",
       "scrollHint": "Devam etmek için metnin sonuna kadar kaydır.",
       "read": "Okudum",
       "title": "İzinler",
-      "description": "Analiz için üç izin gerekli. Hangi verinin nereye gittiğini her maddede görürsün; fotoğrafın hiçbir yerde saklanmaz.",
+      "description": "Analiz için üç izin gerekli. Hangi verinin nereye gittiğini her maddede görürsün; fotoğrafların hiçbir yerde saklanmaz.",
       "required": "analiz için gerekli",
       "optional": "isteğe bağlı",
       "missingRequired": "Üç gerekli izin olmadan analiz yapılamaz. İstersen uygulamayı izin vermeden de kapatabilirsin; hiçbir verin işlenmez.",
@@ -387,15 +398,15 @@
       "items": {
         "biometric_processing": {
           "title": "Yüz verilerimin işlenmesi",
-          "body": "Selfie'nden türetilen yüz oranları, yüz şeklin ve skorların hesaplanır ve hesabında saklanır. Yüz tanıma veya kimlik eşleştirme yapılmaz."
+          "body": "Ön fotoğrafından türetilen yüz oranları, yüz şeklin ve skorların hesaplanır ve hesabında saklanır. Galeriden seçtiğin dosyaların karma değeri (hash) ve skor seti 1 yıl saklanır; aynı dosyalar 1 yıl aynı skoru alır. Yüz tanıma veya kimlik eşleştirme yapılmaz."
         },
         "photo_ai_analysis": {
           "title": "Fotoğrafımın yapay zekâ ile analizi",
-          "body": "Selfie'n skor için yapay zekâ modeline gönderilir; sunucuda, veritabanında veya loglarda saklanmaz."
+          "body": "Ön ve yan profil fotoğrafların (eklersen 45°, ikinci profil ve saç çizgisi) skor ve rapor için yapay zekâ modeline gönderilir; sunucuda, veritabanında veya loglarda saklanmaz."
         },
         "cross_border_transfer": {
           "title": "Yurt dışına aktarım",
-          "body": "Selfie'n ve analiz verilerin yurt dışındaki yapay zekâ ve altyapı sağlayıcılarına geçici olarak aktarılır."
+          "body": "Fotoğrafların ve analiz verilerin yurt dışındaki yapay zekâ ve altyapı sağlayıcılarına geçici olarak aktarılır."
         },
         "marketing": {
           "title": "Pazarlama iletişimi",
@@ -415,7 +426,8 @@
         "female": "Kadın",
         "unspecified": "Belirtmek istemiyorum"
       },
-      "continue": "Devam"
+      "continue": "Devam",
+      "error": "Kaydedilemedi. Tekrar dene."
     }
   },
   "questionnaire": {

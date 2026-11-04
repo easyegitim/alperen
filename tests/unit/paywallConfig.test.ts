@@ -45,6 +45,16 @@ const EVENT_NAMES: Record<AnalyticsEventName, true> = {
   capture_manual_used: true,
   improve_first_clicked: true,
   plan_basis_edit_clicked: true,
+  // v2 ödeme öncesi akış (W1)
+  sign_in_started: true,
+  onboarding_step_completed: true,
+  capture_view_captured: true,
+  capture_gallery_batch: true,
+  capture_quality_prompt: true,
+  device_analysis_submitted: true,
+  device_analysis_completed: true,
+  referral_code_viewed: true,
+  referral_claimed: true,
 };
 
 describe("paywall yapılandırması (UI spec S4)", () => {

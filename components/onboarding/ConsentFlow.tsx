@@ -9,7 +9,8 @@ import { Markdown } from "@/components/legal/Markdown";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { track } from "@/lib/analytics";
-import { postJson } from "@/lib/api/client";
+import { ApiClientError, postJson } from "@/lib/api/client";
+import { GENDER_PATH } from "@/lib/onboarding/gate";
 import { cn } from "@/lib/utils";
 import { OPTIONAL_ONBOARDING_CONSENTS, REQUIRED_ANALYSIS_CONSENTS, type ConsentState, type ConsentType } from "@/lib/consent";
 
@@ -19,12 +20,14 @@ type Props = {
   initial: ConsentState;
   noticeAcked: boolean;
   nextPath: string;
+  /** Çekim ekranı sıradaysa MediaPipe modeli arka planda yüklenir (SPEC 7.1). */
+  prefetchModel?: boolean;
 };
 
 type Toggles = Record<(typeof REQUIRED_ANALYSIS_CONSENTS)[number] | (typeof OPTIONAL_ONBOARDING_CONSENTS)[number], boolean>;
 
 /** SPEC 4.1 adım 4 / 16.2: aydınlatma (kaydırmalı, "Okudum") → zorunlu üç rıza + pazarlama (isteğe bağlı). */
-export function ConsentFlow({ notice, consentVersion, initial, noticeAcked, nextPath }: Props) {
+export function ConsentFlow({ notice, consentVersion, initial, noticeAcked, nextPath, prefetchModel = false }: Props) {
   const t = useTranslations("onboarding.consents");
   const router = useRouter();
   const [step, setStep] = useState<"notice" | "consents">(noticeAcked ? "consents" : "notice");
@@ -76,8 +79,15 @@ export function ConsentFlow({ notice, consentVersion, initial, noticeAcked, next
         const unchanged = prev && prev.granted === toggles[k] && prev.textVersion === consentVersion;
         if (!unchanged && (toggles[k] || prev)) await post(k, toggles[k], consentVersion);
       }
+      // v2: anket ödeme sonrasına taşındı; onboarding burada biter (sunucu 18+, rızalar ve cinsiyeti yeniden doğrular).
+      await postJson("/api/onboarding/complete", {});
+      track("onboarding_step_completed", { step: "consents" });
       router.push(nextPath);
-    } catch {
+    } catch (e) {
+      if (e instanceof ApiClientError && e.message === "presentation_missing") {
+        router.push(GENDER_PATH);
+        return;
+      }
       toast.error(t("error"));
     } finally {
       setBusy(false);
@@ -111,6 +121,12 @@ export function ConsentFlow({ notice, consentVersion, initial, noticeAcked, next
 
   return (
     <div className="space-y-5">
+      {prefetchModel ? (
+        <>
+          <link rel="prefetch" href="/mediapipe/face_landmarker.task" as="fetch" crossOrigin="anonymous" />
+          <link rel="prefetch" href="/mediapipe/wasm/vision_wasm_module_internal.wasm" as="fetch" crossOrigin="anonymous" />
+        </>
+      ) : null}
       <StepHeading icon={<ShieldCheck className="size-6" />} title={t("title")} body={t("description")} />
       <ul className="space-y-2">
         {[...REQUIRED_ANALYSIS_CONSENTS, ...OPTIONAL_ONBOARDING_CONSENTS].map((k) => {

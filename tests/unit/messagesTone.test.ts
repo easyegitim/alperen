@@ -106,8 +106,10 @@ const WALKED = [
   // v2 (CONTRACTS_V2.md §7): KB'nin karara bağladığı metinler ve ayrılan ad alanları
   "common.aiGenerated",
   "auth.signIn",
-  "onboarding.age.bands",
+  "onboarding.flow",
+  "onboarding.age",
   "onboarding.gender",
+  "onboarding.consents",
   "camera.views",
   "camera.qualityPrompt",
   "analysis.sub.brows",

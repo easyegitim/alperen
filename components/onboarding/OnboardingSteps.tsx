@@ -1,15 +1,16 @@
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["age", "consents", "profile"] as const;
+/** v2 sırası (KB §3.1): yaş → cinsiyet → hesap → izinler → fotoğraflar. Yalnız görsel yönlendirme; erişim kontrolü sunucuda. */
+const STEPS = ["age", "gender", "account", "consents"] as const;
+export type OnboardingStep = (typeof STEPS)[number];
 
-/** Başlangıç akışının üç aşaması (yaş → izinler → profil). Yalnız görsel yönlendirme; erişim kontrolü sunucuda. */
-export function OnboardingSteps({ current }: { current: (typeof STEPS)[number] }) {
+export function OnboardingSteps({ current }: { current: OnboardingStep }) {
   const t = useTranslations("onboarding.flow");
   const index = STEPS.indexOf(current);
   return (
     <nav aria-label={t("label")} className="space-y-2">
-      <ol className="grid grid-cols-3 gap-1.5">
+      <ol className="grid grid-cols-4 gap-1.5">
         {STEPS.map((s, i) => (
           <li key={s} aria-current={i === index ? "step" : undefined}>
             <span className={cn("block h-1 rounded-full", i <= index ? "bg-brand-gradient" : "bg-track")} aria-hidden="true" />
