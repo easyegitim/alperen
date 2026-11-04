@@ -25,13 +25,19 @@ function intIn(v: string | undefined, min: number, max: number, fallback: number
 }
 
 export type AiEnv = {
-  scoreEngine: "hybrid.v1" | "legacy";
+  /** hybrid.v2: Claude puan cetveli + ortanca-3 + kalibrasyon h2 (CONTRACTS_V2 §4; lib/config/engine.h2.server.ts). */
+  scoreEngine: "hybrid.v1" | "hybrid.v2" | "legacy";
   observeProvider: "claude" | "gemini";
   coachProvider: "claude" | "gemini";
   claudeObserveModel: string;
   claudeObserveEffort: ClaudeEffort;
   claudeCoachModel: string;
   claudeCoachEffort: ClaudeEffort;
+  /** hybrid.v2 puanlama çağrısı (tüm açılar tek mesajda; cetvel). Varsayılan efor medium (PLAN 3c). */
+  claudeScoreModel: string;
+  claudeScoreEffort: ClaudeEffort;
+  /** hybrid.v2 denetim geçişi (Ek B dili + puan tutarlılığı); metin düzeltmesi için düşük efor yeter. */
+  claudeAuditEffort: ClaudeEffort;
   /** "default": sunucu taraflı yedek model (beta server-side-fallback-2026-07-01). "off": tek model (adalet denetimi). */
   claudeFallbacks: "default" | "off";
   cacheTtl: "1h" | "5m";
@@ -44,13 +50,16 @@ type Env = Record<string, string | undefined>;
 
 export function getAiEnv(env: Env = process.env): AiEnv {
   return {
-    scoreEngine: oneOf(env.SCORE_ENGINE, ["hybrid.v1", "legacy"], "legacy"),
+    scoreEngine: oneOf(env.SCORE_ENGINE, ["hybrid.v1", "hybrid.v2", "legacy"], "legacy"),
     observeProvider: oneOf(env.AI_OBSERVE_PROVIDER, ["claude", "gemini"], "claude"),
     coachProvider: oneOf(env.AI_COACH_PROVIDER, ["claude", "gemini"], "gemini"),
     claudeObserveModel: clean(env.CLAUDE_OBSERVE_MODEL) ?? "claude-opus-5-5",
     claudeObserveEffort: oneOf(env.CLAUDE_OBSERVE_EFFORT, CLAUDE_EFFORTS, "low"),
     claudeCoachModel: clean(env.CLAUDE_COACH_MODEL) ?? "claude-opus-5-5",
     claudeCoachEffort: oneOf(env.CLAUDE_COACH_EFFORT, CLAUDE_EFFORTS, "low"),
+    claudeScoreModel: clean(env.CLAUDE_SCORE_MODEL) ?? "claude-opus-5-5",
+    claudeScoreEffort: oneOf(env.CLAUDE_SCORE_EFFORT, CLAUDE_EFFORTS, "medium"),
+    claudeAuditEffort: oneOf(env.CLAUDE_AUDIT_EFFORT, CLAUDE_EFFORTS, "low"),
     claudeFallbacks: oneOf(env.CLAUDE_FALLBACKS, ["default", "off"], "default"),
     cacheTtl: oneOf(env.CLAUDE_CACHE_TTL, ["1h", "5m"], "1h"),
     observeCalls: intIn(env.OBSERVE_CALLS, 1, 5, 3),
@@ -138,7 +147,8 @@ export function assertEngineReady(
 ): void {
   if (env.VERCEL_ENV !== "production") return;
   const ai = getAiEnv(env);
-  const active = (opts.path ?? "score") === "coach" ? ai.coachProvider === "claude" : ai.scoreEngine === "hybrid.v1";
+  // Skor yolu: legacy dışındaki her motor (hybrid.v1 ve hybrid.v2) üretim kapısına tabidir (scoreEngineBlocked ile aynı).
+  const active = (opts.path ?? "score") === "coach" ? ai.coachProvider === "claude" : ai.scoreEngine !== "legacy";
   if (!active) return;
   const s = opts.status ?? STATUS_UNKNOWN;
   if (s.norms !== "fitted" || s.categories !== "fitted" || s.legal !== "approved") {
