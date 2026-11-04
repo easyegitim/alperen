@@ -41,7 +41,8 @@ export type AnalyticsEvents = {
   report_viewed: undefined;
   tryon_started: { presetKind: "hair" | "beard" | "color" };
   tryon_result: { status: string; durationMs: number };
-  share_card_created: { withPhoto: boolean };
+  /** Faz 6: kart türü (score|strongest|barber); skor değeri eklenmez. */
+  share_card_created: { withPhoto: boolean; kind?: "score" | "strongest" | "barber" };
   routine_checked: { kind: "step" | "exercise" | "habit" };
   expert_request_sent: { specialty: string };
   feedback_sent: { targetType: string; rating: number | null };
@@ -66,10 +67,19 @@ export type AnalyticsEvents = {
   tryon_qc_failed: undefined;
   tryon_flagged_broken: undefined;
   glowup_viewed: undefined;
+  // Sprint 3 / Faz 6 (CONTRACTS_V2 Sprint 3 S3.5): yüksüz olaylar — kılavuz noktası, seri sayısı, skor farkı, kod eklenmez.
+  ghost_guide_shown: undefined;
+  routine_rest_day: undefined;
+  routine_freeze_used: undefined;
+  progress_no_change_shown: undefined;
+  barber_card_opened: undefined;
 };
 
 /** Sprint 2 olayları (yüksüz); testler ve mobil eşitlik bu listeyi kullanır. */
 export const SPRINT2_EVENTS = ["plan_viewed", "plan_step_opened", "questionnaire_v2_completed", "tryon_combo_started", "tryon_qc_failed", "tryon_flagged_broken", "glowup_viewed"] as const satisfies readonly AnalyticsEventName[];
+
+/** Sprint 3 olayları (yüksüz); mobil aynı adları kullanır (ayrı mobile_* adı yok; platform PostHog SDK özelliğidir). */
+export const SPRINT3_EVENTS = ["ghost_guide_shown", "routine_rest_day", "routine_freeze_used", "progress_no_change_shown", "barber_card_opened"] as const satisfies readonly AnalyticsEventName[];
 
 export type AnalyticsEventName = keyof AnalyticsEvents;
 

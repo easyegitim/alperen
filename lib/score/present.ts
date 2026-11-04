@@ -1,6 +1,6 @@
 // SPEC 14.1 teaser kırpması. Kilitli değerler JSON'a hiç girmez (null + locked:true).
 // hybrid.v1 eklemeleri ve kilit kuralları: UI spec §1.2, engine spec §8.
-import { SUB_KIND, SUB_KIND_HYBRID } from "@/lib/config/scoring";
+import { NOISE_BAND, SUB_KIND, SUB_KIND_HYBRID } from "@/lib/config/scoring";
 import { SUB_KEYS_V2, type SubKey, type TeaserMode } from "@/lib/config/teaser";
 import type { FaceShape, GeometryResult } from "@/lib/face/types";
 import {
@@ -194,6 +194,9 @@ export type AnalysisRowV2 = AnalysisRow & {
  */
 export type AccessV2 = { entitled: boolean; referralUnlock: boolean; percentile: boolean };
 
+/** Fotoğraftan görülen gözlük / baş örtüsü (SignalsV2.observations; anket v2 ön dolumu, Ç17). Skor değildir; yalnız açık sonuçta. */
+export type PhotoDetections = { glassesDetected: boolean | null; headCoveringDetected: boolean | null };
+
 export type ClientAnalysisV2 = {
   id: string;
   engine: "hybrid.v2";
@@ -218,10 +221,12 @@ export type ClientAnalysisV2 = {
   captureHints: CaptureHint[];
   /** Güven notu için: kullanılan açı sayısı (fotoğraf yok). */
   viewsUsed: number;
+  /** Anket v2 ön dolumu (web `plan/[id]/anket` satırdan okur; mobil buradan): yalnız hak var + tamamlandı; aksi hâlde null. */
+  detections: PhotoDetections | null;
   failure: AnalysisFailure | null;
 };
 
-export const NOISE_BAND_CLIENT = 0.3;
+export const NOISE_BAND_CLIENT: number = NOISE_BAND;
 
 const LOCKED: { value: null; locked: true } = { value: null, locked: true };
 const OPEN_NULL: { value: null; locked: false } = { value: null, locked: false };
@@ -269,6 +274,16 @@ function readSections(raw: unknown): SectionKey[] {
   if (!Array.isArray(raw)) return [];
   const allowed = new Set<string>(["device", "overall", "subscores", "potential", "faceShape", "explanations", "improveFirst", "report"]);
   return raw.filter((s): s is SectionKey => typeof s === "string" && allowed.has(s));
+}
+
+const optBool = (v: unknown): boolean | null => (typeof v === "boolean" ? v : null);
+
+/** observations JSON → yalnız iki boolean (başka alan sızmaz). */
+export function readDetections(raw: unknown): PhotoDetections | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as { glassesDetected?: unknown; headCoveringDetected?: unknown };
+  const d = { glassesDetected: optBool(o.glassesDetected), headCoveringDetected: optBool(o.headCoveringDetected) };
+  return d.glassesDetected === null && d.headCoveringDetected === null ? null : d;
 }
 
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : typeof v === "string" && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null);
@@ -372,6 +387,7 @@ export function toClientAnalysisV2(a: AnalysisRowV2, access: AccessV2): ClientAn
     notAssessed: signals?.notAssessed.filter((n) => n.reason === "excluded" || live) ?? [],
     captureHints: signals?.captureHints ?? [],
     viewsUsed: signals?.viewsUsed.length ?? 0,
+    detections: open ? readDetections(a.observations) : null,
     failure: stage === "failed" ? (a.failure ?? { code: "AI_FAILED", retryable: true }) : null,
   };
 }

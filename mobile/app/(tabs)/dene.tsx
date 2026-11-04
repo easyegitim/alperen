@@ -1,156 +1,236 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { Alert, Image, Pressable, View } from "react-native";
-import { BEARD_PRESETS } from "@/content/beard-presets";
-import { COLOR_PRESETS } from "@/content/color-presets";
-import { HAIR_PRESETS } from "@/content/hair-presets";
-import { getPreset } from "@/content/presets";
-import type { Preset } from "@/content/types";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, View } from "react-native";
 import { track } from "@/lib/analytics";
 import { TRYON_IMAGE_MAX_BYTES } from "@/lib/api/tryonInput";
 import { landmarksToCrop } from "@/lib/face/crop";
-import { FeedbackButtons } from "@/mobile/src/components/report/FeedbackButtons";
+import { IDX } from "@/lib/face/indices";
+import { driftPolicyForPresets } from "@/lib/tryon/composite";
+import { GLOW_UP_LAYERS, TRYON_MODES, glowUpSkinActive, maskRegionFor, type GlowUpLayer, type TryonMode, type TryonPresets } from "@/lib/tryon/types";
+import { ComboPicker } from "@/mobile/src/components/tryon/ComboPicker";
+import { GlowUpPanel } from "@/mobile/src/components/tryon/GlowUpPanel";
+import { QcFailedCard } from "@/mobile/src/components/tryon/QcFailedCard";
+import { QuotaBar, TryonConsentCard, TryonGenerating } from "@/mobile/src/components/tryon/TryonStateCards";
+import { TryonResult, type TryonResultView } from "@/mobile/src/components/tryon/TryonResult";
 import { Button } from "@/mobile/src/components/ui/Button";
 import { Card } from "@/mobile/src/components/ui/Card";
 import { Screen } from "@/mobile/src/components/ui/Screen";
 import { Text } from "@/mobile/src/components/ui/Text";
 import { getSessionSelfie } from "@/mobile/src/features/capture/sessionSelfie";
+import { planStepsLite, recommendedFromPlan, type PlanStepLite } from "@/mobile/src/features/plan/viewModel";
 import { useSession } from "@/mobile/src/features/session/SessionProvider";
-import { ApiClientError } from "@/mobile/src/lib/api";
-import { scoped, t as tt } from "@/mobile/src/lib/i18n";
-import { cropSquareBase64, deleteQuietly } from "@/mobile/src/native/images";
-import { driftPolicyFor } from "@/lib/tryon/composite";
-import { compositeTryonNative, stampAiLabelBase64 } from "@/mobile/src/native/tryon";
 import { shareBase64Jpeg } from "@/mobile/src/features/share/renderCard";
+import { buildTryonBody, eyeLineRatio, glowUpRequest, initialSelection, modesFor, nextUsed, resultTitle, styleRequest, type RunRequest } from "@/mobile/src/features/tryon/request";
+import { shareTryonResult, tryonSharePlan } from "@/mobile/src/features/tryon/share";
+import { stepTitle } from "@/mobile/src/features/tryon/stepTitles";
+import { ApiClientError, type TryonStatusDto } from "@/mobile/src/lib/api";
+import { isMobileFeatureEnabled } from "@/mobile/src/lib/flags";
+import { scoped } from "@/mobile/src/lib/i18n";
+import { cropSquareBase64, deleteQuietly } from "@/mobile/src/native/images";
+import { compositeTryonNative, stampAiLabelBase64 } from "@/mobile/src/native/tryon";
 import { radius, spacing, useTheme } from "@/mobile/src/theme";
 
 const t = scoped("tryon");
-type Kind = "hair" | "beard" | "color" | "recommended";
-type Stage = "gallery" | "generating" | "result";
-type Status = { premium: boolean; hasConsent: boolean; consentVersion: string; recommended: string[]; quota: { used: number; limit: number; nextAt: string | null } | null; presentation: "male" | "female" | "unspecified" };
+type Stage = "gallery" | "generating" | "result" | "qc_failed";
+type Context = { status: TryonStatusDto; analysisId: string | null; planSteps: PlanStepLite[]; recommended: string[] };
 const CROP_SIZE = 1024;
-/** Süre ölçümü (olay işleyicilerinde; modül düzeyinde tanımlı — React saflık kuralı). */
 const epochNow = () => Date.now();
 
-function newRequestId(): string {
-  const c = globalThis.crypto as { randomUUID?: () => string } | undefined;
-  if (c?.randomUUID) return c.randomUUID();
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => { const r = (Math.random() * 16) | 0; return (ch === "x" ? r : (r & 0x3) | 0x8).toString(16); });
-}
-
-/** /dene (F11 mobil): stil galerisi → (rıza) → bellekteki selfie → POST /api/tryon → Skia kompoziti → önce/sonra. */
+/**
+ * /dene v2 (F11; KB §7; PLAN 5a–5e; CONTRACTS_V2 S3.1): mod (tek stil · kombin · iyileşmiş halin) → (rıza) → selfie bellekte
+ * → POST /api/tryon (v2 gövde; Claude kalite kontrolü sunucuda; geçmeyen görsel hiç gelmez, hak düşmez) → Skia kompoziti
+ * (yüz orijinal piksellerle; glow-up'ta doku kapısı) → gözlere hizalı önce/sonra → paylaş (etiket gömülü) / "Bozuk görünüyor".
+ * Derin bağlantılar: ?preset=<id> (adım kartı "Dene"), ?mode=glow_up&analysis=<id> (rapor/plan "İyileşmiş halin").
+ */
 export default function TryonTab() {
   const { colors } = useTheme();
-  const { api } = useSession();
-  const { preset: initialPreset } = useLocalSearchParams<{ preset?: string }>();
-  const [status, setStatus] = useState<Status | null>(null);
-  const [tab, setTab] = useState<Kind>("hair");
+  const { aura, api } = useSession();
+  const params = useLocalSearchParams<{ preset?: string; mode?: string; analysis?: string }>();
+  const flags = useMemo(() => ({ combo: isMobileFeatureEnabled("tryonCombo"), glowUp: isMobileFeatureEnabled("glowUp") }), []);
+  const modes = useMemo(() => modesFor(flags), [flags]);
+  const [ctx, setCtx] = useState<Context | null>(null);
+  const [mode, setMode] = useState<TryonMode>("style");
+  const [picked, setPicked] = useState<TryonPresets>({});
+  const [layers, setLayers] = useState<GlowUpLayer[]>([...GLOW_UP_LAYERS]);
   const [stage, setStage] = useState<Stage>("gallery");
-  const [pending, setPending] = useState<Preset | null>(null);
+  const [pending, setPending] = useState<RunRequest | null>(null);
   const [used, setUsed] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ eventId: string; preset: Preset; beforeUri: string; afterUri: string } | null>(null);
-  const [view, setView] = useState<"before" | "after">("after");
+  const [result, setResult] = useState<TryonResultView | null>(null);
+  const [flagged, setFlagged] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const appliedParamsRef = useRef<string | null>(null);
+  /** Selfie için /tara'ya gidildi; dönüşte bekleyen istek bir kez kendiliğinden çalışır (web TryonScreen.onCaptured). */
+  const awaitingSelfieRef = useRef<RunRequest | null>(null);
+  const [autoRun, setAutoRun] = useState<RunRequest | null>(null);
+  const autoRunDoneRef = useRef<RunRequest | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      void api.get<Status>("/api/tryon/status").then((s) => {
-        if (!active || !s) return;
-        setStatus(s);
-        setUsed(s.quota?.used ?? 0);
-        if (s.recommended.length) setTab("recommended");
-        if (initialPreset) {
-          const p = getPreset(initialPreset);
-          if (p) setPending(p);
+      void (async () => {
+        try {
+          const status = await aura.tryon.status();
+          if (!status) throw new Error("empty");
+          // Glow-up bağı: istenen analiz (tamamlanmış) ya da en son tamamlanmış analiz; plan adımları o analizin planından.
+          const list = await aura.analyses.list().catch(() => null);
+          const completed = (list ?? []).filter((a) => a.status === "completed");
+          const requested = params.analysis && completed.some((a) => a.id === params.analysis) ? params.analysis : null;
+          const analysisId = requested ?? completed[0]?.id ?? null;
+          const plan = analysisId ? await aura.plan.get(analysisId).catch(() => null) : null;
+          const view = plan?.view ?? null;
+          if (!active) return;
+          setCtx({ status, analysisId, planSteps: planStepsLite(view), recommended: [...new Set([...recommendedFromPlan(view), ...status.recommended])] });
+          setUsed(status.quota?.used ?? 0);
+          // Çekimden dönüş: selfie artık bellekte → bekleyen istek kendiliğinden başlar (yalnız bir kez; aşağıdaki efekt).
+          const awaited = awaitingSelfieRef.current;
+          if (awaited && getSessionSelfie() && status.premium && status.hasConsent) {
+            awaitingSelfieRef.current = null;
+            setAutoRun(awaited);
+          }
+          const key = `${params.preset ?? ""}|${params.mode ?? ""}`;
+          if (appliedParamsRef.current !== key) {
+            appliedParamsRef.current = key;
+            const wanted = TRYON_MODES.find((m): m is TryonMode => m === params.mode);
+            if (wanted && modes.includes(wanted)) setMode(wanted);
+            const sel = initialSelection(params.preset);
+            if (Object.keys(sel).length) {
+              setMode("style");
+              setPicked(sel);
+            }
+          }
+        } catch {
+          if (active) setCtx(null);
         }
-      }).catch(() => active && setStatus(null));
+      })();
       return () => {
         active = false;
       };
-    }, [api, initialPreset]),
+    }, [aura, params.analysis, params.preset, params.mode, modes]),
   );
 
-  const presentation = status?.presentation ?? "unspecified";
-  const recommended = useMemo(() => status?.recommended ?? [], [status]);
-  const list = useMemo(() => {
-    const byPres = (p: Preset) => !p.presentation || presentation === "unspecified" || p.presentation.includes(presentation);
-    if (tab === "recommended") return recommended.map(getPreset).filter((p): p is Preset => Boolean(p));
-    if (tab === "hair") return HAIR_PRESETS.filter(byPres);
-    if (tab === "beard") return BEARD_PRESETS;
-    return COLOR_PRESETS;
-  }, [tab, recommended, presentation]);
-
   async function giveConsent() {
-    if (!status) return;
+    if (!ctx) return;
     try {
-      await api.post("/api/consents", { type: "tryon_generation", granted: true, textVersion: status.consentVersion });
+      await api.post("/api/consents", { type: "tryon_generation", granted: true, textVersion: ctx.status.consentVersion });
       track("consent_updated", { type: "tryon_generation", granted: true });
-      setStatus({ ...status, hasConsent: true });
+      setCtx({ ...ctx, status: { ...ctx.status, hasConsent: true } });
     } catch {
       Alert.alert(t("consentError"));
     }
   }
 
-  function choose(p: Preset) {
-    setPending(p);
+  function start(req: RunRequest) {
+    setPending(req);
     setError(null);
     if (!getSessionSelfie()) {
+      awaitingSelfieRef.current = req;
       router.push({ pathname: "/tara", params: { purpose: "tryon" } });
       return;
     }
-    void run(p);
+    void run(req);
   }
 
-  async function run(preset: Preset) {
+  async function run(req: RunRequest) {
     const selfie = getSessionSelfie();
-    if (!selfie) return;
+    if (!selfie || !ctx) return;
     setStage("generating");
     setElapsed(0);
-    const start = epochNow();
-    timerRef.current = setInterval(() => setElapsed(Math.round((epochNow() - start) / 1000)), 1000);
-    track("tryon_started", { presetKind: preset.kind });
+    const startedAt = epochNow();
+    timerRef.current = setInterval(() => setElapsed(Math.round((epochNow() - startedAt) / 1000)), 1000);
+    if (req.mode === "combo") track("tryon_combo_started");
+    else if (req.mode === "style") {
+      const kind = (["hair", "beard", "color"] as const).find((k) => req.presets[k]);
+      if (kind) track("tryon_started", { presetKind: kind });
+    }
     let cUri: string | null = null;
     let eventId: string | null = null;
+    let afterUri: string | null = null;
     try {
-      // 1024 px kare kırpım C + kırpım uzayında landmark'lar (SPEC 10.3 adım 4)
+      // 1024 px kare kırpım C + kırpım uzayında landmark'lar (SPEC 10.3 adım 4); görsel yalnız /api/tryon'a gider.
       const crop = await cropSquareBase64(selfie.uri, selfie.landmarksPx, selfie.width, selfie.height, CROP_SIZE, TRYON_IMAGE_MAX_BYTES, 0.9);
       cUri = crop.uri;
       const landmarksC = landmarksToCrop(selfie.landmarksPx, crop.box, CROP_SIZE);
-      const res = await api.post<{ eventId: string; image: string; mimeType: string }>("/api/tryon", { clientRequestId: newRequestId(), presetId: preset.id, image: crop.base64 });
+      const res = await aura.tryon.run(buildTryonBody(req, crop.base64, ctx.analysisId));
       if (!res) throw new Error("empty");
       eventId = res.eventId;
-      const out = await compositeTryonNative(cUri, landmarksC, res.image, preset.protect, driftPolicyFor(preset));
+      // Maske ve doku kapısı sunucunun uyguladığı katmanlara göre (cilt kapalıysa yüz saç/sakal denemesi gibi geri yazılır).
+      const protect = maskRegionFor(res.mode, res.presets, res.layers);
+      const out = await compositeTryonNative(cUri, landmarksC, res.image, protect, driftPolicyForPresets(res.presets), { glowUp: glowUpSkinActive(res.mode, res.layers) });
       if (!out.ok) {
-        await api.post(`/api/tryon/${eventId}/drift`, {}).catch(() => undefined);
-        track("tryon_result", { status: "identity_drift", durationMs: epochNow() - start });
+        console.warn("[tryon] kontrol başarısız:", out.reason); // yalnız neden kodu; görsel/nokta yok
+        await aura.tryon.drift(eventId).catch(() => undefined);
+        track("tryon_result", { status: "identity_drift", durationMs: epochNow() - startedAt });
         setError(t("driftMessage"));
         setStage("gallery");
         await deleteQuietly(cUri);
         return;
       }
-      setResult({ eventId, preset, beforeUri: cUri, afterUri: out.uri });
-      setUsed((u) => u + 1);
-      track("tryon_result", { status: "success", durationMs: epochNow() - start });
+      afterUri = out.uri;
+      setResult({
+        eventId,
+        mode: res.mode,
+        title: resultTitle(res.mode, res.presets, req.title),
+        beforeUri: cUri,
+        afterUri: out.uri,
+        eyeLineY: res.mode === "glow_up" ? eyeLineRatio(landmarksC, CROP_SIZE, IDX.irisR, IDX.irisL) : null,
+        appliedSteps: res.appliedStepIds.map((id) => ({ id, title: stepTitle(id, ctx.planSteps) })),
+        qc: res.qc,
+        regenCount: res.regenCount,
+      });
+      setFlagged(false);
+      setUsed((u) => nextUsed(u, res.weight));
+      track("tryon_result", { status: "success", durationMs: epochNow() - startedAt });
       setStage("result");
     } catch (e) {
       const code = e instanceof ApiClientError ? e.code : "NETWORK";
-      track("tryon_result", { status: code, durationMs: epochNow() - start });
-      setError(t(`errors.${code}`) === `tryon.errors.${code}` ? t("errors.GENERIC") : t(`errors.${code}`));
-      setStage("gallery");
+      track("tryon_result", { status: code, durationMs: epochNow() - startedAt });
       await deleteQuietly(cUri);
+      await deleteQuietly(afterUri);
+      if (code === "TRYON_QC_FAILED") {
+        // Kontrolden geçmeyen görsel hiç gelmedi; hak düşmedi (Ç10).
+        track("tryon_qc_failed");
+        setStage("qc_failed");
+        return;
+      }
+      const planRequired = e instanceof ApiClientError && code === "BAD_INPUT" && e.message === "plan_required";
+      const key = t(`errors.${code}`) !== `tryon.errors.${code}` ? t(`errors.${code}`) : t(`v2.errors.${code}`) !== `tryon.v2.errors.${code}` ? t(`v2.errors.${code}`) : t("errors.GENERIC");
+      setError(planRequired ? t("v2.glowUp.planRequired") : key);
+      setStage("gallery");
     } finally {
       if (timerRef.current) clearInterval(timerRef.current);
     }
   }
 
-  async function download() {
+  useEffect(() => {
+    if (!autoRun || !ctx || stage !== "gallery" || autoRunDoneRef.current === autoRun) return;
+    autoRunDoneRef.current = autoRun; // her istek yeni nesne: bir kez çalışır
+    void run(autoRun);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run bileşen kapsamındaki durumla her çağrıda taze; yalnız autoRun tetikler
+  }, [autoRun, ctx, stage]);
+
+  async function share() {
     if (!result) return;
+    setSharing(true);
     try {
-      const b64 = await stampAiLabelBase64(result.afterUri, tt("common.aiGenerated"));
-      await shareBase64Jpeg(b64, result.preset.nameTr);
+      const r = await shareTryonResult(result.afterUri, tryonSharePlan(result), { stamp: stampAiLabelBase64, share: shareBase64Jpeg });
+      Alert.alert(r === "shared" ? t("v2.result.shared") : t("v2.result.shareError"));
+    } catch {
+      Alert.alert(t("v2.result.shareError"));
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function flagBroken() {
+    if (!result || flagged) return;
+    try {
+      await aura.tryon.flag(result.eventId);
+      setFlagged(true);
+      track("tryon_flagged_broken");
+      Alert.alert(t("v2.flagBrokenThanks"));
     } catch {
       Alert.alert(t("errors.GENERIC"));
     }
@@ -165,7 +245,8 @@ export default function TryonTab() {
     setStage("gallery");
   }
 
-  if (!status) return <Screen><Text variant="muted">…</Text></Screen>;
+  if (!ctx) return <Screen><Text variant="muted">…</Text></Screen>;
+  const { status } = ctx;
   if (!status.premium) {
     return (
       <Screen>
@@ -178,76 +259,43 @@ export default function TryonTab() {
   if (!status.hasConsent) {
     return (
       <Screen>
-        <Card title={t("consent.title")} description={t("consent.body")}>
-          {(["b1", "b2", "b3", "b4"] as const).map((k) => <Text key={k} variant="muted">• {t(`consent.${k}`)}</Text>)}
-          <Button title={t("consent.accept")} size="lg" onPress={giveConsent} />
-        </Card>
+        <TryonConsentCard onAccept={() => void giveConsent()} />
       </Screen>
     );
   }
   if (stage === "generating") {
-    return (
-      <Screen>
-        <Card title={t("generating.title", { name: pending?.nameTr ?? "" })} description={elapsed > 45 ? t("generating.slow") : t("generating.body")}>
-          <Text variant="muted">{t("generating.elapsed", { s: elapsed })}</Text>
-        </Card>
-      </Screen>
-    );
+    const title = pending?.mode === "combo" ? t("v2.generatingCombo") : pending?.mode === "glow_up" ? t("v2.generatingGlowUp") : t("generating.title", { name: pending?.title ?? "" });
+    return <Screen><TryonGenerating title={title} elapsed={elapsed} /></Screen>;
   }
+  if (stage === "qc_failed") return <Screen><QcFailedCard onBack={() => void back()} /></Screen>;
   if (stage === "result" && result) {
-    return (
-      <Screen>
-        <View style={{ borderRadius: 24, overflow: "hidden", backgroundColor: "#000" }}>
-          <Image source={{ uri: view === "after" ? result.afterUri : result.beforeUri }} style={{ width: "100%", aspectRatio: 1 }} accessibilityLabel={view === "after" ? t("afterAlt") : t("beforeAlt")} />
-          <Text style={{ position: "absolute", right: 8, bottom: 8, color: "#fff", fontSize: 11, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 6, borderRadius: 4 }}>{tt("common.aiGenerated")}</Text>
-        </View>
-        <View style={{ flexDirection: "row", gap: spacing.sm }}>
-          <Button title={t("before")} variant={view === "before" ? "primary" : "outline"} style={{ flex: 1 }} onPress={() => setView("before")} />
-          <Button title={t("after")} variant={view === "after" ? "primary" : "outline"} style={{ flex: 1 }} onPress={() => setView("after")} />
-        </View>
-        <Text style={{ textAlign: "center" }}>{result.preset.nameTr}</Text>
-        <View style={{ flexDirection: "row", gap: spacing.sm }}>
-          <Button title={t("download")} variant="outline" style={{ flex: 1 }} onPress={download} />
-          <Button title={t("tryAnother")} style={{ flex: 1 }} onPress={() => void back()} />
-        </View>
-        <FeedbackButtons targetType="tryon" targetId={result.eventId} />
-        <Text variant="small">{t("resultNote")}</Text>
-      </Screen>
-    );
+    return <Screen><TryonResult result={result} onShare={() => void share()} onFlag={() => void flagBroken()} flagged={flagged} onBack={() => void back()} sharing={sharing} /></Screen>;
   }
 
   const limit = status.quota?.limit ?? 0;
   const remaining = Math.max(0, limit - used);
-  const tabs: Kind[] = [...(recommended.length ? (["recommended"] as Kind[]) : []), "hair", "beard", "color"];
   return (
     <Screen>
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Text variant="muted">{t("remaining", { n: remaining, limit })}</Text>
-        {remaining === 0 && status.quota?.nextAt ? <Text variant="small">{t("nextAt", { date: new Date(status.quota.nextAt).toLocaleDateString("tr-TR") })}</Text> : null}
-      </View>
-      {error ? <Text accessibilityRole="alert" style={{ color: colors.destructive }}>{error}</Text> : null}
+      <QuotaBar remaining={remaining} limit={limit} nextAt={status.quota?.nextAt ?? null} />
+      {error ? (
+        <View accessibilityRole="alert" style={{ gap: spacing.sm, borderWidth: 1, borderStyle: "dashed", borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md }}>
+          <Text style={{ fontWeight: "500", fontSize: 14 }}>{error}</Text>
+          {pending && remaining > 0 ? <Button title={`${t("retry")} · ${pending.title}`} variant="outline" onPress={() => start(pending)} /> : null}
+        </View>
+      ) : null}
       {!getSessionSelfie() ? <Text variant="small">{t("needSelfie")}</Text> : null}
-      <View style={{ flexDirection: "row", gap: spacing.xs }}>
-        {tabs.map((k) => (
-          <Button key={k} title={t(`tabs.${k}`)} variant={tab === k ? "primary" : "outline"} style={{ flex: 1, minHeight: 40 }} onPress={() => setTab(k)} />
+      <View style={{ flexDirection: "row", gap: spacing.xs }} accessibilityRole="tablist">
+        {modes.map((m) => (
+          <Button key={m} title={t(`v2.modes.${m}`)} variant={mode === m ? "primary" : "outline"} style={{ flex: 1, minHeight: 40 }} accessibilityState={{ selected: mode === m }} onPress={() => { setMode(m); setPicked({}); }} />
         ))}
       </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
-        {list.map((p) => (
-          <Pressable
-            key={p.id}
-            accessibilityRole="button"
-            disabled={remaining === 0}
-            onPress={() => choose(p)}
-            style={{ width: "48%", padding: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, opacity: remaining === 0 ? 0.5 : 1, gap: 2 }}
-          >
-            <Text style={{ fontWeight: "600" }}>{p.nameTr}</Text>
-            {p.noteTr ? <Text variant="small">{p.noteTr}</Text> : null}
-            {recommended.includes(p.id) ? <Text variant="small">★ {t("recommendedBadge")}</Text> : null}
-          </Pressable>
-        ))}
-      </View>
-      <Text variant="small">{t("galleryNote")}</Text>
+      <Text variant="small">{t(`v2.modeHint.${mode}`)}</Text>
+      {mode === "glow_up" ? (
+        <GlowUpPanel layers={layers} onChange={setLayers} onRun={() => { track("glowup_viewed"); start(glowUpRequest(layers, t("v2.glowUp.title"))); }} planSteps={ctx.planSteps} analysisId={ctx.analysisId} disabled={remaining === 0} />
+      ) : (
+        <ComboPicker mode={mode} value={picked} onChange={setPicked} onRun={() => start(styleRequest(mode === "combo" ? "combo" : "style", picked))} recommended={ctx.recommended} presentation={status.presentation} disabled={remaining === 0} />
+      )}
+      <Text variant="small">{mode === "glow_up" ? t("v2.glowUp.skinNote") : t("galleryNote")} {t("v2.aiLabelNote")}</Text>
     </Screen>
   );
 }

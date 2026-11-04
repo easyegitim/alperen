@@ -8,7 +8,8 @@ import { IDX } from "@/lib/face/indices";
 import type { Point } from "@/lib/face/types";
 import { alignmentResidual, estimateSimilarity } from "@/lib/tryon/align";
 import { alignPointsFor, geometryDrift, TRYON_LIMITS, type DriftPolicy } from "@/lib/tryon/composite";
-import { buildProtectMask } from "@/lib/tryon/mask";
+import { glowUpGate, rewriteHighFrequency, type GlowUpGateReason } from "@/lib/tryon/glowUp";
+import { buildProtectMask, skinRegionMask } from "@/lib/tryon/mask";
 import { compositePixels } from "@/lib/tryon/pixels";
 import { toFrameAnalysis } from "@/mobile/src/features/capture/frame";
 import { scalePoints, similarityToMatrix } from "@/mobile/src/features/tryon/matrix";
@@ -17,7 +18,15 @@ import { deleteQuietly } from "./images";
 
 export type TryonOutcome =
   | { ok: true; uri: string; base64: string; residual: number; toneAdjusted: boolean }
-  | { ok: false; reason: "no_face_in_output" | "alignment_residual" | "geometry_drift" | "canvas" };
+  | { ok: false; reason: "no_face_in_output" | "alignment_residual" | "geometry_drift" | "canvas" | GlowUpGateReason };
+
+export type CompositeOptions = {
+  /**
+   * glow_up cilt katmanı (KB Ç9; PLAN 5d): modelin çıktısı cilt bölgesinde doku/ton kapısından geçer (lib/tryon/glowUp.ts),
+   * sonra orijinal ince doku (ben/çil/iz/gözenek) geri yazılır. Kapı geçmezse görsel gösterilmez (çağıran kota iadesi ister).
+   */
+  glowUp?: boolean;
+};
 
 const RGBA = { colorType: ColorType.RGBA_8888, alphaType: AlphaType.Unpremul } as const;
 
@@ -44,7 +53,7 @@ function readRgba(img: SkImage, W: number, H: number): Uint8ClampedArray | null 
  * C: 1024 px kare kırpım (uri) + C üzerindeki noktalar (piksel). gBase64: modelin ürettiği görsel.
  * Adımlar: G'de yüz bul → benzerlik dönüşümü → G' = hizalı G → maske → kompozit → kompozitte yüz bul → geometri sapması.
  */
-export async function compositeTryonNative(cUri: string, landmarksC: Point[], gBase64: string, protect: Protect, policy: DriftPolicy): Promise<TryonOutcome> {
+export async function compositeTryonNative(cUri: string, landmarksC: Point[], gBase64: string, protect: Protect, policy: DriftPolicy, opts: CompositeOptions = {}): Promise<TryonOutcome> {
   const gFile = await writeTemp(gBase64, `aura-g-${Date.now()}.jpg`);
   let outFile: File | null = null;
   try {
@@ -58,7 +67,8 @@ export async function compositeTryonNative(cUri: string, landmarksC: Point[], gB
 
     // 1–2) G → C boyutu; benzerlik dönüşümü L_G → L_C (sabit noktalar), artık kontrolü
     const LG = scalePoints(g.points, W / gImg.width(), H / gImg.height());
-    const points = alignPointsFor(protect);
+    // v2: sakal parçası varsa (policy) ya da sakal bölgesini modele bırakan maskede çene ucu hizalamaya girmez.
+    const points = alignPointsFor(protect, policy);
     const src = points.map((i) => LG[i]);
     const dst = points.map((i) => landmarksC[i]);
     const t = estimateSimilarity(src, dst);
@@ -82,6 +92,16 @@ export async function compositeTryonNative(cUri: string, landmarksC: Point[], gB
     // 3–5) maske + karışım (saf çekirdek)
     const mask = buildProtectMask(landmarksC, W, H, protect);
     const { out, toneAdjusted } = compositePixels(gp, cp, mask, W, H);
+    if (opts.glowUp) {
+      // 6) glow_up: kapı geri yazımdan ÖNCE modelin çıktısını ölçer; sonra orijinal ince doku geri yazılır.
+      const region = skinRegionMask(landmarksC, W, H);
+      const gate = glowUpGate(cp, out, region, W, H);
+      if (!gate.ok && gate.reason) {
+        cImg.dispose();
+        return { ok: false, reason: gate.reason };
+      }
+      rewriteHighFrequency(out, cp, region, W, H);
+    }
     const outImg = Skia.Image.MakeImage({ width: W, height: H, ...RGBA }, Skia.Data.fromBytes(new Uint8Array(out.buffer)), W * 4);
     cImg.dispose();
     if (!outImg) return { ok: false, reason: "canvas" };

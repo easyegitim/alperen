@@ -143,6 +143,13 @@ const WALKED = [
   "questionnaire.v2",
   "doctor",
   "tryon.v2",
+  // Sprint 3 (CONTRACTS_V2 Sprint 3): paylaşım kartları, affedici seri, gürültü bandı, davet kodu girişi, hayalet kılavuz, mobil
+  "share.v2",
+  "routine.v2",
+  "progress.v2",
+  "referral.claim",
+  "ghost",
+  "mobile",
 ];
 const walked = WALKED.flatMap(leaves);
 

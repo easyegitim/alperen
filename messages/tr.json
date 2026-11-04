@@ -1405,7 +1405,10 @@
         "code": "Davet kodun",
         "share": "Daveti paylaş",
         "shareText": "Aura'da yüz analizini dene; davet kodum: {code}",
-        "copied": "Davet metni kopyalandı."
+        "copied": "Davet metni kopyalandı.",
+        "pending": "{n} bekliyor",
+        "unlocks": "Açılan: yalnız genel skor. Potansiyel, alt skorlar, rapor ve plan ödemeyle.",
+        "unlockedNote": "Davetlerin tamamlandı; genel skorun açık."
       },
       "eyebrow": "Tam sonuç",
       "lead": "Analiz ücretlidir. Ödeme sonrası bu analiz kart kart açılır.",
@@ -1451,7 +1454,41 @@
     "shared": "Paylaşıldı.",
     "downloaded": "Kart indirildi.",
     "error": "Kart oluşturulamadı.",
-    "photoError": "Fotoğraf açılamadı."
+    "photoError": "Fotoğraf açılamadı.",
+    "v2": {
+      "title": "Paylaşım kartı",
+      "kinds": {
+        "score": "Skor kartı",
+        "strongest": "En güçlü yanım",
+        "barber": "Berber kartı"
+      },
+      "kindHint": {
+        "score": "Genel skor, potansiyel ve en yüksek 3 alt skor.",
+        "strongest": "Sayı yok; yalnız en güçlü alt alanın ve bir cümle.",
+        "barber": "Stil adı, yan ve üst ölçüleri, sakal hattı; berberine gösterirsin."
+      },
+      "strongestTitle": "En güçlü yanın: {area}",
+      "photoToggle": "Fotoğrafımı ekle",
+      "photoHint": "Varsayılan kapalı; yalnız kendi paylaşımın için. Reklam ve mağaza görsellerinde kullanıcı fotoğrafı yer almaz.",
+      "marketingNoPhoto": "Reklam kartlarında kullanıcı fotoğrafı yer almaz.",
+      "barberNoPhoto": "Berber kartında fotoğraf yok; stil görselleri hazırlanınca eklenecek.",
+      "disclaimer": "Yapay zekâ tahmini; kişisel değerini ölçmez.",
+      "footer": "Aura",
+      "create": "Oluştur ve paylaş",
+      "download": "İndir",
+      "shared": "Paylaşıldı.",
+      "downloaded": "Kart indirildi.",
+      "error": "Kart oluşturulamadı.",
+      "invalid": "Bu kart bu ayarlarla oluşturulamaz.",
+      "deviceNote": "Kart cihazında üretilir; sunucuya gitmez.",
+      "labels": {
+        "overall": "Genel skor",
+        "potential": "Potansiyel"
+      },
+      "kindAria": "Kart türü",
+      "formatAria": "Kart biçimi",
+      "barberButton": "Berber kartını paylaş"
+    }
   },
   "checkout": {
     "choosePlan": "Plan seç",
@@ -1847,6 +1884,36 @@
       "rep": "+1 tekrar",
       "set": "Set {n}/{total}",
       "hold": "{s} sn tut"
+    },
+    "v2": {
+      "restDay": "Dinlenme günü",
+      "restDayHint": "Haftada {n} eksik gün seriyi bozmaz; o gün dinlenme sayılır.",
+      "restDaysLeft": "Bu hafta kalan dinlenme günü: {n}",
+      "restDaysNone": "Bu hafta dinlenme hakkın kullanıldı; bugünü yapmak seriyi korur.",
+      "freeze": "Seriyi dondur",
+      "freezeHint": "Ayda {n} kez seriyi dondurabilirsin; dondurulan gün seriye dokunmaz.",
+      "freezeUsed": "Bu ay dondurma hakkın kullanıldı.",
+      "freezeDone": "Bugün donduruldu; serin korunuyor.",
+      "frozenDay": "Donduruldu",
+      "missedDay": "Yapılmadı",
+      "streakKept": "Serin korundu.",
+      "bridgedNote": "{rest} dinlenme ve {freeze} dondurma günü seriye sayılmadı ama zinciri koparmadı.",
+      "placeholderNote": "Dinlenme ve dondurma kuralları öneri aşamasında; sayılar değişebilir.",
+      "errors": {
+        "limit_reached": "Bu ay dondurma hakkın kalmadı.",
+        "already_frozen": "Bu gün zaten donduruldu.",
+        "future_date": "Gelecek bir gün dondurulamaz.",
+        "bad_date": "Tarih okunamadı."
+      },
+      "weekAria": "Son 7 gün",
+      "dayAria": "{day}: {status}",
+      "days": {
+        "done": "Yapıldı",
+        "rest": "Dinlenme günü",
+        "frozen": "Donduruldu",
+        "missed": "Yapılmadı",
+        "pending": "Bugün, henüz tamamlanmadı"
+      }
     }
   },
   "progress": {
@@ -1873,7 +1940,20 @@
     "goPremium": "Premium'a geç",
     "trendEmptyTitle": "Skor trendin burada çizilecek",
     "trendEmptyBody": "İkinci analizinle genel ve potansiyel skorun çizgiye dönüşür.",
-    "trendNextSlot": "İkinci analiz hakkın {date} tarihinde açılır."
+    "trendNextSlot": "İkinci analiz hakkın {date} tarihinde açılır.",
+    "v2": {
+      "change": {
+        "noChange": "Değişim yok",
+        "up": "Yükseldi",
+        "down": "Düştü"
+      },
+      "noiseNote": "±{band} içindeki fark ışık ve açıdan kaynaklanabilir; değişim sayılmaz.",
+      "deltaLabel": "Önceki analize göre {delta}",
+      "sincePrevious": "Önceki analize göre",
+      "calibrationChanged": "Kalibrasyon sürümü değişti; bu iki analiz karşılaştırılmaz.",
+      "changeAria": "Skor değişimi: {label}",
+      "ownHistoryNote": "Kıyas yalnız kendi geçmişinle; başka kullanıcılarla sıralama yok."
+    }
   },
   "experts": {
     "title": "Uzman Ağı",
@@ -2225,6 +2305,52 @@
       "rejectedByRule": "Kural nedeniyle kaydedilmedi",
       "sources": "Kaynaklar",
       "error": "İşlem yapılamadı."
+    }
+  },
+  "referral": {
+    "claim": {
+      "title": "Davet kodun var mı?",
+      "body": "Seni davet eden kişinin kodunu gir. Fotoğraf yolladığında davet tamamlanır; daveti yapan kişinin genel skoru 5 davetle açılır.",
+      "label": "Davet kodu",
+      "placeholder": "DV-XXXX-XXXX",
+      "submit": "Kodu kullan",
+      "skip": "Kodum yok",
+      "success": "Davet kaydedildi.",
+      "errors": {
+        "unknown_code": "Bu kod bulunamadı.",
+        "self": "Kendi kodunu kullanamazsın.",
+        "already_claimed": "Bu hesapta zaten kayıtlı bir davet var.",
+        "device": "Cihaz doğrulaması tamamlanamadı; daha sonra tekrar dene.",
+        "disabled": "Davet özelliği şu an kapalı.",
+        "generic": "Kod kullanılamadı; tekrar dene.",
+        "format": "Kod DV-XXXX-XXXX biçiminde olmalı."
+      }
+    }
+  },
+  "ghost": {
+    "title": "Hayalet kılavuz",
+    "body": "Önceki fotoğrafının yüz çizgisi kamerada silik görünür; aynı açıya ve mesafeye otur.",
+    "show": "Kılavuzu göster",
+    "hide": "Kılavuzu gizle",
+    "none": "Önceki analizden kılavuz yok; ilk analizden sonra görünür.",
+    "aria": "Önceki yüz çizgisi kılavuzu",
+    "aligned": "Hizalandın; çekebilirsin.",
+    "deviceNote": "Kılavuz cihazında üretilir ve yalnız burada durur; hiçbir yere gönderilmez.",
+    "saveHint": "Kaydedersen bir sonraki çekimde yüz çizgin kamerada silik kılavuz olur."
+  },
+  "mobile": {
+    "stub": {
+      "title": "Hazırlanıyor",
+      "body": "Bu ekran mobil sürümde Sprint 3 ile geliyor.",
+      "back": "Geri"
+    },
+    "signIn": {
+      "emailFallback": "E-posta ile devam et",
+      "openBrowser": "Giriş için tarayıcı açılır; bitince uygulamaya dönersin."
+    },
+    "share": {
+      "systemSheet": "Sistem paylaşım sayfası açılır.",
+      "saved": "Fotoğraflara kaydedildi."
     }
   }
 }

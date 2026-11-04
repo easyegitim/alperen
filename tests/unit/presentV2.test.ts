@@ -181,6 +181,18 @@ describe("toClientAnalysisV2: ödeme sonrası (entitled)", () => {
   it("sunucu alanları (runs, set_key, signals'ın kendisi) hiçbir görünümde gitmez", () => {
     for (const access of [NONE, PAID, REF]) expect(JSON.stringify(toClientAnalysisV2(completed, access))).not.toMatch(/"runs"|set_key|"signals"|"abc"/);
   });
+  it("detections: gözlük/baş örtüsü yalnız açık sonuçta; başka gözlem alanı sızmaz (anket v2 ön dolumu, Ç17)", () => {
+    const observations = { glassesDetected: true, headCoveringDetected: false, hairLossSignal: "possible", skinSurface: "T bölgesinde parlama", seeProfessional: null };
+    const row = { ...completed, observations };
+    expect(toClientAnalysisV2(row, PAID).detections).toEqual({ glassesDetected: true, headCoveringDetected: false });
+    expect(JSON.stringify(toClientAnalysisV2(row, PAID).detections)).not.toMatch(/hairLoss|skinSurface|possible/);
+    expect(toClientAnalysisV2(row, NONE).detections).toBeNull();
+    expect(toClientAnalysisV2(row, REF).detections).toBeNull();
+    expect(toClientAnalysisV2({ ...row, status: "processing" }, PAID).detections).toBeNull();
+    expect(toClientAnalysisV2({ ...completed, observations: null }, PAID).detections).toBeNull();
+    expect(toClientAnalysisV2({ ...completed, observations: { glassesDetected: "yes" } }, PAID).detections).toBeNull();
+    expect(toClientAnalysisV2({ ...completed, observations: { headCoveringDetected: true } }, PAID).detections).toEqual({ glassesDetected: null, headCoveringDetected: true });
+  });
 });
 
 describe("toClientAnalysisV2: davet kilidi (referralUnlock, Ç12)", () => {
@@ -197,5 +209,17 @@ describe("toClientAnalysisV2: davet kilidi (referralUnlock, Ç12)", () => {
   });
   it("davet kilidi tamamlanmamış analizde skor açmaz", () => {
     expect(toClientAnalysisV2(deviceOnly, REF).overall).toEqual({ value: null, locked: true });
+  });
+  it("davetle başlatılan iş (hak yok, running): her şey kilitli; completed olunca yalnız genel skor — hak (entitled) hiç açılmaz", () => {
+    const running = toClientAnalysisV2({ ...completed, status: "running", sections_ready: ["device", "overall"] }, REF);
+    expect(running.stage).toBe("running");
+    expect(running.overall).toEqual({ value: null, locked: true });
+    expect(running.subscores.skin).toEqual({ value: null, locked: true });
+    const done = toClientAnalysisV2(completed, REF);
+    expect(done.overall.locked).toBe(false);
+    expect(done.overall.value?.value).toBe(5.8);
+    expect(done.overall.value?.range).toBeNull();
+    expect(done.potential.locked).toBe(true);
+    expect(done.report.locked).toBe(true);
   });
 });

@@ -4,11 +4,12 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { RevealSequence, type RevealCard } from "@/components/analysis/RevealSequence";
 import { FeedbackButtons } from "@/components/report/FeedbackButtons";
-import { ShareCardButton } from "@/components/share/ShareCardButton";
+import { ShareCardButton, type StrongestInfo } from "@/components/share/ShareCardButton";
 import { track } from "@/lib/analytics";
 import { RESULT_FOCUS_BELOW } from "@/lib/config/scoring";
 import type { SectionKey } from "@/lib/score/contract";
 import type { ClientAnalysisV2 } from "@/lib/score/present";
+import { strongestSub } from "@/lib/share/spec";
 import { FaceShapeCard } from "./FaceShapeCard";
 import { ImproveFirstV2Card } from "./ImproveFirstV2Card";
 import { MeasuresCard } from "./MeasuresCard";
@@ -116,13 +117,16 @@ export function ResultV2View({ initial, instantReveal, flags = DEFAULT_FLAGS }: 
     .filter((r) => r.score && !r.notAssessed)
     .sort((x, y) => (y.score?.value ?? 0) - (x.score?.value ?? 0))
     .slice(0, 3)
-    .map((r) => ({ label: t(`sub.${r.k}`), value: r.score?.value ?? 0 }));
+    .map((r) => ({ key: r.k, label: t(`sub.${r.k}`), value: r.score?.value ?? 0 }));
+  // Faz 6 (KB §8): "En güçlü yanın: …" kartı — en yüksek açık alt skor + açıklamanın ilk "ne tuttu" cümlesi; sayı yok.
+  const strongestKey = strongestSub(Object.fromEntries(rows.filter((r) => r.score && !r.notAssessed).map((r) => [r.k, r.score])));
+  const strongest: StrongestInfo | null = strongestKey ? { sub: strongestKey, label: t(`sub.${strongestKey}`), line: rows.find((r) => r.k === strongestKey)?.explanation?.held[0] ?? "" } : null;
 
   return (
     <div className="space-y-3">
       <StageBanner stage={a.stage} done={done} total={cards.length} pollError={pollError} />
       <RevealSequence stage={a.stage} sectionsReady={a.sectionsReady} cards={cards} instant={instant} />
-      {a.stage === "completed" && overall && potential ? <ShareCardButton overall={overall.value} potential={potential.value} subs={shareSubs} /> : null}
+      {a.stage === "completed" && overall && potential ? <ShareCardButton overall={overall.value} potential={potential.value} subs={shareSubs} strongest={strongest} /> : null}
       {a.stage === "completed" ? <FeedbackButtons targetType="score" targetId={a.id} /> : null}
     </div>
   );

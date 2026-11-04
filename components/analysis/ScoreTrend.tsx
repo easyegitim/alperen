@@ -2,6 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
+import { ScoreChangeNote } from "@/components/progress/ScoreChangeNote";
+import { NOISE_BAND } from "@/lib/progress/noise";
 
 export type TrendPoint = { id: string; date: string; overall: number; potential: number; calibrationVersion: string | null };
 
@@ -11,8 +13,10 @@ const fmt = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 1,
 /**
  * Skor trendi (SPEC 11.2 / Faz 7 madde 5): genel skor ve potansiyel; tek eksen, 2 px çizgi, ≥8 px işaret,
  * lejant + son noktada doğrudan etiket, dokunma/hover ipucu. Kalibrasyon sürümü değişmişse dipnot.
+ * Faz 6 (KB §4.2): son iki analiz arası fark ±band içindeyse "Değişim yok" etiketi ve bant açıklaması (ScoreChangeNote);
+ * band tek kaynak NOISE_BAND (ClientAnalysisV2.noiseBand ile aynı). Kıyas yalnız kendi geçmişiyle.
  */
-export function ScoreTrend({ points }: { points: TrendPoint[] }) {
+export function ScoreTrend({ points, band = NOISE_BAND }: { points: TrendPoint[]; band?: number }) {
   const t = useTranslations("analysis.trend");
   const id = useId();
   const [active, setActive] = useState<number | null>(null);
@@ -77,6 +81,7 @@ export function ScoreTrend({ points }: { points: TrendPoint[] }) {
         <tbody>{data.map((p) => <tr key={p.id}><td>{p.date}</td><td>{fmt(p.overall)}</td><td>{fmt(p.potential)}</td></tr>)}</tbody>
       </table>
       {versions.size > 1 ? <p className="text-xs text-muted-foreground">{t("calibrationNote")}</p> : null}
+      <ScoreChangeNote points={data} band={band} />
     </figure>
   );
 }

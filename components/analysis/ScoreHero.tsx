@@ -182,10 +182,13 @@ export function ScoreHeroLocked({
   faceShape,
   source,
   onLocked,
+  overall = null,
 }: {
   faceShape: { primary: string; secondary?: string } | null;
   source: OverlaySource | null;
   onLocked: (t: PaywallTrigger) => void;
+  /** Davet kilidiyle (KB Ç12) açılmış genel skor: yalnız sayı; aralık/yüzdelik yok, geri kalan kilitli. */
+  overall?: number | null;
 }) {
   const t = useTranslations("analysis");
   const tg = useTranslations("geometry");
@@ -197,8 +200,15 @@ export function ScoreHeroLocked({
           <h2 id="hero-title" className="eyebrow">
             {t("overallTitle")}
           </h2>
-          <ScoreRing value={null} size={176}>
-            <LockedValue v={{ value: null, locked: true }} big onTap={() => onLocked("score_main")} aria={t("locked.ringAria")} />
+          <ScoreRing value={overall} size={176}>
+            {overall === null ? (
+              <LockedValue v={{ value: null, locked: true }} big onTap={() => onLocked("score_main")} aria={t("locked.ringAria")} />
+            ) : (
+              <p className="flex flex-col items-center">
+                <span className="num text-display text-brand-gradient pr-[0.04em]">{fmtScore(overall)}</span>
+                <span className="num mt-1 text-sm font-medium text-muted-foreground">{t("hero.outOf")}</span>
+              </p>
+            )}
           </ScoreRing>
           <div className="flex flex-col items-center gap-1.5">
             <button

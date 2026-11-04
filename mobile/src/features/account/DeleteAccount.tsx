@@ -7,7 +7,7 @@ import { Card } from "@/mobile/src/components/ui/Card";
 import { Input } from "@/mobile/src/components/ui/Input";
 import { Text } from "@/mobile/src/components/ui/Text";
 import { setAnalyticsConsent } from "@/mobile/src/features/analytics/consent";
-import { setSessionSelfie } from "@/mobile/src/features/capture/sessionSelfie";
+import { clearCaptureState } from "@/mobile/src/features/capture/captureSession";
 import { useSession } from "@/mobile/src/features/session/SessionProvider";
 import { scoped } from "@/mobile/src/lib/i18n";
 import { clearProgressPhotos } from "@/mobile/src/lib/progressStore";
@@ -29,7 +29,7 @@ export function DeleteAccount() {
     try {
       await api.post("/api/me/delete", { confirm: word });
       await clearProgressPhotos().catch(() => undefined);
-      setSessionSelfie(null);
+      await clearCaptureState().catch(() => undefined);
       await setAnalyticsConsent(false).catch(() => undefined);
       await signOut().catch(() => undefined);
       setOpen(false);

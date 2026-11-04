@@ -65,6 +65,12 @@ const EVENT_NAMES: Record<AnalyticsEventName, true> = {
   tryon_qc_failed: true,
   tryon_flagged_broken: true,
   glowup_viewed: true,
+  // Sprint 3 (T2): yüksüz olaylar
+  ghost_guide_shown: true,
+  routine_rest_day: true,
+  routine_freeze_used: true,
+  progress_no_change_shown: true,
+  barber_card_opened: true,
 };
 
 describe("paywall yapılandırması (UI spec S4)", () => {

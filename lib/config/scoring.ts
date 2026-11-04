@@ -41,6 +41,10 @@ export const CALIBRATION_H1 = { min: 1.0, max: 9.8 } as const;
 /** Sonuç ekranında düşük skor düzeni eşiği (SPEC 8.7, UI spec S5). */
 export const RESULT_FOCUS_BELOW = 4.0;
 
+/** Gürültü bandı (KB §4.2; CONTRACTS_V2 §4): ±bu kadar fark "değişim yok". Tek kaynak; motor (engine.h2.server) ve
+ *  ClientAnalysisV2.noiseBand ile ilerleme ekranı (lib/progress/noise.ts) aynı değeri okur. Saf; mobil de içe aktarır. */
+export const NOISE_BAND = 0.3;
+
 /** Kalibrasyon v0 (SPEC 8.4): overall = clamp(5.5 + (raw − RAW_MEAN) × SCALE, 1.0, 9.8). Faz 6'da 50 fotoğrafla ayarlanır. */
 export const CALIBRATION_V0 = {
   target: 5.5,

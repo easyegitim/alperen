@@ -3,7 +3,8 @@ import { matchFont, PaintStyle, Skia, type SkImage } from "@shopify/react-native
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
-import { shareCardLayout, type ShareCardInput } from "./layout";
+import { SHARE_RULES, type ShareCardSpec } from "@/lib/share/spec";
+import { shareCardLayout, shareLayoutFromSpec, type Layout, type ShareCardInput } from "./layout";
 
 const FAMILY = Platform.select({ ios: "Helvetica", android: "sans-serif", default: "sans-serif" });
 
@@ -13,7 +14,10 @@ function font(size: number, bold: boolean) {
 
 /** Kartı çizer; JPEG base64 döner. photo: önceden yüklenmiş Skia görüntüsü (isteğe bağlı). */
 export function renderShareCardBase64(input: ShareCardInput, photo: SkImage | null): string {
-  const layout = shareCardLayout({ ...input, hasPhoto: Boolean(photo) });
+  return paintLayout(shareCardLayout({ ...input, hasPhoto: Boolean(photo) }), photo);
+}
+
+function paintLayout(layout: Layout, photo: SkImage | null): string {
   const surface = Skia.Surface.Make(layout.w, layout.h);
   if (!surface) throw new Error("surface");
   const canvas = surface.getCanvas();
@@ -78,4 +82,14 @@ export async function shareBase64Jpeg(base64: string, title: string): Promise<"s
 export async function loadSkiaImage(uri: string): Promise<SkImage | null> {
   const data = await Skia.Data.fromURI(uri);
   return Skia.Image.MakeImageFromEncoded(data);
+}
+
+/**
+ * v2 spec kartı (KB §8; CONTRACTS_V2 S3.3.1): çağıran shareSpecIssues ile doğrular (reklam kartında fotoğraf yok — K17;
+ * berber kartı fotoğrafsız). Çizim aynı Skia yolu; JPEG base64 döner.
+ */
+export function renderShareSpecBase64(spec: ShareCardSpec, photo: SkImage | null): string {
+  const allowPhoto = SHARE_RULES.photoAllowed(spec.kind, spec.audience);
+  const layout = shareLayoutFromSpec(spec, Boolean(photo) && allowPhoto);
+  return paintLayout(layout, allowPhoto ? photo : null);
 }

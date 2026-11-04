@@ -90,10 +90,20 @@ test.describe("Gizlilik (tüm ağ trafiği)", () => {
       await page.getByRole("button", { name: "Kamerayı aç" }).click();
       await page.getByRole("button", { name: "Çek" }).click({ timeout: 30_000 });
       await page.getByRole("button", { name: "Bu fotoğrafı kullan" }).click({ timeout: 60_000 });
+      // "Bu fotoğrafı ilerlememe kaydet" (yalnız IndexedDB): hayalet kılavuz çizgisi (GhostOutline) bu kayıtla saklanır;
+      // ikinci çekimde kamerada görünür. Bu adım olmadan aşağıdaki hayalet kılavuz gövde kuralı hiçbir şey sınamaz.
+      await page.getByRole("checkbox", { name: /ilerlememe kaydet/ }).click({ timeout: 30_000 });
       await page.getByRole("button", { name: "Analizi başlat" }).click({ timeout: 30_000 });
       await expect.poll(() => analysisResponses.length + analysisFailures.length, { timeout: 90_000 }).toBeGreaterThan(0);
       expect(analysisFailures, `POST /api/analyses başarısız (ön koşul: sunucu + migration; gövde: ${analysisFailures[0] ?? ""})`).toEqual([]);
       await expect(page).toHaveURL(/\/analiz\/[0-9a-f-]{36}/, { timeout: 90_000 });
+
+      // 2b) Yeniden çekim (Faz 6, S3.3.4): önceki çekimin hayalet kılavuzu kamerada çizilir; çizgi (oval/eyes/nose/mouth)
+      //     yalnız IndexedDB'dedir. Bu ziyaretin tüm istekleri de aşağıdaki gövde kurallarından geçer.
+      await page.goto("/tara");
+      await page.getByRole("button", { name: "Kamerayı aç" }).click({ timeout: 30_000 });
+      await expect(page.locator("[data-ghost-guide]"), "hayalet kılavuz ikinci çekimde çizilmeli").toBeVisible({ timeout: 60_000 });
+      await page.waitForTimeout(1_500); // canlı kare işleme + olası otomatik çekim istekleri toplansın
 
       // 3) Ödeme öncesi hiçbir isteğe görsel girmez; girerse yalnız izinli uçlara
       const imageReqs = requests.filter(hasImagePayload);
@@ -144,6 +154,18 @@ test.describe("Gizlilik (tüm ağ trafiği)", () => {
       expect(html).not.toMatch(/"improveFirst":\{"value":\[/);
       // Hiçbir hosta giden gövdede landmark dizisi yok
       for (const r of requests) expect(r.postData() ?? "", new URL(r.url()).host).not.toMatch(/"landmarks"/);
+      // Faz 6 (S3.3.4): hayalet kılavuz çizgisi (GhostOutline: oval/eyes/nose/mouth nokta dizileri) yalnız IndexedDB'de;
+      // hiçbir gövdede yok. Kalıp ŞEKLİ yakalar, sözcüğü değil: geometry.faceShape.primary "oval" olabilir (meşru).
+      for (const r of requests) expect(r.postData() ?? "", `${new URL(r.url()).host} hayalet kılavuz`).not.toMatch(/"oval":\[\[|"ghost":\{|"eyes":\[\[|"mouth":\[\[|"nose":\[/);
+      // Faz 6 (S3.3.1): paylaşım kartı cihazda üretilir; kart görseli (JPEG) hiçbir isteğe girmez — hasImagePayload kuralı
+      // (3. adım) izinli uçlar dışındaki her görsel gövdesini zaten reddeder; burada açıkça: izinli uçlara da kart gitmez.
+      for (const r of imageReqs) expect(r.postData() ?? "", "paylaşım kartı").not.toMatch(/aura-(score|strongest|barber)-/);
+      // Faz 6 (S3.3.5): davet kodu girişi POST /api/referral yalnız { code } taşır (e-posta, cihaz, skor yok).
+      for (const r of requests.filter((q) => q.method() === "POST" && new URL(q.url()).pathname === "/api/referral")) {
+        const claim = JSON.parse(r.postData() ?? "{}") as Record<string, unknown>;
+        expect(Object.keys(claim)).toEqual(["code"]);
+        expect(String(claim.code)).toMatch(/^[A-Za-z0-9 -]{8,20}$/);
+      }
 
       // 7) Supabase istemcisiyle (anon key + kullanıcının kendi oturum JWT'si) analyses / coach_reports / analysis_sets
       //    okunamıyor: tarayıcı politikası yok → 401 ya da boş dizi. purchases okunabilir ama skor taşımaz; yine de boş olmalı.

@@ -14,6 +14,7 @@ import { REVEAL_COUNT_MS, REVEAL_LINES_MS, ScoreHero, ScoreHeroLocked } from "@/
 import { LockedSubscoreList, SubscoreList, type SubRow } from "@/components/analysis/SubscoreList";
 import { useBoundSelfie } from "@/components/analysis/useBoundSelfie";
 import { usePaywall } from "@/components/paywall/PaywallSheet";
+import { ReferralBlock } from "@/components/paywall/ReferralBlock";
 import { FeedbackButtons } from "@/components/report/FeedbackButtons";
 import { ShareCardButton } from "@/components/share/ShareCardButton";
 import { Button } from "@/components/ui/button";
@@ -210,6 +211,9 @@ export function ScoreViewV2({ a }: { a: ClientAnalysisV2 }) {
   }, [a.id, source]);
 
   const prelim = a.faceShape?.override ? { primary: a.faceShape.override } : (a.faceShape?.prelim ?? null);
+  // Davet kilidi (KB Ç12; presentV2 referralUnlock): hak yokken yalnız genel skor değeri gelir; aralık/yüzdelik yok.
+  const overall = !a.overall.locked && a.overall.value ? a.overall.value.value : null;
+  const stageNote = a.stage === "queued" || a.stage === "running" || a.stage === "failed" ? t(`stage.${a.stage}`) : null;
 
   return (
     <div className="space-y-3">
@@ -221,10 +225,17 @@ export function ScoreViewV2({ a }: { a: ClientAnalysisV2 }) {
           <span className="font-semibold">{t("locked.deviceDone")}</span> · {t("locked.unlockBody")}
         </span>
       </p>
-      <ScoreHeroLocked faceShape={prelim} source={source} onLocked={onLocked} />
+      {stageNote ? (
+        <p role="status" aria-live="polite" className="rounded-xl border border-dashed px-3.5 py-2.5 text-[13px] text-muted-foreground">
+          {stageNote}
+        </p>
+      ) : null}
+      <ScoreHeroLocked faceShape={prelim} source={source} onLocked={onLocked} overall={overall} />
       <LockedSubscoreList keys={SUB_KEYS_V2} onLocked={onLocked} />
       <ImproveFirstCard v={{ value: null, locked: true }} analysisId={a.id} onLocked={onLocked} />
       <LockedPlanPreview source={source} onTap={() => onLocked("plan")} />
+      {/* Faz 6 (KB Ç12): davet bloğu kilitli sonuçta da görünür (bayrak kapalıysa 404 → çizilmez). */}
+      <ReferralBlock />
       {a.device ? <DeviceMeasurementsCard ratios={a.device.ratios} /> : null}
       <p className="text-center text-[11px] text-muted-foreground">{t("competitorsNote")}</p>
       <MethodDisclosure hybrid />
