@@ -88,11 +88,13 @@ describe("median ve computeStableGeometry", () => {
   }
 
   it("5 karenin medyanını alır; aykırı kare sonucu bozmaz", () => {
-    const frames = [140, 141, 139, 200, 140].map((len) => ({ frame: frame(len), hairline: null }));
+    // fs-v2: ağ tepesi 1,18 → etkin 1,32 (oval bandı); aykırı 170 medyanı bozmaz.
+    const frames = [118, 119, 117, 170, 118].map((len) => ({ frame: frame(len), hairline: null }));
     const g = computeStableGeometry(frames);
     expect(g.version).toBe("geo-v1");
-    expect(g.metrics.lengthRatio).toBeCloseTo(1.4, 2);
+    expect(g.metrics.lengthRatio).toBeCloseTo(1.18, 2);
     expect(g.metrics.hairlineFound).toBe(false);
+    expect(g.metrics.faceLengthRatio).toBeNull();
     expect(g.quality.brightness).toBe(130);
     expect(g.faceShape.primary).toBe("oval");
   });

@@ -59,6 +59,8 @@ export function computeMetrics(L: Point[], hairlineY: number | null): Metrics {
     lower: lower / total,
   };
   const lowerToMiddle = lower / middle;
+  // fs-v2: saç çizgisi → çene ucu uzunluğu (roll düzeltilmiş eksende; x olarak orta hat 10 kullanılır).
+  const faceLengthRatio = hairlineFound && hairlineY !== null ? Math.hypot(L[IDX.top].x - L[IDX.menton].x, hairlineY - L[IDX.menton].y) / cheek : null;
 
   // hybrid.v1 (engine spec §3.1): iris merkezleri arası / elmacık genişliği; göz–ağız mesafesi / 10–152 uzunluğu.
   const ipdRatio = d(L[IDX.irisR], L[IDX.irisL]) / cheek;
@@ -66,7 +68,7 @@ export function computeMetrics(L: Point[], hairlineY: number | null): Metrics {
     ((L[IDX.stomionUpper].y + L[IDX.stomionLower].y) / 2 - (L[IDX.irisR].y + L[IDX.irisL].y) / 2) /
     (L[IDX.menton].y - L[IDX.top].y);
 
-  return { lengthRatio, jawRatio, foreheadRatio, fwhr, canthalTiltDeg, lowerToMiddle, thirds, hairlineFound, ipdRatio, eyeMouthRatio };
+  return { lengthRatio, jawRatio, foreheadRatio, fwhr, canthalTiltDeg, lowerToMiddle, thirds, hairlineFound, faceLengthRatio, ipdRatio, eyeMouthRatio };
 }
 
 /** engine spec §3.2: karede poz eşikleri (derece). Simetri |yaw| ≤ 3 ve |pitch| ≤ 10; göz–ağız |pitch| ≤ 8. */
@@ -152,11 +154,15 @@ export function computeStableGeometry(frames: GeometryFrame[], capturedAt = new 
     lowerToMiddle: med((m) => m.lowerToMiddle)!,
     thirds: { upper, middle: med((m) => m.thirds.middle)!, lower: med((m) => m.thirds.lower)! },
     hairlineFound: per.filter((p) => p.m.hairlineFound).length * 2 > per.length,
+    faceLengthRatio: med((m) => m.faceLengthRatio ?? null),
     ipdRatio: medQualified(per.map((p) => p.ipd)),
     eyeMouthRatio: medQualified(per.map((p) => p.eyeMouth)),
     symmetry,
   };
-  if (!metrics.hairlineFound) metrics.thirds.upper = null;
+  if (!metrics.hairlineFound) {
+    metrics.thirds.upper = null;
+    metrics.faceLengthRatio = null;
+  }
 
   const last = usable[usable.length - 1].frame;
   const pose = last.matrix ? eulerFromMatrix(last.matrix) : { yaw: 0, pitch: 0, roll: 0 };
@@ -193,6 +199,7 @@ function roundMetrics(m: Metrics): Metrics {
       lower: round(m.thirds.lower, 3),
     },
     hairlineFound: m.hairlineFound,
+    faceLengthRatio: roundOpt(m.faceLengthRatio, 3),
     ipdRatio: roundOpt(m.ipdRatio, 3),
     eyeMouthRatio: roundOpt(m.eyeMouthRatio, 3),
     symmetry: m.symmetry ? { face: round(m.symmetry.face, 3), eyes: round(m.symmetry.eyes, 3), lower: round(m.symmetry.lower, 3) } : null,

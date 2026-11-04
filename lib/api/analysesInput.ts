@@ -25,6 +25,8 @@ export const GeometrySchema = z.object({
     lowerToMiddle: z.number().min(0.2).max(4),
     thirds: z.object({ upper: z.number().nullable(), middle: z.number(), lower: z.number() }),
     hairlineFound: z.boolean(),
+    // fs-v2 (W1): saç çizgisi tabanlı uzunluk oranı; eski istemciler göndermez (sunucu yüz şeklini bununla yeniden hesaplar).
+    faceLengthRatio: z.number().min(0.5).max(3).nullable().optional(),
     // hybrid.v1 ek metrikleri (engine spec §1.2, C1); eski istemciler için isteğe bağlı.
     ipdRatio: z.number().min(0.2).max(0.8).nullable().optional(),
     eyeMouthRatio: z.number().min(0.15).max(0.7).nullable().optional(),
