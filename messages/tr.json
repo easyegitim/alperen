@@ -572,7 +572,8 @@
         "light": "Pencereye dön; ışık yüzüne önden gelsin.",
         "neutral": "Gözler açık, ağız kapalı, gülümseme yok.",
         "frame": "Başının üstü ve çenen kadrajda olsun.",
-        "alone": "Karede yalnız sen ol; gözlük takıyorsan çıkarman gerekmez."
+        "alone": "Karede yalnız sen ol; gözlük takıyorsan çıkarman gerekmez.",
+        "distance": "Telefonu kol boyu uzakta tut; yakın ön kamera burnu büyük gösterir. Saçını alından çek, gözlüğünü çıkar."
       },
       "open": "Kamerayı aç",
       "upload": "Galeriden yükle",
@@ -604,7 +605,9 @@
       "holdStill": "Sabit kal",
       "cancel": "Vazgeç",
       "manual": "Şimdi çek",
-      "manualHint": "Koşullar tam değil ama çekebilirsin; ışık yüzüne önden gelirse sonuç daha tutarlı olur."
+      "manualHint": "Koşullar tam değil ama çekebilirsin; ışık yüzüne önden gelirse sonuç daha tutarlı olur.",
+      "shutter": "Çek",
+      "sideHint": "Bu açı ödeme öncesi doğrulanmaz; yalnız tek kişi olmalı. Uygun değilse analiz sırasında yeniden çekim istenir."
     },
     "issues": {
       "no_face": "Yüz bulunamadı",
@@ -670,7 +673,10 @@
       },
       "eyebrow": "Adım 2 / 2",
       "lead": "Kalite kapısından geçti.",
-      "sendNote": "Analizi başlatınca fotoğraf yalnız skorlama için, rızanla, geçici olarak gönderilir."
+      "sendNote": "Analizi başlatınca fotoğraf yalnız skorlama için, rızanla, geçici olarak gönderilir.",
+      "eyebrowV2": "Fotoğraflar",
+      "leadV2": "Ön ve yan profil hazır. İstersen 45°, ikinci profil ya da saç çizgisi ekle; hepsi isteğe bağlı ve sonucu güçlendirir.",
+      "sendNoteV2": "Analizi başlatınca yalnız telefonunda hesaplanan oranlar gönderilir; fotoğrafların bu adımda telefonundan çıkmaz. Tam sonuç için fotoğrafların, rızanla, ödeme sonrası yapay zekâ modeline gider."
     },
     "trust": {
       "title": "Fotoğrafına ne oluyor?",
@@ -715,13 +721,25 @@
       "profileRequiredNote": "Ön ve yan profil zorunlu; diğerleri isteğe bağlıdır.",
       "addOptional": "İsteğe bağlı açı ekle",
       "pickFromGallery": "Galeriden seç (birden çok)",
-      "done": "Fotoğraflar hazır"
+      "done": "Fotoğraflar hazır",
+      "optionalStep": "İsteğe bağlı · {name}",
+      "profileAny": {
+        "name": "Yan profil",
+        "instruction": "Başını bir yana çevir; bir yanağın ve kulağın kameraya baksın."
+      },
+      "takenAria": "Çekilen açılar",
+      "removeAria": "{name} fotoğrafını kaldır",
+      "back": "Özete dön"
     },
     "qualityPrompt": {
       "title": "Fotoğraf zayıf olabilir",
       "body": "Işık yetersiz ya da fotoğraf bulanık; sonuç zayıf olabilir. Yine de devam edilsin mi?",
       "yes": "Evet",
       "no": "Hayır"
+    },
+    "gallery": {
+      "noneAssigned": "Seçilen fotoğraflarda uygun bir yüz bulunamadı. Tek kişilik, net bir fotoğraf dene.",
+      "someSkipped": "{selected} fotoğraftan {assigned} tanesi bir açıya yerleşti; kalanı atlandı (aynı açı ya da yüz bulunamadı)."
     }
   },
   "geometry": {
@@ -747,7 +765,9 @@
     "fwhr": "Yüz genişlik-yükseklik oranı",
     "thirds": "Üçte birler (üst / orta / alt)",
     "note": "Bu oranlar yalnız tarif eder; iyi ya da kötü anlamı taşımaz. Skorlamaya bağlam olarak gider.",
-    "noteV2": "Bu oranlar yüzünü tarif eder. Yapısal alt skorlarda herkes için aynı, geniş referans aralıklarıyla kullanılır; aralığın içindeki her değer aynı puanı alır. Yüz şekli ve genişlik–yükseklik oranı puana girmez."
+    "noteV2": "Bu oranlar yüzünü tarif eder. Yapısal alt skorlarda herkes için aynı, geniş referans aralıklarıyla kullanılır; aralığın içindeki her değer aynı puanı alır. Yüz şekli ve genişlik–yükseklik oranı puana girmez.",
+    "faceShapePrelim": "Yüz şeklin (ön değerlendirme)",
+    "nearTo": "{other} şekle yakın"
   },
   "analysis": {
     "start": "Analizi başlat",
@@ -1059,6 +1079,17 @@
       "running": "Analiz hazırlanıyor; kartlar hazır oldukça açılır",
       "failed": "Analiz tamamlanamadı; hakkın düşmedi. Yeniden deneyebilirsin.",
       "retry": "Yeniden dene"
+    },
+    "deviceProgress": {
+      "title": "Telefonunda analiz ediliyor",
+      "landmarks": "478 yüz noktası çıkarıldı (telefonunda)",
+      "ratios": "Dört oran hesaplandı: göz açısı, çene genişliği, genişlik–yükseklik, üçte birler",
+      "faceShape": "Yüz şekli ön değerlendirmesi yapıldı",
+      "views": "{count} açı hazırlandı",
+      "save": "Cihaz sonucu hesabına kaydedildi",
+      "done": "Analizin tamamlandı",
+      "doneSr": "tamamlandı",
+      "hint": "Fotoğrafların bu adımda telefonundan çıkmaz."
     }
   },
   "paywall": {
