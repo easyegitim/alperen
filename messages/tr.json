@@ -1405,7 +1405,10 @@
         "code": "Davet kodun",
         "share": "Daveti paylaş",
         "shareText": "Aura'da yüz analizini dene; davet kodum: {code}",
-        "copied": "Davet metni kopyalandı."
+        "copied": "Davet metni kopyalandı.",
+        "pending": "{n} bekliyor",
+        "unlocks": "Açılan: yalnız genel skor. Potansiyel, alt skorlar, rapor ve plan ödemeyle.",
+        "unlockedNote": "Davetlerin tamamlandı; genel skorun açık."
       },
       "eyebrow": "Tam sonuç",
       "lead": "Analiz ücretlidir. Ödeme sonrası bu analiz kart kart açılır.",
@@ -2319,7 +2322,8 @@
         "already_claimed": "Bu hesapta zaten kayıtlı bir davet var.",
         "device": "Cihaz doğrulaması tamamlanamadı; daha sonra tekrar dene.",
         "disabled": "Davet özelliği şu an kapalı.",
-        "generic": "Kod kullanılamadı; tekrar dene."
+        "generic": "Kod kullanılamadı; tekrar dene.",
+        "format": "Kod DV-XXXX-XXXX biçiminde olmalı."
       }
     }
   },

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { DeviceAnalysisProgress } from "@/components/analysis/AnalysisProgress";
 import { GeometryOverlay, type OverlaySource } from "@/components/analysis/GeometryOverlay";
 import { GhostGuide } from "@/components/camera/GhostGuide";
+import { ReferralClaimForm } from "@/components/paywall/ReferralClaimForm";
 import { SelfieCamera, type CaptureResult } from "@/components/camera/SelfieCamera";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -461,6 +462,8 @@ export function CaptureScreen({ aiProviderName, resumeAnalysisId = null }: { aiP
               </span>
             </span>
           </label>
+          {/* Davet kodu (KB Ç12): ilk cihaz analizinden ÖNCE girilir (fotoğraf yollanınca davet tamamlanır); bayrak kapalıysa çizilmez. */}
+          {!resumeAnalysisId ? <ReferralClaimForm /> : null}
           {resumeAnalysisId ? (
             <p className="flex items-start gap-2 rounded-xl border bg-brand-soft/40 p-3 text-[13px]" role="note">
               <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" />
