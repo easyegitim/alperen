@@ -38,3 +38,4 @@ venv/
 test-results/
 playwright-report/
 blob-report/
+!Dockerfile.local
