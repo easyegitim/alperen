@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertCircle, RefreshCw, Sparkles, Wand2 } from "lucide-react";
+import { AlertCircle, ListPlus, RefreshCw, Sparkles, Wand2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { normalizeTr } from "@/lib/ai/safety";
 import { BasisChips } from "@/components/plan/BasisChips";
 import { DoctorLayer } from "@/components/plan/DoctorLayer";
@@ -19,6 +20,7 @@ import { track } from "@/lib/analytics";
 import { ApiClientError, postJson } from "@/lib/api/client";
 import type { PlanViewV2 } from "@/lib/coach/planTypes";
 import { PLAN_AREAS, type PlanArea } from "@/lib/config/plan";
+import { addPlanV2ToRoutine } from "@/lib/routine/addFromReport";
 import { cn } from "@/lib/utils";
 
 export type PlanPayload = { view: PlanViewV2; hairLossSignal: "none" | "possible" | "visible" | "not_visible" | null };
@@ -48,6 +50,8 @@ const hasScalpStepIn = (steps: readonly { id: string; title: string }[]) => step
  */
 export function PlanView({ analysisId, reportId, initial, expertNetworkEnabled, doctorLayerEnabled, glowUpEnabled, links = {} }: Props) {
   const t = useTranslations("plan.v2");
+  const tr = useTranslations("report");
+  const [routineBusy, setRoutineBusy] = useState(false);
   const [data, setData] = useState<PlanPayload | null>(initial);
   const [status, setStatus] = useState<"idle" | "generating" | "error">(initial ? "idle" : "generating");
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -55,6 +59,20 @@ export function PlanView({ analysisId, reportId, initial, expertNetworkEnabled, 
   const [stale, setStale] = useState(initial?.view.basisStale ?? false);
   const [tab, setTab] = useState<string>("all");
   const jumpRef = useRef<string | null>(null);
+
+  // Rutin boş ekranındaki "Planımdan rutin oluştur" buraya gelir: katalog kimlikli adımlar tek dokunuşla rutine eklenir.
+  async function addToRoutine() {
+    if (!data) return;
+    setRoutineBusy(true);
+    try {
+      const n = await addPlanV2ToRoutine(data.view.plan);
+      toast.success(n > 0 ? tr("addedToRoutine", { n }) : tr("alreadyInRoutine"));
+    } catch {
+      toast.error(tr("routineError"));
+    } finally {
+      setRoutineBusy(false);
+    }
+  }
 
   async function generate(regenerate = false) {
     const inline = regenerate && data !== null;
@@ -201,6 +219,10 @@ export function PlanView({ analysisId, reportId, initial, expertNetworkEnabled, 
               ))}
             </ul>
           </section>
+          <Button size="lg" className="w-full" onClick={addToRoutine} disabled={routineBusy} aria-busy={routineBusy}>
+            <ListPlus aria-hidden="true" />
+            {tr("addToRoutine")}
+          </Button>
         </CardContent>
       </Card>
 
