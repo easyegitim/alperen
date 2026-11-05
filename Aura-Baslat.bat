@@ -18,9 +18,9 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-if exist aura-ayarlar.env copy /Y aura-ayarlar.env .env.local >nul
-if not exist .env.local (
-  echo Ayar dosyasi bulunamadi. "aura-ayarlar.env" dosyasini bu klasore koy ve yeniden cift tikla.
+rem Ayar dosyasini bulur (bu klasorde ya da Indirilenler'de, "(1)" ya da ".txt" eki olsa da) ve test girisini acar.
+node scripts\aura-launcher.mjs env
+if errorlevel 1 (
   pause
   exit /b 1
 )
@@ -30,10 +30,17 @@ if errorlevel 1 goto :hata
 echo == 2/3 Uygulama derleniyor ==
 call npx --yes pnpm@10.28.0 build
 if errorlevel 1 goto :hata
-echo == 3/3 Uygulama aciliyor: http://localhost:3000/baslangic/yas ==
+rem Eski bir Aura penceresi 3000'i tutuyorsa siradaki bos portu kullanir.
+set "PORT="
+for /f "delims=" %%P in ('node scripts\aura-launcher.mjs port') do set "PORT=%%P"
+if not defined PORT (
+  pause
+  exit /b 1
+)
+echo == 3/3 Uygulama aciliyor: http://localhost:%PORT%/baslangic/yas ==
 echo Bu pencereyi test boyunca acik birak. Kapatmak icin pencereyi kapat.
-start "" cmd /c "timeout /t 8 >nul & start http://localhost:3000/baslangic/yas"
-call npx --yes pnpm@10.28.0 start
+start "" cmd /c "timeout /t 8 >nul & start http://localhost:%PORT%/baslangic/yas"
+call npx --yes pnpm@10.28.0 start -p %PORT%
 exit /b 0
 :hata
 echo Bir hata oldu. Bu pencerenin ekran goruntusunu gonder.

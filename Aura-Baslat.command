@@ -16,9 +16,8 @@ if [ "$NODE_MAJOR" -lt 22 ]; then
   read -r -p "Kapatmak için Enter'a bas..." _; exit 1
 fi
 
-if [ -f aura-ayarlar.env ]; then cp aura-ayarlar.env .env.local; fi
-if [ ! -f .env.local ]; then
-  echo "Ayar dosyası bulunamadı. 'aura-ayarlar.env' dosyasını bu klasöre koy ve yeniden çift tıkla."
+# Ayar dosyasını bulur (bu klasörde ya da İndirilenler'de, "(1)" ya da ".txt" eki olsa da) ve test girişini açar.
+if ! node scripts/aura-launcher.mjs env; then
   read -r -p "Kapatmak için Enter'a bas..." _; exit 1
 fi
 
@@ -27,7 +26,10 @@ echo "== 1/3 Paketler kuruluyor (ilk seferde birkaç dakika) =="
 $PNPM install || { read -r -p "Kurulum hatası. Ekran görüntüsünü gönder. Enter..." _; exit 1; }
 echo "== 2/3 Uygulama derleniyor =="
 $PNPM build || { read -r -p "Derleme hatası. Ekran görüntüsünü gönder. Enter..." _; exit 1; }
-echo "== 3/3 Uygulama açılıyor: http://localhost:3000/baslangic/yas =="
+# Eski bir Aura penceresi 3000'i tutuyorsa sıradaki boş portu kullanır.
+PORT=$(node scripts/aura-launcher.mjs port) || { read -r -p "Kapatmak için Enter'a bas..." _; exit 1; }
+URL="http://localhost:$PORT/baslangic/yas"
+echo "== 3/3 Uygulama açılıyor: $URL =="
 echo "Bu pencereyi test boyunca açık bırak. Kapatmak için pencereyi kapat."
-( sleep 6; command -v open >/dev/null 2>&1 && open "http://localhost:3000/baslangic/yas" ) &
-$PNPM start
+( sleep 6; command -v open >/dev/null 2>&1 && open "$URL" ) &
+$PNPM start -p "$PORT"
