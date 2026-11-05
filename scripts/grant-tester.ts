@@ -10,7 +10,7 @@
  *   pnpm tsx scripts/grant-tester.ts <email> [--create]   # yoksa e-postası onaylı hesap açar (parolasız)
  *   pnpm tsx scripts/grant-tester.ts <email> --revoke     # aboneliği "canceled" yapar, sınırsız kotayı kapatır
  */
-import { loadEnvConfig } from "@next/env";
+import { existsSync } from "node:fs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { isMain } from "./engine-tooling";
 
@@ -72,7 +72,8 @@ async function main(args: string[]): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  loadEnvConfig(process.cwd());
+  // .env.local (Next.js ile aynı dosya); Node'un yerleşik yükleyicisi, ek bağımlılık yok. Var olan değişkenleri ezmez.
+  for (const f of [".env.local", ".env"]) if (existsSync(f)) process.loadEnvFile(f);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("NEXT_PUBLIC_SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY gerekli (.env.local).");
