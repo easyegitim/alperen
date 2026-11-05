@@ -272,7 +272,7 @@ export class Gateway {
       messages,
       ...(built.definitions.length > 0 ? { tools: built.definitions } : {}),
       ...(thinking ? { thinking } : {}),
-      output_config: { effort: r.effort, ...(contract ? { format: structuredFormat(contract) } : {}) },
+      output_config: { effort: r.effort, ...(contract ? { format: structuredFormat(contract, r.schemaDelivery) } : {}) },
       ...(r.cache.tail ? { cache_control: { type: 'ephemeral' as const } } : {}),
       ...(input.container && hasCodeExecution(built) ? { container: input.container } : {}),
       // Batch öğesinin senkron yeniden gönderimi (batchRetry) de Opus/Sonnet'te sunucu yedeğini alır.

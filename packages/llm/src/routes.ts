@@ -79,6 +79,8 @@ export interface RouteConfig {
   readonly maxToolUses?: number;
   /** Araç döngüsü tur sınırı. */
   readonly maxIterations: number;
+  /** 'prompt': şema dilbilgisi sınırını aşar; şema metin olarak gönderilir (parse.ts `StructuredFormat.delivery`). */
+  readonly schemaDelivery?: 'prompt';
   /**
    * Ürün bloğuna `PROGRESS_NOTE` eklenir mi (prompt.ts): akışlı, araçlı serbest metin rotalarında araç çağrılarından
    * önce kısa kullanıcı cümlesi istenir. Yapılandırılmış rotalarda kullanılmaz (ara metin biçimle çatışmasın).
@@ -146,7 +148,7 @@ type Spec<S extends SchemaName | null> = Omit<
   RouteConfig,
   'name' | 'maxIterations' | 'batchable' | 'stream' | 'fallbacks' | 'schema' | 'progressNote'
 > &
-  Partial<Pick<RouteConfig, 'maxIterations' | 'batchable' | 'stream' | 'progressNote'>> & { schema: S };
+  Partial<Pick<RouteConfig, 'maxIterations' | 'batchable' | 'stream' | 'progressNote' | 'schemaDelivery'>> & { schema: S };
 
 /** Şema adını literal tipte tutar (gateway çıktı tipi `RouteOutput<R>` buradan türer). */
 function route<const S extends SchemaName | null>(name: RouteName, spec: Spec<S>): RouteConfig & { readonly schema: S } {
@@ -211,6 +213,7 @@ export const ROUTES = {
     tools: ['code_execution'], cache: COURSE_ONLY, mode: 'batch', maxTokens: 16000,
   }),
   exam_report: route('exam_report', {
+    schemaDelivery: 'prompt', // gerçek API denemesi: dilbilgisi çok büyük (400)
     purpose: 'Deneme raporu (exam-report AST: 3 bölüm, tek cümle özet, data_ref grafikleri)',
     model: MODELS.sonnet, effort: 'medium', thinking: 'adaptive', schema: 'exam-report',
     tools: READ_TOOLS, cache: SHARED, mode: 'sync', stream: true, maxTokens: 24000,
@@ -241,6 +244,7 @@ export const ROUTES = {
   // local (açıkça seçilirse) → çağıran `disableTools: ['code_execution']` verir, worker aynı kodu yerel matplotlib ile
   // çalıştırır. Prompt iki kipte de aynıdır (önbellek bozulmaz).
   notes_generation: route('notes_generation', {
+    schemaDelivery: 'prompt', // gerçek API denemesi: dilbilgisi çok büyük (400)
     purpose: 'Kişiye özel not üretimi (document-ast: kapak, hedefler, tanım/örnek/figür, kişisel hata kutusu, 5 kendini sına + cevaplar)',
     model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'document-ast',
     tools: ['code_execution'], cache: SHARED, mode: 'sync', stream: true, batchable: true, maxTokens: 64000,
@@ -294,6 +298,7 @@ export const ROUTES = {
     tools: [], cache: PRODUCT_ONLY, mode: 'sync', stream: true, maxTokens: 32000,
   }),
   lesson_analysis: route('lesson_analysis', {
+    schemaDelivery: 'prompt', // gerçek API denemesi: dilbilgisi çok büyük (400)
     purpose: 'Ders analizi (kareler + transkript)',
     model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: 'lesson-analysis',
     tools: [], cache: SHARED, mode: 'sync', stream: true, maxTokens: 32000,
@@ -306,6 +311,7 @@ export const ROUTES = {
     tools: PARENT_TOOLS, cache: CHAT, mode: 'sync', stream: true, maxTokens: 4000,
   }),
   report: route('report', {
+    schemaDelivery: 'prompt', // gerçek API denemesi: dilbilgisi çok büyük (400)
     purpose: 'İstek üzerine rapor (report-ast)',
     model: MODELS.sonnet, effort: 'medium', thinking: 'adaptive', schema: 'report-ast',
     tools: READ_TOOLS, cache: SHARED, mode: 'sync', stream: true, maxTokens: 24000,

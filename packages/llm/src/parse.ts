@@ -25,7 +25,15 @@ import { refusalOf, type RefusalAudience } from './refusal.js';
 import { MODEL_MAX_OUTPUT } from './routes.js';
 
 /** `output_config.format` değeri; `parse` işlevi gövde JSON'a çevrilirken düşer (API'ye gitmez). */
-export type StructuredFormat<T> = BetaJSONOutputFormat & { parse(text: string): T | null };
+export type StructuredFormat<T> = BetaJSONOutputFormat & {
+  parse(text: string): T | null;
+  /**
+   * 'prompt': şema API'nin dilbilgisi sınırını aşıyor (400 "compiled grammar is too large"); gönderim sırasında
+   * `output_config.format` kaldırılır, şema kullanıcı turuna metin olarak eklenir (client.ts `wire`). Yanıt yine
+   * sözleşmeyle doğrulanır ve onarım turu geçerlidir. Alan JSON'a girmez.
+   */
+  delivery?: 'grammar' | 'prompt';
+};
 
 export type StructuredResult<T> = { ok: true; data: T; raw: string } | { ok: false; issues: string; raw: string };
 
@@ -59,18 +67,31 @@ export function validateStructured<T>(contract: Contract, text: string | null): 
   try {
     json = JSON.parse(text);
   } catch (err) {
-    return { ok: false, issues: `- geçerli JSON değil: ${err instanceof Error ? err.message : String(err)}`, raw: text };
+    // Şemayı metin olarak alan rotalarda model JSON'u kod çitine sarabilir: çiti ve çevre metni at, bir kez daha dene.
+    const lo = text.indexOf('{');
+    const hi = text.lastIndexOf('}');
+    let recovered = false;
+    if (lo !== -1 && hi > lo) {
+      try {
+        json = JSON.parse(text.slice(lo, hi + 1));
+        recovered = true;
+      } catch {
+        /* aşağıdaki hata döner */
+      }
+    }
+    if (!recovered) return { ok: false, issues: `- geçerli JSON değil: ${err instanceof Error ? err.message : String(err)}`, raw: text };
   }
   const r = contract.safeParse(json) as { success: true; data: T } | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } };
   return r.success ? { ok: true, data: r.data, raw: text } : { ok: false, issues: formatIssues(r.error.issues), raw: text };
 }
 
 /** Sözleşmeden `output_config.format` kurar. */
-export function structuredFormat<T>(contract: Contract): StructuredFormat<T> {
+export function structuredFormat<T>(contract: Contract, delivery: 'grammar' | 'prompt' = 'grammar'): StructuredFormat<T> {
   const base = outputFormat(contract);
   return {
     type: 'json_schema',
     schema: base.schema,
+    ...(delivery === 'prompt' ? { delivery } : {}),
     parse: (text: string) => {
       const r = validateStructured<T>(contract, text);
       return r.ok ? r.data : null;

@@ -51,7 +51,45 @@ export interface LlmTransport {
 
 /** Gövdedeki `parse` gibi işlevleri ayıklar (yapılandırılmış çıktı biçimi). JSON'a giren her şey aynı kalır. */
 function wire<T>(body: T): T {
-  return JSON.parse(JSON.stringify(body)) as T;
+  return JSON.parse(JSON.stringify(withPromptSchema(body))) as T;
+}
+
+interface PromptFormatBody {
+  output_config?: { format?: { schema?: unknown; delivery?: string } & Record<string, unknown> } & Record<string, unknown>;
+  messages?: { role: string; content: unknown }[];
+  requests?: { params?: unknown }[];
+}
+
+/**
+ * `delivery: 'prompt'` işaretli yapılandırılmış biçimi kaldırır, şemayı son kullanıcı turuna metin olarak ekler
+ * (dilbilgisi sınırını aşan şemalar için). Batch isteklerinde her öğeye uygulanır. Giriş nesnesi değiştirilmez.
+ */
+export function withPromptSchema<T>(body: T): T {
+  const b = body as unknown as PromptFormatBody;
+  if (Array.isArray(b.requests)) {
+    return { ...b, requests: b.requests.map((r) => ({ ...r, params: withPromptSchema(r.params) })) } as unknown as T;
+  }
+  const fmt = b.output_config?.format;
+  if (!fmt || fmt.delivery !== 'prompt' || !Array.isArray(b.messages)) return body;
+  const { format: _drop, ...restConfig } = b.output_config!;
+  void _drop;
+  const note = {
+    type: 'text',
+    text:
+      'Yanıtın tamamı, aşağıdaki JSON Şemasına uyan TEK bir JSON nesnesi olsun: kod çiti, önsöz ya da açıklama ekleme. ' +
+      'Şemadaki enum, zorunlu alan ve tip kurallarına tam uy.\n<json_schema>\n' +
+      JSON.stringify(fmt.schema) +
+      '\n</json_schema>',
+  };
+  const messages = b.messages.slice();
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i]!;
+    if (m.role !== 'user') continue;
+    const content = Array.isArray(m.content) ? m.content : [{ type: 'text', text: String(m.content) }];
+    messages[i] = { ...m, content: [...content, note] };
+    break;
+  }
+  return { ...b, output_config: restConfig, messages } as unknown as T;
 }
 
 /** Gerçek Anthropic taşıması (beta ad alanı: `fallbacks` yalnız orada). */
