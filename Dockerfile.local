@@ -32,7 +32,25 @@ RUN bun install --frozen-lockfile || bun install
 RUN bunx playwright@1.56.1 install --with-deps chromium
 
 COPY . .
+
+# Windows'ta klonlanan depoda (1) Git sembolik bağları düz metin dosyasına çevirir, (2) satır sonları CRLF olur.
+# İkisini de imaj içinde onarırız; Linux/Mac'te zararsızdır.
+RUN find /app \( -name node_modules -o -name .next \) -prune -o -type f \
+      \( -name '*.sh' -o -name '*.py' -o -name '*.sql' -o -name '*.json' -o -name '*.md' -o -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.yml' -o -name '*.toml' \) \
+      -exec sed -i 's/\r$//' {} + \
+    && C=packages/contracts/python/ogrenmen_contracts \
+    && rm -rf "$C/schemas" "$C/models.json" \
+    && cp -r packages/contracts/schemas "$C/schemas" \
+    && cp packages/contracts/models.json "$C/models.json"
+
+# Veritabanı kurulumunun (müfredat dışa aktarımı) ihtiyaç duyduğu Python paketleri
+RUN pip install --no-cache-dir pglast==8.7 ./packages/contracts/python \
+    && python3 -I -c "from ogrenmen_contracts import errors; import pglast; print('sözleşme paketi tamam')"
+
 RUN bun install --frozen-lockfile || bun install
+
+# Kanıt: ilk açılışta çalışacak müfredat dışa aktarımı imaj derlenirken de çalışır (hata varsa burada görünür, sonra değil)
+RUN python3 /app/content/tyt-matematik/scripts/export-sql.py --schema v2 --out /tmp/cur.sql && test -s /tmp/cur.sql && rm /tmp/cur.sql
 
 ENV OGRENMEN_IN_DOCKER=1 \
     OGRENMEN_BIND_HOST=0.0.0.0 \
