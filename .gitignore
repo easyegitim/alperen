@@ -51,3 +51,6 @@ next-env.d.ts
 
 # Sentry
 .sentryclirc
+
+# Yerel başlatıcının ayar dosyası (gizli anahtarlar; asla depoya girmez)
+aura-ayarlar.env
