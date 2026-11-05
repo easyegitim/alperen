@@ -1,11 +1,12 @@
-import { CoachReport } from "@/lib/ai/reportSchema";
 import { getConsentState, withGuard } from "@/lib/api/guard";
 import { getPremiumStatus } from "@/lib/api/premium";
 import { CONSENT_DOC } from "@/lib/consent";
 import { createAdminClient } from "@/lib/db/admin";
 import { getLegalVersion } from "@/lib/legal/docs";
-import { QuestionnaireSchema } from "@/lib/questionnaire";
+import { tryonPresentation, tryonRecommended } from "@/lib/tryon/context";
+import { loadTryonReport, resolveTryonAnalysisId } from "@/lib/tryon/context.server";
 import { tryonUsage } from "@/lib/tryon/quota";
+import { loadProfile } from "@/app/api/analyses/v2";
 
 export const runtime = "nodejs";
 
@@ -22,20 +23,15 @@ export const GET = withGuard({}, async ({ user, supabase }) => {
   if (!premium) return Response.json({ premium: false, hasConsent, consentVersion, recommended: [], quota: null, presentation: "unspecified" });
 
   const admin = createAdminClient();
-  const [usage, profile, report] = await Promise.all([
-    tryonUsage(user.id),
-    admin.from("profiles").select("questionnaire").eq("id", user.id).maybeSingle(),
-    admin.from("coach_reports").select("report").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-  ]);
-  const q = QuestionnaireSchema.safeParse(profile.data?.questionnaire);
-  const parsed = report.data ? CoachReport.safeParse(report.data.report) : null;
-  const recommended = parsed?.success ? [...parsed.data.hair, ...parsed.data.beard, ...(parsed.data.hairColor ? [parsed.data.hairColor] : [])].map((p) => p.presetId) : [];
+  // Web /dene ile aynı kaynak: sunum profiles.presentation (v2), öneriler en son tamamlanan analizin plan_v2'si (+ v1 rapor).
+  const [usage, profile, analysisId] = await Promise.all([tryonUsage(user.id), loadProfile(admin, user.id), resolveTryonAnalysisId(admin, user.id, null)]);
+  const report = await loadTryonReport(admin, user.id, analysisId);
   return Response.json({
     premium: true,
     hasConsent,
     consentVersion,
-    recommended,
+    recommended: tryonRecommended(report?.plan_v2, report?.report),
     quota: { used: usage.used, limit: usage.limit, nextAt: usage.nextAt },
-    presentation: q.success ? q.data.presentation : "unspecified",
+    presentation: tryonPresentation(profile),
   });
 });
