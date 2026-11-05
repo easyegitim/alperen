@@ -1,18 +1,24 @@
 # Öğrenmen yerel deneme kapsayıcısı: uygulama + worker + ders servisi + PDF üretimi tek imajda (Linux).
 # Windows/Mac/Linux'ta aynı şekilde çalışır; yalnız Docker gerekir.  Kullanım: docker-compose.local.yml
-FROM node:22-bookworm
+# Taban Python 3.13 (numpy 2.5 / matplotlib 3.11 Python >=3.12 ister); Node 22 üstüne eklenir.
+FROM python:3.13-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    PIP_BREAK_SYSTEM_PACKAGES=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
     NEXT_TELEMETRY_DISABLED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 python3-pip ffmpeg postgresql-client ca-certificates curl unzip \
+      ffmpeg postgresql-client ca-certificates curl unzip gnupg git \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --no-cache-dir sympy==1.14.0 matplotlib==3.11.2 numpy==2.5.3 httpx==0.28.1 jsonschema==4.26.0 \
-    && npm install -g bun@1.4.2
+    && node --version && python3 --version
+
+RUN pip install --no-cache-dir sympy==1.14.0 matplotlib==3.11.2 numpy==2.5.3 httpx==0.28.1 jsonschema==4.26.0 \
+    && python3 -I -c "import sympy, matplotlib, numpy, httpx, jsonschema; print('python paketleri tamam')" \
+    && npm install -g bun@1.4.2 \
+    && bun --version
 
 WORKDIR /app
 # Önce bağımlılıklar (önbellek katmanı): yalnız package.json'lar ve kilit dosyası
