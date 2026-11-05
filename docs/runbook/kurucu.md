@@ -290,3 +290,18 @@ Yapılandırma değerleri (sır değil): `WORKER_PROCESS`, `WORKER_SCHEDULES`, `
   yukarıdaki tablo tek kaynaktır. Örnek dosyaya eklenmesi bekliyor.
 - Hiçbir gerçek anahtar bu turda denenmedi (Anthropic, Groq, Voyage, VAPID, Resend). Anahtar geldiğinde
   `OGRENMEN_LIVE=1 bash scripts/check-all.sh --live` ile ilk doğrulama yapılır.
+
+
+## Gerçek Claude denemesi (GitHub Actions)
+
+Anahtarı sohbete yapıştırmadan, depoda gerçek Claude testlerini koşturmak için:
+
+1. **Anahtar:** console.anthropic.com › Workspaces ile ayrı bir "ogrenmen" çalışma alanı açın, harcama limiti koyun, orada **API Keys › Create Key**.
+   (claude.ai aboneliği API kredisi sayılmaz; Console'da Billing'de kredi olmalı.)
+2. **Depoya ekleyin:** GitHub › depo **Settings › Secrets and variables › Actions › New repository secret**
+   - Name: `ANTHROPIC_API_KEY` (tam böyle)
+   - Secret: `sk-ant-...` anahtarı
+3. **Çalıştırın:** depo **Actions › live-claude › Run workflow** (dal: `claude/festive-feynman-qjnn4i`). `budget_usd` varsayılanı 1,50 $.
+4. **Sonuç:** iş özetinde tablo çıkar: Haiku önbellek isabeti, Sonnet koç yanıtı, Opus teşhis ve kısa not; model, token, önbellek okuma, maliyet.
+
+Bu iş akışı yalnız elle tetiklenir; push veya PR ile çalışmaz. Anahtar yalnız adım ortamında bulunur ve log'larda maskelenir.

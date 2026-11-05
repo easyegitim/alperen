@@ -41,7 +41,8 @@
     "lint": "eslint --max-warnings 0 .",
     "test": "vitest run",
     "test:live": "vitest run --config vitest.live.config.ts",
-    "test:db": "vitest run --config vitest.db.config.ts"
+    "test:db": "vitest run --config vitest.db.config.ts",
+    "smoke:live": "bun run scripts/live-smoke.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
