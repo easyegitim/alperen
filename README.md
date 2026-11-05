@@ -215,3 +215,6 @@ Ekranlar mockup'lara (S01–S09b, S10/S10b, S12–S15) birebir uyar.
 v1 (Telegram botu, Cloudflare Worker, eğitmen paneli, `pipelines/kitap`, `pipelines/kulaklik_batch`) **commit
 `4e2b756`'da** durur: `git show 4e2b756:apps/worker/README.md`, `git checkout 4e2b756 -- apps/panel` gibi geri
 alınabilir. v1'in nasıl çalıştığı `docs/SISTEM.md`'de anlatılır (v2 için güncel değildir).
+
+
+> Docker ile tek komut (Windows dahil): `docker compose -f docker-compose.local.yml run --rm --service-ports app` — ayrıntı: docs/YEREL-DENEME.md

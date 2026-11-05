@@ -54,7 +54,10 @@ const STORAGE_DIR = path.join(DEV_DIR, 'storage');
 const DERS_DIR = path.join(DEV_DIR, 'ders');
 const WEB_DIR = path.join(REPO_ROOT, 'apps', 'web');
 const WORKER_DIR = path.join(REPO_ROOT, 'apps', 'worker');
-const ENV_FILE = path.join(REPO_ROOT, '.env.local');
+// Docker kapsayıcısında anahtar kalıcı birimde (/data) tutulur; kapsayıcı dışında depo kökündeki .env.local.
+const ENV_FILE = process.env.OGRENMEN_ENV_FILE || path.join(REPO_ROOT, '.env.local');
+/** Kapsayıcıda 0.0.0.0 (yayınlanan port yalnız host'un 127.0.0.1'ine açılır); aksi halde yalnız 127.0.0.1. */
+const BIND_HOST = process.env.OGRENMEN_BIND_HOST || '127.0.0.1';
 const JWT_SECRET_FILE = path.join(DEV_DIR, 'jwt-secret');
 
 const say = (msg = '') => process.stdout.write(`${msg}\n`);
@@ -109,6 +112,36 @@ function loadEnvFile(file: string): string[] {
 
 type LlmMode = 'gerçek' | 'sahte';
 
+/**
+ * Gerçek kipte anahtar yoksa ve terminal etkileşimliyse anahtarı sorar, ENV_FILE'a yazar (bir kez). Değer ekrana
+ * yazılmaz. Etkileşimsiz ortamda (TTY yok) hiçbir şey yapmaz; decideLlm açıklayıcı hata verir.
+ */
+async function promptForKey(): Promise<void> {
+  if (process.env.OGRENMEN_LLM === 'fake') return;
+  if ((process.env.ANTHROPIC_API_KEY ?? '').trim()) return;
+  if (!process.stdin.isTTY) return;
+  say('');
+  say('Claude anahtarı gerekiyor (bir kez sorulur, bu bilgisayarda saklanır).');
+  say('console.anthropic.com → API Keys → Create Key; "sk-ant-" ile başlar.');
+  const rl = (await import('node:readline')).createInterface({ input: process.stdin, output: process.stdout });
+  const ask = () => new Promise<string>((resolve) => rl.question('Anahtarı yapıştır ve Enter\'a bas: ', (a) => resolve(a.trim())));
+  for (let i = 0; i < 3; i++) {
+    const key = (await ask()).replace(/^["']|["']$/g, '');
+    if (!key.startsWith('sk-ant-') || key.length < 40 || /\s/.test(key)) {
+      warn('Bu bir Anthropic anahtarına benzemiyor ("sk-ant-" ile başlamalı, boşluk olmamalı). Tekrar dene.');
+      continue;
+    }
+    fs.mkdirSync(path.dirname(ENV_FILE), { recursive: true });
+    const old = fs.existsSync(ENV_FILE) ? fs.readFileSync(ENV_FILE, 'utf8').replace(/^ANTHROPIC_API_KEY=.*\r?\n?/m, '') : '';
+    fs.writeFileSync(ENV_FILE, `${old}${old && !old.endsWith('\n') ? '\n' : ''}ANTHROPIC_API_KEY=${key}\n`, { mode: 0o600 });
+    process.env.ANTHROPIC_API_KEY = key;
+    rl.close();
+    step('anahtar kaydedildi');
+    return;
+  }
+  rl.close();
+}
+
 function decideLlm(): LlmMode {
   if (process.env.OGRENMEN_LLM === 'fake') return 'sahte';
   const key = (process.env.ANTHROPIC_API_KEY ?? '').trim();
@@ -139,6 +172,15 @@ async function verifyAnthropicKey(): Promise<void> {
     return;
   }
   if (r.level === 'fail') {
+    // Reddedilen anahtar dosyada kalmasın: bir sonraki açılışta yenisi sorulur (kullanıcı dosya düzenlemek zorunda kalmaz).
+    try {
+      if (fs.existsSync(ENV_FILE) && /^ANTHROPIC_API_KEY=/m.test(fs.readFileSync(ENV_FILE, 'utf8'))) {
+        fs.writeFileSync(ENV_FILE, fs.readFileSync(ENV_FILE, 'utf8').replace(/^ANTHROPIC_API_KEY=.*\r?\n?/m, ''), { mode: 0o600 });
+        step('geçersiz anahtar kayıttan silindi; yeniden çalıştırınca yenisi sorulacak');
+      }
+    } catch {
+      /* dosya yazılamıyorsa mesaj yine de gösterilir */
+    }
     throw new SetupError(r.detail, [...(r.fix ?? []), 'Sonra yeniden çalıştır:  bun run local', 'Anahtarsız denemek istersen (cevaplar örnek metindir):  OGRENMEN_LLM=fake bun run local']);
   }
   warn(r.detail);
@@ -405,6 +447,7 @@ async function main(): Promise<void> {
   // bun depo kökündeki .env.local'ı kendisi de yükler; bu okuma başka çalıştırıcılar için güvencedir (kabuk önceliklidir).
   loadEnvFile(ENV_FILE);
   step(fs.existsSync(ENV_FILE) ? '.env.local okundu' : '.env.local yok; yalnız kabuk ortamı kullanılıyor');
+  await promptForKey();
   const llm = decideLlm();
   checkTools();
   await checkPorts();
@@ -438,6 +481,7 @@ async function main(): Promise<void> {
   bridge = await startBridge({
     db: database,
     port: PORTS.bridge,
+    host: BIND_HOST,
     otp: LOCAL_DEV_OTP,
     jwtSecret: jwtSecret(),
     allowedOrigins: ALLOWED_ORIGINS,
@@ -484,7 +528,7 @@ async function main(): Promise<void> {
   const demo = await ensureDemoAccounts(database);
   step(demo.created.length ? `demo hesaplar kuruldu: ${demo.created.join(', ')}` : 'demo hesaplar hazır');
 
-  startChild('web', 'node', [path.join(WEB_DIR, 'node_modules/next/dist/bin/next'), 'dev', '--webpack', '-p', String(PORTS.web), '-H', '127.0.0.1'], WEB_DIR, {
+  startChild('web', 'node', [path.join(WEB_DIR, 'node_modules/next/dist/bin/next'), 'dev', '--webpack', '-p', String(PORTS.web), '-H', BIND_HOST], WEB_DIR, {
     NEXT_DIST_DIR: '.next-local',
     NEXT_PUBLIC_SUPABASE_URL: BRIDGE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: bridge.anonKey,

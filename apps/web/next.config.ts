@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
   // E2E derlemesi (sahte Supabase adresiyle) ayrı dizine yazılır; normal .next bozulmaz.
   distDir: process.env.NEXT_DIST_DIR || '.next',
   reactStrictMode: true,
+  // Geliştirme sunucusu 0.0.0.0'a bağlandığında (Docker kapsayıcısı) tarayıcı 127.0.0.1/localhost ile gelir: HMR ve
+  // geliştirme kaynakları 'cross-origin' sayılıp engellenirse sayfa hidrasyonu yapılmaz (düğmeler çalışmaz).
+  allowedDevOrigins: ['127.0.0.1', 'localhost'],
   // `next dev` yönetilen AGENTS.md üretmesin (depoda ajan yönergeleri elle yönetilir).
   agentRules: false,
   poweredByHeader: false,

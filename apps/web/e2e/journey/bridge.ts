@@ -701,6 +701,8 @@ export interface BridgeOptions {
   /** Veritabanı havuzu (süper kullanıcı ya da migration sahibi; her istek rolünü kendisi düşürür). */
   db: { pool: pg.Pool };
   port: number;
+  /** Dinlenen adres (varsayılan 127.0.0.1; Docker kapsayıcısında 0.0.0.0, host tarafında yine yalnız 127.0.0.1'e yayınlanır). */
+  host?: string;
   /** E-posta kodu: her adres için bu sabit kod kabul edilir (e-posta gönderilmez). */
   otp: string;
   jwtSecret: string;
@@ -782,7 +784,7 @@ export async function startBridge(opts: BridgeOptions): Promise<Bridge> {
   });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
-    server.listen(opts.port, '127.0.0.1', () => {
+    server.listen(opts.port, opts.host ?? '127.0.0.1', () => {
       server.off('error', reject);
       resolve();
     });
