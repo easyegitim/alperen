@@ -67,6 +67,11 @@ test.describe("Gizlilik (tüm ağ trafiği)", () => {
 
       // 1) Yaş bandı → cinsiyet (oturum var: hemen yazılır) → rızalar → fotoğraflar
       await page.goto("/baslangic/yas");
+      // Çerez bandı mobilde alttaki birincil düğmenin üstüne biner; gerçek kullanıcı gibi seçilir. "Kabul et": analitik
+      // açıkken de olaylarda görsel/skor/e-posta olmadığını aşağıdaki kurallar sınar (anahtar tanımlıysa).
+      const cookieBanner = page.getByRole("dialog", { name: "Çerez tercihi" });
+      await cookieBanner.getByRole("button", { name: "Kabul et" }).click({ timeout: 10_000 }); // bant hidrasyondan sonra açılır
+      await expect(cookieBanner).toHaveCount(0);
       await page.getByRole("radio", { name: "25–34" }).check({ force: true });
       await page.getByRole("button", { name: "Devam" }).click();
       await expect(page).toHaveURL(/\/baslangic\/cinsiyet/);

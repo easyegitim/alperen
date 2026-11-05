@@ -35,6 +35,9 @@ describe("runAnalysisJob", () => {
     expect((row.signals as { progressAt: string }).progressAt).toBeTruthy();
     expect(repo.reports).toHaveLength(1);
     expect(repo.reports[0]).toMatchObject({ user_id: "u1", analysis_id: "a1", prompt_version: "report.v3", is_fallback: false });
+    // Maliyet tek satırda (ops.daily_ai_cost analyses + coach_reports toplar): rapor satırı estUsd 0, analiz satırı gerçek kullanım.
+    expect(repo.reports[0].ai_usage).toMatchObject({ calls: 0, estUsd: 0 });
+    expect((row.ai_usage as { calls: number }).calls).toBe(3);
     expect(repo.sets.size).toBe(1);
     const cached = repo.sets.get(computeSetKey("gizli", H) as string);
     expect(cached?.scores.overall).toBe(row.overall);
@@ -56,6 +59,7 @@ describe("runAnalysisJob", () => {
     expect((row.signals as { cacheHit: boolean }).cacheHit).toBe(true);
     expect(repo2.reports[0].report).toEqual(repo.reports[0].report);
     expect(row.ai_usage).toMatchObject({ calls: 0, estUsd: 0 });
+    expect(repo2.reports[0].ai_usage).toMatchObject({ calls: 0, estUsd: 0 }); // null olsaydı görünüm 0,005 $ varsayardı
   });
   it("başka kullanıcının aynı set anahtarı isabet sayılmaz: skor ve rapor kopyalanmaz, model çağrılır", async () => {
     const repo = new FakeRepo();
