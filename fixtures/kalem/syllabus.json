@@ -1,0 +1,55 @@
+[
+  {
+    "week": 1,
+    "topics": [
+      "Rasyonel sayılar",
+      "Ondalık gösterim"
+    ],
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar",
+      "tyt.mat.temel.ondalik"
+    ]
+  },
+  {
+    "week": 2,
+    "topics": [
+      "Üslü ifadeler",
+      "Köklü ifadeler"
+    ],
+    "skill_ids": [
+      "tyt.mat.temel.uslu",
+      "tyt.mat.temel.koklu"
+    ]
+  },
+  {
+    "week": 3,
+    "topics": [
+      "Birinci dereceden denklem",
+      "Mutlak değer"
+    ],
+    "skill_ids": [
+      "tyt.mat.cebir.denklem",
+      "tyt.mat.cebir.mutlak-deger"
+    ]
+  },
+  {
+    "week": 4,
+    "topics": [
+      "Oran orantı",
+      "Yüzde problemleri"
+    ],
+    "skill_ids": [
+      "tyt.mat.cebir.oran-oranti",
+      "tyt.mat.problem.yuzde"
+    ]
+  },
+  {
+    "week": 5,
+    "topics": [
+      "Hareket problemleri"
+    ],
+    "skill_ids": [
+      "tyt.mat.problem.hareket"
+    ]
+  }
+]

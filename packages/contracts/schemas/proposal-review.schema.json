@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/proposal-review.json",
+  "title": "ProposalReview",
+  "description": "Müfredat önerisi incelemesi: öneri başına karar (kabul, ret, eğitmene bırak), güven ve gerekçe.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "decisions": {
+      "minItems": 1,
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "İncelenen önerinin kimliği"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "accept",
+              "reject",
+              "needs_instructor"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Kararın güveni 0..1"
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 600,
+            "description": "Kısa gerekçe"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "action",
+          "confidence",
+          "rationale"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "decisions"
+  ],
+  "additionalProperties": false
+}

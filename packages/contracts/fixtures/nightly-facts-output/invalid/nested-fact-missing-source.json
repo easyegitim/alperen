@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "day": "2026-10-18",
+  "student_ref": "s_k3m7q2x4z6ab",
+  "facts": [
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_k3m7q2x4z6ab",
+      "kind": "promise",
+      "text": "Öğrenci cumartesiye kadar kesir çalışma kâğıdını bitireceğini söyledi.",
+      "confidence": 0.86,
+      "valid_until": "2026-10-24",
+      "morale_signal": null,
+      "requires_approval": false,
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+    },
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_k3m7q2x4z6ab",
+      "kind": "morale",
+      "text": "Öğrenci denemeden sonra kendini yorgun hissettiğini yazdı.",
+      "source_message_ids": [
+        1201,
+        1203,
+        1204
+      ],
+      "confidence": 0.64,
+      "morale_signal": -2,
+      "requires_approval": false
+    }
+  ],
+  "is_question_message_ids": [
+    1040,
+    1045
+  ],
+  "answered_question_message_ids": [
+    1040
+  ],
+  "preferences": {
+    "modality": "visual",
+    "explanation_notes": "Şekilli açıklamaları daha hızlı anlıyor.",
+    "active_hours": [
+      19,
+      20,
+      21
+    ]
+  }
+}

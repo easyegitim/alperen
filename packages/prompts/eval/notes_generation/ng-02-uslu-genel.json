@@ -1,0 +1,321 @@
+{
+  "id": "ng-02-uslu-genel",
+  "route": "notes_generation",
+  "title": "Üslü ifadeler notu: örüntü yok, kişiselleştirilmemiş; genel uyarı kaynaksız, 5 soru, figür",
+  "notes": "Örüntü listesi boş: hiçbir hata kutusu öğrenciye özgü bir şey söylememeli ve pattern_ref taşımamalı.",
+  "input": {
+    "course": "tyt-matematik",
+    "dossier": "Öğrenci: 10. sınıf, hedef TYT 2028. tyt.mat.temel.uslu: kanıt yok. Açık yanılgı yok.",
+    "turn": {
+      "date": "2026-11-04"
+    },
+    "user": "Not isteği:\n<note_request>{\n \"topic\": \"Üslü ifadeler\",\n \"skills\": [\n  {\n   \"code\": \"tyt.mat.temel.uslu\",\n   \"name\": \"Üslü ifadeler ve özellikleri\"\n  }\n ],\n \"pages\": 2,\n \"self_check_count\": 5,\n \"include_mistakes\": true,\n \"personalized\": false\n}</note_request>\nÖğrencinin örüntüleri: bu notta kullanılmaz (kişiselleştirilmemiş not).\n<patterns>[]</patterns>\nBu isteğe göre notu yaz."
+  },
+  "expected": {
+    "personalized": false,
+    "patterns": [],
+    "min_callouts": 0,
+    "self_check_count": 5,
+    "skills_any": [
+      "tyt.mat.temel.uslu"
+    ],
+    "min_figures": 1
+  },
+  "fake_reply": [
+    {
+      "json": {
+        "kind": "notes",
+        "title": "Üslü ifadeler notu",
+        "meta": {
+          "course_title": "TYT Matematik",
+          "subtitle": "Üslü ifadelerin özellikleri",
+          "generated_on": "2026-11-04",
+          "language": "tr",
+          "personalized": false,
+          "duration_min": null
+        },
+        "sections": [
+          {
+            "no": 1,
+            "title": "Hedefler"
+          },
+          {
+            "no": 2,
+            "title": "Konu anlatımı"
+          },
+          {
+            "no": 3,
+            "title": "Kendini sına"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "heading",
+            "id": "b1",
+            "section_no": 1,
+            "level": 1,
+            "text": "Üslü ifadeler"
+          },
+          {
+            "type": "summary_box",
+            "id": "b2",
+            "section_no": 1,
+            "title": "Bu notun hedefleri",
+            "bullets": [
+              "Aynı tabanlı üslü ifadeleri çarpar ve bölersin.",
+              "Üssün üssünü ve negatif üssü doğru hesaplarsın.",
+              "Basit üslü denklemlerde bilinmeyen üssü bulursun."
+            ]
+          },
+          {
+            "type": "definition_box",
+            "id": "b3",
+            "section_no": 2,
+            "term": "Üslü ifade",
+            "body": "$a^n$, $a$ sayısının kendisiyle $n$ kez çarpımıdır: $2^3=2\\cdot 2\\cdot 2=8$. $a\\neq 0$ için $a^0=1$ ve $a^{-n}=\\frac{1}{a^n}$."
+          },
+          {
+            "type": "math_display",
+            "id": "b4",
+            "section_no": 2,
+            "latex": "a^m\\cdot a^n=a^{m+n}\\qquad \\frac{a^m}{a^n}=a^{m-n}\\qquad (a^m)^n=a^{m\\cdot n}"
+          },
+          {
+            "type": "figure",
+            "id": "b5",
+            "section_no": 2,
+            "source": "svg",
+            "figure_code": "fig, ax = plt.subplots(figsize=(6.4, 3.2))\nn = np.arange(1, 6)\nvalues = 2 ** n\nbars = ax.bar([f\"2^{k}\" for k in n], values, color=ACCENT, width=0.6)\nax.bar_label(bars, padding=3, color=NAVY)\nax.set_ylabel(\"Değer\")\nax.set_ylim(0, 38)\nax.yaxis.grid(True)\nax.set_axisbelow(True)\nfor side in (\"top\", \"right\"):\n    ax.spines[side].set_visible(False)\nsave_figure(fig, 1)",
+            "kind": "matplotlib",
+            "alt": "Sütun grafiği: 2 üzeri 1 ile 5 arası değerler 2, 4, 8, 16, 32; her sütun bir öncekinin iki katı."
+          },
+          {
+            "type": "worked_example",
+            "id": "b6",
+            "section_no": 2,
+            "title": "Kuralları birlikte kullanmak",
+            "problem": "$\\frac{2^5\\cdot 2^3}{(2^2)^3}$ işleminin sonucu kaçtır?",
+            "steps": [
+              "Paydaki çarpımda üsleri topla: $2^5\\cdot 2^3=2^8$.",
+              "Paydada üssün üssünü çarp: $(2^2)^3=2^6$.",
+              "Bölmede üsleri çıkar: $\\frac{2^8}{2^6}=2^2$.",
+              "Hesapla: $2^2=4$."
+            ],
+            "answer": "$4$"
+          },
+          {
+            "type": "paragraph",
+            "id": "b7",
+            "section_no": 2,
+            "text": "Bu konuda sık yapılan bir hata, aynı tabanlı çarpımda üsleri çarpmaktır: $2^3\\cdot 2^4$ için $2^{12}$ yazmak. Doğrusu üsleri toplamaktır: $2^7$. Kontrol yolu: küçük sayılarla dene, $2^1\\cdot 2^1=4=2^2$."
+          },
+          {
+            "type": "heading",
+            "id": "b8",
+            "section_no": 3,
+            "level": 2,
+            "text": "Kendini sına"
+          },
+          {
+            "type": "question",
+            "id": "q1",
+            "section_no": 3,
+            "no": 1,
+            "stem": "$2^3\\cdot 2^4$ işleminin sonucu kaçtır?",
+            "options": [
+              {
+                "key": "A",
+                "text": "$2^{12}$"
+              },
+              {
+                "key": "B",
+                "text": "$2^{7}$"
+              },
+              {
+                "key": "C",
+                "text": "$4^{7}$"
+              },
+              {
+                "key": "D",
+                "text": "$2^{1}$"
+              },
+              {
+                "key": "E",
+                "text": "$4^{12}$"
+              }
+            ],
+            "skill_ids": [
+              "tyt.mat.temel.uslu"
+            ]
+          },
+          {
+            "type": "question",
+            "id": "q2",
+            "section_no": 3,
+            "no": 2,
+            "stem": "$\\frac{3^5}{3^2}$ işleminin sonucu kaçtır?",
+            "options": [
+              {
+                "key": "A",
+                "text": "$27$"
+              },
+              {
+                "key": "B",
+                "text": "$9$"
+              },
+              {
+                "key": "C",
+                "text": "$81$"
+              },
+              {
+                "key": "D",
+                "text": "$243$"
+              },
+              {
+                "key": "E",
+                "text": "$3$"
+              }
+            ],
+            "skill_ids": [
+              "tyt.mat.temel.uslu"
+            ]
+          },
+          {
+            "type": "question",
+            "id": "q3",
+            "section_no": 3,
+            "no": 3,
+            "stem": "$(2^3)^2$ işleminin sonucu kaçtır?",
+            "options": [
+              {
+                "key": "A",
+                "text": "$32$"
+              },
+              {
+                "key": "B",
+                "text": "$12$"
+              },
+              {
+                "key": "C",
+                "text": "$64$"
+              },
+              {
+                "key": "D",
+                "text": "$256$"
+              },
+              {
+                "key": "E",
+                "text": "$36$"
+              }
+            ],
+            "skill_ids": [
+              "tyt.mat.temel.uslu"
+            ]
+          },
+          {
+            "type": "question",
+            "id": "q4",
+            "section_no": 3,
+            "no": 4,
+            "stem": "$5^{-2}$ ifadesinin değeri kaçtır?",
+            "options": [
+              {
+                "key": "A",
+                "text": "$-25$"
+              },
+              {
+                "key": "B",
+                "text": "$-10$"
+              },
+              {
+                "key": "C",
+                "text": "$\\frac{1}{10}$"
+              },
+              {
+                "key": "D",
+                "text": "$\\frac{1}{25}$"
+              },
+              {
+                "key": "E",
+                "text": "$25$"
+              }
+            ],
+            "skill_ids": [
+              "tyt.mat.temel.uslu"
+            ]
+          },
+          {
+            "type": "question",
+            "id": "q5",
+            "section_no": 3,
+            "no": 5,
+            "stem": "$2^x=32$ olduğuna göre $x$ kaçtır?",
+            "options": [
+              {
+                "key": "A",
+                "text": "$4$"
+              },
+              {
+                "key": "B",
+                "text": "$16$"
+              },
+              {
+                "key": "C",
+                "text": "$6$"
+              },
+              {
+                "key": "D",
+                "text": "$3$"
+              },
+              {
+                "key": "E",
+                "text": "$5$"
+              }
+            ],
+            "skill_ids": [
+              "tyt.mat.temel.uslu"
+            ]
+          },
+          {
+            "type": "answer_key_page",
+            "id": "b9",
+            "section_no": 3,
+            "title": "Cevaplar"
+          }
+        ],
+        "keys": [
+          {
+            "question_no": 1,
+            "correct_option": "B",
+            "numeric_value": null,
+            "canonical_expr": "2**7"
+          },
+          {
+            "question_no": 2,
+            "correct_option": "A",
+            "numeric_value": null,
+            "canonical_expr": "27"
+          },
+          {
+            "question_no": 3,
+            "correct_option": "C",
+            "numeric_value": null,
+            "canonical_expr": "64"
+          },
+          {
+            "question_no": 4,
+            "correct_option": "D",
+            "numeric_value": null,
+            "canonical_expr": "1/25"
+          },
+          {
+            "question_no": 5,
+            "correct_option": "E",
+            "numeric_value": null,
+            "canonical_expr": "5"
+          }
+        ]
+      }
+    }
+  ]
+}

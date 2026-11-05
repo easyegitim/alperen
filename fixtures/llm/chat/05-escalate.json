@@ -1,0 +1,17 @@
+{
+  "reply": "Bundan emin değilim; hocana soralım.",
+  "ends_with_question": false,
+  "hint_level": 0,
+  "confidence": 0.35,
+  "escalate": true,
+  "escalate_reason": "bot_unsure",
+  "detected_skill_ids": [
+    "tyt.mat.cebir.mutlak-deger"
+  ],
+  "detected_misconception_tag": null,
+  "used_fact_ids": [],
+  "suggest_pool_save": false,
+  "suggested_buttons": [
+    "ask_instructor"
+  ]
+}

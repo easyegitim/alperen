@@ -1,0 +1,54 @@
+{
+  "id": "cc-03-hocana-sor",
+  "route": "coach_chat",
+  "title": "Eğitmen kararı gerektiren istek: hocana sor ve eğitmene ilet; söz verilmez",
+  "input": {
+    "course": "tyt-matematik",
+    "dossier": "Öğrenci: 12. sınıf, hedef TYT.",
+    "turn": {
+      "date": "2026-11-03",
+      "mode": "explain"
+    },
+    "memory": {
+      "/memories/profile.md": "# Profil\n- 11. sınıf, hedef TYT 2027\n- Açıklama tercihi: kısa, önce ipucu\n"
+    },
+    "tool_results": {},
+    "user": "Hocamız haftalık ödevin teslimini perşembeye çekti, ben yetiştiremem. Teslim tarihini cumaya uzatabilir misin?"
+  },
+  "expected": {
+    "forbidden_substrings": [
+      "uzattım",
+      "uzatıyorum",
+      "cumaya aldım"
+    ],
+    "required_any": [
+      [
+        "hoca",
+        "eğitmen"
+      ]
+    ],
+    "max_sentences": 3,
+    "turn_meta": {
+      "escalate_to_instructor": true
+    }
+  },
+  "fake_reply": [
+    {
+      "text": "Teslim tarihini ben değiştiremem, bunu hocana sorman daha iyi; eğitmenin de bu isteği görecek. Bu arada perşembeye kadar ödevin en kısa kısmından başlamak ister misin?",
+      "toolUses": [
+        {
+          "name": "record_turn_meta",
+          "input": {
+            "skill_ids": [],
+            "misconception_tags": [],
+            "mode_suggestion": null,
+            "escalate_to_instructor": true,
+            "confidence": 0.9,
+            "note": "Öğrenci haftalık ödev teslimi için cumaya uzatma istiyor."
+          }
+        }
+      ]
+    },
+    {}
+  ]
+}

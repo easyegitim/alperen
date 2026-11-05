@@ -1,0 +1,12 @@
+{
+  "reply": "Bunu hocana bırakıyorum.",
+  "ends_with_question": false,
+  "hint_level": 0,
+  "confidence": 0.5,
+  "escalate": true,
+  "escalate_reason": "grade_attendance_payment",
+  "detected_skill_ids": [],
+  "detected_misconception_tag": null,
+  "used_fact_ids": [],
+  "suggest_pool_save": false
+}

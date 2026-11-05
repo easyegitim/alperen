@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "lesson_ref": "ders-1",
+  "student_ref": "s_qk7m2rx4tn5a",
+  "skills": [
+    {
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "mastery_estimate": 0.5,
+      "confidence": 0.8,
+      "evidence": []
+    }
+  ],
+  "talk": {
+    "student_ratio": 1.5
+  }
+}

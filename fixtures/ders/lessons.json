@@ -1,0 +1,17 @@
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "enrollment_id": "8bef16e2-1fb1-56d1-9530-3cd5b1ea7cf3",
+    "staff_id": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "held_at": "2026-10-19T15:00:00Z",
+    "duration_min": 90,
+    "video_ref": "local:2026-10-19-ders-01.mp4",
+    "video_deleted_at": null,
+    "deletion_notified_at": null,
+    "transcript_path": "transcripts/00000000-0000-0000-0000-000000000001.jsonl",
+    "frames_count": 8,
+    "status": "analyzed",
+    "created_at": "2026-10-19T17:00:00Z",
+    "student_ref": "s_qk7m2rx4tn5a"
+  }
+]

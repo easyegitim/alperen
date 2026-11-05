@@ -1,0 +1,39 @@
+# Öğrenmen tek komutla yerel deneme (Windows / Mac / Linux). Gerekli olan tek şey Docker Desktop.
+#
+# İlk çalıştırma (anahtar sorulur, bir kez):
+#   docker compose -f docker-compose.local.yml run --rm --service-ports app
+# Sonraki çalıştırmalar aynı komut (anahtar hatırlanır). Durdurmak: Ctrl+C.
+# Veritabanını sıfırlamak:  docker compose -f docker-compose.local.yml down -v
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ogrenmen_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    depends_on:
+      db:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+    environment:
+      OGRENMEN_DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres
+    ports:
+      - "127.0.0.1:3000:3000"     # uygulama
+      - "127.0.0.1:54321:54321"   # yerel giriş/veri köprüsü (tarayıcı kullanır)
+    volumes:
+      - ogrenmen_data:/data       # anahtar ve yüklenen dosyalar burada kalır
+
+volumes:
+  ogrenmen_pg:
+  ogrenmen_data:

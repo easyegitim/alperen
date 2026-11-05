@@ -1,0 +1,86 @@
+{
+  "total": 3,
+  "offset": 0,
+  "query": "spaced repetition matematik",
+  "data": [
+    {
+      "paperId": "s2-0001",
+      "title": "Distributed practice in verbal recall tasks: A review and quantitative synthesis",
+      "year": 2006,
+      "citationCount": 3150,
+      "externalIds": {
+        "DOI": "10.1037/0033-2909.132.3.354"
+      },
+      "authors": [
+        {
+          "name": "Nicholas J. Cepeda"
+        },
+        {
+          "name": "Harold Pashler"
+        },
+        {
+          "name": "Edward Vul"
+        },
+        {
+          "name": "John T. Wixted"
+        },
+        {
+          "name": "Doug Rohrer"
+        }
+      ],
+      "venue": "Psychological Bulletin",
+      "tldr": {
+        "text": "Aralıklı çalışma, toplu çalışmaya göre uzun süreli hatırlamayı artırır."
+      },
+      "openAccessPdf": null
+    },
+    {
+      "paperId": "s2-0002",
+      "title": "Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology",
+      "year": 2013,
+      "citationCount": 4200,
+      "externalIds": {
+        "DOI": "10.1177/1529100612453266"
+      },
+      "authors": [
+        {
+          "name": "John Dunlosky"
+        },
+        {
+          "name": "Katherine A. Rawson"
+        },
+        {
+          "name": "Elizabeth J. Marsh"
+        },
+        {
+          "name": "Mitchell J. Nathan"
+        },
+        {
+          "name": "Daniel T. Willingham"
+        }
+      ],
+      "venue": "Psychological Science in the Public Interest",
+      "tldr": {
+        "text": "Aralıklı tekrar ve kendini sınama yüksek fayda sağlayan tekniklerdir."
+      },
+      "openAccessPdf": null
+    },
+    {
+      "paperId": "s2-0003",
+      "title": "Aralıklı tekrarın matematik başarısına etkisi: bir meta-analiz",
+      "year": 2021,
+      "citationCount": 3,
+      "externalIds": {
+        "DOI": "10.9999/fake"
+      },
+      "authors": [
+        {
+          "name": "A. Yazar"
+        }
+      ],
+      "venue": "Uydurma Eğitim Dergisi",
+      "tldr": null,
+      "openAccessPdf": null
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "source_id": "c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e03",
+  "item_no": 3,
+  "topic": "Türev ile ekstremum",
+  "kind": "calc",
+  "points": 15,
+  "year": 2022,
+  "term": "final",
+  "instructor_alias": "Ahmet Hoca",
+  "skill_id": null,
+  "ocr_text": "3) f(x) = x^3 - 3x fonksiyonunun yerel ekstremum noktalarını bulunuz. (15 puan)",
+  "ocr_confidence": 0.92
+}

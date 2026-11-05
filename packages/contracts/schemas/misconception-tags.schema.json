@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/misconception-tags.json",
+  "title": "MisconceptionTags",
+  "description": "Yanılgı etiketi kataloğu (misconception-tags.json): dizi; her etiket eğitmen metni (üçüncü tekil) ve öğrenci metni (sen dili, ünlemsiz) taşır. skill_id null olan etiketler yalnız genel.* önekli olabilir.",
+  "x-version": "1.0",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "$ref": "#/$defs/tag"
+  },
+  "$defs": {
+    "tag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "skill_id",
+        "prereq_skill_id",
+        "text_instructor",
+        "text_student"
+      ],
+      "properties": {
+        "tag": {
+          "$ref": "common.json#/$defs/tag"
+        },
+        "skill_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "common.json#/$defs/skillId"
+            }
+          ],
+          "description": "null = çok kazanımlı genel etiket (genel.*)"
+        },
+        "prereq_skill_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "common.json#/$defs/skillId"
+            }
+          ],
+          "description": "'Asıl sorun alt konuda' çıkarımı için ön koşul"
+        },
+        "text_instructor": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 200,
+          "pattern": "^[^!☀-➿⭐-⭕️🀀-🫿]*$",
+          "description": "Üçüncü tekil, ünlemsiz, emojisiz (desen ! ve emoji aralıklarını reddeder)"
+        },
+        "text_student": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 200,
+          "pattern": "^[^!☀-➿⭐-⭕️🀀-🫿]*$",
+          "description": "Sen dili, ünlemsiz, emojisiz (desen ! ve emoji aralıklarını reddeder)"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "skill_id": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "skill_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "tag": {
+                "pattern": "^genel\\."
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

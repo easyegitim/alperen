@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/question-generation.json",
+  "title": "QuestionGeneration",
+  "description": "Tablet'in LLM'den istediği yapılandırılmış çıktı: tek zarfta item (question-item) ve key (answer-key, question_id hariç). Pipeline item'ı questions'a, key'i SymPy'den geçirip register_answer_key'e verir; key dosyaya yazılmaz.",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "item",
+    "key"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "item": {
+      "$ref": "question-item.json"
+    },
+    "key": {
+      "$ref": "#/$defs/key"
+    }
+  },
+  "$defs": {
+    "key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "solution",
+        "sympy_status"
+      ],
+      "description": "answer-key ile aynı alanlar, question_id hariç (soru henüz yazılmadı).",
+      "properties": {
+        "correct_option": {
+          "$ref": "common.json#/$defs/optionKey"
+        },
+        "numeric_value": {
+          "type": "string",
+          "description": "SymPy string: '7/8', '2*sqrt(3)'"
+        },
+        "numeric_tolerance": {
+          "type": "number",
+          "minimum": 0
+        },
+        "canonical_expr": {
+          "type": "string",
+          "description": "sympy.sympify edilebilir ifade; stem_values ile çözülür"
+        },
+        "solution": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 2000,
+          "description": "Adım adım çözüm; doğrudan modda reveal_solution bunu döner"
+        },
+        "sympy_status": {
+          "enum": [
+            "verified",
+            "failed",
+            "not_applicable"
+          ]
+        },
+        "sympy_report": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "expr": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            },
+            "matched_option": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "correct_option"
+          ]
+        },
+        {
+          "required": [
+            "numeric_value"
+          ]
+        }
+      ]
+    }
+  }
+}

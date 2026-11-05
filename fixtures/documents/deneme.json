@@ -1,0 +1,430 @@
+{
+  "kind": "mock_exam",
+  "title": "Temel Matematik Denemesi 1",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": "Sentetik örnek: 10 soru",
+    "generated_on": "2026-11-03",
+    "language": "tr",
+    "personalized": false,
+    "duration_min": 25
+  },
+  "sections": [
+    {
+      "no": 1,
+      "title": "Temel Matematik"
+    },
+    {
+      "no": 2,
+      "title": "Geometri"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "question",
+      "id": "q1",
+      "section_no": 1,
+      "no": 1,
+      "stem": "$\\dfrac{3}{4}+\\dfrac{5}{6}$ işleminin sonucu kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$\\dfrac{8}{10}$"
+        },
+        {
+          "key": "B",
+          "text": "$\\dfrac{19}{12}$"
+        },
+        {
+          "key": "C",
+          "text": "$\\dfrac{15}{12}$"
+        },
+        {
+          "key": "D",
+          "text": "$\\dfrac{23}{24}$"
+        },
+        {
+          "key": "E",
+          "text": "$\\dfrac{4}{3}$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q2",
+      "section_no": 1,
+      "no": 2,
+      "stem": "$|x-3|=5$ denklemini sağlayan x değerlerinin toplamı kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$-2$"
+        },
+        {
+          "key": "B",
+          "text": "$0$"
+        },
+        {
+          "key": "C",
+          "text": "$3$"
+        },
+        {
+          "key": "D",
+          "text": "$6$"
+        },
+        {
+          "key": "E",
+          "text": "$8$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.mat.temel.mutlak-deger"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q3",
+      "section_no": 1,
+      "no": 3,
+      "stem": "$2^{x+1}=64$ olduğuna göre x kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$3$"
+        },
+        {
+          "key": "B",
+          "text": "$4$"
+        },
+        {
+          "key": "C",
+          "text": "$5$"
+        },
+        {
+          "key": "D",
+          "text": "$6$"
+        },
+        {
+          "key": "E",
+          "text": "$7$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.mat.temel.uslu-sayilar"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q4",
+      "section_no": 1,
+      "no": 4,
+      "stem": "Beş sayının aritmetik ortalaması 12 dir. Bu sayılardan biri çıkarılırsa kalan dört sayının ortalaması 10 oluyor.\n\nÇıkarılan sayı kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$16$"
+        },
+        {
+          "key": "B",
+          "text": "$18$"
+        },
+        {
+          "key": "C",
+          "text": "$20$"
+        },
+        {
+          "key": "D",
+          "text": "$22$"
+        },
+        {
+          "key": "E",
+          "text": "$24$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.mat.temel.ortalama"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q5",
+      "section_no": 1,
+      "no": 5,
+      "stem": "$x^2-5x+6=0$ denkleminin kökleri $x_1$ ve $x_2$ olduğuna göre $x_1^2+x_2^2$ kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$9$"
+        },
+        {
+          "key": "B",
+          "text": "$11$"
+        },
+        {
+          "key": "C",
+          "text": "$13$"
+        },
+        {
+          "key": "D",
+          "text": "$15$"
+        },
+        {
+          "key": "E",
+          "text": "$17$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.mat.temel.denklemler"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q6",
+      "section_no": 1,
+      "no": 6,
+      "stem": "Bir ürüne yüzde yirmi zam yapıldığında fiyatı 360 TL oluyor. Ürünün zamdan önceki fiyatı kaç TL idi?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$288$"
+        },
+        {
+          "key": "B",
+          "text": "$300$"
+        },
+        {
+          "key": "C",
+          "text": "$312$"
+        },
+        {
+          "key": "D",
+          "text": "$320$"
+        },
+        {
+          "key": "E",
+          "text": "$330$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.mat.temel.yuzde"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q7",
+      "section_no": 2,
+      "no": 7,
+      "stem": "Şekildeki ABC dik üçgeninde $|AB|=6$ ve $|BC|=8$ birimdir. $[AC]$ kenarının uzunluğu kaç birimdir?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$7$"
+        },
+        {
+          "key": "B",
+          "text": "$9$"
+        },
+        {
+          "key": "C",
+          "text": "$10$"
+        },
+        {
+          "key": "D",
+          "text": "$12$"
+        },
+        {
+          "key": "E",
+          "text": "$14$"
+        }
+      ],
+      "figure": {
+        "source": "svg",
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 150\" width=\"220\" height=\"150\"><polygon points=\"20,125 200,125 20,20\" fill=\"#e3eafc\" stroke=\"#051c60\" stroke-width=\"2\"/><rect x=\"20\" y=\"109\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"#051c60\" stroke-width=\"1.5\"/><g font-family=\"Lexend, sans-serif\" font-size=\"14\" fill=\"#051c60\"><text x=\"8\" y=\"80\" text-anchor=\"end\">6</text><text x=\"110\" y=\"145\" text-anchor=\"middle\">8</text><text x=\"12\" y=\"16\">A</text><text x=\"10\" y=\"140\" text-anchor=\"end\">B</text><text x=\"206\" y=\"140\">C</text></g></svg>",
+        "alt": "A noktasında dik açılı, kenarları 6 ve 8 birim olan ABC dik üçgeni"
+      },
+      "skill_ids": [
+        "tyt.geo.ucgen"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q8",
+      "section_no": 2,
+      "no": 8,
+      "stem": "Yarıçapı 7 birim olan bir çemberin çevresi kaç birimdir? ($\\pi$ sayısı olduğu gibi bırakılacaktır.)",
+      "options": [
+        {
+          "key": "A",
+          "text": "$7\\pi$"
+        },
+        {
+          "key": "B",
+          "text": "$14\\pi$"
+        },
+        {
+          "key": "C",
+          "text": "$21\\pi$"
+        },
+        {
+          "key": "D",
+          "text": "$28\\pi$"
+        },
+        {
+          "key": "E",
+          "text": "$49\\pi$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.geo.cember"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q9",
+      "section_no": 2,
+      "no": 9,
+      "stem": "Köşegen uzunluğu $6\\sqrt{2}$ birim olan karenin alanı kaç birimkaredir?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$18$"
+        },
+        {
+          "key": "B",
+          "text": "$24$"
+        },
+        {
+          "key": "C",
+          "text": "$36$"
+        },
+        {
+          "key": "D",
+          "text": "$48$"
+        },
+        {
+          "key": "E",
+          "text": "$72$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.geo.dortgen"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q10",
+      "section_no": 2,
+      "no": 10,
+      "stem": "Bir üçgenin iç açılarının ölçüleri $2x$, $3x$ ve $4x$ derecedir. Bu üçgenin en büyük açısı kaç derecedir?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$60$"
+        },
+        {
+          "key": "B",
+          "text": "$70$"
+        },
+        {
+          "key": "C",
+          "text": "$80$"
+        },
+        {
+          "key": "D",
+          "text": "$90$"
+        },
+        {
+          "key": "E",
+          "text": "$100$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.geo.ucgen"
+      ]
+    },
+    {
+      "type": "page_break",
+      "id": "pb1",
+      "section_no": 2
+    },
+    {
+      "type": "answer_sheet",
+      "id": "optik",
+      "section_no": 2,
+      "title": "Optik form",
+      "question_count": 10,
+      "options_per_question": 5
+    },
+    {
+      "type": "answer_key_page",
+      "id": "anahtar",
+      "section_no": 2,
+      "title": "Cevap anahtarı"
+    }
+  ],
+  "keys": [
+    {
+      "question_no": 1,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": "19/12"
+    },
+    {
+      "question_no": 2,
+      "correct_option": "D",
+      "numeric_value": null,
+      "canonical_expr": "6"
+    },
+    {
+      "question_no": 3,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "5"
+    },
+    {
+      "question_no": 4,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "20"
+    },
+    {
+      "question_no": 5,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "13"
+    },
+    {
+      "question_no": 6,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": "300"
+    },
+    {
+      "question_no": 7,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "10"
+    },
+    {
+      "question_no": 8,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": "14*pi"
+    },
+    {
+      "question_no": 9,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "36"
+    },
+    {
+      "question_no": 10,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "80"
+    }
+  ]
+}

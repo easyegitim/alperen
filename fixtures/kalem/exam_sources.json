@@ -1,0 +1,28 @@
+[
+  {
+    "id": "c97a5607-ead2-5620-b865-cf6bb93495e4",
+    "course_id": "a48b1144-f71e-5ff2-8c38-92f9d76c3805",
+    "year": 2022,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "storage_path": "exams/c97a5607-ead2-5620-b865-cf6bb93495e4.pdf",
+    "legal_basis": "eğitmenin kendi sınavı",
+    "uploaded_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "status": "uploaded",
+    "error": null,
+    "created_at": "2026-10-18T14:00:00Z"
+  },
+  {
+    "id": "53ad77db-789c-5344-b86e-a2491d00af64",
+    "course_id": "a48b1144-f71e-5ff2-8c38-92f9d76c3805",
+    "year": 2023,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "storage_path": "exams/53ad77db-789c-5344-b86e-a2491d00af64.pdf",
+    "legal_basis": "eğitmenin kendi sınavı",
+    "uploaded_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "status": "ocr_done",
+    "error": null,
+    "created_at": "2026-10-11T14:00:00Z"
+  }
+]

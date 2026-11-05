@@ -1,0 +1,26 @@
+{
+  "name": "ogrenmen",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Öğrenmen 2.0 monorepo kökü: bun workspace (apps/*, packages/*) ve betik kısayolları. Python boru hatları (pipelines/*) ve Supabase (supabase/) kendi araçlarıyla çalışır.",
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "check": "bash scripts/check-all.sh",
+    "check:quick": "bash scripts/check-all.sh --quick",
+    "check:live": "bash scripts/check-all.sh --live",
+    "dev:web": "bun run --cwd apps/web dev",
+    "dev:worker": "bun run --cwd apps/worker dev",
+    "doctor": "bun scripts/dev-local/doctor.ts",
+    "local": "bun scripts/dev-local/up.ts",
+    "local:reset": "bun scripts/dev-local/up.ts --reset",
+    "secret-scan": "bash scripts/secret-scan.sh"
+  }
+}

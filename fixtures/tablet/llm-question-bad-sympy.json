@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "item": {
+    "schema_version": "1.0",
+    "curriculum_code": "TYT-MAT@2026.1",
+    "kind": "mcq",
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar"
+    ],
+    "stem": "`2/3 + 1/4` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`3/7`",
+        "misconception_tag": "rasyonel.pay-payda-ayri-toplama"
+      },
+      {
+        "key": "B",
+        "text": "`11/12`",
+        "misconception_tag": null
+      },
+      {
+        "key": "C",
+        "text": "`3/4`",
+        "misconception_tag": "rasyonel.payda-esitlemeden-toplama"
+      },
+      {
+        "key": "D",
+        "text": "`5/12`",
+        "misconception_tag": null
+      }
+    ],
+    "difficulty": 0.5,
+    "source": "llm",
+    "verification": {
+      "schema": true,
+      "sympy": "pending",
+      "render": "pending",
+      "vision": "pending",
+      "attempts": 0,
+      "status": "draft",
+      "review_note": null
+    },
+    "provenance": {
+      "model": "gemini-2.5-flash-lite",
+      "cost_usd": 0.000294,
+      "prompt_version": "question_gen.v1"
+    }
+  },
+  "key": {
+    "correct_option": "D",
+    "canonical_expr": "Rational(2,3) + Rational(1,4)",
+    "solution": "Paydaları 12'de eşitle: `8/12 + 3/12 = 5/12`.",
+    "sympy_status": "verified",
+    "sympy_report": {
+      "expr": "Rational(2,3) + Rational(1,4)",
+      "value": "5/12",
+      "matched_option": "D"
+    }
+  }
+}

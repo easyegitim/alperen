@@ -1,0 +1,16 @@
+{
+  "decisions": [
+    {
+      "proposal_id": "11111111-1111-4111-8111-111111111111",
+      "action": "accept",
+      "confidence": 0.92,
+      "rationale": "Kaynakla birebir uyuşuyor, mevcut kazanımla çakışmıyor."
+    },
+    {
+      "proposal_id": "22222222-2222-4222-8222-222222222222",
+      "action": "needs_instructor",
+      "confidence": 0.4,
+      "rationale": "İki kazanım arasında bölme önerisi; eğitmen kararı gerekir."
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "kind": "supergroup",
+    "bot_is_admin": false,
+    "bot_can_pin": false,
+    "recording_notice_msg_id": 3,
+    "recording_notice_legal_id": "2ca970eb-50ec-5a04-bf51-76466d40ffc7",
+    "privacy_mode_off_verified": true,
+    "retention_days": 90,
+    "recording_notice_days": 90,
+    "group_auto_answer_min": 0,
+    "chat_id": -1001000000003,
+    "title": "Hafta sonu etüt grubu",
+    "created_at": "2026-10-17T10:30:00Z"
+  },
+  {
+    "kind": "supergroup",
+    "bot_is_admin": false,
+    "bot_can_pin": false,
+    "recording_notice_msg_id": 3,
+    "recording_notice_legal_id": "2ca970eb-50ec-5a04-bf51-76466d40ffc7",
+    "privacy_mode_off_verified": false,
+    "retention_days": 90,
+    "recording_notice_days": 90,
+    "group_auto_answer_min": 0,
+    "chat_id": -1001000000004,
+    "title": "TYT Matematik · Pilot C",
+    "created_at": "2026-10-18T08:00:00Z"
+  }
+]

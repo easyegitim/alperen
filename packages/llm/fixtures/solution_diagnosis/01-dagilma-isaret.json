@@ -1,0 +1,53 @@
+{
+  "question_text": "$2(x+1) - 3(x-2) = 4$ olduğuna göre $x$ kaçtır? A) $-8$ B) $-2$ C) $2$ D) $4$ E) $8$",
+  "student_work_text": "2(x+1) = 2x+2; 2x+2 - 3(x-2) = 4; -3(x-2) = -3x-6; -x - 4 = 4; x = -8",
+  "reference_solution_steps": [
+    "$2(x+1) = 2x+2$",
+    "$2x+2 - 3(x-2) = 4$",
+    "$-3(x-2) = -3x+6$",
+    "$-x + 8 = 4$",
+    "$x = 4$, cevap D"
+  ],
+  "student_steps": [
+    {
+      "no": 1,
+      "text": "$2(x+1) = 2x+2$",
+      "status": "ok"
+    },
+    {
+      "no": 2,
+      "text": "$2x+2 - 3(x-2) = 4$",
+      "status": "ok"
+    },
+    {
+      "no": 3,
+      "text": "$-3(x-2) = -3x-6$",
+      "status": "error"
+    },
+    {
+      "no": 4,
+      "text": "$-x - 4 = 4$",
+      "status": "ok"
+    },
+    {
+      "no": 5,
+      "text": "$x = -8$",
+      "status": "ok"
+    }
+  ],
+  "failing_step_no": 3,
+  "verdict": "wrong",
+  "error_cause": "procedure",
+  "why_tr": "3. adımda $-3(x-2)$ ifadesini $-3x-6$ yazdın; eksi çarpı eksi artı olduğu için doğrusu $-3x+6$.",
+  "skill_ids": [
+    "tyt.mat.cebir.denklem",
+    "tyt.mat.temel.sayilar"
+  ],
+  "misconception_tags": [
+    "sayilar.parantez-eksi-dagitma"
+  ],
+  "proposed_subskill": null,
+  "style_hint": null,
+  "confidence": 0.86,
+  "key_dispute": null
+}

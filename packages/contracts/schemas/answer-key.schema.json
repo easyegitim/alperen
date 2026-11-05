@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/answer-key.json",
+  "title": "AnswerKey",
+  "description": "Cevap anahtarı: doğru şık ya da sayısal değer, adım adım çözüm ve SymPy doğrulama durumu.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "question_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "correct_option": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    "numeric_value": {
+      "type": "string",
+      "description": "SymPy dizesi: '7/8', '2*sqrt(3)'"
+    },
+    "numeric_tolerance": {
+      "type": "number",
+      "minimum": 0
+    },
+    "canonical_expr": {
+      "type": "string",
+      "description": "sympy.sympify edilebilir ifade; stem_values ile çözülür"
+    },
+    "solution": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000,
+      "description": "Adım adım çözüm"
+    },
+    "sympy_status": {
+      "type": "string",
+      "enum": [
+        "verified",
+        "failed",
+        "not_applicable"
+      ]
+    },
+    "sympy_report": {
+      "type": "object",
+      "properties": {
+        "expr": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "matched_option": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "question_id",
+    "solution",
+    "sympy_status"
+  ],
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "required": [
+        "correct_option"
+      ]
+    },
+    {
+      "required": [
+        "numeric_value"
+      ]
+    }
+  ]
+}

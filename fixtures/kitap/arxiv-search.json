@@ -1,0 +1,33 @@
+{
+  "query": "spaced repetition matematik",
+  "source": "arxiv",
+  "total": 2,
+  "entries": [
+    {
+      "arxiv_id": "2513.00017",
+      "doi": "10.1007/s11251-007-9015-8",
+      "title": "The shuffling of mathematics problems improves learning",
+      "authors": [
+        "Doug Rohrer",
+        "Kelli Taylor"
+      ],
+      "published": "2025-12-01",
+      "pdf_url": "https://arxiv.org/pdf/2513.00017",
+      "summary": "Sentetik özet: aralıklı ve karışık pratik etkisini inceleyen çalışma.",
+      "primary_category": "math.HO"
+    },
+    {
+      "arxiv_id": "2513.00042",
+      "doi": null,
+      "title": "Interleaved and spaced retrieval practice for secondary school algebra",
+      "authors": [
+        "Sentetik Yazar",
+        "Örnek Araştırmacı"
+      ],
+      "published": "2025-12-02",
+      "pdf_url": "https://arxiv.org/pdf/2513.00042",
+      "summary": "Sentetik özet: aralıklı ve karışık pratik etkisini inceleyen çalışma.",
+      "primary_category": "math.HO"
+    }
+  ]
+}

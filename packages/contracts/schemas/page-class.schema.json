@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/page-class.json",
+  "title": "PageClass",
+  "description": "Yüklenen deneme sayfasının türü, dönüklüğü ve görünen soru numaraları.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "page_class": {
+      "type": "string",
+      "enum": [
+        "booklet",
+        "answer_sheet",
+        "scratch",
+        "answer_key",
+        "other"
+      ],
+      "description": "booklet: soru kitapçığı, answer_sheet: optik form, scratch: karalama, answer_key: cevap anahtarı"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "rotation_degrees": {
+      "anyOf": [
+        {
+          "type": "number",
+          "const": 0
+        },
+        {
+          "type": "number",
+          "const": 90
+        },
+        {
+          "type": "number",
+          "const": 180
+        },
+        {
+          "type": "number",
+          "const": 270
+        }
+      ],
+      "description": "Sayfayı dik hale getirmek için saat yönünde gereken döndürme: 0, 90, 180 ya da 270"
+    },
+    "question_numbers_seen": {
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 500
+      },
+      "description": "Yalnız kitapçık sayfasında basılı soru numaraları; optik formda ve cevap anahtarında boş"
+    },
+    "has_figures": {
+      "type": "boolean"
+    },
+    "section_hint": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 80
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Sayfanın bölümü (ör. Türkçe, Matematik); bilinmiyorsa null"
+    },
+    "printed_page_number": {
+      "default": null,
+      "description": "Sayfada basılı sayfa numarası; görünmüyorsa null",
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 999
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "unreadable": {
+      "default": false,
+      "description": "Görsel sınıflamaya yetmeyecek kadar bulanık, karanlık ya da kesik: true (yeniden çekim istenir)",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "page_class",
+    "confidence",
+    "rotation_degrees",
+    "question_numbers_seen",
+    "has_figures",
+    "section_hint"
+  ],
+  "additionalProperties": false
+}

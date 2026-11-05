@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/figure-render-report.json",
+  "title": "FigureRenderReport",
+  "description": "Şekil denetim raporu: PNG ile stem_values karşılaştırması; isteğe bağlı render özeti. mismatch durumunda kod düzeltilip yeniden üretilir.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "figure_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "matches_stem": {
+      "type": "boolean",
+      "description": "Şekil soru kökündeki değerlerle uyuşuyor mu"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "match",
+        "mismatch"
+      ]
+    },
+    "mismatches": {
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "description": "stem_values anahtarı ya da şekil öğesi"
+              },
+              "expected": {
+                "type": [
+                  "number",
+                  "string",
+                  "null"
+                ]
+              },
+              "observed": {
+                "type": [
+                  "number",
+                  "string",
+                  "null"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "field"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 600
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "render": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "failed",
+            "size_mismatch",
+            "blank",
+            "skipped"
+          ]
+        },
+        "tool": {
+          "type": "string",
+          "enum": [
+            "matplotlib",
+            "svg",
+            "tikz",
+            "vega-lite",
+            "schemdraw",
+            "rdkit",
+            "graphviz",
+            "latex",
+            "template"
+          ]
+        },
+        "width_px": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "height_px": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pixel_variance": {
+          "type": "number",
+          "minimum": 0
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "log": {
+          "type": "string",
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "matches_stem",
+    "mismatches"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "matches_stem": {
+            "const": true
+          }
+        },
+        "required": [
+          "matches_stem"
+        ]
+      },
+      "then": {
+        "properties": {
+          "mismatches": {
+            "maxItems": 0
+          },
+          "status": {
+            "const": "match"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "matches_stem": {
+            "const": false
+          }
+        },
+        "required": [
+          "matches_stem"
+        ]
+      },
+      "then": {
+        "properties": {
+          "mismatches": {
+            "minItems": 1
+          },
+          "status": {
+            "const": "mismatch"
+          }
+        }
+      }
+    }
+  ]
+}

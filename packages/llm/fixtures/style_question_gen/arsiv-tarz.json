@@ -1,0 +1,116 @@
+{
+  "fake_match": [
+    "tarza özel soru isteği"
+  ],
+  "output": {
+    "items": [
+      {
+        "no": 1,
+        "section": "TYT Matematik",
+        "kind": "mcq",
+        "stem": "$\\frac{1}{2} + \\frac{1}{3} \\cdot \\frac{3}{4}$ işleminin sonucu kaçtır?",
+        "options": [
+          {
+            "key": "A",
+            "text": "1/4"
+          },
+          {
+            "key": "B",
+            "text": "5/8"
+          },
+          {
+            "key": "C",
+            "text": "3/4"
+          },
+          {
+            "key": "D",
+            "text": "1"
+          },
+          {
+            "key": "E",
+            "text": "5/4"
+          }
+        ],
+        "figure_svg": null,
+        "skill_ids": [
+          "tyt.mat.temel.rasyonel-sayilar"
+        ],
+        "difficulty": "easy",
+        "style_id": "00000000-0000-4000-8000-00000000a5c2",
+        "figure": null
+      },
+      {
+        "no": 2,
+        "section": "TYT Matematik",
+        "kind": "mcq",
+        "stem": "$\\frac{2}{3} : \\frac{4}{9} - \\frac{1}{2}$ işleminin sonucu kaçtır?",
+        "options": [
+          {
+            "key": "A",
+            "text": "-12"
+          },
+          {
+            "key": "B",
+            "text": "1/2"
+          },
+          {
+            "key": "C",
+            "text": "1"
+          },
+          {
+            "key": "D",
+            "text": "3/2"
+          },
+          {
+            "key": "E",
+            "text": "2"
+          }
+        ],
+        "figure_svg": null,
+        "skill_ids": [
+          "tyt.mat.temel.rasyonel-sayilar"
+        ],
+        "difficulty": "medium",
+        "style_id": "00000000-0000-4000-8000-00000000a5c2",
+        "figure": null
+      },
+      {
+        "no": 3,
+        "section": "TYT Matematik",
+        "kind": "numeric",
+        "stem": "$\\left(\\frac{3}{5} - \\frac{1}{10}\\right) \\cdot 8 + 1$ işleminin sonucu kaçtır?",
+        "options": [],
+        "figure_svg": null,
+        "skill_ids": [
+          "tyt.mat.temel.rasyonel-sayilar"
+        ],
+        "difficulty": "medium",
+        "style_id": "00000000-0000-4000-8000-00000000a5c2",
+        "figure": null
+      }
+    ],
+    "keys": [
+      {
+        "question_no": 1,
+        "correct_option": "C",
+        "numeric_value": null,
+        "canonical_expr": "Rational(3,4)",
+        "solution": "Önce çarpma yapılır: 1/3 · 3/4 = 1/4. Sonra 1/2 + 1/4 = 3/4. Soldan sağa toplayan 5/8 bulur."
+      },
+      {
+        "question_no": 2,
+        "correct_option": "C",
+        "numeric_value": null,
+        "canonical_expr": "1",
+        "solution": "Bölme önce yapılır: 2/3 : 4/9 = 2/3 · 9/4 = 3/2. Sonra 3/2 - 1/2 = 1. Önce çıkarma yapan -12 bulur."
+      },
+      {
+        "question_no": 3,
+        "correct_option": null,
+        "numeric_value": 5,
+        "canonical_expr": "5",
+        "solution": "Parantez önce: 3/5 - 1/10 = 1/2. Sonra 1/2 · 8 = 4 ve 4 + 1 = 5."
+      }
+    ]
+  }
+}

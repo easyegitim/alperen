@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/conversation-summary.json",
+  "title": "ConversationSummary",
+  "description": "Eski sohbet mesajlarının özeti: düzyazı özet, açık kalan konular ve değinilen kazanımlar.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "summary": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 1500,
+      "description": "Üçüncü tekil, isimsiz özet"
+    },
+    "open_threads": {
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    },
+    "skill_ids": {
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+      }
+    }
+  },
+  "required": [
+    "summary",
+    "open_threads",
+    "skill_ids"
+  ],
+  "additionalProperties": false
+}

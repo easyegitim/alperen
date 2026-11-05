@@ -1,0 +1,14 @@
+{
+  "extra-field.json": [
+    "additionalProperties"
+  ],
+  "six-queries.json": [
+    "maxItems"
+  ],
+  "tiny-query.json": [
+    "minLength"
+  ],
+  "two-queries.json": [
+    "minItems"
+  ]
+}

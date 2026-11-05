@@ -1,0 +1,28 @@
+{
+  "description": "x-forbidden-words vakaları: TS (test/forbidden-words.test.ts) ve Python (python/tests/test_forbidden_words.py) aynı dosyayı geçer. hit = ilk eşleşen kelime (listedeki yazımıyla) ya da null.",
+  "cases": [
+    { "name": "düz eşleşme", "words": ["tahmin", "çıkacak", "kesin", "garanti"], "data": "Bu bir tahmin değildir", "hit": "tahmin" },
+    { "name": "büyük harf Türkçe İ", "words": ["tahmin"], "data": "TAHMİN LİSTESİ", "hit": "tahmin" },
+    { "name": "büyük harf ASCII I", "words": ["tahmin"], "data": "TAHMIN", "hit": "tahmin" },
+    { "name": "ı/i katlama", "words": ["çıkacak"], "data": "Sınavda ÇIKACAK konular", "hit": "çıkacak" },
+    { "name": "ek almış kelime", "words": ["kesin"], "data": "Kesinlikle sorulur", "hit": "kesin" },
+    { "name": "garantili", "words": ["garanti"], "data": "garantili 10 soru", "hit": "garanti" },
+    { "name": "kelime ortasında da eşleşir (öntahmin)", "words": ["tahmin"], "data": "öntahmin modeli", "hit": "tahmin" },
+    { "name": "benzer ama farklı kelime", "words": ["kesin"], "data": "Kesir problemleri ve kesişim", "hit": null },
+    { "name": "noktalama sonrası kelime başı", "words": ["tahmin"], "data": "(tahminen 3 soru)", "hit": "tahmin" },
+    { "name": "rakama bitişik de eşleşir", "words": ["tahmin"], "data": "3tahmin", "hit": "tahmin" },
+    { "name": "k → ğ yumuşaması: çıkacağı", "words": ["tahmin", "çıkacak"], "data": "Bu konuların sınavda çıkacağı düşünülüyor", "hit": "çıkacak" },
+    { "name": "k → ğ yumuşaması: çıkacağını", "words": ["çıkacak"], "data": "çıkacağını sanıyoruz", "hit": "çıkacak" },
+    { "name": "çoğul ek: çıkacaklar", "words": ["çıkacak"], "data": "Bunlar ÇIKACAKLAR", "hit": "çıkacak" },
+    { "name": "yumuşama yalnız k ile bitende", "words": ["kesin"], "data": "kesiğin kenarı", "hit": null },
+    { "name": "kesintisiz de yakalanır (alt dize)", "words": ["kesin"], "data": "kesintisiz çalışma", "hit": "kesin" },
+    { "name": "birleşik nokta (NFD İ)", "words": ["depresif"], "data": "DEPRESİF", "hit": "depresif" },
+    { "name": "iç içe nesne ve dizi", "words": ["tembel", "depresif"], "data": { "a": 1, "b": ["iyi", { "c": "çok TEMBEL" }] }, "hit": "tembel" },
+    { "name": "anahtarlar taranmaz", "words": ["tahmin"], "data": { "tahmin": "öncelik" }, "hit": null },
+    { "name": "liste sırası önceliklidir", "words": ["kesin", "tahmin"], "data": "tahmin ve kesin", "hit": "kesin" },
+    { "name": "sayı ve null değerler", "words": ["garanti"], "data": [1, null, true, 2.5], "hit": null },
+    { "name": "boş metin", "words": ["garanti"], "data": "", "hit": null },
+    { "name": "başarısız ünlü uyumu", "words": ["başarısız"], "data": "BAŞARISIZ sayılmaz", "hit": "başarısız" },
+    { "name": "umutsuz cümle içinde", "words": ["umutsuz"], "data": "öğrenci umutsuzluk belirtti", "hit": "umutsuz" }
+  ]
+}

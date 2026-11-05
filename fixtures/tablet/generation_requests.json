@@ -1,0 +1,53 @@
+[
+  {
+    "id": "ce3e1212-a381-5a9b-8086-9224f9dbc645",
+    "kind": "pool_miss",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_id": "tyt.mat.temel.ondalik",
+    "difficulty_band": "mid",
+    "topic": null,
+    "question_kind": "mcq",
+    "points": null,
+    "plan_id": null,
+    "requested_by": "8bef16e2-1fb1-56d1-9530-3cd5b1ea7cf3",
+    "requested_by_staff": null,
+    "served_question_id": null,
+    "served_at": null,
+    "needs_generation": true,
+    "created_at": "2026-10-18T20:40:00Z"
+  },
+  {
+    "id": "e05571fe-26be-520a-8bd0-d5feac99169c",
+    "kind": "pool_miss",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_id": "tyt.mat.problem.kesir",
+    "difficulty_band": "easy",
+    "topic": null,
+    "question_kind": "mcq",
+    "points": null,
+    "plan_id": null,
+    "requested_by": "1899cde6-c497-5b14-8051-882f44649013",
+    "requested_by_staff": null,
+    "served_question_id": null,
+    "served_at": null,
+    "needs_generation": true,
+    "created_at": "2026-10-18T21:20:00Z"
+  },
+  {
+    "id": "fc06a87f-91ef-524e-abd2-2619c26c1d68",
+    "kind": "exam_variant",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_id": "tyt.mat.cebir.mutlak-deger",
+    "difficulty_band": "mid",
+    "topic": "Mutlak değer",
+    "question_kind": "mcq",
+    "points": 4.0,
+    "plan_id": "d323913e-7e24-5ad9-8bc5-4a32cfa8485b",
+    "requested_by": null,
+    "requested_by_staff": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "served_question_id": null,
+    "served_at": null,
+    "needs_generation": true,
+    "created_at": "2026-10-19T09:00:00Z"
+  }
+]

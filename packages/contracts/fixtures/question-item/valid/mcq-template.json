@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "curriculum_code": "TYT-MAT@2026.1",
+  "kind": "mcq",
+  "skill_ids": [
+    "tyt.mat.cebir.esitsizlik",
+    "tyt.mat.cebir.mutlak-deger"
+  ],
+  "stem": "Sayı doğrusunda gösterilen aralık `|x - 2| < 3` eşitsizliğinin çözüm kümesidir. Bu aralıktaki tam sayıların toplamı kaçtır?",
+  "stem_values": {
+    "a": 2,
+    "b": 3
+  },
+  "figure": {
+    "tool": "template",
+    "code": "sayi-dogrusu-esitsizlik(a=2, b=3, kapali=false)",
+    "alt_text": "Sayı doğrusu: -1 ve 5 noktalarında boş daireler, aradaki aralık taralı.",
+    "render": {
+      "status": "rendered",
+      "png_path": "figures/sd-2-3.png",
+      "width_px": 800,
+      "height_px": 220,
+      "bytes": 18432,
+      "vision": "match",
+      "attempts": 1
+    }
+  },
+  "options": [
+    {
+      "key": "A",
+      "text": "10",
+      "misconception_tag": "mutlak.tek-durum"
+    },
+    {
+      "key": "B",
+      "text": "9",
+      "misconception_tag": null
+    },
+    {
+      "key": "C",
+      "text": "14",
+      "misconception_tag": "esitsizlik.negatifle-carpma-yon"
+    },
+    {
+      "key": "D",
+      "text": "12",
+      "misconception_tag": null
+    }
+  ],
+  "difficulty": 0.5,
+  "source": "template",
+  "template": {
+    "id": "sayi-dogrusu-esitsizlik",
+    "params": {
+      "a": 2,
+      "b": 3,
+      "kapali": false,
+      "aralik": {
+        "sol": -1,
+        "sag": 5
+      },
+      "vurgu": null
+    }
+  },
+  "verification": {
+    "schema": true,
+    "sympy": "verified",
+    "render": "ok",
+    "vision": "match",
+    "attempts": 1,
+    "status": "approved"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "kind": "ops",
+  "severity": "neutral",
+  "student_ref": null,
+  "detail": "Bot bu grupta yönetici değil; kayıt bildirimi sabitlenemedi.",
+  "since": "2026-10-18T08:00:00+03:00",
+  "ref": {
+    "chat_id": -1002233445566
+  }
+}

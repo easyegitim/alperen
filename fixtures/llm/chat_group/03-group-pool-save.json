@@ -1,0 +1,14 @@
+{
+  "reply": "Ondalık sayıyı 10 ile çarparken virgül bir basamak sağa gider.\n100 ile çarparken kaç basamak kayar?",
+  "ends_with_question": true,
+  "hint_level": 0,
+  "confidence": 0.91,
+  "escalate": false,
+  "escalate_reason": null,
+  "detected_skill_ids": [
+    "tyt.mat.temel.ondalik"
+  ],
+  "detected_misconception_tag": null,
+  "used_fact_ids": [],
+  "suggest_pool_save": true
+}

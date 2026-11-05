@@ -1,0 +1,109 @@
+[
+  {
+    "student_id": "c661b28c-81a8-5c11-9a5e-b919b5231034",
+    "public_ref": "s_qk7m2rx4tn5a",
+    "label": "Elif K.",
+    "is_minor": false,
+    "status": "active",
+    "consent_ok": true,
+    "missing": [],
+    "consents": [
+      {
+        "id": "4aa1b867-61bd-5316-8924-f9c583b00f2e",
+        "student_id": "c661b28c-81a8-5c11-9a5e-b919b5231034",
+        "kind": "kvkk_aydinlatma",
+        "legal_text_id": "675a8680-b4d6-5837-9155-7792d2824422",
+        "status": "given",
+        "method": "telegram_button",
+        "given_by": "student",
+        "evidence": {
+          "chat_id": 700000001,
+          "message_id": 1,
+          "telegram_user_id": 700000001
+        },
+        "given_at": "2026-10-10T12:05:00Z",
+        "revoked_at": null,
+        "created_at": "2026-10-10T12:05:00Z"
+      }
+    ],
+    "guardian_code_open": false
+  },
+  {
+    "student_id": "1da926ea-a047-5403-9644-bb047719707b",
+    "public_ref": "s_vd3hp6wz2kc7",
+    "label": "Mert D.",
+    "is_minor": true,
+    "status": "active",
+    "consent_ok": true,
+    "missing": [],
+    "consents": [
+      {
+        "id": "93a067fa-ddaf-507b-ab80-ec04559a4138",
+        "student_id": "1da926ea-a047-5403-9644-bb047719707b",
+        "kind": "kvkk_aydinlatma",
+        "legal_text_id": "675a8680-b4d6-5837-9155-7792d2824422",
+        "status": "given",
+        "method": "telegram_button",
+        "given_by": "student",
+        "evidence": {
+          "chat_id": 700000002,
+          "message_id": 1,
+          "telegram_user_id": 700000002
+        },
+        "given_at": "2026-10-11T15:00:00Z",
+        "revoked_at": null,
+        "created_at": "2026-10-11T15:00:00Z"
+      },
+      {
+        "id": "b9f33c6c-3bc3-5d6d-a2b1-d874a62cccd9",
+        "student_id": "1da926ea-a047-5403-9644-bb047719707b",
+        "kind": "veli_onayi",
+        "legal_text_id": "436801a0-024e-56dd-ab6e-257889632603",
+        "status": "given",
+        "method": "guardian_code",
+        "given_by": "guardian",
+        "evidence": {
+          "chat_id": 700000301,
+          "message_id": 3,
+          "telegram_user_id": 700000301,
+          "code_id": "b511f6d9-3627-5d4c-a9f2-90c85d32102e"
+        },
+        "given_at": "2026-10-12T18:30:00Z",
+        "revoked_at": null,
+        "created_at": "2026-10-12T18:30:00Z"
+      }
+    ],
+    "guardian_code_open": false
+  },
+  {
+    "student_id": "9d4d557b-6191-5018-b679-baf9dbacc67e",
+    "public_ref": "s_mb5tj7ye4ql2",
+    "label": "Zeynep Ç.",
+    "is_minor": true,
+    "status": "pending_consent",
+    "consent_ok": false,
+    "missing": [
+      "veli_onayi"
+    ],
+    "consents": [
+      {
+        "id": "6d8727af-6997-585a-9b7c-32eb0636f091",
+        "student_id": "9d4d557b-6191-5018-b679-baf9dbacc67e",
+        "kind": "kvkk_aydinlatma",
+        "legal_text_id": "675a8680-b4d6-5837-9155-7792d2824422",
+        "status": "given",
+        "method": "telegram_button",
+        "given_by": "student",
+        "evidence": {
+          "chat_id": 700000003,
+          "message_id": 1,
+          "telegram_user_id": 700000003
+        },
+        "given_at": "2026-10-16T13:58:00Z",
+        "revoked_at": null,
+        "created_at": "2026-10-16T13:58:00Z"
+      }
+    ],
+    "guardian_code_open": true
+  }
+]

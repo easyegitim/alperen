@@ -1,0 +1,47 @@
+[
+  {
+    "kind": "practice",
+    "rank": 0,
+    "title": "Rasyonel sayılarda dört işlem ve sıralama",
+    "subtitle": "8 soru · 12 dk",
+    "payload": {
+      "skill_ids": [
+        "tyt.mat.temel.rasyonel-sayilar",
+        "tyt.mat.temel.sayilar"
+      ],
+      "count": 8,
+      "minutes": 12,
+      "reason": "weakest"
+    }
+  },
+  {
+    "kind": "gap_analysis",
+    "rank": 20,
+    "title": "Tekrar zamanı",
+    "subtitle": "Yaş problemleri · 8 soru · 12 dk",
+    "payload": {
+      "skill_ids": [
+        "tyt.mat.problem.yas"
+      ],
+      "count": 8,
+      "minutes": 12,
+      "reason": "spaced_review"
+    }
+  },
+  {
+    "kind": "lesson_review",
+    "rank": 30,
+    "title": "Ders tekrarı: Üslü ifadeler ve özellikleri",
+    "subtitle": "Çarşamba dersinden 5 soru ve kısa özet · 15 dk",
+    "payload": {
+      "skill_ids": [
+        "tyt.mat.temel.uslu"
+      ],
+      "count": 5,
+      "minutes": 15,
+      "lesson_id": "00000000-0000-4000-8000-0000000000a4",
+      "analysis_id": "00000000-0000-4000-8000-0000000000a5",
+      "summary_pages": 1
+    }
+  }
+]

@@ -1,0 +1,334 @@
+{
+  "note": "Yayımlanmış prompt sürümleri değişmez: metin değişirse yeni sürüm açın (bkz. README). Üreten: scripts/build-bundle.ts",
+  "defaults": {
+    "answer_sheet": "v2",
+    "coach_chat": "v2",
+    "coach_deep": "v2",
+    "conversation_summary": "v1",
+    "curriculum_draft": "v1",
+    "curriculum_research": "v1",
+    "exam_generation": "v2",
+    "exam_item_extract": "v1",
+    "exam_page_items": "v2",
+    "exam_report": "v2",
+    "figure_check": "v1",
+    "inferred_keys": "v1",
+    "lesson_analysis": "v1",
+    "memory_delta": "v1",
+    "notes_generation": "v2",
+    "notification_copy": "v1",
+    "page_class": "v1",
+    "parent_chat": "v2",
+    "personalization_check": "v1",
+    "report": "v1",
+    "solution_diagnosis": "v2",
+    "speaker_label": "v1",
+    "style_definition": "v1",
+    "style_question_gen": "v1",
+    "suggestions_copy": "v1"
+  },
+  "prompts": {
+    "answer_sheet@v1": {
+      "sha256": "f21facad6fe3283fe353b5b2ee5d687c66eea3cdc1c6215dda3dd55bf72c36da",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "answer-sheet",
+      "tools": []
+    },
+    "answer_sheet@v2": {
+      "sha256": "96b00363eec57690d77a4478df1650e14a79f957a7218ca3e0ca9b52c3406013",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "answer-sheet",
+      "tools": []
+    },
+    "coach_chat@v1": {
+      "sha256": "bea88d042a13f2dc6096febb1888b6acaf5152880b173ef823caab8538d79b23",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": null,
+      "tools": [
+        "get_mastery",
+        "get_recent_exams",
+        "memory",
+        "record_turn_meta",
+        "search_evidence"
+      ]
+    },
+    "coach_chat@v2": {
+      "sha256": "4ea4c5a7d90746c6e0e09464cca9fec76e30805210728b1e2fa3f74334d7f3e0",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": null,
+      "tools": [
+        "get_mastery",
+        "get_recent_exams",
+        "memory",
+        "record_turn_meta",
+        "request_document",
+        "search_evidence"
+      ]
+    },
+    "coach_deep@v1": {
+      "sha256": "bc4bb3cb44abbac5478871b4e570cab4c7b0b3e3a634f45da70d134d6e2298eb",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": null,
+      "tools": [
+        "get_mastery",
+        "get_recent_exams",
+        "memory",
+        "record_turn_meta",
+        "search_evidence"
+      ]
+    },
+    "coach_deep@v2": {
+      "sha256": "562a9d5bf009f4556f799d2d5dc099e2a705a13f3070d4b1063c7e7c45193e05",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": null,
+      "tools": [
+        "get_mastery",
+        "get_recent_exams",
+        "memory",
+        "record_turn_meta",
+        "request_document",
+        "search_evidence"
+      ]
+    },
+    "conversation_summary@v1": {
+      "sha256": "315d07cceb624b584a0dc92c103e5171817fa2ce6c800fd940938975440404ad",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "conversation-summary",
+      "tools": []
+    },
+    "curriculum_draft@v1": {
+      "sha256": "20317985096be6a7c81e0e57e03b9c3e0c2cba335a9fccf032769fda41dbb230",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "curriculum-draft",
+      "tools": []
+    },
+    "curriculum_research@v1": {
+      "sha256": "801e26f3c4d3bfa64ba59e3df40b5aa632ad5d6418fd4f6dac17b73d0d509621",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": null,
+      "tools": [
+        "web_fetch",
+        "web_search"
+      ]
+    },
+    "exam_generation@v1": {
+      "sha256": "90c5c5709d47f86acdc007997d0131a2d3ac440a693ed88d9b653e8343af19ae",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "exam-generation",
+      "tools": [
+        "code_execution"
+      ]
+    },
+    "exam_generation@v2": {
+      "sha256": "4b8601c4ac50b59472a843207da26b82977fcb9286f23a6dc9ec32ffc0a9a2ea",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "exam-generation",
+      "tools": [
+        "code_execution"
+      ]
+    },
+    "exam_item_extract@v1": {
+      "sha256": "f1ea599d28b50f827e4d37150d087af8b3d3a78685b283aa15a9fa78f2f25db9",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "exam-item",
+      "tools": []
+    },
+    "exam_page_items@v1": {
+      "sha256": "f5f397ee4a5ba4b38edecbc61bab9e75a4022502f17438d667fd5a45c1e9b6f4",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "exam-page-items",
+      "tools": []
+    },
+    "exam_page_items@v2": {
+      "sha256": "d4dcb760996f3657ab5070ec5393f5b15ffb15e2ffec87cbb7e661d9375868a2",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "exam-page-items",
+      "tools": []
+    },
+    "exam_report@v1": {
+      "sha256": "0e540b1aa8661c7d7c975dc6e176a848553a2ff4786554ebfd603bc3ab0fe381",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "exam-report",
+      "tools": [
+        "get_mastery",
+        "get_recent_exams"
+      ]
+    },
+    "exam_report@v2": {
+      "sha256": "87b14ac01bb7a400565004ce2d2298b87f9a65619317a8504d7a0521db43db36",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "exam-report",
+      "tools": [
+        "get_mastery",
+        "get_recent_exams"
+      ]
+    },
+    "figure_check@v1": {
+      "sha256": "bdb6a9a2ea409071455d1169aa16863b46d6ccc56e36a89e1d880da0a65aa56e",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "figure-render-report",
+      "tools": []
+    },
+    "inferred_keys@v1": {
+      "sha256": "c95fb421fc081e82d7cb5b31a16ca5150b8aa2296a4a0e97ab2ecce96d458d81",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "inferred-keys",
+      "tools": [
+        "code_execution"
+      ]
+    },
+    "lesson_analysis@v1": {
+      "sha256": "4202d3737285eab696f565d16ee10d32ad4dd6e8284861a3383b2374d118b5c5",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "lesson-analysis",
+      "tools": []
+    },
+    "memory_delta@v1": {
+      "sha256": "7d121cc8d4264dd1014552104f51e733a4ebd31792d7b38526d3b8a8b82260cd",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "memory-delta",
+      "tools": []
+    },
+    "notes_generation@v1": {
+      "sha256": "c94ed5fe7cfdaa7c3c5e69f9e59f77bf035203e9d2d08b60221b2180034d3a32",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "document-ast",
+      "tools": [
+        "code_execution"
+      ]
+    },
+    "notes_generation@v2": {
+      "sha256": "64f707f01d5ccfa8ae1b235c809410e29f6da879b7c7a5b3e9d70a6a7a2c56ea",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "document-ast",
+      "tools": [
+        "code_execution"
+      ]
+    },
+    "notification_copy@v1": {
+      "sha256": "ff160c3db2c3afe1b7720f38cfda97a9c921f9c78e646f47a74544b5b41babb7",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "notification-copy",
+      "tools": []
+    },
+    "page_class@v1": {
+      "sha256": "adf3a3032552acd3da9e45a36b99fa0195aa41cde1b9a66c2edfc043977e005b",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "page-class",
+      "tools": []
+    },
+    "parent_chat@v1": {
+      "sha256": "88448b1330c8f3ef8f20f54f11043fcc5dc7c8bd4e6a7ead78656da62e663f58",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "schema": null,
+      "tools": [
+        "get_child_summary",
+        "get_exam_sessions",
+        "get_mastery_overview",
+        "get_recent_activity",
+        "get_reports",
+        "request_report"
+      ]
+    },
+    "parent_chat@v2": {
+      "sha256": "56f3d568704adeba420dd19681134e2b2f6e4389fee2aa6b5f99e36159cae57b",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "schema": null,
+      "tools": [
+        "get_child_summary",
+        "get_exam_sessions",
+        "get_mastery_overview",
+        "get_recent_activity",
+        "get_reports",
+        "request_report"
+      ]
+    },
+    "personalization_check@v1": {
+      "sha256": "1fa770af4ccd98e8e62fe5ec88773e88c5e1af6f0a155e168d5f1711cfd61ce6",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "personalization-check",
+      "tools": []
+    },
+    "report@v1": {
+      "sha256": "256c3fbbac61f7ff87438b066b5377ab095fb0d68ec53ccb65f8b748babccfe4",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "report-ast",
+      "tools": [
+        "get_mastery",
+        "get_recent_exams"
+      ]
+    },
+    "solution_diagnosis@v1": {
+      "sha256": "631691380e1320dc6db5ada097220442ead7447e1cd8eaab400308cc3daa51f2",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "solution-diagnosis",
+      "tools": []
+    },
+    "solution_diagnosis@v2": {
+      "sha256": "09acc87a27a78b2069b160c1d4dc4067b08bd2f2b7f2a41eb22338147f4395e6",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "solution-diagnosis",
+      "tools": []
+    },
+    "speaker_label@v1": {
+      "sha256": "0e39c9e9d5c2469b98b89978e224afa71a01b651e465cc1e0c991e82d6a8f5a6",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "schema": "transcript",
+      "tools": []
+    },
+    "style_definition@v1": {
+      "sha256": "1bb72237a09a5947b9a0f57b0c228985fb05998b7b2bcb65f531ece541f96f82",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "style-definition",
+      "tools": []
+    },
+    "style_question_gen@v1": {
+      "sha256": "27eb5eae29b140da8b0726aebabafa79e5c1e04f525bbc729a5307fb9db18a0f",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "style-question-generation",
+      "tools": [
+        "code_execution"
+      ]
+    },
+    "suggestions_copy@v1": {
+      "sha256": "012665ecf6bc9fb58633657ccb315dc7f4e85fa338ec5efeb098102baf90201e",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "notification-copy",
+      "tools": []
+    }
+  }
+}

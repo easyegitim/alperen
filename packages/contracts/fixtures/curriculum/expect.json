@@ -1,0 +1,14 @@
+{
+  "bad-skill-id.json": [
+    "pattern"
+  ],
+  "missing-status.json": [
+    "required"
+  ],
+  "strength-above-one.json": [
+    "maximum"
+  ],
+  "unknown-status.json": [
+    "enum"
+  ]
+}

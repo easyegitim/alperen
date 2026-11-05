@@ -1,0 +1,334 @@
+[
+  {
+    "id": "e0cc9cfb-fffd-5244-8eaf-45e360ce3381",
+    "course_id": "ef43a923-b6fc-51a1-8a46-9fc5e5b18e0d",
+    "period": "YKS 2027",
+    "plan": {
+      "schema_version": "1.0",
+      "course_code": "TYT-MAT",
+      "period": "YKS 2027",
+      "title": "Sıklık analizine göre öncelikler",
+      "years_total": 3,
+      "rows": [
+        {
+          "rank": 1,
+          "topic": "Rasyonel sayılarda dört işlem",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+          "hits": 3,
+          "years": 3,
+          "points_text": "≈4 puan",
+          "evidence_count": 3,
+          "evidence_item_ids": [
+            "c35a7dbd-1434-57a4-94c7-3e80dcad7cb2",
+            "b607a74f-068d-5fa9-b357-dff40c166117",
+            "7e7bfa42-9d23-5a45-862c-ba6a2f36c18e"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 2,
+          "topic": "Yüzde ve kâr–zarar",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.problem.yuzde",
+          "hits": 3,
+          "years": 3,
+          "points_text": "≈4 puan",
+          "evidence_count": 3,
+          "evidence_item_ids": [
+            "35229066-4aba-5af1-9f5c-62d39cc1c11d",
+            "849f3f3b-3c2e-5c89-a3a2-60c4638f8755",
+            "e82ce808-a60d-5668-977d-1ccf0cc257a6"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 3,
+          "topic": "Birinci dereceden denklem",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.cebir.denklem",
+          "hits": 2,
+          "years": 2,
+          "points_text": "≈4 puan",
+          "evidence_count": 2,
+          "evidence_item_ids": [
+            "23fe9b72-9184-5500-bbe1-5148bdf2f204",
+            "040bdf82-486b-5823-92b9-83a97e5280a5"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 4,
+          "topic": "Mutlak değer",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.cebir.mutlak-deger",
+          "hits": 2,
+          "years": 2,
+          "points_text": "≈4 puan",
+          "evidence_count": 2,
+          "evidence_item_ids": [
+            "cac4aa19-3752-5ab1-85ca-d7e979d5cd5c",
+            "8a3a67b7-bb79-50fc-81ac-e8f33d2bdc32"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 5,
+          "topic": "Üslü ifadeler",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.temel.uslu",
+          "hits": 2,
+          "years": 2,
+          "points_text": "≈4 puan",
+          "evidence_count": 2,
+          "evidence_item_ids": [
+            "799c3b90-2870-5798-b96d-c410dc5134c4",
+            "4534c6b8-7ec1-54d3-aca8-138ac1fff8a6"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        }
+      ],
+      "others": [
+        "Köklü ifadeler",
+        "Çarpanlara ayırma"
+      ],
+      "uncovered_topics": [
+        "Devirli ondalık açılım"
+      ],
+      "evidence_count": 12,
+      "generated_at": "2026-10-19T03:50:00Z"
+    },
+    "evidence_count": 12,
+    "status": "pending_review",
+    "approved_by": null,
+    "approved_at": null,
+    "created_at": "2026-10-19T03:50:00Z",
+    "course_code": "TYT-MAT"
+  },
+  {
+    "id": "d323913e-7e24-5ad9-8bc5-4a32cfa8485b",
+    "course_id": "ef43a923-b6fc-51a1-8a46-9fc5e5b18e0d",
+    "period": "YKS 2027",
+    "plan": {
+      "schema_version": "1.0",
+      "course_code": "TYT-MAT",
+      "period": "YKS 2027",
+      "title": "Sıklık analizine göre öncelikler",
+      "years_total": 3,
+      "rows": [
+        {
+          "rank": 1,
+          "topic": "Rasyonel sayılarda dört işlem",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+          "hits": 3,
+          "years": 3,
+          "points_text": "≈4 puan",
+          "evidence_count": 3,
+          "evidence_item_ids": [
+            "c35a7dbd-1434-57a4-94c7-3e80dcad7cb2",
+            "b607a74f-068d-5fa9-b357-dff40c166117",
+            "7e7bfa42-9d23-5a45-862c-ba6a2f36c18e"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 2,
+          "topic": "Yüzde ve kâr–zarar",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.problem.yuzde",
+          "hits": 3,
+          "years": 3,
+          "points_text": "≈4 puan",
+          "evidence_count": 3,
+          "evidence_item_ids": [
+            "35229066-4aba-5af1-9f5c-62d39cc1c11d",
+            "849f3f3b-3c2e-5c89-a3a2-60c4638f8755",
+            "e82ce808-a60d-5668-977d-1ccf0cc257a6"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 3,
+          "topic": "Birinci dereceden denklem",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.cebir.denklem",
+          "hits": 2,
+          "years": 2,
+          "points_text": "≈4 puan",
+          "evidence_count": 2,
+          "evidence_item_ids": [
+            "23fe9b72-9184-5500-bbe1-5148bdf2f204",
+            "040bdf82-486b-5823-92b9-83a97e5280a5"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 4,
+          "topic": "Mutlak değer",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.cebir.mutlak-deger",
+          "hits": 2,
+          "years": 2,
+          "points_text": "≈4 puan",
+          "evidence_count": 2,
+          "evidence_item_ids": [
+            "cac4aa19-3752-5ab1-85ca-d7e979d5cd5c",
+            "8a3a67b7-bb79-50fc-81ac-e8f33d2bdc32"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 5,
+          "topic": "Üslü ifadeler",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.temel.uslu",
+          "hits": 2,
+          "years": 2,
+          "points_text": "≈4 puan",
+          "evidence_count": 2,
+          "evidence_item_ids": [
+            "799c3b90-2870-5798-b96d-c410dc5134c4",
+            "4534c6b8-7ec1-54d3-aca8-138ac1fff8a6"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 6,
+          "topic": "Oran–orantı",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.cebir.oran-oranti",
+          "hits": 1,
+          "years": 1,
+          "points_text": "≈4 puan",
+          "evidence_count": 1,
+          "evidence_item_ids": [
+            "696906fe-5bd0-5742-9b7e-0a717f374e04"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        }
+      ],
+      "others": [
+        "Köklü ifadeler",
+        "Çarpanlara ayırma"
+      ],
+      "uncovered_topics": [
+        "Devirli ondalık açılım"
+      ],
+      "evidence_count": 13,
+      "generated_at": "2026-10-07T03:50:00Z"
+    },
+    "evidence_count": 13,
+    "status": "approved",
+    "approved_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "approved_at": "2026-10-08T09:30:00Z",
+    "created_at": "2026-10-07T03:50:00Z",
+    "course_code": "TYT-MAT"
+  },
+  {
+    "id": "ab597b24-b321-5e04-a9d0-427462630c9e",
+    "course_id": "ef43a923-b6fc-51a1-8a46-9fc5e5b18e0d",
+    "period": "YKS 2027",
+    "plan": {
+      "schema_version": "1.0",
+      "course_code": "TYT-MAT",
+      "period": "YKS 2027",
+      "title": "Sıklık analizine göre öncelikler",
+      "years_total": 3,
+      "rows": [
+        {
+          "rank": 1,
+          "topic": "Rasyonel sayılarda dört işlem",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+          "hits": 3,
+          "years": 3,
+          "points_text": "≈4 puan",
+          "evidence_count": 3,
+          "evidence_item_ids": [
+            "c35a7dbd-1434-57a4-94c7-3e80dcad7cb2",
+            "b607a74f-068d-5fa9-b357-dff40c166117",
+            "7e7bfa42-9d23-5a45-862c-ba6a2f36c18e"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 2,
+          "topic": "Yüzde ve kâr–zarar",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.problem.yuzde",
+          "hits": 3,
+          "years": 3,
+          "points_text": "≈4 puan",
+          "evidence_count": 3,
+          "evidence_item_ids": [
+            "35229066-4aba-5af1-9f5c-62d39cc1c11d",
+            "849f3f3b-3c2e-5c89-a3a2-60c4638f8755",
+            "e82ce808-a60d-5668-977d-1ccf0cc257a6"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 3,
+          "topic": "Birinci dereceden denklem",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.cebir.denklem",
+          "hits": 2,
+          "years": 2,
+          "points_text": "≈4 puan",
+          "evidence_count": 2,
+          "evidence_item_ids": [
+            "23fe9b72-9184-5500-bbe1-5148bdf2f204",
+            "040bdf82-486b-5823-92b9-83a97e5280a5"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        },
+        {
+          "rank": 4,
+          "topic": "Mutlak değer",
+          "kind": "çoktan seçmeli",
+          "skill_id": "tyt.mat.cebir.mutlak-deger",
+          "hits": 2,
+          "years": 2,
+          "points_text": "≈4 puan",
+          "evidence_count": 2,
+          "evidence_item_ids": [
+            "cac4aa19-3752-5ab1-85ca-d7e979d5cd5c",
+            "8a3a67b7-bb79-50fc-81ac-e8f33d2bdc32"
+          ],
+          "syllabus_alignment": "covered_and_asked",
+          "variant_question_ids": []
+        }
+      ],
+      "others": [
+        "Köklü ifadeler",
+        "Çarpanlara ayırma"
+      ],
+      "uncovered_topics": [
+        "Devirli ondalık açılım"
+      ],
+      "evidence_count": 10,
+      "generated_at": "2026-10-01T03:50:00Z"
+    },
+    "evidence_count": 10,
+    "status": "retired",
+    "approved_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "approved_at": "2026-10-02T09:00:00Z",
+    "created_at": "2026-10-01T03:50:00Z",
+    "course_code": "TYT-MAT"
+  }
+]

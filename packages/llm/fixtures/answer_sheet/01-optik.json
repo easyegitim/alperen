@@ -1,0 +1,105 @@
+{
+  "booklet_type": "A",
+  "answers": [
+    {
+      "question_no": 1,
+      "status": "marked",
+      "marked_option": "C",
+      "marks_seen": [
+        "C"
+      ],
+      "note": null,
+      "confidence": 0.98
+    },
+    {
+      "question_no": 2,
+      "status": "marked",
+      "marked_option": "A",
+      "marks_seen": [
+        "A"
+      ],
+      "note": null,
+      "confidence": 0.98
+    },
+    {
+      "question_no": 3,
+      "status": "marked",
+      "marked_option": "B",
+      "marks_seen": [
+        "B"
+      ],
+      "note": null,
+      "confidence": 0.98
+    },
+    {
+      "question_no": 4,
+      "status": "marked",
+      "marked_option": "B",
+      "marks_seen": [
+        "B"
+      ],
+      "note": null,
+      "confidence": 0.98
+    },
+    {
+      "question_no": 5,
+      "status": "blank",
+      "marked_option": null,
+      "marks_seen": [],
+      "note": null,
+      "confidence": 0.97
+    },
+    {
+      "question_no": 6,
+      "status": "marked",
+      "marked_option": "B",
+      "marks_seen": [
+        "B"
+      ],
+      "note": null,
+      "confidence": 0.98
+    },
+    {
+      "question_no": 7,
+      "status": "multiple",
+      "marked_option": null,
+      "marks_seen": [
+        "A",
+        "C"
+      ],
+      "note": "A ve C işaretli; çift işaret boş sayılır.",
+      "confidence": 0.95
+    },
+    {
+      "question_no": 8,
+      "status": "marked",
+      "marked_option": "D",
+      "marks_seen": [
+        "D"
+      ],
+      "note": null,
+      "confidence": 0.98
+    },
+    {
+      "question_no": 9,
+      "status": "marked",
+      "marked_option": "A",
+      "marks_seen": [
+        "A"
+      ],
+      "note": null,
+      "confidence": 0.98
+    },
+    {
+      "question_no": 10,
+      "status": "marked",
+      "marked_option": "E",
+      "marks_seen": [
+        "E"
+      ],
+      "note": null,
+      "confidence": 0.98
+    }
+  ],
+  "unreadable": false
+}

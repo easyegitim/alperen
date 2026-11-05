@@ -1,0 +1,89 @@
+[
+  {
+    "chat_id": -1001000000001,
+    "kind": "supergroup",
+    "title": "TYT Matematik · Pilot A",
+    "bot_is_admin": true,
+    "bot_can_pin": true,
+    "recording_notice_msg_id": 2,
+    "recording_notice_legal_id": "2ca970eb-50ec-5a04-bf51-76466d40ffc7",
+    "privacy_mode_off_verified": true,
+    "retention_days": 90,
+    "recording_notice_days": 90,
+    "group_auto_answer_min": 0,
+    "created_at": "2026-10-14T17:00:00Z",
+    "members": [
+      {
+        "telegram_user_id": 700000001,
+        "role": "student",
+        "label": "Elif K.",
+        "mention_handle": null,
+        "joined_at": "2026-10-14T17:00:00Z",
+        "consent_ok": true
+      },
+      {
+        "telegram_user_id": 700000002,
+        "role": "student",
+        "label": "Mert D.",
+        "mention_handle": null,
+        "joined_at": "2026-10-14T17:00:00Z",
+        "consent_ok": true
+      },
+      {
+        "telegram_user_id": 700000003,
+        "role": "student",
+        "label": "Zeynep Ç.",
+        "mention_handle": null,
+        "joined_at": "2026-10-14T17:00:00Z",
+        "consent_ok": false
+      },
+      {
+        "telegram_user_id": 700000101,
+        "role": "instructor",
+        "label": "Ayşe Yılmaz",
+        "mention_handle": "@ayse_hoca",
+        "joined_at": "2026-10-14T17:00:00Z",
+        "consent_ok": false
+      },
+      {
+        "telegram_user_id": 700000102,
+        "role": "coordinator",
+        "label": "Selin Arslan",
+        "mention_handle": "@selin_koord",
+        "joined_at": "2026-10-14T17:00:00Z",
+        "consent_ok": false
+      },
+      {
+        "telegram_user_id": 800000001,
+        "role": "bot",
+        "label": null,
+        "mention_handle": "@ogrenmen_bot",
+        "joined_at": "2026-10-14T17:00:00Z",
+        "consent_ok": false
+      },
+      {
+        "telegram_user_id": 700000201,
+        "role": "student",
+        "label": null,
+        "mention_handle": null,
+        "joined_at": "2026-10-15T09:00:00Z",
+        "consent_ok": false
+      }
+    ]
+  },
+  {
+    "chat_id": -1001000000003,
+    "kind": "supergroup",
+    "title": "Hafta sonu etüt grubu",
+    "bot_is_admin": false,
+    "bot_can_pin": false,
+    "recording_notice_msg_id": 3,
+    "recording_notice_legal_id": "2ca970eb-50ec-5a04-bf51-76466d40ffc7",
+    "privacy_mode_off_verified": false,
+    "retention_days": 90,
+    "recording_notice_days": 90,
+    "group_auto_answer_min": 0,
+    "created_at": "2026-10-17T10:30:00Z",
+    "members": []
+  }
+]

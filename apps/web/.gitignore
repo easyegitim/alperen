@@ -1,0 +1,15 @@
+# Next.js ve test çıktıları (kök .gitignore'a ek)
+.next/
+.next-e2e/
+.next-journey/
+.next-local/
+next-env.d.ts
+test-results/
+playwright-report/
+e2e/.output/
+# Serwist derleme çıktısı
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+public/swe-worker-*.js.map
+.env.local

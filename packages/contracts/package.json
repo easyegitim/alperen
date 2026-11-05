@@ -1,0 +1,41 @@
+{
+  "name": "@ogrenmen/contracts",
+  "version": "0.1.0",
+  "description": "Öğrenmen sözleşmeleri: zod-önce şemalar (strict/loose), JSON Schema 2020-12 dışa aktarımı, Python doğrulayıcı",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./models.json": "./models.json",
+    "./schemas/*": "./schemas/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "schemas",
+    "models.json",
+    "fixtures"
+  ],
+  "scripts": {
+    "export": "bun scripts/export-json-schema.ts",
+    "export:check": "bun scripts/export-json-schema.ts --check",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "eslint --max-warnings 0 ."
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "22.10.2",
+    "eslint": "9.39.5",
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "2.1.9"
+  },
+  "types": "./src/index.ts"
+}

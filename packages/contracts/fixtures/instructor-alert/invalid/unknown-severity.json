@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "kind": "unanswered",
+  "severity": "critical",
+  "student_ref": "s_k3m7q2x4z6ab",
+  "staff_ref": null,
+  "detail": "Öğrencinin sorusu 6 saattir cevapsız: \"Devirli ondalığı kesre nasıl çeviririz?\"",
+  "since": "2026-10-18T13:05:00Z",
+  "ref": {
+    "message_id": 1045
+  }
+}

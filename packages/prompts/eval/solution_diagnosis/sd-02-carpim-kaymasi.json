@@ -1,0 +1,70 @@
+{
+  "id": "sd-02-carpim-kaymasi",
+  "route": "solution_diagnosis",
+  "title": "İşlem önceliği doğru, tek çarpımda kayma (dikkatsizlik)",
+  "input": {
+    "course": "tyt-matematik",
+    "dossier": "Öğrenci: 12. sınıf, hedef TYT. tyt.mat.temel.sayilar: iyi (14 kanıt, son 10'da 9 doğru). Hafıza: işlem hatası örüntüsü kayıtlı değil.",
+    "turn": {
+      "date": "2026-11-03"
+    },
+    "user": "Soru: $7 \\cdot 8 - 3 \\cdot (12-4)$ işleminin sonucu kaçtır?\nA) 24  B) 30  C) 32  D) 40  E) 56\n\nÇözümüm (el yazısı, transkripsiyon):\n1) parantez: 12 - 4 = 8\n2) 3 . 8 = 24\n3) 7 . 8 = 54\n4) 54 - 24 = 30\nCevap B"
+  },
+  "expected": {
+    "verdict": "wrong",
+    "failing_step_no": 3,
+    "error_cause": "careless",
+    "skill_ids_any": [
+      "tyt.mat.temel.sayilar"
+    ],
+    "misconception_tags_empty": true,
+    "proposed_subskill": false
+  },
+  "fake_reply": [
+    {
+      "json": {
+        "question_text": "$7 \\cdot 8 - 3 \\cdot (12-4)$ işleminin sonucu kaçtır? A) 24 B) 30 C) 32 D) 40 E) 56",
+        "student_work_text": "12 - 4 = 8; 3 . 8 = 24; 7 . 8 = 54; 54 - 24 = 30; cevap B",
+        "reference_solution_steps": [
+          "Parantez: $12-4=8$",
+          "Çarpmalar: $3\\cdot 8=24$ ve $7\\cdot 8=56$",
+          "Çıkarma: $56-24=32$",
+          "Cevap C"
+        ],
+        "student_steps": [
+          {
+            "no": 1,
+            "text": "12 - 4 = 8",
+            "status": "ok"
+          },
+          {
+            "no": 2,
+            "text": "3 . 8 = 24",
+            "status": "ok"
+          },
+          {
+            "no": 3,
+            "text": "7 . 8 = 54",
+            "status": "error"
+          },
+          {
+            "no": 4,
+            "text": "54 - 24 = 30",
+            "status": "ok"
+          }
+        ],
+        "failing_step_no": 3,
+        "verdict": "wrong",
+        "error_cause": "careless",
+        "why_tr": "İşlem sıran doğru, yalnız 3. adımda $7\\cdot 8$'i 54 yazdın; doğrusu 56 ve sonuç 32 olur.",
+        "skill_ids": [
+          "tyt.mat.temel.sayilar"
+        ],
+        "misconception_tags": [],
+        "proposed_subskill": null,
+        "style_hint": null,
+        "confidence": 0.85
+      }
+    }
+  ]
+}

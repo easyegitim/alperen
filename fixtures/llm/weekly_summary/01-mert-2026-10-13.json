@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "student_ref": "s_vd3hp6wz2kc7",
+  "week_start": "2026-10-13",
+  "body": "Öğrenci bu hafta teşhis testini bitirdi ve kesir toplamada paydaları ayrı toplama hatasını üç kez tekrarladı. Üslü ifadelerde aynı tabanlı çarpımı sordu. Ödevini pazartesiye kadar teslim edeceğini söyledi. Kesirlerde zorlandığını belirtti; moral göstergesi düştü.",
+  "metrics": {
+    "messages": 9,
+    "questions_solved": 24,
+    "accuracy": 0.75,
+    "active_days": 4,
+    "open_misconceptions": 1,
+    "unanswered_questions": 1,
+    "morale_trend": "down",
+    "mastery_deltas": [
+      {
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+        "delta": -0.05,
+        "reliable": true
+      }
+    ]
+  },
+  "facts_used": [
+    7,
+    9,
+    11
+  ],
+  "next_week_focus": [
+    "tyt.mat.temel.rasyonel-sayilar",
+    "tyt.mat.temel.uslu"
+  ]
+}

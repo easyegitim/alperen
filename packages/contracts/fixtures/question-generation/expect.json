@@ -1,0 +1,11 @@
+{
+  "item-with-correct-option.json": [
+    "additionalProperties"
+  ],
+  "key-with-question-id.json": [
+    "additionalProperties"
+  ],
+  "missing-key.json": [
+    "required"
+  ]
+}

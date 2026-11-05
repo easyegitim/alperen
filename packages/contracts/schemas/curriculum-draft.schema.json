@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/curriculum-draft.json",
+  "title": "CurriculumDraft",
+  "description": "Müfredat taslağı: düz düğüm listesi (parent_code ile ağaç), ön koşullar, yanılgı etiketleri, güven ve eğitmen notu. Tek kök, döngüsüz, derinlik en çok 4.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "nodes": {
+      "minItems": 1,
+      "maxItems": 400,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$",
+            "description": "Tekil kod; küçük harf, noktalı yol"
+          },
+          "parent_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kök için null"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 400
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "unit",
+              "outcome",
+              "sub_outcome"
+            ]
+          },
+          "exam_weight_hint": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Sınavdaki tahmini göreli ağırlık (0..1); bilinmiyorsa null"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sources": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            }
+          }
+        },
+        "required": [
+          "code",
+          "parent_code",
+          "name",
+          "description",
+          "kind",
+          "exam_weight_hint",
+          "sources"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "prerequisites": {
+      "maxItems": 800,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "skill_code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+          },
+          "prereq_code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+          },
+          "strength": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "skill_code",
+          "prereq_code",
+          "strength"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "misconception_tags": {
+      "maxItems": 400,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"
+          },
+          "skill_code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+          },
+          "text_instructor": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 200
+          },
+          "text_student": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "tag",
+          "skill_code",
+          "text_instructor",
+          "text_student"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "notes_for_instructor": {
+      "type": "string",
+      "maxLength": 2000
+    }
+  },
+  "required": [
+    "nodes",
+    "prerequisites",
+    "misconception_tags",
+    "confidence",
+    "notes_for_instructor"
+  ],
+  "additionalProperties": false
+}

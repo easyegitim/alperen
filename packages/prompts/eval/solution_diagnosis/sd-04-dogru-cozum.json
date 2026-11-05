@@ -1,0 +1,69 @@
+{
+  "id": "sd-04-dogru-cozum",
+  "route": "solution_diagnosis",
+  "title": "Birinci dereceden denklem, doğru çözüm",
+  "input": {
+    "course": "tyt-matematik",
+    "dossier": "Öğrenci: 11. sınıf, hedef TYT. tyt.mat.cebir.denklem: orta (8 kanıt).",
+    "turn": {
+      "date": "2026-11-03"
+    },
+    "user": "Soru: $3(x-2) = x + 4$ olduğuna göre $x$ kaçtır?\nA) 1  B) 3  C) 5  D) 7  E) 9\n\nÇözümüm (el yazısı, transkripsiyon):\n1) 3x - 6 = x + 4\n2) 3x - x = 4 + 6\n3) 2x = 10\n4) x = 5 → C"
+  },
+  "expected": {
+    "verdict": "correct",
+    "failing_step_no": null,
+    "error_cause": null,
+    "skill_ids_any": [
+      "tyt.mat.cebir.denklem"
+    ],
+    "misconception_tags_empty": true,
+    "proposed_subskill": false
+  },
+  "fake_reply": [
+    {
+      "json": {
+        "question_text": "$3(x-2) = x + 4$ olduğuna göre $x$ kaçtır? A) 1 B) 3 C) 5 D) 7 E) 9",
+        "student_work_text": "3x - 6 = x + 4; 3x - x = 4 + 6; 2x = 10; x = 5, C",
+        "reference_solution_steps": [
+          "$3x-6=x+4$",
+          "$2x=10$",
+          "$x=5$, cevap C"
+        ],
+        "student_steps": [
+          {
+            "no": 1,
+            "text": "3x - 6 = x + 4",
+            "status": "ok"
+          },
+          {
+            "no": 2,
+            "text": "3x - x = 4 + 6",
+            "status": "ok"
+          },
+          {
+            "no": 3,
+            "text": "2x = 10",
+            "status": "ok"
+          },
+          {
+            "no": 4,
+            "text": "x = 5",
+            "status": "ok"
+          }
+        ],
+        "failing_step_no": null,
+        "verdict": "correct",
+        "error_cause": null,
+        "why_tr": "Parantezi doğru dağıttın ve terimleri karşıya işaretini değiştirerek geçirdin; yolun baştan sona doğru.",
+        "skill_ids": [
+          "tyt.mat.cebir.denklem"
+        ],
+        "misconception_tags": [],
+        "proposed_subskill": null,
+        "style_hint": null,
+        "confidence": 0.95
+      }
+    }
+  ]
+}

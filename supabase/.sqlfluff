@@ -1,0 +1,11 @@
+[sqlfluff]
+dialect = postgres
+templater = raw
+# Büyük migration dosyaları da denetlensin (varsayılan 20 KB üstünü atlar)
+large_file_skip_byte_limit = 0
+max_line_length = 160
+# Kapsam dışı kurallar (README "Lint kuralları"): blueprint'in bağlayıcı sütun adları (text, kind, day, role …)
+# anahtar kelimedir (RF04); hizalama/girinti üslubu (LT02, LT05, LT08, LT09, LT14) proje biçimidir; plpgsql ve
+# görünüm gövdelerindeki kısa takma adlar ve birleşim sırası (AL03, AM05, RF02, RF03, ST06, ST09) bilinçlidir.
+# Ayrıştırma hataları (PRS) ve kalan çekirdek kurallar (büyük/küçük harf tutarlılığı, belirsiz ifadeler, …) uygulanır.
+exclude_rules = LT02, LT05, LT08, LT09, LT14, RF04, AL03, AM05, RF02, RF03, ST06, ST09

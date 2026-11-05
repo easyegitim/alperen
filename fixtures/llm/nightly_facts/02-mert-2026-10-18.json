@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0",
+  "day": "2026-10-18",
+  "student_ref": "s_vd3hp6wz2kc7",
+  "facts": [
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_vd3hp6wz2kc7",
+      "kind": "deadline",
+      "text": "Öğrencinin matematik ödevini pazartesiye kadar teslim etmesi gerekiyor.",
+      "source_message_ids": [
+        26
+      ],
+      "confidence": 0.8,
+      "valid_until": "2026-10-26",
+      "morale_signal": null,
+      "requires_approval": false,
+      "skill_id": null
+    },
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_vd3hp6wz2kc7",
+      "kind": "unanswered_question",
+      "text": "Öğrenci deneme sınavının saatini sordu; henüz cevap verilmedi.",
+      "source_message_ids": [
+        14
+      ],
+      "confidence": 0.75,
+      "valid_until": null,
+      "morale_signal": null,
+      "requires_approval": false,
+      "skill_id": null
+    },
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_vd3hp6wz2kc7",
+      "kind": "morale",
+      "text": "Öğrenci kesirlerde zorlandığını ve konunun oturmadığını söyledi.",
+      "source_message_ids": [
+        29
+      ],
+      "confidence": 0.7,
+      "valid_until": null,
+      "morale_signal": -1,
+      "requires_approval": false,
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+    },
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_vd3hp6wz2kc7",
+      "kind": "other",
+      "text": "Öğrenci bu haftaki notunu sordu; soru eğitmene iletildi.",
+      "source_message_ids": [
+        27
+      ],
+      "confidence": 0.8,
+      "valid_until": null,
+      "morale_signal": null,
+      "requires_approval": true,
+      "skill_id": null
+    }
+  ],
+  "is_question_message_ids": [
+    14,
+    27
+  ],
+  "answered_question_message_ids": [],
+  "preferences": {
+    "modality": "mixed",
+    "active_hours": [
+      21
+    ]
+  }
+}

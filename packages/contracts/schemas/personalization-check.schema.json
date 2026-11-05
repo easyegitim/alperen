@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/personalization-check.json",
+  "title": "PersonalizationCheck",
+  "description": "Kişiselleştirme denetimi: nottaki her hata kutusu gerçek bir örüntüye (kimlik + tarih) başvuruyor mu; sorunlu blok kimlikleri ve nedenleri.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "ok": {
+      "type": "boolean",
+      "description": "Bütün hata kutuları gerçek örüntülere doğru başvuruyorsa true"
+    },
+    "offending_block_ids": {
+      "maxItems": 60,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 40
+      },
+      "description": "Sorunlu common_mistake_callout blok kimlikleri"
+    },
+    "findings": {
+      "maxItems": 60,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "block_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "problem": {
+            "type": "string",
+            "enum": [
+              "unknown_pattern",
+              "date_mismatch",
+              "text_mismatch",
+              "generic"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "Eğitmenin okuyacağı kısa açıklama"
+          }
+        },
+        "required": [
+          "block_id",
+          "problem",
+          "note"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "ok",
+    "offending_block_ids",
+    "findings"
+  ],
+  "additionalProperties": false
+}

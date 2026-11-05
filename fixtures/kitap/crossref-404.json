@@ -1,0 +1,6 @@
+{
+  "10.9999/fake": {
+    "status": 404,
+    "body": "Resource not found."
+  }
+}

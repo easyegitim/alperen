@@ -1,0 +1,15 @@
+{
+  "styles": [
+    {
+      "code": "tablo-yorumlu-yuzde",
+      "name": "Tablo yorumlu yüzde",
+      "description": "Tablodaki verilerden yüzde artış ve azalış hesaplatan çok adımlı sorular.",
+      "format": "text",
+      "trick": "Birim ve baz değişimi saklıdır",
+      "difficulty_band": "medium",
+      "skill_ids": [
+        "tyt.mat.yuzde"
+      ]
+    }
+  ]
+}

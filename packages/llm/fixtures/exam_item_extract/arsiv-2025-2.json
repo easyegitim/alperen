@@ -1,0 +1,26 @@
+{
+  "fake_match": [
+    "arşivi: 2025",
+    "madde no: 2."
+  ],
+  "output": {
+    "schema_version": "1.0",
+    "source_id": "00000000-0000-4000-8000-00000000a5c1",
+    "item_no": 2,
+    "topic": "Üslü ifadeleri sadeleştirme",
+    "kind": "calc",
+    "points": 15,
+    "year": 2025,
+    "term": "final",
+    "instructor_alias": null,
+    "skill_id": "tyt.mat.temel.uslu",
+    "ocr_text": "$\\frac{3^{4} \\cdot 9^{2}}{27^{2}}$ ifadesini üslü ifadelerin özelliklerini kullanarak sadeleştiriniz.",
+    "ocr_confidence": 0.95,
+    "format": "text",
+    "trick": "Farklı görünen tabanlar aynı asal tabana çevrilmeden üsler toplanamaz",
+    "difficulty": 0.5,
+    "skill_ids": [
+      "tyt.mat.temel.uslu"
+    ]
+  }
+}

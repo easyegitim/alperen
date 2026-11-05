@@ -1,0 +1,14 @@
+{
+  "reply": "İpucu: `|x - 2| = 5` için `x - 2 = -5` durumunu da yaz.\nBu durumda `x` kaç olur?",
+  "ends_with_question": true,
+  "hint_level": 1,
+  "confidence": 0.88,
+  "escalate": false,
+  "escalate_reason": null,
+  "detected_skill_ids": [
+    "tyt.mat.cebir.mutlak-deger"
+  ],
+  "detected_misconception_tag": null,
+  "used_fact_ids": [],
+  "suggest_pool_save": false
+}

@@ -1,0 +1,18 @@
+{
+  "id": "sayi-dogrusu-esitsizlik",
+  "params": {
+    "a": -2,
+    "b": 5,
+    "bicim": "mutlak",
+    "kapali": false,
+    "isaretler": [
+      -7,
+      3
+    ],
+    "nokta": {
+      "x": {
+        "deger": 1
+      }
+    }
+  }
+}

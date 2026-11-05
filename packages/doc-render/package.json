@@ -1,0 +1,46 @@
+{
+  "name": "@ogrenmen/doc-render",
+  "version": "0.1.0",
+  "description": "Öğrenmen belge oluşturucu: belge AST (contracts) -> React (sunucu) -> HTML (KaTeX sunucu tarafı) -> PDF (Playwright, A4)",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./src/index.ts",
+  "files": [
+    "src",
+    "fonts"
+  ],
+  "scripts": {
+    "fixtures": "bun scripts/gen-fixtures.ts",
+    "fixtures:check": "bun scripts/gen-fixtures.ts --check",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ogrenmen/contracts": "workspace:*",
+    "@ogrenmen/design-system": "workspace:*",
+    "katex": "0.16.11",
+    "playwright-core": "1.56.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/katex": "0.16.7",
+    "@types/node": "22.10.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "pdfjs-dist": "4.10.38",
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "2.1.9"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "ops": [
+    {
+      "op": "insert",
+      "path": "/memories/x",
+      "insert_line": 0,
+      "text": "x"
+    }
+  ]
+}

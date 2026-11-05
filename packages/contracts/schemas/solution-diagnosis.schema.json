@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/solution-diagnosis.json",
+  "title": "SolutionDiagnosis",
+  "description": "Çözüm teşhisi: soru metni, öğrencinin adımları, ilk bozulan adım, hata nedeni, kazanım ve yanılgı etiketi. verdict=correct ise failing_step_no ve error_cause null olur.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "question_text": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Sorunun okunmuş/yazıya dökülmüş metni"
+    },
+    "student_work_text": {
+      "type": "string",
+      "maxLength": 6000,
+      "description": "Öğrencinin çözümünün yazıya dökülmüş hali; çözüm yoksa boş"
+    },
+    "reference_solution_steps": {
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 600
+      }
+    },
+    "student_steps": {
+      "maxItems": 40,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 40
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 600
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error",
+              "missing"
+            ],
+            "description": "missing: olması gereken ama öğrencinin yazmadığı adım"
+          }
+        },
+        "required": [
+          "no",
+          "text",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "failing_step_no": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 40
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "İlk bozulan adımın numarası; yoksa null"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "correct",
+        "wrong",
+        "incomplete",
+        "unreadable"
+      ]
+    },
+    "error_cause": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "concept",
+            "procedure",
+            "careless",
+            "reading",
+            "time"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Doğru çözümde null"
+    },
+    "why_tr": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 400,
+      "description": "Tek cümle, sen dili, ünlemsiz: neden takıldı"
+    },
+    "skill_ids": {
+      "maxItems": 3,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+      }
+    },
+    "misconception_tags": {
+      "maxItems": 3,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"
+      }
+    },
+    "proposed_subskill": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 120
+            },
+            "parent_code": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 400
+            }
+          },
+          "required": [
+            "code",
+            "name",
+            "parent_code",
+            "description"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Uygun yaprak yoksa önerilen alt kazanım; yoksa null"
+    },
+    "style_hint": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 200
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Sorunun tarzına ipucu (format/tuzak); yoksa null"
+    },
+    "key_dispute": {
+      "default": null,
+      "description": "Deneme anahtarı şüpheliyse doldurulur (eğitmen incelemesine gider); anahtar çelişmiyorsa ya da deneme bağlamı yoksa null",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "suspected": {
+              "type": "boolean",
+              "description": "Verilen anahtar kendi çözümünle çelişiyor ve çözümünü yeniden denetledikten sonra da çelişiyor: true"
+            },
+            "model_answer": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Kendi çözümünün cevabı (şık harfi ya da değer); bilinmiyorsa null"
+            }
+          },
+          "required": [
+            "suspected",
+            "model_answer"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "required": [
+    "question_text",
+    "student_work_text",
+    "reference_solution_steps",
+    "student_steps",
+    "failing_step_no",
+    "verdict",
+    "error_cause",
+    "why_tr",
+    "skill_ids",
+    "misconception_tags",
+    "proposed_subskill",
+    "style_hint",
+    "confidence"
+  ],
+  "additionalProperties": false
+}

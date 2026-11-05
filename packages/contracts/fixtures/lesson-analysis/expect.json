@@ -1,0 +1,14 @@
+{
+  "bad-timestamp.json": [
+    "pattern"
+  ],
+  "skill-without-evidence.json": [
+    "minItems"
+  ],
+  "student-name-field.json": [
+    "additionalProperties"
+  ],
+  "student-ref-name.json": [
+    "pattern"
+  ]
+}

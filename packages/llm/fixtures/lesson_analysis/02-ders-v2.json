@@ -1,0 +1,143 @@
+{
+  "fake_match": [
+    "<lesson_request>"
+  ],
+  "output": {
+    "schema_version": "1.0",
+    "lesson_ref": "00000000-0000-0000-0000-000000000001",
+    "student_ref": "s_qk7m2rx4tn5a",
+    "duration_min": 1,
+    "skills": [
+      {
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+        "mastery_estimate": 0.45,
+        "confidence": 0.8,
+        "evidence": [
+          {
+            "speaker": "ÖĞRENCİ",
+            "quote": "Payları toplarım 4, paydaları toplarım 12, yani 4/12.",
+            "t": "00:00:06",
+            "t_end": "00:00:08"
+          },
+          {
+            "speaker": "ÖĞRENCİ",
+            "quote": "O zaman 6/8 + 1/8 = 7/8 oluyor.",
+            "t": "00:00:14",
+            "t_end": "00:00:16"
+          }
+        ]
+      },
+      {
+        "skill_id": "tyt.mat.cebir.denklem",
+        "mastery_estimate": 0.7,
+        "confidence": 0.6,
+        "evidence": [
+          {
+            "speaker": "EĞİTMEN",
+            "quote": "Denklemde de x/2 + 1 = 4 sorusunu doğru çözdün.",
+            "t": "00:00:16",
+            "t_end": "00:00:18"
+          }
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "t": "00:00:10",
+        "quote": "Anlamadım, neden sekiz?",
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+        "answered": true
+      }
+    ],
+    "hesitations": [
+      {
+        "t": "00:00:10",
+        "kind": "said_dont_understand",
+        "quote": "Anlamadım, neden sekiz?",
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+      },
+      {
+        "t": "00:00:06",
+        "kind": "wrong_answer",
+        "quote": "Payları toplarım 4, paydaları toplarım 12, yani 4/12.",
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+      }
+    ],
+    "misconceptions": [
+      {
+        "tag": "rasyonel.pay-payda-ayri-toplama",
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+        "text_instructor": "Payları ve paydaları ayrı ayrı topluyor.",
+        "text_student": "Paylar ve paydalar ayrı ayrı toplanmaz; önce paydaları eşitleyelim.",
+        "resolved_in_lesson": true,
+        "evidence": [
+          {
+            "speaker": "ÖĞRENCİ",
+            "quote": "Payları toplarım 4, paydaları toplarım 12, yani 4/12.",
+            "t": "00:00:06",
+            "t_end": "00:00:08"
+          }
+        ]
+      },
+      {
+        "tag": null,
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+        "text_instructor": "Ortak paydanın neden seçildiğini açıklayamıyor.",
+        "text_student": "Ortak payda iki paydanın ortak katıdır; en küçüğünü seçmek işi kolaylaştırır.",
+        "resolved_in_lesson": false,
+        "evidence": [
+          {
+            "speaker": "ÖĞRENCİ",
+            "quote": "Anlamadım, neden sekiz?",
+            "t": "00:00:10",
+            "t_end": "00:00:12"
+          }
+        ]
+      }
+    ],
+    "commitments": [
+      {
+        "who": "ÖĞRENCİ",
+        "kind": "homework",
+        "text": "Hafta sonuna kadar on kesir sorusu çözecek.",
+        "due": "2026-10-25",
+        "t": "00:00:18"
+      }
+    ],
+    "talk": {
+      "student_ratio": 0.42,
+      "student_questions": 1,
+      "attention": "medium",
+      "morale": "medium",
+      "notes": "Öğrenci soru sormaktan çekinmedi; hatasını fark edince düzeltti."
+    },
+    "previous_profile_check": [],
+    "next_step": {
+      "for_student": "Paydası farklı üç kesir toplama sorusu çöz; her birinde önce ortak paydayı yaz.",
+      "for_instructor": "Bir sonraki derste ortak payda seçimini EKOK ile ilişkilendirerek tekrar edin."
+    },
+    "course_insights": [
+      {
+        "kind": "syllabus_topic",
+        "topic": "Kesirlerde toplama",
+        "text": "Paydaları farklı kesirlerde ortak payda ile toplama işlendi.",
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+        "evidence": [
+          {
+            "speaker": "EĞİTMEN",
+            "quote": "3/4 + 1/8 kaç eder, sesli düşünerek çöz.",
+            "t": "00:00:04",
+            "t_end": "00:00:06"
+          }
+        ]
+      },
+      {
+        "kind": "assignment",
+        "topic": "Kesir alıştırması",
+        "text": "Hafta sonuna kadar on kesir sorusu.",
+        "skill_id": null,
+        "evidence": []
+      }
+    ]
+  }
+}

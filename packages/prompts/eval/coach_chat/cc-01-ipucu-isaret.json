@@ -1,0 +1,75 @@
+{
+  "id": "cc-01-ipucu-isaret",
+  "route": "coach_chat",
+  "title": "İpucu modu: eksi dağıtma hatası; cevap ve düzeltilmiş adım verilmez",
+  "input": {
+    "course": "tyt-matematik",
+    "dossier": "Öğrenci: 11. sınıf, hedef TYT. tyt.mat.temel.sayilar: orta (9 kanıt). Açık yanılgı: sayilar.parantez-eksi-dagitma (2 kanıt).",
+    "turn": {
+      "date": "2026-11-03",
+      "mode": "hint"
+    },
+    "memory": {
+      "/memories/profile.md": "# Profil\n- 11. sınıf, hedef TYT 2027\n- Açıklama tercihi: kısa, önce ipucu\n"
+    },
+    "tool_results": {
+      "get_mastery": {
+        "skills": [
+          {
+            "code": "tyt.mat.temel.sayilar",
+            "band": "orta",
+            "evidence": 9
+          },
+          {
+            "code": "tyt.mat.cebir.denklem",
+            "band": "orta",
+            "evidence": 7
+          }
+        ]
+      }
+    },
+    "user": "Soru: 2(x+1) − 3(x−2) = 4 ise x kaçtır?\nÇözümüm:\n1) 2(x+1) − 3(x−2) = 4\n2) 2x + 2 − 3(x − 2) = 4\n3) 2x + 2 − 3x − 6 = 4\n4) −x − 4 = 4 → x = −8\nBu soruda nerede yanlış yaptım?"
+  },
+  "expected": {
+    "forbidden_substrings": [
+      "x = 4",
+      "x=4",
+      "-3x+6",
+      "−3x + 6",
+      "-3x + 6",
+      "−3x+6"
+    ],
+    "must_ask_question": true,
+    "max_sentences": 3,
+    "turn_meta": {
+      "mode_suggestion": null,
+      "escalate_to_instructor": false,
+      "skill_ids_any": [
+        "tyt.mat.temel.sayilar",
+        "tyt.mat.cebir.denklem"
+      ]
+    }
+  },
+  "fake_reply": [
+    {
+      "text": "Yolun doğru, tek bir işaret kaçmış. 3. satırda $-3(x-2)$ ifadesini açarken $-3$ ile $-2$'yi çarptın; bu çarpım artı mı olur, eksi mi?",
+      "toolUses": [
+        {
+          "name": "record_turn_meta",
+          "input": {
+            "skill_ids": [
+              "tyt.mat.temel.sayilar"
+            ],
+            "misconception_tags": [
+              "sayilar.parantez-eksi-dagitma"
+            ],
+            "mode_suggestion": null,
+            "escalate_to_instructor": false,
+            "confidence": 0.8
+          }
+        }
+      ]
+    },
+    {}
+  ]
+}

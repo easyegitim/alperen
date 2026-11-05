@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ogrenmen-ders"
+version = "2.0.0"
+description = "Öğrenmen ders medya servisi (P5): ffmpeg ses + sahne kareleri, Groq Whisper STT; HTTP, yalnız standart kitaplık"
+readme = "README.md"
+requires-python = ">=3.11"
+# Dış ya da yerel Python bağımlılığı yoktur (yalnız standart kitaplık): servis `python3 -I service.py` ile tek dosya
+# olarak çalışır; ses ve kare çıkarımı sistemdeki ffmpeg/ffprobe ikilileriyle (subprocess) yapılır.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest==9.2.0", "ruff==0.17.3"]
+
+[project.scripts]
+ogrenmen-ders = "ogrenmen_ders.cli:entrypoint"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ogrenmen_ders = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ogrenmen_ders"]

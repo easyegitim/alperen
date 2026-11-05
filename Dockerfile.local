@@ -1,0 +1,60 @@
+# Öğrenmen yerel deneme kapsayıcısı: uygulama + worker + ders servisi + PDF üretimi tek imajda (Linux).
+# Windows/Mac/Linux'ta aynı şekilde çalışır; yalnız Docker gerekir.  Kullanım: docker-compose.local.yml
+# Taban Python 3.13 (numpy 2.5 / matplotlib 3.11 Python >=3.12 ister); Node 22 üstüne eklenir.
+FROM python:3.13-bookworm
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
+    NEXT_TELEMETRY_DISABLED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ffmpeg postgresql-client ca-certificates curl unzip gnupg git \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/* \
+    && node --version && python3 --version
+
+RUN pip install --no-cache-dir sympy==1.14.0 matplotlib==3.11.2 numpy==2.5.3 httpx==0.28.1 jsonschema==4.26.0 \
+    && python3 -I -c "import sympy, matplotlib, numpy, httpx, jsonschema; print('python paketleri tamam')" \
+    && npm install -g bun@1.4.2 \
+    && bun --version
+
+WORKDIR /app
+# Önce bağımlılıklar (önbellek katmanı): yalnız package.json'lar ve kilit dosyası
+COPY package.json bun.lock tsconfig.base.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY apps/worker/package.json apps/worker/package.json
+COPY packages packages
+RUN bun install --frozen-lockfile || bun install
+
+# Chromium (PDF) — Playwright 1.56.1
+RUN bunx playwright@1.56.1 install --with-deps chromium
+
+COPY . .
+
+# Windows'ta klonlanan depoda (1) Git sembolik bağları düz metin dosyasına çevirir, (2) satır sonları CRLF olur.
+# İkisini de imaj içinde onarırız; Linux/Mac'te zararsızdır.
+RUN find /app \( -name node_modules -o -name .next \) -prune -o -type f \
+      \( -name '*.sh' -o -name '*.py' -o -name '*.sql' -o -name '*.json' -o -name '*.md' -o -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name '*.yml' -o -name '*.toml' \) \
+      -exec sed -i 's/\r$//' {} + \
+    && C=packages/contracts/python/ogrenmen_contracts \
+    && rm -rf "$C/schemas" "$C/models.json" \
+    && cp -r packages/contracts/schemas "$C/schemas" \
+    && cp packages/contracts/models.json "$C/models.json"
+
+# Veritabanı kurulumunun (müfredat dışa aktarımı) ihtiyaç duyduğu Python paketleri
+RUN pip install --no-cache-dir pglast==8.7 ./packages/contracts/python \
+    && python3 -I -c "from ogrenmen_contracts import errors; import pglast; print('sözleşme paketi tamam')"
+
+RUN bun install --frozen-lockfile || bun install
+
+# Kanıt: ilk açılışta çalışacak müfredat dışa aktarımı imaj derlenirken de çalışır (hata varsa burada görünür, sonra değil)
+RUN python3 /app/content/tyt-matematik/scripts/export-sql.py --schema v2 --out /tmp/cur.sql && test -s /tmp/cur.sql && rm /tmp/cur.sql
+
+ENV OGRENMEN_IN_DOCKER=1 \
+    OGRENMEN_BIND_HOST=0.0.0.0 \
+    OGRENMEN_ENV_FILE=/data/.env.local
+VOLUME ["/data"]
+EXPOSE 3000 54321
+CMD ["bun", "scripts/dev-local/up.ts"]

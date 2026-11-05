@@ -1,0 +1,149 @@
+{
+  "description": "Desen ve parçalı başvuru vakaları: TS (test/patterns.test.ts) ve Python (python/tests/test_patterns.py) aynı dosyayı geçer. ref = sözleşme başvurusu (kısa ad ya da <ad>#/$defs/<tanım>), valid = beklenen karar. Anahtar şemaları TS'de answer-key alt yolundan doğrulanır.",
+  "cases": [
+    {
+      "name": "diagnostic-keys: geçerli anahtar adı",
+      "ref": "diagnostic-keys",
+      "data": {
+        "DIAG-2026.1-07": {
+          "correct_option": "B",
+          "canonical_expr": "Rational(3,4)+Rational(1,8)",
+          "numeric_value": "7/8",
+          "solution": "Paydaları 8'de eşitle: `6/8 + 1/8 = 7/8`."
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "diagnostic-keys: sonda satır sonu olan anahtar adı ($ yalnız metin sonu)",
+      "ref": "diagnostic-keys",
+      "data": {
+        "DIAG-2026.1-07\n": {
+          "correct_option": "B",
+          "canonical_expr": "Rational(3,4)+Rational(1,8)",
+          "numeric_value": "7/8",
+          "solution": "Paydaları 8'de eşitle: `6/8 + 1/8 = 7/8`."
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "question-item: curriculum_code sonda satır sonu",
+      "ref": "question-item",
+      "data": {
+        "schema_version": "1.0",
+        "id": "3f2b8c1e-5a4d-4e7f-9b1a-2c3d4e5f6a71",
+        "curriculum_code": "TYT-MAT@2026.1\n",
+        "kind": "mcq",
+        "skill_ids": [
+          "tyt.mat.temel.rasyonel-sayilar"
+        ],
+        "stem": "`3/4 + 1/8` işleminin sonucu kaçtır?",
+        "stem_values": {},
+        "figure": null,
+        "options": [
+          {
+            "key": "A",
+            "text": "`4/12`",
+            "misconception_tag": "rasyonel.pay-payda-ayri-toplama"
+          },
+          {
+            "key": "B",
+            "text": "`7/8`",
+            "misconception_tag": null
+          },
+          {
+            "key": "C",
+            "text": "`4/8`",
+            "misconception_tag": "rasyonel.payda-esitlemeden-toplama"
+          },
+          {
+            "key": "D",
+            "text": "`3/32`",
+            "misconception_tag": null
+          }
+        ],
+        "difficulty": 0.5,
+        "source": "diagnostic",
+        "verification": {
+          "schema": true,
+          "sympy": "verified",
+          "render": "not_applicable",
+          "vision": "not_applicable",
+          "attempts": 0,
+          "status": "approved",
+          "review_note": null
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "common studentRef: sonda satır sonu",
+      "ref": "common#/$defs/studentRef",
+      "data": "s_k3m7q2x4z6ab\n",
+      "valid": false
+    },
+    {
+      "name": "common studentRef: geçerli",
+      "ref": "common#/$defs/studentRef",
+      "data": "s_k3m7q2x4z6ab",
+      "valid": true
+    },
+    {
+      "name": "transcript segment parçası: geçerli",
+      "ref": "transcript#/$defs/segment",
+      "data": {
+        "t": "00:01:05",
+        "speaker": "ÖĞRENCİ",
+        "text": "Paydaları neden eşitliyoruz?"
+      },
+      "valid": true
+    },
+    {
+      "name": "transcript segment parçası: bilinmeyen konuşmacı",
+      "ref": "https://ogrenmen.easy/schemas/transcript.json#/$defs/segment",
+      "data": {
+        "t": "00:01:05",
+        "speaker": "VELİ",
+        "text": "Paydaları neden eşitliyoruz?"
+      },
+      "valid": false
+    },
+    {
+      "name": "misconception-tags: emoji öğrenci metninde",
+      "ref": "misconception-tags#/$defs/tag",
+      "data": {
+        "tag": "uslu.usleri-carpma",
+        "skill_id": "tyt.mat.temel.uslu",
+        "prereq_skill_id": null,
+        "text_instructor": "Aynı tabanlı çarpımda üsleri çarpıyor.",
+        "text_student": "Tabanlar aynıysa üsler toplanır 🙂"
+      },
+      "valid": false
+    },
+    {
+      "name": "misconception-tags: ✅ eğitmen metninde",
+      "ref": "misconception-tags#/$defs/tag",
+      "data": {
+        "tag": "uslu.usleri-carpma",
+        "skill_id": "tyt.mat.temel.uslu",
+        "prereq_skill_id": null,
+        "text_instructor": "Aynı tabanlı çarpımda üsleri çarpıyor ✅",
+        "text_student": "Tabanlar aynıysa üsler toplanır."
+      },
+      "valid": false
+    },
+    {
+      "name": "misconception-tags: Türkçe harfler ve matematik sembolleri geçer",
+      "ref": "misconception-tags#/$defs/tag",
+      "data": {
+        "tag": "uslu.usleri-carpma",
+        "skill_id": "tyt.mat.temel.uslu",
+        "prereq_skill_id": null,
+        "text_instructor": "Aynı tabanlı çarpımda üsleri çarpıyor.",
+        "text_student": "Çarpımda üsler toplanır: 2³ · 2² = 2⁵, √4 = 2, x ≤ 3."
+      },
+      "valid": true
+    }
+  ]
+}

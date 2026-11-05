@@ -1,0 +1,6 @@
+{
+  "DIAG-2026.1-14": {
+    "correct_option": "C",
+    "solution": "Dolu daire 3 dahil demektir, ok sağa: `x >= 3`."
+  }
+}

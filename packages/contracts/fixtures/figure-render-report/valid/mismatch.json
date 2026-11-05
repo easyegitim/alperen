@@ -1,0 +1,14 @@
+{
+  "matches_stem": false,
+  "status": "mismatch",
+  "mismatches": [
+    {
+      "field": "b",
+      "expected": 3,
+      "observed": 4,
+      "note": "Sağ boş daire 5 yerine 6'da çizilmiş."
+    },
+    "Aralık taraması sola taşmış."
+  ],
+  "notes": null
+}

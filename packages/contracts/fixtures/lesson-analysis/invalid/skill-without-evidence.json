@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0",
+  "lesson_ref": "c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e03",
+  "student_ref": "s_k3m7q2x4z6ab",
+  "duration_min": 52,
+  "skills": [
+    {
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "mastery_estimate": 0.45,
+      "confidence": 0.7,
+      "evidence": []
+    },
+    {
+      "skill_id": "tyt.mat.temel.ebob-ekok",
+      "mastery_estimate": 0.7,
+      "confidence": 0.6,
+      "evidence": [
+        {
+          "speaker": "ÖĞRENCİ",
+          "quote": "EKOK'u 24 buldum, sonra paydaları 24'te eşitledim.",
+          "t": "00:21:02"
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "t": "00:12:31",
+      "quote": "Neden ikinci kesri ters çeviriyoruz?",
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "answered": true
+    },
+    {
+      "t": "00:44:10",
+      "quote": "Devirli ondalığı kesre nasıl çeviririz?",
+      "skill_id": null,
+      "answered": false
+    }
+  ],
+  "hesitations": [
+    {
+      "t": "00:15:02",
+      "kind": "long_silence",
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+    },
+    {
+      "t": "00:30:44",
+      "kind": "said_dont_understand",
+      "quote": "Burayı anlamadım.",
+      "skill_id": null
+    }
+  ],
+  "misconceptions": [
+    {
+      "tag": "rasyonel.pay-payda-ayri-toplama",
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "text_instructor": "Payları ve paydaları ayrı ayrı topluyor.",
+      "text_student": "Paylar ve paydalar ayrı ayrı toplanmaz; önce paydaları eşitleyelim.",
+      "resolved_in_lesson": false,
+      "evidence": [
+        {
+          "speaker": "ÖĞRENCİ",
+          "quote": "Payları toplayıp paydaları da topladım, 4/12 buldum.",
+          "t": "00:08:14"
+        }
+      ]
+    }
+  ],
+  "commitments": [
+    {
+      "who": "ÖĞRENCİ",
+      "kind": "homework",
+      "text": "Kesirlerde toplama çalışma kâğıdının ilk 10 sorusunu çözecek.",
+      "due": "2026-10-24",
+      "t": "00:50:12"
+    },
+    {
+      "who": "EĞİTMEN",
+      "kind": "promise",
+      "text": "Devirli ondalık için kısa bir not gönderecek.",
+      "due": null,
+      "t": "00:51:00"
+    }
+  ],
+  "talk": {
+    "student_ratio": 0.38,
+    "student_questions": 2,
+    "attention": "high",
+    "morale": "medium",
+    "notes": "Derse istekli başladı, sonlara doğru yoruldu."
+  },
+  "previous_profile_check": [
+    {
+      "misconception_id": "0e9d8c7b-6a5f-4e3d-8c2b-1a0f9e8d7c64",
+      "status": "improved",
+      "evidence": [
+        {
+          "speaker": "ÖĞRENCİ",
+          "quote": "Bölmede ikinciyi ters çevirip çarptım.",
+          "t": "00:33:20"
+        }
+      ]
+    }
+  ],
+  "next_step": {
+    "for_student": "Paydaları eşitleyerek toplama yaptığın beş soruyla başla.",
+    "for_instructor": "Bir sonraki derste payda eşitleme ile EKOK bağlantısını tekrar edin."
+  },
+  "model_notes": {
+    "model": "gemini-2.5-pro",
+    "prompt_version": "ders-1.0",
+    "cost_usd": 0.31,
+    "tokens_in": 182340,
+    "tokens_out": 4120,
+    "frames": 8
+  }
+}

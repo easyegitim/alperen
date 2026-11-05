@@ -1,0 +1,11 @@
+{
+  "bad-points-text.json": [
+    "pattern"
+  ],
+  "single-year.json": [
+    "minimum"
+  ],
+  "wrong-title.json": [
+    "const"
+  ]
+}

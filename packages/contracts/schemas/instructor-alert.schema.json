@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/instructor-alert.json",
+  "title": "InstructorAlert",
+  "description": "Eğitmen paneli alarmı (instructor_alerts). Tek cümle, yargısız; şiddet panelde kelimeyle gösterilir.",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "severity",
+    "student_ref",
+    "detail",
+    "since",
+    "ref"
+  ],
+  "x-forbidden-words": [
+    "depresif",
+    "tembel",
+    "başarısız",
+    "umutsuz"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "kind": {
+      "enum": [
+        "unanswered",
+        "silent",
+        "morale",
+        "deadline",
+        "response",
+        "ops"
+      ]
+    },
+    "severity": {
+      "enum": [
+        "danger",
+        "warning",
+        "neutral"
+      ],
+      "description": "Panelde kelimeyle: Acil / Dikkat / Bilgi"
+    },
+    "student_ref": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.json#/$defs/studentRef"
+        }
+      ]
+    },
+    "staff_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "detail": {
+      "type": "string",
+      "maxLength": 240,
+      "description": "Tek cümle; cevapsız soruda sorunun kendisi tırnak içinde; yargı yok ('göstergesi düştü')"
+    },
+    "since": {
+      "$ref": "common.json#/$defs/dateTime"
+    },
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "message_id": {
+          "type": "integer"
+        },
+        "fact_id": {
+          "type": "integer"
+        },
+        "escalation_id": {
+          "$ref": "common.json#/$defs/uuid"
+        },
+        "lesson_id": {
+          "$ref": "common.json#/$defs/uuid"
+        },
+        "chat_id": {
+          "type": "integer",
+          "description": "ops alarmları (grup başına tekil)"
+        },
+        "source_id": {
+          "$ref": "common.json#/$defs/uuid",
+          "description": "ops: exam_sources OCR hatası"
+        }
+      }
+    }
+  }
+}

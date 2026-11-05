@@ -1,0 +1,18 @@
+{
+  "array-of-objects.json": [
+    "oneOf"
+  ],
+  "bad-param-name.json": [
+    "propertyNames",
+    "pattern"
+  ],
+  "empty-params.json": [
+    "minProperties"
+  ],
+  "nested-object-value.json": [
+    "oneOf"
+  ],
+  "uppercase-id.json": [
+    "pattern"
+  ]
+}

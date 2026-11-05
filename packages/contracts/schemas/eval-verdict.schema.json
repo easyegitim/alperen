@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/eval-verdict.json",
+  "title": "EvalVerdict",
+  "description": "Bir eval vakasının hakem puanı: bozulan adım, hata nedeni, kazanım uyumu, Türkçe ton (1-5) ve gerekçe.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "failing_step_match": {
+      "type": "string",
+      "enum": [
+        "exact",
+        "near",
+        "miss"
+      ]
+    },
+    "cause_match": {
+      "type": "boolean"
+    },
+    "skills_match": {
+      "type": "string",
+      "enum": [
+        "full",
+        "partial",
+        "none"
+      ]
+    },
+    "tone_score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Türkçe ton rubriği: 5 = sen dili, sıcak, ünlemsiz, yargılamayan"
+    },
+    "overall": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "0..1 toplam puan"
+    },
+    "pass": {
+      "type": "boolean"
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 800
+    },
+    "issues": {
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    }
+  },
+  "required": [
+    "failing_step_match",
+    "cause_match",
+    "skills_match",
+    "tone_score",
+    "overall",
+    "pass",
+    "rationale",
+    "issues"
+  ],
+  "additionalProperties": false
+}
