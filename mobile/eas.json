@@ -1,0 +1,38 @@
+{
+  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
+  "build": {
+    "base": {
+      "node": "22.12.0",
+      "pnpm": "10.12.1",
+      "prebuildCommand": "node scripts/setup-models.mjs && expo prebuild --no-install",
+      "env": { "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com" }
+    },
+    "development": {
+      "extends": "base",
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "env": { "EXPO_PUBLIC_API_URL": "https://staging.aura.example", "EXPO_PUBLIC_FEATURE_EXPERT_NETWORK": "false" }
+    },
+    "preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "channel": "preview",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_API_URL": "https://staging.aura.example", "EXPO_PUBLIC_FEATURE_EXPERT_NETWORK": "false" }
+    },
+    "production": {
+      "extends": "base",
+      "autoIncrement": true,
+      "channel": "production",
+      "android": { "buildType": "app-bundle" },
+      "env": { "EXPO_PUBLIC_API_URL": "https://aura.example", "EXPO_PUBLIC_FEATURE_EXPERT_NETWORK": "false" }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": { "ascAppId": "", "appleTeamId": "" },
+      "android": { "serviceAccountKeyPath": "./google-play-service-account.json", "track": "internal", "releaseStatus": "draft" }
+    }
+  }
+}
