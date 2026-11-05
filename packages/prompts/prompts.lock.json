@@ -8,16 +8,23 @@
     "curriculum_draft": "v1",
     "curriculum_research": "v1",
     "exam_generation": "v2",
+    "exam_item_extract": "v1",
     "exam_page_items": "v2",
     "exam_report": "v2",
     "figure_check": "v1",
     "inferred_keys": "v1",
+    "lesson_analysis": "v1",
     "memory_delta": "v1",
     "notes_generation": "v2",
+    "notification_copy": "v1",
     "page_class": "v1",
-    "parent_chat": "v1",
+    "parent_chat": "v2",
     "personalization_check": "v1",
+    "report": "v1",
     "solution_diagnosis": "v2",
+    "speaker_label": "v1",
+    "style_definition": "v1",
+    "style_question_gen": "v1",
     "suggestions_copy": "v1"
   },
   "prompts": {
@@ -131,6 +138,13 @@
         "code_execution"
       ]
     },
+    "exam_item_extract@v1": {
+      "sha256": "f1ea599d28b50f827e4d37150d087af8b3d3a78685b283aa15a9fa78f2f25db9",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "exam-item",
+      "tools": []
+    },
     "exam_page_items@v1": {
       "sha256": "f5f397ee4a5ba4b38edecbc61bab9e75a4022502f17438d667fd5a45c1e9b6f4",
       "model": "claude-sonnet-5-5",
@@ -181,6 +195,13 @@
         "code_execution"
       ]
     },
+    "lesson_analysis@v1": {
+      "sha256": "4202d3737285eab696f565d16ee10d32ad4dd6e8284861a3383b2374d118b5c5",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "lesson-analysis",
+      "tools": []
+    },
     "memory_delta@v1": {
       "sha256": "7d121cc8d4264dd1014552104f51e733a4ebd31792d7b38526d3b8a8b82260cd",
       "model": "claude-haiku-5-5",
@@ -206,6 +227,13 @@
         "code_execution"
       ]
     },
+    "notification_copy@v1": {
+      "sha256": "ff160c3db2c3afe1b7720f38cfda97a9c921f9c78e646f47a74544b5b41babb7",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "schema": "notification-copy",
+      "tools": []
+    },
     "page_class@v1": {
       "sha256": "adf3a3032552acd3da9e45a36b99fa0195aa41cde1b9a66c2edfc043977e005b",
       "model": "claude-haiku-5-5",
@@ -227,12 +255,36 @@
         "request_report"
       ]
     },
+    "parent_chat@v2": {
+      "sha256": "56f3d568704adeba420dd19681134e2b2f6e4389fee2aa6b5f99e36159cae57b",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "schema": null,
+      "tools": [
+        "get_child_summary",
+        "get_exam_sessions",
+        "get_mastery_overview",
+        "get_recent_activity",
+        "get_reports",
+        "request_report"
+      ]
+    },
     "personalization_check@v1": {
       "sha256": "1fa770af4ccd98e8e62fe5ec88773e88c5e1af6f0a155e168d5f1711cfd61ce6",
       "model": "claude-haiku-5-5",
       "effort": "low",
       "schema": "personalization-check",
       "tools": []
+    },
+    "report@v1": {
+      "sha256": "256c3fbbac61f7ff87438b066b5377ab095fb0d68ec53ccb65f8b748babccfe4",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "report-ast",
+      "tools": [
+        "get_mastery",
+        "get_recent_exams"
+      ]
     },
     "solution_diagnosis@v1": {
       "sha256": "631691380e1320dc6db5ada097220442ead7447e1cd8eaab400308cc3daa51f2",
@@ -247,6 +299,29 @@
       "effort": "high",
       "schema": "solution-diagnosis",
       "tools": []
+    },
+    "speaker_label@v1": {
+      "sha256": "0e39c9e9d5c2469b98b89978e224afa71a01b651e465cc1e0c991e82d6a8f5a6",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "schema": "transcript",
+      "tools": []
+    },
+    "style_definition@v1": {
+      "sha256": "1bb72237a09a5947b9a0f57b0c228985fb05998b7b2bcb65f531ece541f96f82",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "schema": "style-definition",
+      "tools": []
+    },
+    "style_question_gen@v1": {
+      "sha256": "27eb5eae29b140da8b0726aebabafa79e5c1e04f525bbc729a5307fb9db18a0f",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "schema": "style-question-generation",
+      "tools": [
+        "code_execution"
+      ]
     },
     "suggestions_copy@v1": {
       "sha256": "012665ecf6bc9fb58633657ccb315dc7f4e85fa338ec5efeb098102baf90201e",

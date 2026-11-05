@@ -15,6 +15,7 @@ import { documentGenerateJob } from './document-generate.js';
 import { dossierRenderJob } from './dossierRender.js';
 import { examAnalyseJob } from './exam-analyse.js';
 import { examReportJob } from './exam-report.js';
+import { LESSON_JOBS } from './lessons.js';
 import { llmPingJob } from './llmPing.js';
 import { memoryCompactJob } from './memoryCompact.js';
 import { noopJob } from './noop.js';
@@ -22,10 +23,12 @@ import { outboxDrainJob } from './outboxDrain.js';
 import { practiceGenerateJob, practicePrewarmJob } from './practice-generate.js';
 import { pdfRenderJob } from './pdfRender.js';
 import { pushSendJob } from './pushSend.js';
+import { STYLE_JOBS } from './styles.js';
 import { suggestionsRefreshJob } from './suggestionsRefresh.js';
 import type { AnyJobDefinition, JobDefinition, QueuePolicy } from './types.js';
 import { uploadIntakeJob } from './upload-intake.js';
 import { weeklySummaryJob } from './weeklySummary.js';
+import { emailSendJob } from './email-send.js'; import { notificationsEvaluateJob } from './notifications-evaluate.js'; import { reportGenerateJob } from './report-generate.js'; // P6-B
 
 /** Dead letter kuyruğu: yeniden denemeleri biten ve kalıcı hata veren işler buraya kopyalanır. */
 export const DEAD_LETTER_QUEUE = 'dead_letter';
@@ -69,6 +72,9 @@ export const JOBS: readonly AnyJobDefinition[] = [
   proposalsCollectJob,
   // secure.job_outbox (0029): enqueue_job'un pgboss'a yazamadığı işler; worker her 30 sn aktarır
   outboxDrainJob,
+  ...STYLE_JOBS, // P4 tarz kütüphanesi: style.ingest, style.coverage.refresh, style.question_gen
+  ...LESSON_JOBS, // P5 ders hattı: lesson.prepare → stt → label → analyse, lesson.retention, memory.apply (0040/0041)
+  notificationsEvaluateJob, emailSendJob, reportGenerateJob, // P6 kural motoru (saatlik + olaylar), e-posta (Resend), veli raporu (parent_request_report → report.generate)
 ];
 
 const BY_NAME = new Map(JOBS.map((j) => [j.name, j]));

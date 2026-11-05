@@ -1,0 +1,67 @@
+{
+  "fake_match": [
+    "arşivi: 2024",
+    "sayfa 1/1."
+  ],
+  "output": {
+    "items": [
+      {
+        "no": 1,
+        "section": null,
+        "kind": "open",
+        "stem_text": "$\\frac{3}{4} - \\frac{1}{2} : \\frac{2}{3}$ işleminin sonucu kaçtır? İşlem önceliğine dikkat ederek kesirleri sadeleştiriniz.",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 2,
+        "section": null,
+        "kind": "open",
+        "stem_text": "Bir sayının 3 katının 5 fazlası, aynı sayının 2 katından 11 fazladır. Bu sayıyı denklem kurarak bulunuz.",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 3,
+        "section": null,
+        "kind": "open",
+        "stem_text": "$\\frac{2^{5} \\cdot 4^{3}}{8^{2}}$ ifadesini üslü ifadelerin özelliklerini kullanarak sadeleştiriniz.",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 4,
+        "section": null,
+        "kind": "open",
+        "stem_text": "$\\frac{5}{6} + \\frac{2}{3} \\cdot \\frac{3}{4}$ işleminin sonucunu işlem önceliğine dikkat ederek kesir olarak bulunuz.",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 5,
+        "section": null,
+        "kind": "open",
+        "stem_text": "Bir mağazada ürünlerin etiket fiyatları tabloda verilmiştir: gömlek 150 TL, pantolon 240 TL. Gömlekte %20, pantolonda %25 indirim vardır. İndirimli fiyatların toplamı kaç TL'dir?",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      }
+    ],
+    "page_notes": null,
+    "unreadable": false
+  }
+}

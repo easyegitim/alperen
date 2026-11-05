@@ -210,9 +210,11 @@ describe.skipIf(!live)('Deneme analizi: submit_exam_upload → exam.analyse → 
     const card = (await tmp.pool.query(`select title, subtitle, payload from public.suggestions where student_id = $1 and kind = 'upload_result' and consumed_at is null`, [elif])).rows;
     expect(card).toHaveLength(1);
     expect(card[0]).toMatchObject({ title: 'Deneme sonucun hazır', subtitle: done.progress.card_line, payload: { copy_key: `session:${sessionId}`, session_id: sessionId, upload_id: pageIds[0], net: 5.5 } });
-    const note = (await tmp.pool.query(`select kind, body, payload from public.notifications where recipient_id = $1 and kind = 'exam_result'`, [PARENT_PROFILE])).rows;
+    const note = (await tmp.pool.query(`select kind, body, payload from public.notifications where recipient_id = $1 and kind = 'exam_analysed'`, [PARENT_PROFILE])).rows;
     // veliye üçüncü kişiyle ("Takıldığın yer" değil)
-    expect(note).toEqual([{ kind: 'exam_result', body: 'Örnek Deneme 1 · TYT Matematik: 5,5 net. En çok zorlandığı konu: Oran–orantı.', payload: expect.objectContaining({ session_id: sessionId, document_id: doc.id }) }]);
+    // tek kart: 0042 tetikleyicisinin genel metni hattın cümlesiyle güncellenir; eski exam_result türü yazılmaz
+    expect(note).toEqual([{ kind: 'exam_analysed', body: 'Örnek Deneme 1 · TYT Matematik: 5,5 net. En çok zorlandığı konu: Oran–orantı.', payload: expect.objectContaining({ session_id: sessionId, report_document_id: doc.id, url: `/veli/rapor/${doc.id}`, dedupe_key: `session:${sessionId}` }) }]);
+    expect((await tmp.pool.query(`select count(*)::int as n from public.notifications where kind = 'exam_result'`)).rows[0]!.n).toBe(0);
 
     // llm_calls: sahte çağrılar deftere yazıldı (3 sınıflama + 2 OCR + 1 anahtar + 1 optik + 1 rapor)
     const calls = (await tmp.pool.query(`select route, count(*)::int as n from public.llm_calls where ref_id = $1 group by route order by route`, [sessionId])).rows;
@@ -344,12 +346,15 @@ describe.skipIf(!live)('Deneme analizi: submit_exam_upload → exam.analyse → 
     return dir;
   }
 
-  /** Bildirim yazımını bir kez düşürür (geçici tablo + tetikleyici; iş bitince hepsi kaldırılır). `disarm` düşürmeyi keser. */
+  /**
+   * Bildirim yazımını bir kez düşürür (geçici tablo + tetikleyici; iş bitince hepsi kaldırılır). `disarm` düşürmeyi keser.
+   * Tetikleyici security definer: yazım emit_notification'ın (SECURITY DEFINER) sahibi rolüyle olur.
+   */
   async function failNotifications<T>(fn: (disarm: () => Promise<void>) => Promise<T>): Promise<T> {
     await tmp.pool.query(
       `create table public.zz_notify_fail (x int);
        insert into public.zz_notify_fail values (1);
-       create function public.zz_notify_fail() returns trigger language plpgsql as $$ begin if new.kind = 'exam_result' and exists (select 1 from public.zz_notify_fail) then raise exception 'test: bildirim yazılamadı'; end if; return new; end $$;
+       create function public.zz_notify_fail() returns trigger language plpgsql security definer as $$ begin if new.kind = 'exam_analysed' and exists (select 1 from public.zz_notify_fail) then raise exception 'test: bildirim yazılamadı'; end if; return new; end $$;
        create trigger zz_notify_fail before insert on public.notifications for each row execute function public.zz_notify_fail();`,
     );
     try {
@@ -546,7 +551,7 @@ describe.skipIf(!live)('Deneme analizi: submit_exam_upload → exam.analyse → 
       expect(await run()).toMatchObject({ status: 'done', diagnosesQueued: 4 });
     });
     expect((await tmp.pool.query('select progress from public.exam_sessions where id = $1', [se])).rows[0]!.progress).toMatchObject({ stage: 'done', diagnoses_queued: 4 });
-    expect((await tmp.pool.query(`select count(*)::int as n from public.notifications where kind = 'exam_result' and payload ->> 'session_id' = $1`, [se])).rows[0]!.n).toBe(1);
+    expect((await tmp.pool.query(`select count(*)::int as n from public.notifications where kind = 'exam_analysed' and recipient_id = $2 and payload ->> 'session_id' = $1`, [se, PARENT_PROFILE])).rows[0]!.n).toBe(1);
     // rapor bir kez üretildi: ikinci koşu exam_report çağırmadı, belge tek
     expect(transport.requests.filter((x) => x.route === 'exam_report')).toHaveLength(1);
     expect((await tmp.pool.query(`select count(*)::int as n from public.generated_documents where kind = 'report' and spec ->> 'session_id' = $1`, [se])).rows[0]!.n).toBe(1);

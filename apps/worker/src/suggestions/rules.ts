@@ -20,6 +20,8 @@
  * başlatılabilir kartların arkasında kalıp görünmez olmaz (list_today_suggestions iki bandı ayrı sınırlar).
  */
 
+import { styleSuggestion, type StyleGap } from './styles.js';
+
 export type SuggestionKind =
   | 'practice'
   | 'weekly_homework'
@@ -53,6 +55,8 @@ export interface EnrollmentSignals {
   topMisconception: { tag: string | null; skillId: string; skillName: string; prereqSkillId: string | null; prereqName: string | null } | null;
   homework: { refId: string; source: 'note' | 'lesson_claim'; skillIds: string[]; skillNames: string[]; createdAt: string }[];
   lessonReview: { analysisId: string; lessonId: string; heldAt: string; skillIds: string[]; skillNames: string[] } | null;
+  /** P4: kapsaması en düşük etkin tarz (suggestions/styles.ts). */
+  styleGap?: StyleGap | null;
 }
 
 /**
@@ -309,6 +313,8 @@ export function planSuggestions(sig: StudentSignals): PlannedSuggestion[] {
       });
       ids.forEach((s) => used.add(s));
     }
+    const styleCard = styleSuggestion(e, ei, used, practiced); // P4: "Bu tarzı hiç çözmedin" (suggestions/styles.ts)
+    if (styleCard) push(styleCard);
 
     // (3) eksik analizi: açık yanılgı (asıl sorun ön koşulda olabilir) ya da aralıklı tekrar vadesi
     const mc = e.topMisconception;

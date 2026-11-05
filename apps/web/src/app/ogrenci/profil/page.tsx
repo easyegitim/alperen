@@ -11,6 +11,7 @@ import { GRADE_LABELS, GRADES } from '@/lib/validation';
 import { getPublicEnv } from '@/lib/env';
 import { requireRole } from '@/server/auth';
 import { getMyStudent } from '@/server/queries';
+import { loadGuardianLinks } from '@/server/parent/links';
 
 export const metadata: Metadata = { title: 'Profil' };
 
@@ -23,6 +24,7 @@ export default async function ProfilSayfasi() {
   const { user, displayName } = await requireRole('student', 'admin');
   const student = await getMyStudent(user.id);
   const vapid = getPublicEnv().vapidPublicKey;
+  const links = student ? await loadGuardianLinks(student.id) : [];
   const name = displayName?.trim() || 'Öğrenci';
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
@@ -53,8 +55,15 @@ export default async function ProfilSayfasi() {
         <h2 id="veli-davet" className="text-title-2 m-0 text-ink">
           Velini davet et
         </h2>
-        <p className="text-body m-0 max-w-prose text-ink-muted">Velin gelişimini görebilsin istiyorsan bir davet kodu üret ve ona gönder. Kod tek kullanımlıktır; son kullanma zamanı kodla birlikte gösterilir.</p>
-        <GuardianInvite />
+        <p className="text-body m-0 max-w-prose text-ink-muted">Velin özetleri ve deneme sonuçlarını görür; koçla yazışmalarını görmez. Kod tek kullanımlıktır.</p>
+        {links.length > 0 ? (
+          <ul aria-label="Bağlı veliler" className="text-small m-0 flex list-none flex-col gap-1 p-0 text-ink-muted">
+            {links.map((l) => (
+              <li key={l.id}>{l.label}</li>
+            ))}
+          </ul>
+        ) : null}
+        <GuardianInvite simple />
       </section>
 
       <section aria-labelledby="bildirim" className="flex flex-col gap-3">

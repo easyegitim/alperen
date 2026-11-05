@@ -61,7 +61,7 @@ export default async function HosGeldinPage({ searchParams }: { searchParams: Pr
         <div>
           <h1 className="text-title-1 m-0 text-ink">Hoş geldin</h1>
           <p className="text-body mt-1 mb-0 text-ink-muted">
-            {choice === 'veli' ? 'Çocuğunla bağlantı kurmak için davet kodunu gir.' : 'Öğrenmen’i nasıl kullanacaksın?'}
+            {choice === 'veli' ? 'Çocuğunuzla bağlantı kurmak için davet kodunu girebilirsiniz.' : 'Öğrenmen’i nasıl kullanacaksın?'}
           </p>
           <p className="text-small mt-2 mb-0 text-ink-muted">{user.email}</p>
         </div>

@@ -52,7 +52,7 @@ eskiyse `log.error('outbox aktarılamayan işler birikiyor')` yazılır (üretim
 
 | Süreç | İşler | Zamanlayıcı |
 | --- | --- | --- |
-| `worker` | `noop`, `llm.ping`, `memory.compact`, `dossier.render`, `push.send`, `weekly.summary`, `curriculum.*`, `suggestions.refresh`, `activity.completed`, `conversation.summarize`, `upload.intake`, `diagnosis.run`, `diagnosis.followup`, `exam.analyse`, `exam.report`, `practice.generate`, `practice.prewarm`, `document.generate`, `outbox.drain` | evet |
+| `worker` | `noop`, `llm.ping`, `memory.compact`, `dossier.render`, `push.send`, `weekly.summary`, `curriculum.*`, `suggestions.refresh`, `activity.completed`, `conversation.summarize`, `upload.intake`, `diagnosis.run`, `diagnosis.followup`, `exam.analyse`, `exam.report`, `practice.generate`, `practice.prewarm`, `document.generate`, `outbox.drain`, `notifications.evaluate`, `email.send`, `report.generate` | evet |
 | `pdf` | `pdf.render` (Chromium kurulu imajda) | hayır |
 | `all` | hepsi (yerel geliştirme) | evet |
 
@@ -67,14 +67,17 @@ Seçim: `--process=pdf` bayrağı, yoksa `WORKER_PROCESS`, yoksa `all`.
 | `memory.compact` | `{ student_id?, batch_id?, meta?, hashes?, attempt?, no_chain? }` | 1 | 2 | gece: > 6 KB hafıza dosyaları `memory_compaction` (Sonnet, Batch) ile ≤ 4 KB; gönder → topla (aynı iş, `batch_id`; bitmediyse 10 dk sonra, en çok 24 sa); `PgStore.write(…, 'compact', 'memory-compact', { expectedHash })`: gönderimdeki md5 (`hashes`) tutan dosyaya Batch çıktısı yazılır, Batch sürerken değişen dosya güncel içerikle senkron yeniden sıkıştırılır (öğrenci başına ≤ 20 senkron; fazlası ve topla sırasında çakışan ertesi geceye, `deferred`); yüksüz çalışma gece zincirini kurar |
 | `dossier.render` | `{ student_id, course_id }` | 4 | 3 | `@ogrenmen/llm` `renderDossier`: `render_dossier` RPC → metin → sha256; metin değişince `student_dossier_cache` |
 | `suggestions.refresh` | `{ student_id?, reason? }` | 4 | 3 | öneri motoru (aşağıda); yüksüz: etkin kaydı olan her öğrenci için iş (`debounced('suggestions:<id>')`) |
-| `activity.completed` | `{ student_id, enrollment_id?, course_id?, kind }` | 4 | 3 | etkinlik sonrası `suggestions.refresh` + `dossier.render` |
+| `activity.completed` | `{ student_id, enrollment_id?, course_id?, kind }` | 4 | 3 | etkinlik sonrası `suggestions.refresh` + `dossier.render` + `notifications.evaluate` (ilerleme, çözülen yanılgı; 60 sn debounce) |
 | `conversation.summarize` | `{ conversation_id? }` | 2 | 3 | `conversation_summary` (Haiku): son 30 mesaj dışı (önceki özetten sonrası, ≥ 10 mesaj) → `conversations.summary`, `summary_upto_message_id`; girdi penceresi (60 bin karakter) en eskiden başlar ve kullanıcı turu sınırında biter, özet yalnız pencerenin sonuna kadar ilerler, kalan için hemen yeni tur; yüksüz: sohbet başına iş |
 | `upload.intake` | `{ upload_ids[1..40], kind: own_work \| school_exam, student_id, enrollment_id }` (own_work en çok 4) | 2 | 3 | Yükle ekranı (`submit_upload` RPC'si `enqueue_job` ile atar): Kendi çalışmam → `diagnosis.run` (`singletonKey diagnosis:<ilk yükleme>`); Okul denemesi (eski yol; P2 web'i doğrudan `submit_exam_upload` çağırır) → `submit_exam_upload` ile aynı kayıt (`exams(deneme, uploaded, telifli, processing)` + `exam_sessions(uploaded, grading, upload_ids, progress.stage = classify)` + `audit.events 'exam.upload_intake'` tek SQL deyiminde) → `exam.analyse` (`singletonKey exam:<oturum>`) + "Denemeni inceliyorum" kartı |
 | `diagnosis.run` | `{ upload_ids[1..4], enrollment_id }`; deneme bağlamı `{ upload_ids[0..4], enrollment_id, context: 'exam', exam_response_id, session_id, exam_id, question_no, how_far_text }` | 2 | 3, üstel, 20 sn | Files API (`anthropic_file_id` saklanır, `expires_in_seconds` 90 gün; süresi dolmuş kimlik bir kez yeniden yüklenir; sahte: `fake-file-<id>`) → `solution_diagnosis` (Opus · high; görsel `image`, PDF `document`) → çıktı `audit.events 'diagnosis.raw'`'a (yeniden deneme Opus'u yeniden çağırmaz) → doğrulama (yaprak kazanım, katalog etiketi, adım no; düşenler `analysis.validation`; modelin kazanım sırası `analysis.skill_order`) → `apply_diagnosis` (gözlem + BKT; öneri yükü `{parent_id, name, description, id?}`; otopilot + `ai_draft` müfredatta gözlem yeni yaprağa; `diagnosis.followup` kuyruğa) → Voyage gömmesi (`VOYAGE_API_KEY` yoksa atlanır) → `upload_result` kartı ("Çözümünü inceledim: 3. adımda işlem kuralı."; `copy_key = analysis:<id>`, öneri motoruyla aynı metin: `uploadNotice`) → yüklemeler `ready`; ret (`RefusalError`) ya da şemaya uymayan çıktı (`ParseError`) → `failed` + "Fotoğrafı okuyamadım" kartı (OGR-JOB-143); kalıcı yapılandırma/kimlik/istek hatası → `failed` + "Yüklemeni şu an işleyemedim" + `log.error` (OGR-JOB-146); başka hata son denemede → aynı kart (OGR-JOB-145). Düşen her teşhis `audit.events 'diagnosis.failed'` (`{upload_ids, enrollment_id, failure, reason}`) bırakır; kart `copy_key = upload:<ilk yükleme>`. Aynı küme ikinci kez teşhis edilmez. **Deneme bağlamı** (`src/jobs/diagnosis-exam.ts`; `exam_how_far`, `finish_exam_session`, `exam.analyse` karalama dağıtımı atar): cevap + soru + gizli anahtar (yalnız modele) → görseller (yoksa sorunun kitapçık sayfası) + `<exam_context>` (prompts `examContextText`, solution_diagnosis v2) + soru ve öğrencinin metni veri bloğu → `apply_diagnosis(exam_response_id)` (ağırlık 0, `exam_responses.solution_analysis_id`; Bugün kartı yok); ham çıktı `audit 'diagnosis.raw'` (row_id = cevap); aynı cevap ikinci kez teşhis edilmez; düşerse `audit 'diagnosis.failed'` ({exam_response_id, session_id}) |
 | `diagnosis.followup` | `{ analysis_id, enrollment_id }` | 2 | 3 | `memory_delta` (Haiku) → `applyMemoryDelta` (hafıza aracının işleyicileri, actor `memory-delta`) → `activity.completed`; doğru/okunamayan teşhiste Haiku çağrılmaz |
 | `pdf.render` | `{ html \| htmlRef, output, document_id?, options? }` | `PDF_CONCURRENCY` | 2 | HTML, A4 PDF, Storage, `generated_documents.pdf_path` |
-| `push.send` | `{ notification_id \| user_id+title, ... }` | 4 | 5 | web-push iskeleti (VAPID); 404/410 abonelikleri siler |
-| `weekly.summary` | `{ weekStart? }` | 1 | 2 | iskelet |
+| `push.send` | `{ notification_id \| user_id+title, ... }` | 4 | 5 | web-push (VAPID; `emit_notification` push kanalı + abonelik varsa SQL atar); 404/410 abonelikleri siler; teslim `payload.delivery.push` (sent/dry/none/failed); VAPID yoksa kuru çalışma (aşağıda "Veli ve bildirimler") |
+| `weekly.summary` | `{ attempt? }` | 1 | 2 | Pazar 19:00: memory.compact bitmediyse 15 dk sonra; `parent_summary.md` + weekly_summary bildirimi (aşağıda) |
+| `notifications.evaluate` | `{ kinds?, student_id?, reason? }` | 1 | 2 | kural motoru: saatlik (`5 * * * *`) tüm kurallar + e-posta süpürmesi; olay (`activity.completed`) öğrenci başına ilerleme/yanılgı |
+| `email.send` | `{ notification_id }` | 2 | 4, üstel | Resend; anahtar yoksa kuru çalışma; teslim `payload.delivery.email` |
+| `report.generate` | `{ document_id, student_id?, report_kind?, params?, requested_by? }` | 2 | 3, üstel, 30 sn | veli raporu (`parent_request_report` atar): `report` rotası → doc-render PDF → Storage → rendered → `report_ready` |
 | `practice.generate` | `{ set_id, enrollment_id, curriculum_id?, skill_ids[], count, template_ids[] }` | 4 | 2, üstel, 5 sn | `start_practice` bankada soru bulamayınca atar: şablon → yetmezse LLM → banka + set (aşağıda); son denemede `fail_practice_generation` |
 | `practice.prewarm` | `{ enrollment_id, skill_ids?, per_skill? (8), reason? }` | 2 | 2, üstel, 60 sn | ilk öneri için banka ısıtma (`curriculum.draft` bitişi, `suggestions.refresh`'in ilk `practice` kartı; yaprak kümesi başına saatte bir; ilk kartı ekleyen SQL `app.first_practice_suggestion` da atar: otopilotlu taslak kaydı ve eğitmen yayını `curriculum_publish`, `reason: curriculum_ready`) |
 | `exam.analyse` | `{ session_id, exam_id, enrollment_id?, student_id?, upload_ids[1..40] }` | 2 | 3, üstel, 30 sn (deneme 30 dk) | yüklenen okul denemesinin analizi (aşağıda "Deneme analizi") |
@@ -86,6 +89,15 @@ Seçim: `--process=pdf` bayrağı, yoksa `WORKER_PROCESS`, yoksa `all`.
 | `curriculum.merge` | `{ proposal_id }` | 1 | 3 | kabul edilen birleştirme: taslakta yerinde, yayındaysa yeni sürümde; yayın her zaman eğitmende |
 | `curriculum.proposals.review` | `{ curriculum_id?, limit?, min_age_hours? }` | 1 | 2 | gece: açık öneriler müfredat başına Batch (`proposal_review`) |
 | `curriculum.proposals.collect` | `{ batch_id, meta, proposals }` | 1 | 72 × 10 dk | Batch sonucu: kararlar `payload.review`'a, otopilotta güvenli kabul `curriculum_autopilot_accept` (taslağa) |
+| `style.ingest` | `{ source_id, course_id?, year?, term?, upload_ids? }` | 2 | 3, üstel, 30 sn (deneme 30 dk) | `ingest_exam_source` (0037) atar: çıkmış sınav alımı → kümeleme → tarzlar → öncelik planı (aşağıda "Tarz kütüphanesi") |
+| `style.coverage.refresh` | `{ course_id, reason? }` | 2 | 3 | `style.ingest` sonu (ders başına 60 sn debounce): dersin öğrencilerinin `suggestions.refresh`'i + öncelikli 3 tarzın bankası < 5 ise `style.question_gen` (tarz başına 6 sa'de bir) |
+| `style.question_gen` | `{ style_id, enrollment_id?, count? (5, 1–10), reason? }` | 2 | 2, üstel, 60 sn | tarza özel özgün soru (Opus) → SymPy → yalnız doğrulanan `approved` + `questions.style_id` |
+| `lesson.prepare` | `{ lesson_id, upload_id?, transcript_upload_id?, upload_kind? }` | 2 | 2, üstel, 60 sn (deneme 60 dk) | `register_lesson` (0040) atar: ders medya servisi `/prepare` → ses + ≤ 30 kare Storage'a; hazır transkript varsa içe aktarır (aşağıda "Ders hattı") |
+| `lesson.stt` | `{ lesson_id, audio_path?, frames[] }` | 2 | 2, üstel, 60 sn | servis `/stt` (Groq Whisper; 25 MB parçalama; anahtarsız `OGRENMEN_STT=fake`) → ad temizliği → `write_lesson_transcript` → ses silinir |
+| `lesson.label` | `{ lesson_id, frames[] }` | 2 | 2, üstel, 60 sn | ad temizliği (packages/pii) + `speaker_label` (Sonnet · low, 10 dk pencereler) → temiz, etiketli transkript |
+| `lesson.analyse` | `{ lesson_id, frames[] }` | 2 | 2, üstel, 60 sn | `lesson_analysis` (Opus · high, kareler + transkript + dossier) → `write_lesson_analysis` → `apply_lesson_claims` → bildirim + Bugün → done → kareler silinir; yazılmış analiz transkriptten yeniyse model yeniden çağrılmaz |
+| `lesson.retention` | `{ limit? (100), reason? }` | 1 | 2 | gece 04:15 (`SCHEDULES`; pg_cron sahibiyse 0040'taki `ogrenmen-lesson-retention` 01:15 UTC): takılan dersler (processing, 2 saattir ilerlemiyor, kuyrukta işi yok) `failed`; süresi dolan ham video (90 gün), kalan çıkarılmış ses ve kareler, içe aktarılmış transkript dosyası Storage'dan → `lesson_mark_media_deleted`; liste sınırı dolarsa 1 dk sonra `more` devamı |
+| `memory.apply` | `{ source: 'lesson', lesson_id, course_id, course_code, path, student_ids[], claim_ids[] }` | 2 | 3 | `apply_lesson_claims` (0041) atar: `/memories/courses/<kod>.md` ders bölümü (onaylı, öğrenciye uygun bilgiler) |
 
 Hata semantiği: `PermanentJobError` ya da geçersiz yük yeniden denenmez, doğrudan `dead_letter` kuyruğuna gider (30 gün saklanır). Diğer hatalar kuyruğun politikasıyla (üstel geri çekilme) yeniden denenir; bitince yine `dead_letter`.
 
@@ -199,7 +211,7 @@ modelde kalır.
 | `grade` | optik form `answer_sheet` (çift işaret/okunmayan → boş + uyarı; birden çok form sayfası numaraya göre birleşir) → stash `answers` → `record_exam_answers` → `grade_exam_session` (gözlemler, ustalık, bölüm netleri); hattın `expectedScore`'u (net = doğru − yanlış/4) SQL ile karşılaştırılır | `answer_sheet_pages`, `answers_read`, `answers_double`, `answers_unclear` |
 | `analyse` | `grade_exam_session` yazar (oturum `analysing`) | `questions`, `wrong_blank` |
 | `report` | `exam/produce-report.ts`: `exam_report` (Sonnet, akış; araçlar `get_mastery`, `get_recent_exams` worker tarafında; girdi prompts `examReportUserText`) → modele doğru cevap gitmez (`key: null`; rapor öğrenci ve veliye açık) → özet cümlesi neti taşımıyorsa (sayı sınırlı, "net"e bitişik), metinde anahtar kalıbı varsa ("doğru cevap: C"; `leaksKey`) ya da model kalıcı düşerse deterministik rapor (`exam/report.ts fallbackReport`, aynı şablon) → `@ogrenmen/doc-render` `renderHtml` + `renderPdf` (grafikler: `section_nets`, `skill_map`, `error_causes`, `time_per_question`) → Storage `STORAGE_BUCKET_DOCUMENTS/reports/<öğrenci>/<oturum>.pdf` → `register_generated_document(kind='report', exam_session_id)` | `net`, `card_line`, `report_status` (rendered \| failed) |
-| `done` | Bugün `upload_result` kartı (`session:<id>`, "Deneme sonucun hazır" + `card_line`), veli `notifications` (`exam_result`, in_app, üçüncü kişiyle: "…: 5,5 net. En çok zorlandığı konu: Oran–orantı."; gönderim P6), karalama sayfası varsa yanlış/boşlar için `diagnosis.run` deneme bağlamı (önce yanlışlar, en çok `EXAM_AUTO_DIAGNOSIS_MAX` = 10; sorunun kitapçık sayfası + karalamalar ≤ 4, `exam_responses.work_upload_ids`); yoksa öğrenci sonuç ekranında "Nereye kadar geldim?" (`exam_how_far`) ya da boş nedeni (`exam_blank_reason`) | `diagnoses_queued`, `warnings` (virgüllü kodlar: `page_unreadable`, `page_unknown`, `question_partial`, `question_duplicate`, `question_gap`, `skill_untagged`, `key_low_confidence`, `key_missing`, `answer_double`, `answer_unclear`, `answer_low_confidence`, `score_mismatch`, `report_fallback`, `report_failed`, `no_scratch`). Maliyet, ayrıntılı uyarılar ve bütün koşuların kodları stash `run_meta`'dadır (progress öğrenciye açık) |
+| `done` | Bugün `upload_result` kartı (`session:<id>`, "Deneme sonucun hazır" + `card_line`), veli bildirimi `exam_analysed` (`emit_notification`: kural, kanallar, push/e-posta; anahtar `session:<id>`, 0042 tetikleyicisi önce genel metinle yazdıysa o satır bu cümleyle güncellenir, tek kart; üçüncü kişiyle: "…: 5,5 net. En çok zorlandığı konu: Oran–orantı."), karalama sayfası varsa yanlış/boşlar için `diagnosis.run` deneme bağlamı (önce yanlışlar, en çok `EXAM_AUTO_DIAGNOSIS_MAX` = 10; sorunun kitapçık sayfası + karalamalar ≤ 4, `exam_responses.work_upload_ids`); yoksa öğrenci sonuç ekranında "Nereye kadar geldim?" (`exam_how_far`) ya da boş nedeni (`exam_blank_reason`) | `diagnoses_queued`, `warnings` (virgüllü kodlar: `page_unreadable`, `page_unknown`, `question_partial`, `question_duplicate`, `question_gap`, `skill_untagged`, `key_low_confidence`, `key_missing`, `answer_double`, `answer_unclear`, `answer_low_confidence`, `score_mismatch`, `report_fallback`, `report_failed`, `no_scratch`). Maliyet, ayrıntılı uyarılar ve bütün koşuların kodları stash `run_meta`'dadır (progress öğrenciye açık) |
 | `failed` | okuma hatası (kitapçık yok/okunamadı OGR-EXAM-101, optik form yok/okunamadı OGR-EXAM-102, PDF OGR-EXAM-104; tek sayfanın ret/bozuk çıktısı okuma hatası değildir) ya da kalıcı/son deneme hatası (OGR-JOB-15x): `set_exam_progress('failed')` (oturum, sınav, sayfalar failed) + `audit 'diagnosis.failed'` + "Fotoğrafı okuyamadım" / "Yüklemeni şu an işleyemedim" kartı | `error` (öğrenciye gösterilebilir tek cümle), `error_code` |
 
 - **Yeniden deneme:** her ücretli çağrının çıktısı `audit.events 'exam.stash'` (row_id = oturum, `{key, data}`;
@@ -306,6 +318,174 @@ PLAN-v2 §3.5. SQL tarafı `supabase/migrations/0025_curriculum_builder.sql`.
   tamamlar (önce şablon, sonra yaprak başına bir LLM çağrısı); bitince kaydın bekleyen `needs_generation` setlerini
   bankadan doldurur.
 
+## Tarz kütüphanesi (`src/jobs/style-*.ts`, `src/styles/`, `src/suggestions/styles.ts`; P4, docs/PLAN-v2.md §11)
+
+Eğitmen çıkmış sınav dosyalarını yükler (`ingest_exam_source(course, {year, term, instructor_alias?}, upload_ids)`, 0037)
+→ `style.ingest`:
+
+1. **Sayfalar** (`styles/pages.ts`): Storage'dan indirme; PDF `pdftoppm -r 150 -png` (poppler-utils; dosya başına ≤ 40,
+   toplam ≤ 80 sayfa), fotoğraf ve PDF sayfası sharp normalleştirmesi (EXIF, fotoğrafta eğrilik, ≤ 2576 px, JPEG q85) →
+   Files API (sahte taşımada ağsız kimlik). Storage yoksa her yükleme tek sayfadır (PDF `document` bloğu).
+2. **OCR**: `exam_page_items` (Sonnet; deneme rotası ve promptu aynen) + `archivePageUserText` (yükleme sırası + "Çıkmış
+   sınav arşivi: 2024 final." + açık uçlu soru notu) → `exam/merge.ts` sayfalar arası birleştirme.
+3. **Madde** (exam-item v2): `exam_item_extract` (Sonnet; madde başına, `examItemExtractUserText`): konu, tür
+   (proof/calc/mc/other), sunuş biçimi, tuzak, zorluk, puan, kazanımlar. Kaynak kimliği, numara, yıl ve metin OCR'dan
+   gelir; model yalnız sınıflar. Ret/şemasız çıktıda madde OCR bilgisiyle yazılır. Bilinmeyen kazanım kodu (OGR-CURR-001)
+   gelirse maddeler kazanımsız yeniden yazılır. Gömme `VOYAGE_API_KEY` varsa (`styles/embed.ts`, voyage-3.5, 1024).
+   → `register_exam_items` (kaynak `ocr_done`, yüklemeler `ready`).
+4. **Kümeleme** (`styles/cluster.ts`, v1 `pipelines/kalem` cluster.py'nin Node karşılığı): dersin bütün maddeleri;
+   mesafe = gömme kosinüsü (hepsinde gömme varsa; eşik 0,30) ya da yerel yedek tf-idf kosinüsü (metin + konu + tür/biçim
+   belirteçleri, sayılar `#`; eşik 0,60) − 0,35 × kazanım Jaccard'ı (aynı-kazanım bonusu) − 0,20 (aynı konu) + 0,10
+   (ispat ↔ hesap); ortalama bağlantılı birleştirici kümeleme, deterministik (eşitlikte küçük dizin; küme kimlikleri
+   `k1…` ilk üyeye göre). Var olan tarzlar: eğitmenin onayladığı/etkinleştirdiği tarzın maddeleri yerinde kalır ve
+   kümesini o tarza çeker; taslak tarz en çok ortak maddeyle yeniden kullanılır; kalan kümeler `style_definition`
+   (Sonnet; en çok 40 küme/çağrı) ile adlandırılır. Ad/tanım "tahmin/çıkacak/kesin" içeriyorsa ya da bir üyenin
+   metninden 30+ karakter kopyalıyorsa kullanılmaz (yedek ad: en sık konu → kazanım adı → "Soru tarzı N"; tanım boş).
+   → `upsert_question_styles` (worker taslak yazar, etkinleştiremez; kaynaklar `clustered`; skorlar tazelenir).
+5. **Plan**: `compute_priority_plan` (≥ 2 yıl; yoksa `plan.status = skipped`) → `exam_priority_plans(pending_review)`.
+6. **Kapsama**: `style.coverage.refresh` → öğrencilerin Bugün kartları + tarz bankası ön ısıtması.
+
+Yeniden deneme: OCR ve madde çıktıları `audit.events 'style.stash'` (row_id = kaynak); maddeler yazıldıysa 1–3 atlanır,
+kümeleme ve plan idempotenttir (ikinci koşu ücretli çağrı yapmaz). Kalıcı hata/son deneme: maddesi olmayan kaynak
+`failed`, yüklemeleri `failed`. Gerçek taşımada `check_spend('style.ingest')`; tavan kapalıysa kaynak düşürülmez (`uploaded` kalır), iş 6 saat sonrasına ertelenir (`SpendBlockedError`).
+
+`style.question_gen` (`styles/bank.ts`): tarzın yaprakları (yoksa maddelerinin en sık yaprakları) + tanımı + örnek
+maddelerin **yalnız yapısı** (yıl, tür, biçim, konu, tuzak, zorluk, puan; çıkmış soru metni modele gitmez) + bankadaki
+kökler (yinelenmesin) → `style_question_gen` (Opus; `styleQuestionGenUserText`; yerel figür kipinde code_execution
+kapalı) → yapı denetimi (4–5 tekil şık, kazanım tarzın yaprağı; sahte taşımada fikstür kazanımı tarzın ilk yaprağına
+eşlenir; kök ya da şık dersin arşiv metninden — `exam_items.ocr_text`, yalnız worker okur — 30+ karakter aynen taşıyorsa
+madde atılır: "arşiv metnine çok benziyor", `cluster.ts` `copiesSource`) → figür (varsa ve Storage varsa: kod → SVG → PNG → `figure_check`; `figures` satırı `verified`, olmazsa soru
+atılır) → SymPy (`py/key_verify.py`): **yalnız `verified`** soru `register_practice_questions` ile bankaya
+(`approved`), ardından `questions.style_id` (content_hash ile) ve şekil bağlanır. Kayıt verildiyse öğrencinin
+`suggestions.refresh`'i. `check_spend('style.question_gen')` kapalıysa atlanır.
+
+Bugün kuralı (`suggestions/styles.ts`; `signals.ts`'e `styleGap`, `rules.ts`'e tek satır): kaydın dersinde **etkin**,
+sorulmuş, kazanımlı ve bankasında onaylı tarz sorusu olan tarzlardan hiç çözülmemiş olanı (önce hiç görülmemiş, sonra
+öncelik skoru) → `practice` kartı (rank 15: en zayıf yaprak alıştırmasından sonra), `payload {skill_ids, count: 8,
+minutes: 12, reason: 'style_gap', style_id}`, alt satır "Bu tarzı hiç çözmedin · 8 soru · 12 dk". Kazanımları bugün
+çalışıldıysa ya da başka kartta kullanıldıysa kart yok.
+
+Sahte LLM fikstürleri (`OGRENMEN_LLM=fake`): `apps/worker/test/fixtures/styles/archive.json` (2 yıl × 5 soru, TYT
+yaprakları, 4 tarz) tek kaynaktır; `python3 -I apps/worker/test/fixtures/styles/build.py .` →
+`packages/llm/fixtures/{exam_page_items/arsiv-<yıl>, exam_item_extract/arsiv-<yıl>-<no>, style_definition/arsiv,
+style_question_gen/arsiv-tarz}.json`.
+
+Bilinen boşluklar: `exam_item_extract` ve `style_definition` Batch rotalarıdır ama şimdilik senkron (`batchRetry`)
+çağrılır (Batch gönder/topla `inferred_keys` gibi sonraki iş); `start_practice` (0021) `payload.style_id`'yi okumaz,
+tarz kartı tarzın kazanımlarında set açar ve bankadaki tarz soruları bu kazanımların havuzuna girer (tarz soruları
+öncelikli seçilsin diye DB tarafında `start_practice` eki gerekir); kümeleme ders başına en çok 800 madde.
+
+## Ders hattı (`src/jobs/lessons.ts`, `src/lessons/`; P5, docs/PLAN-v2.md §9; supabase 0039–0041)
+
+Eğitmen kaydı (video, ses ya da hazır transkript) `lessons` kovasına TUS ile yükler ve `register_lesson` çağırır; ders
+`processing` olur, yükleme eğitmen arşivine alınır ve `lesson.prepare` kuyruğa düşer. Her aşama ilerlemeyi
+`lesson_set_progress` ile yazar (`prepare → stt → label → analyse → apply → done | failed`; eğitmen ekranı okur) ve bir
+sonraki işi (`singletonKey <iş>:<ders>`, 120 sn) atar:
+
+1. **prepare** — ders medya servisi (`pipelines/ders`, `LESSON_SERVICE_URL`, `src/lessons/service.ts`) `/prepare`:
+   `ffmpeg -vn -ac 1 -ar 16000` WAV + sahne kareleri (eşik kuralı, ≤ 30 JPEG, ≤ 1280 px). Servisin Storage erişimi
+   varsa (`/healthz` `storage: true`; Fly'da sırlar uygulama geneli) kaynağı kendisi indirir, çıktıları
+   `<sahip>/<ders>/audio.wav` ve `…/frames/frame-NN.jpg`'ye yükler; yoksa servis aynı makinededir: worker kaynağı
+   servisin çalışma köküne (`work_dir`) yazar ve çıktıları oradan Storage'a yükler (90 dk'lık videoda bellek ister:
+   üretimde Storage kipi). Kova MIME listesi kareler için `image/jpeg` içerir (0039; testlerin bellek içi Storage'ı
+   listeyi göçlerden okuyup zorlar: `test/lesson-storage.ts`). Sayaçlar `duration_sec`, `frames_count`, `audio_path`,
+   `media_prefix`. Hazır transkript yüklemesi (`kind = transcript` ya da `transcript_upload_id`) ayrıştırılır
+   (`src/lessons/transcript.ts`: JSON, WebVTT, SRT, düz metin; "Hoca:"/"Öğrenci:" önekleri ve `<v …>` konuşmacı olur)
+   → ad temizliği → `write_lesson_transcript(provider 'upload')` → dosya Storage'dan silinir
+   (`lesson_mark_media_deleted('transcript_file')`) → STT atlanır.
+2. **stt** — servis `/stt`: Groq Whisper large-v3-turbo (`GROQ_API_KEY`; ses 600 sn'lik ≈ 19 MB parçalara bölünür,
+   zamanlar kaydırılır; 429/5xx üç deneme); anahtarsız ortamda servis `OGRENMEN_STT=fake` ile deterministik
+   transkript (`fixtures/ders/lesson-01.transcript.json`, konuşmacısız) döner; ikisi de yoksa `OGR-DERS-008` (sessizce
+   sahteye düşülmez). Adlar STT'den önce okunur (öğrencinin adı yoksa STT de yapılmaz, `OGR-JOB-181`); bölümler ad
+   temizliğinden geçip konuşmacısız yazılır (düz ad veritabanına hiç yazılmaz), çıkarılan ses hemen silinir (`lesson_mark_media_deleted('audio')`;
+   olmazsa gece işi). Konuşma yoksa ders failed ("kayıtta konuşma bulunamadı").
+3. **label** — ad temizliği (`src/lessons/names.ts`, packages/pii TS kaynağı): dersin öğrencileri `[ÖĞRENCİ]`, dersi
+   veren + bağlı eğitmenler `[EĞİTMEN]`, aktif veliler `[VELİ]`, kalıplar `[AD]`; adlar `profiles.display_name`'den
+   yalnız bellekte okunup ad-token hash'ine çevrilir. **Kapalı başarısızlık:** dersin bir öğrencisinin görünen adı
+   yoksa hiçbir model çağrısı yapılmaz, ders failed (`OGR-JOB-181`). Etiketsiz bölümler 10 dakikalık pencerelerde
+   `speaker_label`'a (Sonnet · low · düşünme kapalı; `speakerLabelUserText`) gider; model her bölümün yalnız ilk üç
+   sözcüğünü yazar (çıktı maliyeti), etiketler sırayla ya da başlangıç zamanıyla hizalanır (`alignLabels`). Modele
+   giden her metin son kemerden geçer (`assertNoNames`). Temiz + etiketli transkript `write_lesson_transcript`.
+4. **analyse** — `lesson_analysis` (Opus · high): ≤ 30 kare (base64 görsel) + `lessonAnalysisUserText` (`<lesson_request>`:
+   ders, anonim öğrenci, kare zamanları, açık yanılgılar, önceki onaylı dersin eğitmene sonraki adımı; `<transcript>`)
+   + ders bloğu + (birebir) dossier. Gerçek taşımada `check_spend('lesson_analysis')` kapalıysa failed (`OGR-JOB-183`).
+   Bağlam denetimi (`src/lessons/analysis.ts`): alıntı transkriptte yoksa kanıt düşer, kanıtsız kazanım/yanılgı düşer;
+   yaprak olmayan kazanım ve süre dışı zaman düşer; önceki yanılgı takibi yalnız açık yanılgılara; model metnindeki ad
+   deterministik temizlenir; ders başlığı ve açık yanılgıların eğitmen metni de istemden önce temizlenir ("Ayşe ile
+   türev" dersi düşmez); öğrenci metinlerinde (text_student, for_student, taahhüt) sınav/sonuç öngörüsü ("sınavda …
+   çıkacak", "kesin geçersin", "garanti", "not tahmini"; "önce sonucu tahmin et" serbest), ünlem ya da yüzde varsa bir
+   onarım turu (önceki yanıt asistan turu olarak gider). Yine varsa ders düşmez: sorunlu söz (`promise`) çıkar, diğerleri
+   zaten eğitmen incelemesinde (sayaç `student_text_dropped/held`). Sonraki adım ve ödev/son tarih iddiaları boş güvenle
+   yazılır (0040): eğitmen görmeden öğrenciye, hafızaya ve veliye gitmez. Yeniden deneme: son analiz transkriptten
+   yeniyse model atlanır, `apply_lesson_claims`'ten sürülür; yeni sürüm yazılırsa eskisinin uygulanmışları geri alınır. `lesson_ref`, `student_ref`, `duration_min`,
+   `model_notes` hattındır. `write_lesson_analysis` → `apply_lesson_claims`: güveni dersin eşiğinin (0,80) üstündeki
+   iddialar `observations(kind='lesson')` + BKT; altındakiler ve güvensizler (yanılgı, takip, ders bilgisi) eğitmen
+   incelemesinde. Bekleyen varsa eğitmenlere uygulama içi bildirim (`notifications.kind = 'lesson_review'`, analiz başına
+   bir kez); dersin öğrencilerine `suggestions.refresh` (Bugün `lesson_review` kartı onaylı analizden gelir: inceleme
+   bitince). Son: `done` + sayaçlar (`claims`, `applied`, `pending`, `quotes_dropped`, `frames_used`, maliyet).
+5. **memory.apply** — `apply_lesson_claims` bir şey uyguladıysa atar (`src/lessons/memory.ts`):
+   `/memories/courses/<kod>.md`'de bu dersin bölümü (`<!-- ders:<id> -->`, en yeni 8 ders, ≤ 6 KB) yalnız uygulanmış
+   ve öğrenciye uygun bilgilerden kurulur: izlence konusu, hocanın sınav notu, ortak ödev, kaynak; ders öğrenciye
+   açıksa (`student_visible`) ödev, sonraki adım ve yanılgının öğrenci metni. Gizli derste yalnız işlenen konu girer
+   (ders başlığı da girmez). Eğitmen metni girmez. Öğrenciler `app.lesson_students` kapsamıdır (sınıf dersinde yalnız
+   dersi verene owner bağlı kayıtlılar; `lessonStudents` ve ad temizliği aynı fonksiyonu kullanır).
+6. **lesson.retention** — zamanlayıcıdan gelir (`SCHEDULES` 04:15 İstanbul; pg_cron sahibiyse 0040'taki cron
+   eşleniği); iş kendini zincirlemez (yalnız liste sınırı dolunca `more` devamı). Önce takılan dersler: `processing`,
+   ilerlemesi `STALE_HOURS` (2) saattir yazılmamış ve pg-boss'ta o derse ait bekleyen/çalışan `lesson.*` işi olmayan
+   ders (işçi son denemede öldü: dağıtım, OOM) `failed` olur ("İşlem yarıda kaldı"); `retry_lesson` aynı eşikteki
+   `processing` dersi de kabul eder. Sonra `lesson_retention_due` (video, ses, kareler, transkript dosyası; `paths[]`) →
+   Storage silme → `lesson_mark_media_deleted`. Kareler analiz bitince `lesson.analyse` tarafından silinir; düşen derste
+   ses ve kareler `guarded` içinde hemen silinir.
+
+Hata: servis 4xx (bozuk/ses akışı olmayan kayıt, geçersiz istek), ad temizliği, ret/şema hatası kalıcıdır; geçici hata
+(servis kapalı, 429/5xx) pg-boss ile yeniden denenir; son denemede ya da kalıcı hatada `lesson_set_progress('failed',
+{error})` ("Kayıt hazırlanamadı: OGR-DERS-001 kayıtta ses akışı yok"), türetilmiş medya (`<sahip>/<ders>/audio.wav`,
+`frames/`) Storage'dan silinir ve servis çalışma dizini silinir. Eğitmen ders sayfasındaki "Yeniden dene" ile
+`retry_lesson`'ı çağırır: aynı yüklemelerle `lesson.prepare` yeniden atılır (dosya yeniden yüklenmez).
+
+## Veli ve bildirimler (`src/notifications/`, `src/reports/`; P6, docs/PLAN-v2.md §10; supabase 0042–0044)
+
+Kural motorunun SQL yarısı (varsayılanlar, alıcının kuralı, `emit_notification`, olay tetikleyicileri exam_analysed ve
+instructor_note_shared) supabase 0042'dedir; worker zamanlanmış kuralları değerlendirir (`src/notifications/engine.ts`).
+
+| Kural | Ne zaman (alıcının saat diliminde, `profiles.tz`) | Tekilleştirme |
+| --- | --- | --- |
+| `weekly_summary` | `weekday` (0 = Pazar) gününde saat ≥ `hour` (19); işçi bir saat kaçırsa da aynı gün yetişir | hafta başına bir (`week:<öğrenci>:<pazartesi>`) |
+| `inactivity` | son etkinlikten (`app.child_last_activity`) ≥ `days` (5) tam gün; hiç etkinlik yoksa yok | sessizlik başına bir (son gönderim son etkinlikten önceyse yeniden) |
+| `improvement` | (a) yaprak `leaf_p` (0,8) eşiğini `min_evidence` (5) kanıtla geçti (`mastery_history`, son 8 gün; güncel p eşik üstünde) (b) son denemenin neti bir öncekinden ≥ `weekly_net_delta` (4) yüksek | kazanım / oturum başına bir kez (geçmiş anahtar denetimi) |
+| `misconception_resolved` | son 7 günde çözülen yanılgı | yanılgı başına bir kez |
+
+Yazım her zaman `emit_notification`'dır (kural kapalıysa ya da 24 saat içinde aynı anahtar varsa null). Kanallar kuraldan:
+`push` varsa ve alıcının aboneliği varsa SQL aynı işlemde `push.send` atar; `email` varsa worker `email.send` atar (SQL
+tetikleyicilerinin yazdığı e-posta kanallı satırlar saatlik süpürmeyle yakalanır). Teslim `payload.delivery.<kanal>` =
+{status: sent | dry | none | failed, at, detail?}; `sent_at` yalnız gerçek gönderimde dolar. Kanal sütununa (`channels`,
+CHECK in_app | push | email) `push:dry` gibi değer yazılamadığı için kuru çalışma işareti `payload.delivery`'dedir.
+
+**Haftalık özet** (`weekly.summary`, Pazar 19:00; alıcı başka gün/saat seçtiyse saatlik `notifications.evaluate`):
+bu gecenin `memory.compact`'i kuyruktaysa 15 dk sonra yeniden (en çok 8 kez) → velisi olan her aktif öğrenci için
+`parent_child_summary` (worker güvenilir çağıran) → `/memories/parent_summary.md` (deterministik, ≤ 1,5 KB, actor
+`memory-compact`, ad/p/koç sohbeti yok; değişmediyse yazılmaz) → bildirim metni `notification_copy` (Haiku 5.5 · low;
+`<notification>` JSON, şablon dahil) → kural dışıysa (ünlem, yüzde, emoji, uzunluk, girdide olmayan sayı) ya da çağrı
+düşerse şablon ("Bu hafta yaklaşık 4,5 saat çalıştı ve 38 soru çözdü. … Ona bu hafta en çok hangi konuyu kolay
+bulduğunu sorabilirsiniz.").
+
+**Kuru çalışma:** VAPID yoksa `push.send` iletiyi günlüğe yazar (uç nokta yalnız ana makine adıyla) ve teslimi `dry`
+yapar; `RESEND_API_KEY`/`EMAIL_FROM` yoksa `email.send` aynısını yapar (adres maskeli: `v***@alan`). Anahtarlar gelince kod
+değişmeden gerçek gönderim başlar. E-posta adresi `auth.users.email`'dir (yalnız worker okur).
+
+**Veli raporu** (`report.generate`, `src/reports/`): belge `generating` → veri (`data.ts`: `parent_*` RPC'leri ve
+`app.child_study_stats`, velinin saat diliminde; ad, p, soru, cevap ve anahtar yok) + deterministik grafik verisi
+(`daily_time`, `weekly_time` time_per_question; `skill_bands` style_coverage — yalnız bant kelimesi; `section_nets`,
+`exam_nets` score_by_section) → `report` rotası (Sonnet 5.5 · medium, report-ast, akış; okuma araçları bant düzeyinde;
+system[1] ders bloğu, dossier yok) → temizlik (izinsiz grafik atılır, başlık/meta hattın; anahtar kalıbı, yüzde, ünlem
+ya da emoji varsa deterministik rapor) → doc-render rapor şablonu → PDF → Storage `documents/reports/<öğrenci>/<belge>.pdf`
+→ `register_generated_document` (rendered; `parent_reports` hazır sayar) → isteyen veliye `report_ready`. Bilerek
+`document_set_status('ready')` değil: o yol öğrenci belgelerinin yayın kapısıdır (doğrulama merdiveni + Bugün kartı).
+
+Testler: `test/notifications.test.ts` (kurallar, saat dilimi, tekilleştirme, şablon/Haiku metni, kuru çalışma, Resend,
+rapor temizliği ve yedek rapor), `test/notifications.live.test.ts` (geçici DB + gerçek pg-boss: haftalık özet → veli
+bildirimi, push/e-posta `dry`; ilerleme; `parent_request_report` → rapor PDF Storage'da → `report_ready`).
+
 ## Öneri motoru (`src/suggestions/`, docs/PLAN-v2.md §13)
 
 `signals.ts` öğrenci başına sinyalleri okur (yalnız kimlik, kod, sayı, kısa ad; hafıza/sohbet/yükleme içeriği yok),
@@ -349,6 +529,8 @@ pg-boss `schedule`, saat dilimi `Europe/Istanbul`:
 
 - `memory.compact`: her gece 03:00 (`0 3 * * *`)
 - `weekly.summary`: pazar 19:00 (`0 19 * * 0`)
+- `notifications.evaluate`: her saat :05 (`5 * * * *`; pg_cron sahipliğinde kurulmaz: 0016_cron.sql'e eklenmesi gerekir, bkz. "Veli ve bildirimler")
+- `lesson.retention`: her gece 04:15 (`15 4 * * *`; pg_cron eşleniği 0040 `ogrenmen-lesson-retention` `15 1 * * *` UTC)
 
 Gece zinciri (`NIGHTLY_CHAIN`): pg_cron ve bu süreç yalnız 03:00 `memory.compact`'ı zamanlar (0016_cron.sql ile birebir);
 yüksüz `memory.compact` hemen `conversation.summarize`'ı ve 03:30'a `suggestions.refresh`'i kuyruğa atar. Böylece
@@ -386,6 +568,9 @@ Tam liste ve açıklama: `.env.example`.
 | `PDF_CHROMIUM_PATH`, `PDF_CONCURRENCY` | PDF (`pdf.render`); deneme raporu `@ogrenmen/doc-render` kendi Chromium'unu (`PLAYWRIGHT_BROWSERS_PATH`) açar |
 | `EXAM_AUTO_DIAGNOSIS_MAX` (10), `EXAM_KEYS_BATCH` (`1`: anahtar çıkarımı Batch) | deneme analizi |
 | `OGRENMEN_FIGURES` (`auto` \| `code_execution` \| `local`) | belge figürleri (varsayılan `auto`: gerçek anahtarla code_execution, sahte LLM'de yerel; `local` model kodunu OS yalıtımında worker'da çalıştırır) |
+| `RESEND_API_KEY`, `EMAIL_FROM`, `OGRENMEN_SITE_URL` | e-posta kanalı (`email.send`); anahtar yoksa kuru çalışma. Site adresi e-postadaki "Uygulamada aç" bağlantısı |
+| `OGRENMEN_NOTIFICATION_COPY` (`template`) | haftalık bildirim metninde Haiku'yu kapatır (varsayılan `notification_copy`, kurala uymazsa şablon) |
+| `LESSON_SERVICE_URL` (`http://127.0.0.1:8711`), `LESSON_SERVICE_TOKEN` | ders medya servisi (pipelines/ders); belirteç servis tarafında `OGRENMEN_DERS_TOKEN` ya da aynı ad |
 
 ## Dağıtım
 
@@ -394,7 +579,10 @@ docker build -f apps/worker/Dockerfile -t ogrenmen-worker .     # bağlam: depo 
 fly deploy -c apps/worker/fly.toml --dockerfile apps/worker/Dockerfile
 ```
 
-`fly.toml`: iki süreç grubu (`worker`, `pdf`), ikisi de iç port 8080 ve `/healthz` denetimi; dışarı açık hizmet yok. Sırlar `fly secrets set` ile.
+`fly.toml`: üç süreç grubu: `worker`, `pdf` (iç port 8080, `/healthz`) ve `ders` (ders medya servisi,
+`python3 -I …/service.py --host :: --port 8711`, ffmpeg imajda; worker `LESSON_SERVICE_URL =
+http://ders.process.ogrenmen-worker.internal:8711`); dışarı açık hizmet yok. Sırlar `fly secrets set` ile (`GROQ_API_KEY`,
+`LESSON_SERVICE_TOKEN` dahil; uygulama geneli olduğundan ders servisi Storage'a kendisi erişir).
 
 ## Testler
 
@@ -410,6 +598,8 @@ fly deploy -c apps/worker/fly.toml --dockerfile apps/worker/Dockerfile
 - `test/exam.live.test.ts`: geçici veritabanı + gerçek pg-boss + sahte LLM + bellek içi Storage + gerçek doc-render PDF: öğrenci JWT'si → `submit_exam_upload` → `exam.analyse` → done < 60 sn (yerelde ~4 sn): 10 soru (5. soru iki sayfada, 3. soruda şekil kırpımı), kazanımlar, çıkarılmış anahtar, net 5,5, 8 gözlem + ustalık (kazanımsız 2 soru gözlemsiz), rapor PDF Storage'da, kart, veli bildirimi, `llm_calls`; öğrenci görünümünde anahtar yok; `exam_how_far` → deneme bağlamlı teşhis; karalama dağıtımı; uygulama içi aynı deneme → `exam.report`; yüklenen anahtar sayfası ve yayıncı eşleşmesi (çıkarım çağrılmaz; başka kişinin yüklemesi, varsayılan başlık, farklı kökler eşleşmez); okunamayan sayfalar → failed + kart; tek sayfanın bozuk çıktısı → done + `page_unreadable`; çıkarım reddi → done + `key_missing`; PDF → OGR-EXAM-104; `EXAM_KEYS_BATCH` (bitmeyen Batch → 120 sn sonra yeniden kuyruk, `plan`'dan süren ikinci koşu, 6 sa sonra senkron); telifli denemede `question_text` null
 - `test/document.test.ts`: içerik stüdyosu (exam → AST, blok çıkarma/yeniden numaralama, birleştirme, LaTeX → SymPy, kapsam bölümleri ve zorluk bantları; figür kipi seçimi; yerel matplotlib figürü + kum havuzu retleri (sympy `S('…')` kaçışı, `DataSource.open`, `matplotlib.animation`, `numpy.f2py`, `print_svg`) + sonsuz döngü/uyku ≤ 11 sn, bellek sınırı + yalıtımsız model kodu çalışmaz + boş/küçük SVG + figure_check uyuşmazlığı ve önbellek; OS yalıtımı (kullanıcı ad alanı varsa): kardeş sürecin ve worker'ın `environ`'u okunamaz, tek pid, ağ kapalı, `umount` olmaz, `/home` boş; merdiven: temiz not, SymPy uyuşmazlığında yalnız o soru yeniden istenir (saklanan verification'da anahtar ayrıntısı yok), hak bitince soru/kutu çıkar ve not kişisel sayılmaz, kutusuz kişisel not `@callout` ile istenir, doğrulayıcı çalışmazsa skipped + deneme incelemeye, çizilemeyen figür çıkar, code_execution'da inmeyen figür yerelde çalışmaz, Haiku kişiselleştirme bulgusu, sorusuz deneme fail; iş: ders geneli not → PDF + HTML Storage'da, durum geçişleri, incelemeye döner; code_execution yolu (Files'tan inen `figure_<n>.svg` → via code_execution, konteyner yeniden üretimde aynı, yerel çalışmaz, önceki iş denemelerinin regen kayıtları hakkı yemez); müfredatsız belge → failed + Türkçe neden + Storage dosyaları silinir)
 - `test/document.live.test.ts`: geçici veritabanı + gerçek pg-boss + sahte LLM + yerel matplotlib + gerçek PDF: öğrenci `request_document('notes')` → ready < 60 sn (yerelde ~5 sn; figür SVG, `patterns.md:2` / 19 Ekim kutusu, Storage'da PDF/HTML, "Rasyonel sayılar notun hazır" kartı, bildirim, `llm_calls`, Belgelerim); deneme → exams + 10 soru (8, 9 SVG şekilli) + anahtarlar secure'da, öğrenci oturumda anahtarsız görür, öğrenci JWT'siyle `verification::text`'te "doğru şık"/`canonical_expr`/anahtar değeri yok, "Denemen hazır"; eğitmen isteği → review + bildirim → onay → yayın; bozuk anahtarlı set → 2 yeniden üretim turu (4 regen kaydı) → failed + Türkçe neden, AST silinir
+- `test/styles.test.ts`: kümeleme (sentetik arşivde beklenen 4 tarz, deterministik, sıra bağımsız, kazanım bonusu, gömme yolu), var olan tarzlarla eşleme, kod/ad kuralları (öngörü sözcüğü, 30+ karakter kopya), skor formülü, PDF → PNG (pdftoppm), fikstür ↔ arşiv tutarlılığı, tarza özel üretim eşlemesi, Bugün tarz kartı; `test/styles.live.test.ts`: geçici veritabanı + sahte LLM + bellek Storage + SymPy: eğitmen `ingest_exam_source` 2024 PDF → 5 madde, 4 taslak tarz, plan atlanır → 2025 fotoğraf → 10 madde, yeni tarz yok, plan pending_review (skor SQL = TS) → yeniden çalıştırma ücretsiz → `style.coverage.refresh` → `style.question_gen` 3 doğrulanmış soru `style_id` ile (çıkmış metin modele gitmez, yinelenmez) → tarz etkin → "Bu tarzı hiç çözmedin" kartı; öğrenci görünümünde soru metni yok
+- `test/lessons.test.ts`: ders hattı (analiz bağlam denetimi: alıntı, kısaltma, yaprak, süre, açık yanılgı, ad, öğrenci metni; hazır transkript JSON/VTT/SRT/metin; etiket hizalama; ad temizliği; hafıza bölümü ve sınırları; servis istemcisi 4xx/5xx; prepare → stt (yerel kip) ve label sahte veritabanıyla; öğrencinin adı yoksa model çağrılmaz); `test/lessons.live.test.ts`: geçici veritabanı + gerçek pg-boss + gerçek ders servisi (`python3 -I`, ffmpeg, sahte STT) + sahte LLM + bellek Storage: eğitmen `register_lesson` (10 sn video) → done (~10 sn): 10 kare, ses silindi, temiz etiketli transkript, rasyonel (0,8) gözlem + BKT, denklem (0,6) ve yanılgılar incelemede, eğitmen bildirimi, `llm_calls`, ders hafızası; eğitmen onayı → `lesson_review` kartı; hazır VTT transkripti (STT yok); ses akışı olmayan video → failed + neden; `lesson.retention` ham videoyu siler
 - `test/startup-checks.test.ts`: başlangıç denetimleri (sahte veritabanı: ön denetim, rol yetkileri, kuyruk açma, enqueue_job sahibi + `auto`/`off` yetki, deneme bloğu, outbox; SQL göçlerinin attığı her ad `REQUIRED_QUEUES`'ta) ve `drainOutbox` (aynı işlem, kayıt noktası, kuyruksuz satır kalır)
 - `test/startup.live.test.ts`: geçici veritabanı + gerçek pg-boss: denetimler geçer (sahibe yetki verilir, deneme satırı kalmaz, `/healthz` 200); sahibin yetkisi alınınca SQL işi outbox'a düşer, `outbox.drain` aynı kimlikle aktarır, iş tamamlanır, zamanlayıcı çalışır; `WORKER_PGBOSS_GRANT=off` → `StartupCheckError` (78) + `/healthz` 503 `degraded`; pgboss'ta yetkisiz giriş rolüyle `src/index.ts` 78 ile çıkar
 - `test/boss.live.test.ts`: yerel Postgres'te geçici şema (`pgboss_t_*`, sonunda silinir); `OGRENMEN_LIVE=1` ile (`bun run test:live`)

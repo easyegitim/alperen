@@ -21,6 +21,9 @@ export * from './registry.js';
 export * from './exam-input.js';
 export * from './content-input.js';
 export * from './figure-style.js';
+export * from './style-input.js';
+export * from './lesson-input.js';
+export * from './parent-input.js';
 
 let defaultRegistry: PromptRegistry | null = null;
 

@@ -73,9 +73,18 @@ export const getExamSessionsInput = z.object({
   limit: z.number().int().min(1).max(10).optional().describe('En çok kaç deneme oturumu (1..10; varsayılan 5)'),
 });
 
+/**
+ * Veli rapor isteği: RPC `parent_request_report(p_kind, p_params)` biçimine birebir eşlenir (supabase 0043). Sınırlar
+ * veritabanında yine denetlenir (OGR-REPORT-001/002: günde en çok 3 rapor, başarısızlar sayılmaz).
+ */
 export const requestReportInput = z.object({
-  topic: z.string().describe('Velinin istediği raporun konusu'),
-  period: z.enum(['week', 'month', 'term']).describe('Rapor dönemi'),
+  kind: z
+    .enum(['weekly', 'exam', 'topic', 'trend', 'custom'])
+    .describe('weekly: bu haftanın raporu; exam: bir deneme oturumunun raporu (session_id); topic: bir konu (topic); trend: son haftaların gidişi (weeks); custom: velinin kendi sorusu (question)'),
+  topic: z.string().max(120).optional().describe('Yalnız topic: konu, velinin sözleriyle (ör. "rasyonel sayılar")'),
+  session_id: z.string().optional().describe('Yalnız exam: get_exam_sessions sonucundaki oturum kimliği'),
+  weeks: z.number().int().min(2).max(26).optional().describe('Yalnız trend: kaç hafta geriye (varsayılan 8)'),
+  question: z.string().min(5).max(500).optional().describe('Yalnız custom: velinin raporda cevap aradığı soru'),
 });
 
 /**
@@ -94,6 +103,7 @@ export const requestDocumentInput = z.object({
 });
 
 export type RequestDocumentInput = z.infer<typeof requestDocumentInput>;
+export type RequestReportInput = z.infer<typeof requestReportInput>;
 
 export interface ToolInputs {
   request_document: z.infer<typeof requestDocumentInput>;
@@ -192,7 +202,10 @@ const CLIENT_TOOLS: { [K in ClientToolName]: ClientToolSpec<K> } = {
     strict: true,
   },
   request_report: {
-    description: 'Hazır raporlarda olmayan bir konu istendiğinde yeni rapor üretimini kuyruğa alır; rapor hazır olunca veliye bildirim gider.',
+    description:
+      'Veli açıkça bir rapor istediğinde ve get_reports\'taki hazır raporlar bunu karşılamıyorsa çağır: raporu arka planda ' +
+      'hazırlatır, hazır olunca veliye bildirim gider ve Özet\'te görünür. Günde en çok üç rapor istenebilir; sınır dolarsa ' +
+      'araç bunu söyler, veliye yarın yeniden isteyebileceğini anlat. Raporun içeriğini kendin yazma.',
     schema: requestReportInput,
     strict: true,
   },

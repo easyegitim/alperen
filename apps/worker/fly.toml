@@ -1,5 +1,7 @@
-# Fly.io: bir uygulama, iki süreç grubu. Dağıtım (depo kökünden): fly deploy -c apps/worker/fly.toml --dockerfile apps/worker/Dockerfile
-# Sırlar `fly secrets set` ile (DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY, VAPID_*); dosyaya yazılmaz.
+# Fly.io: bir uygulama, üç süreç grubu (worker, pdf, ders). Dağıtım (depo kökünden): fly deploy -c apps/worker/fly.toml --dockerfile apps/worker/Dockerfile
+# Sırlar `fly secrets set` ile (DATABASE_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY,
+# LESSON_SERVICE_TOKEN, VAPID_*); dosyaya yazılmaz. Sırlar uygulama geneli olduğundan ders servisi Storage'a kendisi erişir
+# (kaynak videoyu indirir, ses + kareleri yükler; büyük video worker belleğine girmez) ve Groq'u çağırır.
 app = "ogrenmen-worker"
 primary_region = "fra"
 # Süren işlere kapanışta süre tanınır (SHUTDOWN_TIMEOUT_MS 30 sn). Kök düzeyde olmalı ([deploy] altında değil).
@@ -15,10 +17,13 @@ kill_timeout = 45
   HEALTH_PORT = "8080"
   LOG_LEVEL = "info"
   STORAGE_BUCKET_DOCUMENTS = "documents"
+  # Ders medya servisi (pipelines/ders): `ders` süreç grubunun iç ağ adresi (6PN, IPv6)
+  LESSON_SERVICE_URL = "http://ders.process.ogrenmen-worker.internal:8711"
 
 [processes]
   worker = "node --import tsx src/index.ts --process=worker"
   pdf = "node --import tsx src/index.ts --process=pdf"
+  ders = "python3 -I /app/pipelines/ders/src/ogrenmen_ders/service.py --host :: --port 8711"
 
 # Dışarıya açılan hizmet yok: yalnız Fly iç sağlık denetimi (internal_port) ve iç ağ.
 [[services]]
@@ -51,6 +56,21 @@ kill_timeout = 45
     method = "get"
     path = "/healthz"
 
+[[services]]
+  processes = ["ders"]
+  internal_port = 8711
+  protocol = "tcp"
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [[services.http_checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "get"
+    path = "/healthz"
+
 [[vm]]
   processes = ["worker"]
   size = "shared-cpu-1x"
@@ -60,6 +80,12 @@ kill_timeout = 45
   processes = ["pdf"]
   size = "shared-cpu-2x"
   memory = "2gb"
+
+# ffmpeg 90 dakikalık kaydı çözerken CPU ister; geçici disk kaynağı + WAV + kareleri tutar (iş sonunda silinir).
+[[vm]]
+  processes = ["ders"]
+  size = "shared-cpu-2x"
+  memory = "1gb"
 
 [deploy]
   strategy = "rolling"

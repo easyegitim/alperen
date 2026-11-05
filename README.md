@@ -97,6 +97,24 @@ belgeler `review` durumuna düşer ve eğitmen `/egitmen/icerik` ekranında onay
 `EXPECTED_MODULES` listesi diskteki 15 `check.sh` ile birebir; betik testleri (check-all, secret-scan) 48/48 geçti.
 Sonuç (yazım anı, tam koşu bitmeden): 6 kök adımı, `apps/web` ve `apps/worker` PASS; `content/tyt-matematik` pytest adımı bu turda bitmedi, kalan modüller koşulmadı. Tam `--quick` sonucu yeniden koşulmalı.
 
+**P4–P6 (çalışma ağacında, commit edilmedi; üç hat paralel yazıldı).** Bu paragraf yazım anındaki dosya durumunu kaydeder,
+doğrulama sonucunu değil: `bash scripts/check-all.sh --quick` bu metinden sonra doğrulama ajanı tarafından koşulur ve sonucu
+oraya yazılır. Göç aralıkları: P4 0036–0038, P5 0039–0041, P6 0042–0044; testler `supabase/tests` 24–26, 27–29, 30–32.
+
+| Faz | Çalışma ağacında olanlar | Kalan |
+|---|---|---|
+| P4 Tarz ve tahmin | çıkmış sınav alımı v2, tarz kümeleme ve kütüphane (`apps/worker/src/styles/`, işler `style.ingest`, `style.question_gen`, `style.coverage.refresh`), öncelik planı (`suggestions/styles.ts`, 0038), tarz UI (`apps/web/src/components/styles/`, `/egitmen/soru-tarzlari`), prompt'lar `style_definition` ve `style_question_gen` | eğitmen onayı ve gerçek model ile tahmin kalitesi; canlı kip |
+| P5 Dersler | ders kayıt hattı (`apps/worker/src/lessons/`, iş `lessons`), ders servisi `pipelines/ders/src/ogrenmen_ders/service.py` (ffmpeg, STT adaptörü, `OGRENMEN_STT`), eğitmen ekranı `/egitmen/dersler`, iddia incelemesi ve `lesson_analysis` prompt'u; v1 ders modülünün dosyaları çalışma ağacında silinmiş | gerçek Groq ile döküm; v1 kalıntılarının temizliği; canlı kip |
+| P6 Veli ve bildirimler | veli ajanı (`apps/web/src/server/parent/`, `/api/parent-chat`, `parent_chat` v2), kural motoru ve bildirim metni (`apps/worker/src/notifications/`, `notification_copy`), e-posta (`email-send`, kuru çalışma), rapor işi (`report-generate`, `report` prompt'u) | web-push ve Resend gerçek anahtarla; veli sohbeti gerçek model ile |
+
+Modül sayımı diskle eşleşir: 15 `check.sh` (kök 6 adım + 15 modül = 21 adım); `scripts/tests/test_check_all.py` içindeki
+`EXPECTED_MODULES` listesi bu 15 yolla birebir, bu turda değişmedi. P4–P6 için yeni `check.sh` eklenmedi; yeni işler
+`apps/worker/src/jobs/`, rotalar `packages/llm/src/routes.ts` ve prompt'lar `packages/prompts` içinde kendi dosyalarındadır.
+
+**P4–P6 kapsamındaki boşluklar:** gerçek anahtar yok (Anthropic, Groq, Voyage, VAPID, Resend); barındırılan Supabase
+duman testi yok (GoTrue, PostgREST, Storage ve Realtime yalnız yerel köprünün alt kümesiyle denenir); `apps/worker/.env.example`
+içinde `GROQ_API_KEY`, `VOYAGE_API_KEY` ve `OGRENMEN_STT` yok (ortam tablosu `docs/runbook/kurucu.md` §6'da).
+
 **P3 kapsamında henüz kapanmayanlar:** PLAN §14 P3 geçiti (eğitmen incelemeli 10 not + 3 deneme, doğrulanmamış anahtar 0,
 tipografi kontrol listesi) gerçek modelle koşulmadı. `code_execution` figür yolu gerçek anahtarla denenmedi (konteyner,
 Files API ile çıktı indirme, container yeniden kullanımı); yerel figür yolu sahte kipte doğrulandı.

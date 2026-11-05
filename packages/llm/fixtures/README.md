@@ -43,3 +43,35 @@ Notlama (TYT, doğru − yanlış/4; çift işaret boş): doğru 1, 2, 3, 6, 8, 
 
 Figür kodları `@ogrenmen/prompts` `FIGURE_PREAMBLE` ile yerel matplotlib'de çalışır ve bayt bayt aynı SVG üretir
 (`packages/prompts/test/content-input.test.ts`); anahtarlar SymPy ile tek doğru şıkka eşittir.
+
+### Tarz kütüphanesi (P4)
+
+`apps/worker/test/fixtures/styles/archive.json` (2 yıl × 5 soru, TYT yaprakları, 4 tarz) tek doğruluk kaynağıdır;
+`python3 -I apps/worker/test/fixtures/styles/build.py .` yazar. `arsiv-` önekli dosyalar deneme tutarlılık testinin
+(`test/exam-routes.test.ts`) dışındadır.
+
+| rota | dosya | eşleme | içerik |
+|---|---|---|---|
+| `exam_page_items` | `arsiv-2024`, `arsiv-2025` | `arşivi: <yıl>` + `sayfa 1/1.` | sayfadaki 5 açık uçlu soru |
+| `exam_item_extract` | `arsiv-<yıl>-<no>` (10) | `arşivi: <yıl>` + `madde no: <no>.` | exam-item v2 (konu, calc, biçim, tuzak, zorluk, puan, kazanım) |
+| `style_definition` | `arsiv` | — (düz) | k1…k4 → kesir-islem-onceligi, sayi-denklem-kurma, uslu-ifade-sadelestirme, tablolu-indirim-problemi |
+| `style_question_gen` | `arsiv-tarz` | `tarza özel soru isteği` | 3 soru (2 mcq, 1 numeric), anahtarlar SymPy ile doğrulanır |
+
+### Ders hattı (P5)
+
+`fixtures/ders/lesson-01.transcript.json` (10 bölüm, 20 sn, "Elif" adı geçer) tek doğruluk kaynağıdır; ders servisi
+`OGRENMEN_STT=fake` iken bu bölümleri konuşmacısız döner, worker adı `[ÖĞRENCİ]` yapar.
+
+| rota | dosya | eşleme | içerik |
+|---|---|---|---|
+| `speaker_label` | `01-ders-01` | `<lesson_transcript_window>` | 10 bölüm EĞİTMEN/ÖĞRENCİ dönüşümlü; metin ilk üç sözcük (temizlenmiş) |
+| `lesson_analysis` | `02-ders-v2` | `<lesson_request>` | v2 (course_insights: izlence konusu + ödev); rasyonel 0,8 (eşikte, uygulanır), denklem 0,6 (incelemede), 2 yanılgı (güvensiz → incelemede), soru, 2 tereddüt, ödev, konuşma, sonraki adım; alıntılar temizlenmiş transkriptte aynen geçer |
+
+`01-analysis-01` v1 boru hattının örneğidir (`model_notes` taşır, `course_insights` yok); eşlemesiz yedek olarak kalır.
+
+### Veli hattı (P6)
+
+| rota | dosya | eşleme | içerik |
+|---|---|---|---|
+| `report` | `01-haftalik` | — (düz) | report-ast: 3 bölüm (Genel görünüm, Ayrıntı, Bu hafta yapılabilecekler), tek cümle özet, `daily_time` + `skill_bands` grafikleri, 2 maddelik adım kutusu; anahtar yok. Worker grafikleri izinli listeye göre süzer, başlığı ve meta'yı kendisi yazar |
+| `notification_copy` | `01-haftalik`, `02-genel` | `<notification>` + `weekly_summary` / — | haftalık özet metni (sayısız; worker'ın sayı denetiminden geçer), diğer türler için genel metin |

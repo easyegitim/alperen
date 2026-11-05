@@ -24,7 +24,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { createTempDatabase, REPO_ROOT, type TempDatabase } from '@ogrenmen/llm/testing';
-import { BRIDGE_PORT, BRIDGE_URL, JOURNEY_JWT_SECRET, JOURNEY_OTP, JOURNEY_WEB_PORT, JOURNEY_WEB_URL, WORKER_HEALTH_PORT } from './config.mjs';
+import { BRIDGE_PORT, BRIDGE_URL, JOURNEY_JWT_SECRET, JOURNEY_OTP, JOURNEY_WEB_PORT, JOURNEY_WEB_URL, LESSON_SERVICE_PORT, WORKER_HEALTH_PORT } from './config.mjs';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const WORKER_DIR = path.join(REPO_ROOT, 'apps', 'worker');
@@ -468,6 +468,92 @@ function serveFile(res: http.ServerResponse, bucket: string, name: string) {
   return res.end(fs.readFileSync(file));
 }
 
+// --- TUS (Supabase Storage resumable; ders dosyaları): oluştur (POST) → parça parça ekle (PATCH) → bitince storage.objects
+// satırı (RLS: ilk klasör = yükleyen) ve dosya yazılır. HEAD kaldığı yeri söyler. Yalnız tek süreçli sınama içindir.
+interface TusUpload {
+  bucket: string;
+  name: string;
+  type: string;
+  length: number;
+  file: string;
+  claims: Record<string, unknown>;
+}
+const tusUploads = new Map<string, TusUpload>();
+const TUS_HEADERS = { 'tus-resumable': '1.0.0' };
+
+function tusMeta(raw: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const pair of raw.split(',')) {
+    const [k, v] = pair.trim().split(' ');
+    if (k) out[k] = v ? Buffer.from(v, 'base64').toString('utf8') : '';
+  }
+  return out;
+}
+
+async function handleTus(req: http.IncomingMessage, res: http.ServerResponse, id: string | null, claims: Record<string, unknown>) {
+  const owner = typeof claims.sub === 'string' ? claims.sub : null;
+  if (!id && req.method === 'POST') {
+    const meta = tusMeta(String(req.headers['upload-metadata'] ?? ''));
+    const length = Number(req.headers['upload-length']);
+    const bucket = meta.bucketName ?? '';
+    const name = meta.objectName ?? '';
+    if (!/^[a-z0-9_-]+$/.test(bucket) || !name || !Number.isFinite(length) || length < 0) return storageError(res, 400, 'invalid', 'TUS üst verisi geçersiz');
+    try {
+      // izin denemesi: ekleme RLS'ten geçmezse oluşturma 403 olur (gerçek Storage gibi); satır geri alınır
+      await asClaims(claims, async (c) => {
+        await c.query('savepoint tus_check');
+        await c.query(`insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, '{}'::jsonb)`, [bucket, name, owner]);
+        await c.query('rollback to savepoint tus_check');
+      });
+    } catch (err) {
+      const e = err as { code?: string };
+      if (e.code === '23505') return storageError(res, 409, 'Duplicate', 'The resource already exists');
+      if (e.code === '42501') return storageError(res, 403, 'Unauthorized', 'new row violates row-level security policy');
+      throw err;
+    }
+    const uid = randomUUID();
+    const file = path.join(STORE_DIR, '__tus', uid);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, Buffer.alloc(0));
+    tusUploads.set(uid, { bucket, name, type: meta.contentType || 'application/octet-stream', length, file, claims });
+    return send(res, 201, undefined, { ...TUS_HEADERS, location: `${BRIDGE_URL}/storage/v1/upload/resumable/${uid}`, 'upload-offset': '0' });
+  }
+  const up = id ? tusUploads.get(id) : undefined;
+  if (!up) return storageError(res, 404, 'not_found', 'yükleme yok');
+  const offset = fs.statSync(up.file).size;
+  if (req.method === 'HEAD') return send(res, 200, undefined, { ...TUS_HEADERS, 'upload-offset': String(offset), 'upload-length': String(up.length), 'cache-control': 'no-store' });
+  if (req.method === 'PATCH') {
+    if (Number(req.headers['upload-offset']) !== offset) return storageError(res, 409, 'conflict', 'Upload-Offset uyuşmuyor');
+    const chunk = await readRaw(req);
+    fs.appendFileSync(up.file, chunk);
+    const now_ = offset + chunk.length;
+    if (now_ >= up.length) {
+      try {
+        await asClaims(up.claims, async (c) => {
+          await c.query(`insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, $4::jsonb)`, [up.bucket, up.name, typeof up.claims.sub === 'string' ? up.claims.sub : null, JSON.stringify({ size: up.length, mimetype: up.type })]);
+        });
+      } catch (err) {
+        const e = err as { code?: string };
+        if (e.code === '23505') return storageError(res, 409, 'Duplicate', 'The resource already exists');
+        if (e.code === '42501') return storageError(res, 403, 'Unauthorized', 'new row violates row-level security policy');
+        throw err;
+      }
+      const dest = objectFile(up.bucket, up.name);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.renameSync(up.file, dest);
+      fs.writeFileSync(`${dest}.__type`, up.type);
+      tusUploads.delete(id!);
+    }
+    return send(res, 204, undefined, { ...TUS_HEADERS, 'upload-offset': String(now_) });
+  }
+  if (req.method === 'DELETE') {
+    fs.rmSync(up.file, { force: true });
+    tusUploads.delete(id!);
+    return send(res, 204, undefined, TUS_HEADERS);
+  }
+  return storageError(res, 405, 'method', 'yöntem yok');
+}
+
 async function handleStorage(req: http.IncomingMessage, res: http.ServerResponse, rest: string, url: URL) {
   try {
     const pub = /^object\/public\/([a-z0-9_-]+)\/(.+)$/.exec(rest);
@@ -487,6 +573,8 @@ async function handleStorage(req: http.IncomingMessage, res: http.ServerResponse
     }
     const claims = claimsOf(req);
     if (!claims) return storageError(res, 401, 'Unauthorized', 'jwt geçersiz');
+    const tus = /^upload\/resumable(?:\/([0-9a-f-]{36}))?$/.exec(rest);
+    if (tus) return handleTus(req, res, tus[1] ?? null, claims);
     if (signed && req.method === 'POST') {
       const [, bucket, raw] = signed as unknown as [string, string, string];
       const name = decodeURIComponent(raw);
@@ -640,7 +728,7 @@ async function main() {
       if (req.method === 'OPTIONS') return send(res, 204);
       if (p === '/__info') return send(res, 200, { dbUrl: db.url, dbName: db.name, web: JOURNEY_WEB_URL });
       if (p === '/__ready') {
-        const ready = (await ok(`http://127.0.0.1:${WORKER_HEALTH_PORT}/healthz`)) && (await ok(`${JOURNEY_WEB_URL}/api/health`));
+        const ready = (await ok(`http://127.0.0.1:${WORKER_HEALTH_PORT}/healthz`)) && (await ok(`http://127.0.0.1:${LESSON_SERVICE_PORT}/healthz`)) && (await ok(`${JOURNEY_WEB_URL}/api/health`));
         return send(res, ready ? 200 : 503, { ready });
       }
       const auth = /^\/auth\/v1\/(\w+)$/.exec(p);
@@ -662,6 +750,15 @@ async function main() {
 
   // Worker, Supabase'deki gibi migration sahibinin rolüyle bağlanır (yerel eşleniği ogrenmen_owner; supabase/README.md
   // "pgboss şemasını worker kurar"): pgboss şeması bu role ait olur, SECURITY DEFINER enqueue_job pgboss.job'a yazabilir.
+  // Ders medya servisi (pipelines/ders; ffmpeg + OGRENMEN_STT=fake deterministik transkript; Storage = bu köprü)
+  startChild('ders', 'python3', ['-I', path.join(REPO_ROOT, 'pipelines/ders/src/ogrenmen_ders/service.py'), '--port', String(LESSON_SERVICE_PORT)], REPO_ROOT, {
+    OGRENMEN_STT: 'fake',
+    OGRENMEN_STT_FIXTURES: path.join(REPO_ROOT, 'fixtures', 'ders'),
+    OGRENMEN_DERS_WORK_DIR: path.join(STORE_DIR, '__ders'),
+    OGRENMEN_DERS_QUIET: '1',
+    SUPABASE_URL: BRIDGE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY,
+  });
   startChild('worker', 'node', ['--import', 'tsx', 'src/index.ts'], WORKER_DIR, {
     DATABASE_URL: db.url,
     PGOPTIONS: '-c role=ogrenmen_owner',
@@ -672,6 +769,7 @@ async function main() {
     SUPABASE_URL: BRIDGE_URL,
     SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY,
     OGRENMEN_LLM: 'fake',
+    LESSON_SERVICE_URL: `http://127.0.0.1:${LESSON_SERVICE_PORT}`,
     LOG_LEVEL: 'info',
   });
   startChild('web', 'node', [path.join(WEB_DIR, 'node_modules/next/dist/bin/next'), 'dev', '--webpack', '-p', String(JOURNEY_WEB_PORT), '-H', '127.0.0.1'], WEB_DIR, {

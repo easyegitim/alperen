@@ -159,6 +159,8 @@ test.describe('P2 deneme yolculuğu (gerçek Postgres + worker)', () => {
 
   test('uygulama içi deneme: mini_exam önerisi → 3 soru → bitir → sonuç', async ({ page }) => {
     const me = await newStudent(page, 'sinav');
+    // onboarding'in suggestions.refresh'i bitmeden elle kart eklenirse yenileme onu siler (yarış): önce ilk kart beklenir
+    await until('ilk suggestions.refresh', async () => (await q(`select 1 from public.suggestions where student_id = $1 and kind = 'practice'`, [me.student_id])).length > 0);
     const skills = await q<{ id: string }>(`select id::text from public.skills where curriculum_id = $1 order by id limit 3`, [me.curriculum_id]);
     expect(skills.length).toBe(3);
     const [ex] = await q<{ id: string }>(

@@ -16,7 +16,7 @@ export function DavetFormu({ defaultToken = '' }: { defaultToken?: string }) {
       </div>
       {state.ok ? (
         <p role="status" className="text-small m-0 text-success">
-          ✓ Davet kabul edildi. Çocuğun Özet sayfasında görünecek.
+          Davet kabul edildi. Çocuğunuz Özet sayfasında görünecek.
         </p>
       ) : null}
     </form>

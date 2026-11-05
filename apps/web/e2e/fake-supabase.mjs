@@ -9,6 +9,9 @@ import { handlePractice, seedPracticeTables } from './fake-practice.mjs';
 import { handleExam, seedExamTables } from './fake-exam.mjs';
 import { handleExamResult } from './fake-exam-result.mjs';
 import { handleDocuments } from './fake-documents.mjs';
+import { handleStyles } from './fake-styles.mjs';
+import { handleLessons } from './fake-lessons.mjs';
+import { handleParent } from './fake-parent.mjs';
 
 const tables = { ...seedTables(), ...seedUploadTables(), ...seedPracticeTables(), ...seedExamTables() };
 const requests = [];
@@ -133,6 +136,15 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, { 'access-control-allow-origin': '*' });
     return res.end();
   }
+
+  // Dersler (Storage TUS, register_lesson, list_lessons, lesson_view, review_lesson_claim, apply_lesson_claims, lesson_set_options)
+  if (await handleLessons({ req, res, path, tables, send, readBody, userFromAuth })) return;
+
+  // Veli özeti, rapor isteği, bildirimler ve kural anahtarları (parent_*, list_notifications, set_notification_rule, push)
+  if (await handleParent({ req, res, path, tables, send, readBody, userFromAuth })) return;
+
+  // Tarz kütüphanesi (style_library_view, ingest_exam_source, upsert/merge, öncelik planı, student_style_coverage)
+  if (await handleStyles({ req, res, path, tables, send, readBody, userFromAuth })) return;
 
   // Koç'tan belge isteği → hazırlanıyor → inceleme → Bugün kartı (request_document, document_request_view, review_document, list_my_documents)
   if (await handleDocuments({ req, res, path, tables, send, readBody, userFromAuth })) return;

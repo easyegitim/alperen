@@ -268,10 +268,13 @@
         "ocr_text",
         "points",
         "skill_id",
+        "skill_ids",
         "source_id",
         "style_id",
+        "term",
         "topic",
-        "trick"
+        "trick",
+        "year"
       ],
       "service_role": {
         "select": "*",
@@ -382,6 +385,7 @@
         "storage_path",
         "term",
         "upload_id",
+        "upload_ids",
         "uploaded_by",
         "year"
       ],
@@ -560,6 +564,8 @@
     "public.lesson_claims": {
       "columns": [
         "analysis_id",
+        "applied_at",
+        "applied_ref",
         "confidence",
         "created_at",
         "curriculum_id",
@@ -585,21 +591,51 @@
         "delete": "*"
       }
     },
+    "public.lesson_transcripts": {
+      "columns": [
+        "created_at",
+        "edited_by",
+        "id",
+        "labeled",
+        "language",
+        "lesson_id",
+        "provider",
+        "segment_count",
+        "segments",
+        "updated_at"
+      ],
+      "service_role": {
+        "select": "*",
+        "insert": "*",
+        "update": "*",
+        "delete": "*"
+      }
+    },
     "public.lessons": {
       "columns": [
+        "audio_deleted_at",
+        "audio_path",
         "auto_apply_threshold",
         "course_id",
         "created_at",
         "duration_min",
+        "duration_sec",
         "enrollment_id",
         "frames_count",
+        "frames_deleted_at",
         "held_at",
         "id",
         "instructor_id",
+        "progress",
+        "retain_until",
         "status",
         "student_visible",
+        "title",
+        "transcript_deleted_at",
         "transcript_path",
-        "upload_id"
+        "transcript_upload_id",
+        "upload_id",
+        "video_deleted_at"
       ],
       "service_role": {
         "select": "*",
@@ -943,6 +979,7 @@
         "skill_ids",
         "started_at",
         "status",
+        "style_id",
         "suggestion_id",
         "summary",
         "target_count"
@@ -1042,11 +1079,16 @@
         "frequency_score",
         "id",
         "name",
+        "priority_score",
         "recency_score",
+        "reviewed_at",
+        "reviewed_by",
         "skill_ids",
         "source",
         "status",
+        "syllabus_score",
         "trick",
+        "updated_at",
         "years_hit",
         "years_total"
       ],
@@ -1097,6 +1139,7 @@
         "status",
         "stem",
         "stem_values",
+        "style_id",
         "template_id",
         "template_params",
         "verification"

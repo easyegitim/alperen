@@ -136,9 +136,10 @@ describe('push.send ve memory.compact', () => {
     expect(res.sent).toBe(0);
   });
 
-  it('VAPID yoksa abonelik varken kalıcı hata', async () => {
-    const db = fakeDb(() => [{ id: '1', endpoint: 'https://e', p256dh: 'p', auth: 'a' }]);
-    await expect(getJob('push.send')!.handler!({ user_id: '00000000-0000-0000-0000-000000000003', title: 'x' }, ctxWith({ db }))).rejects.toBeInstanceOf(PermanentJobError);
+  it('VAPID yoksa abonelik varken kuru çalışma (hata değil; ayrıntı: notifications.test.ts)', async () => {
+    const db = fakeDb(() => [{ id: '1', endpoint: 'https://e.example/x', p256dh: 'p', auth: 'a' }]);
+    const res = await getJob('push.send')!.handler!({ user_id: '00000000-0000-0000-0000-000000000003', title: 'x' }, ctxWith({ db }));
+    expect(res).toMatchObject({ subscriptions: 1, sent: 0, skipped: 'dry-run' });
   });
 
   it('memory.compact sıkıştırılacak dosya yoksa Batch göndermez (ayrıntı: nightly.test.ts)', async () => {

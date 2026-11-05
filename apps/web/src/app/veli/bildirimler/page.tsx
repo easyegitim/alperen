@@ -1,37 +1,35 @@
 import type { Metadata } from 'next';
-import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
-import { Badge } from '@/ds';
-import { formatDateTimeTr } from '@/lib/format';
+import { PushToggle } from '@/components/PushToggle';
+import { EmailSwitch, RuleSwitches } from '@/components/parent/RuleSwitches';
+import { PARENT_RULES, emailOn, parseRules } from '@/lib/parent';
+import { getPublicEnv } from '@/lib/env';
 import { requireRole } from '@/server/auth';
-import { listNotifications } from '@/server/queries';
+import { parentDb } from '@/server/parent/children';
+import { loadRules } from '@/server/parent/rpc';
 
 export const metadata: Metadata = { title: 'Bildirimler' };
 
+// Bildirim ayarları (Özet › dişli): kural anahtarları tek sayfa, altında tek "E-postayla da gönder" anahtarı (bütün türler).
+// Anlık bildirim düğmesi yalnız VAPID anahtarı varsa görünür.
 export default async function VeliBildirimler() {
   const { user } = await requireRole('parent', 'admin');
-  const items = await listNotifications(user.id);
+  const vapid = getPublicEnv().vapidPublicKey;
+  const res = await loadRules(await parentDb());
+  const rules = res.ok ? res.data : parseRules(PARENT_RULES.map((r) => ({ kind: r.kind, enabled: true })));
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <PageHeader title="Bildirimler" description="Deneme sonuçları, haftalık özet ve önemli gelişmeler." />
-      {items.length === 0 ? (
-        <EmptyState title="Henüz bildirim yok">
-          {'Bir deneme analiz edildiğinde, haftalık özet hazır olduğunda ya da çocuğunda belirgin bir ilerleme olduğunda burada görürsün. Anlık bildirimleri Ayarlar sayfasından açabilirsin.'}
-        </EmptyState>
-      ) : (
-        <ul aria-label="Bildirimler" className="m-0 flex list-none flex-col gap-3 p-0">
-          {items.map((n) => (
-            <li key={n.id} className="flex flex-col gap-1 rounded-lg border border-line bg-surface-raised p-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-label text-ink">{n.title}</span>
-                {n.read_at ? null : <Badge tone="primary">Yeni</Badge>}
-              </div>
-              {n.body ? <p className="text-small m-0 text-ink-muted">{n.body}</p> : null}
-              <span className="text-caption text-ink-muted">{formatDateTimeTr(n.created_at)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
+      <PageHeader title="Bildirimler" description="Hangi gelişmelerde haber almak istediğinizi seçin." />
+      <RuleSwitches rules={rules} />
+      <EmailSwitch initial={emailOn(rules)} />
+      {vapid ? (
+        <section aria-labelledby="anlik" className="flex flex-col gap-3">
+          <h2 id="anlik" className="text-title-3 m-0 text-ink">
+            Bu cihazda
+          </h2>
+          <PushToggle userId={user.id} vapidPublicKey={vapid} />
+        </section>
+      ) : null}
     </div>
   );
 }

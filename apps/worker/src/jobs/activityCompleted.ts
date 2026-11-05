@@ -25,7 +25,7 @@ export interface ActivityCompletedResult {
  */
 export const activityCompletedJob: JobDefinition<z.infer<typeof payload>, ActivityCompletedResult> = {
   name: 'activity.completed',
-  description: 'Etkinlik sonrası: suggestions.refresh + dossier.render.',
+  description: 'Etkinlik sonrası: suggestions.refresh + dossier.render + notifications.evaluate (ilerleme).',
   process: 'worker',
   payload,
   concurrency: 4,
@@ -43,6 +43,9 @@ export const activityCompletedJob: JobDefinition<z.infer<typeof payload>, Activi
       await ctx.enqueue('dossier.render', { student_id: p.student_id, course_id: course }, debounced(`dossier:${p.student_id}:${course}`));
       enqueued.push('dossier.render');
     }
+    // P6 kural motoru: ilerleme ve çözülen yanılgı bildirimleri olaydan hemen sonra (öğrenci başına 60 sn debounce)
+    await ctx.enqueue('notifications.evaluate', { student_id: p.student_id, kinds: ['improvement', 'misconception_resolved'], reason: p.kind }, debounced(`notify:${p.student_id}`, 60));
+    enqueued.push('notifications.evaluate');
     return { enqueued };
   },
 };

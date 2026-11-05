@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 export interface ScreenHeaderProps {
@@ -9,6 +10,8 @@ export interface ScreenHeaderProps {
   accountHref?: string;
   /** 'lg': Bugün (24 px başlık, 40 px yuvarlak); 'sm': Gelişim, Özet (18 px, 32 px). */
   size?: 'lg' | 'sm';
+  /** Hesap yuvarlağının solunda küçük bir eylem (veli Özet: bildirim ayarları dişlisi). */
+  action?: ReactNode;
 }
 
 function initial(name: string): string {
@@ -17,7 +20,7 @@ function initial(name: string): string {
 }
 
 /** Sekme ekranlarının başlığı (mockup S02/S08/S10): sayfanın tek h1'i ve sağda hesap yuvarlağı. */
-export function ScreenHeader({ title, name, accountHref, size = 'lg' }: ScreenHeaderProps) {
+export function ScreenHeader({ title, name, accountHref, size = 'lg', action }: ScreenHeaderProps) {
   const letter = name ? initial(name) : '';
   const circle = cn(
     'inline-flex shrink-0 items-center justify-center rounded-full bg-primary-soft font-semibold text-primary no-underline',
@@ -26,6 +29,8 @@ export function ScreenHeader({ title, name, accountHref, size = 'lg' }: ScreenHe
   return (
     <header className="mb-6 flex items-center justify-between gap-3">
       <h1 className={cn('m-0 min-w-0 text-ink', size === 'lg' ? 'text-title-2' : 'text-title-3')}>{title}</h1>
+      <div className="flex shrink-0 items-center gap-1">
+      {action}
       {letter ? (
         accountHref ? (
           <Link href={accountHref} aria-label={`Hesabın: ${name}`} className={cn(circle, 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus')}>
@@ -37,6 +42,7 @@ export function ScreenHeader({ title, name, accountHref, size = 'lg' }: ScreenHe
           </span>
         )
       ) : null}
+      </div>
     </header>
   );
 }

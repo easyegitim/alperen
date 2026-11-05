@@ -63,11 +63,18 @@ ile (sunucu havuzu) çözer, bellek kipinde kaynak vermeden çağırır (kilit v
 | `memory_delta` | v1 | analyst | Haiku · low | memory-delta | — |
 | `conversation_summary` | v1 | analyst | Haiku · low | conversation-summary | — |
 | `suggestions_copy` | v1 | generator | Haiku · low | notification-copy | — |
-| `parent_chat` | v1 (iskelet) | parent_agent | Sonnet · low | — | get_child_summary, get_exam_sessions, get_mastery_overview, get_recent_activity, get_reports, request_report |
+| `parent_chat` | v2 (varsayılan; v1 iskelet) | parent_agent | Sonnet · low (between_tools) | — | get_child_summary, get_exam_sessions, get_mastery_overview, get_recent_activity, get_reports, request_report |
+| `report` | v1 | generator | Sonnet · medium | report-ast | get_mastery, get_recent_exams |
+| `notification_copy` | v1 | generator | Haiku · low | notification-copy | — |
 | `notes_generation` | v1 | generator | Opus · high | document-ast | code_execution |
 | `exam_generation` | v1 | generator | Opus · high | exam-generation | code_execution |
 | `figure_check` | v1 | analyst | Haiku · low | figure-render-report | — |
 | `personalization_check` | v1 | analyst | Haiku · low | personalization-check | — |
+| `exam_item_extract` | v1 | analyst | Sonnet · medium | exam-item | — |
+| `style_definition` | v1 | analyst | Sonnet · medium | style-definition | — |
+| `style_question_gen` | v1 | generator | Opus · high | style-question-generation | code_execution |
+| `speaker_label` | v1 | analyst | Sonnet · low | transcript | — |
+| `lesson_analysis` | v1 | analyst | Opus · high | lesson-analysis | — |
 
 Deneme rotalarının kullanıcı turu metinleri `src/exam-input.ts`'teki kurucularla yazılır (prompt gövdeleri bu biçimi
 anlatır): `pageClassUserText`, `examPageItemsUserText`, `answerSheetUserText`, `inferredKeysUserText`,
@@ -93,6 +100,29 @@ Hata kutularının `pattern_ref`'i yalnız `<patterns>` listesindeki kimlik ve t
 `save_figure(fig, n)` → `figure_<n>.svg`). Not ve deneme promptları başlığı birebir taşır (test); model kodu başlıksız
 yazar, worker `figureScript(code)` ile başlığı önüne ekleyip `python3 -I` ile çalıştırır. Prompt iki figür kipinde de
 aynıdır: kod çalıştırabiliyorsa (code_execution) kodu konteynerde dener, çalıştıramıyorsa yalnız yazar.
+
+Tarz kütüphanesi (P4) kullanıcı turları `src/style-input.ts`'tedir: `archivePageUserText` (çıkmış sınav sayfası;
+`exam_page_items` rotası + "Çıkmış sınav arşivi: 2024 final." satırı), `examItemExtractUserText` (`<exam_item>` JSON +
+`Madde no: N.`), `styleDefinitionUserText` (`<clusters>`: küme kimliği, yıllar, kazanımlar, üyelerin yapısı ve metin başı),
+`styleQuestionGenUserText` (`<style_request>`: tarz, kazanımlar, örneklerin YALNIZ yapısı, bankadaki kökler). Sahte
+taşıma eşleme anahtarları `archiveMatch(yıl)`, `examItemMatch(no)`, `STYLE_CLUSTERS_MARK`, `STYLE_REQUEST_MARK`. Üç
+promptun gövdesinde öngörü sözcüğü yoktur (tahmin, çıkacak, kesin; `test/style-input.test.ts`); tarz tanımı soru
+metninden alıntı yapmaz, üretim çıkmış soruyu ve bankadaki kökleri yeniden yazmaz.
+
+Ders hattı (P5) kullanıcı turları `src/lesson-input.ts`'tedir: `speakerLabelUserText` (`<lesson_transcript_window>`:
+ders türü, pencere sırası, satır başına `[i] SS:DD:ss–SS:DD:ss | metin`; model her bölüm için yalnız konuşmacıyı ve ilk
+üç sözcüğü yazar), `labelWindows` (600 sn pencereler), `lessonAnalysisUserText` (`<lesson_request>` JSON: ders,
+anonim öğrenci, tür, süre, kare zamanları, açık yanılgılar, önceki onaylı sonraki adım + `<transcript>` satırları
+`transcriptLines`; kareler mesajın başındaki görsellerdir), `lessonText` (alıntı denetimiyle aynı biçim), `hms` /
+`hmsSeconds`. Metinler ad temizliğinden geçmiş gelir; burada yalnız veri bloğu kapatılamasın diye `<`/`>` değişir.
+Sahte taşıma eşleme anahtarları `LESSON_WINDOW_MARK`, `LESSON_REQUEST_MARK`.
+
+Veli hattı (P6) kullanıcı turları `src/parent-input.ts`'tedir: `reportUserText` (`<report_request>` JSON: tür weekly |
+exam | topic | trend | custom, başlık, dönem, ders, tarih, izinli grafikler `charts` [{data_ref, chart_kind, about}] ve
+veliye açık veri; custom'da velinin sorusu) ve `notificationCopyUserText` (`<notification>` JSON: tür, alıcı parent |
+student, veri, şablon {title, body}). Veri ad, olasılık p, soru metni ve anahtar taşımaz; kullanıcı metni `<`/`>`
+kaçışlanır. Sahte taşıma eşleme anahtarları `REPORT_REQUEST_MARK`, `NOTIFICATION_MARK`. `parent_chat/v2` yanıtı en çok
+üç cümle ister (durum, dayanak, "Bu hafta ona şunu sorabilirsiniz…" adımı); koç sohbeti, soru metni ve anahtar yoktur.
 
 Model, effort, şema ve araçlar geçidin rota tablosuyla (`packages/llm/src/routes.ts`) birebir aynı olmalıdır;
 `test/routes.test.ts` denetler.
@@ -171,7 +201,7 @@ ANTHROPIC_API_KEY=… bun run --cwd packages/prompts eval    # aynı komut gerç
 
 - `eval_judge` hakemi (Opus, Batch) için prompt ve `eval_runs` yazımı; aktivasyon kapısı (hakem puanı belirgin
   düşerse `prompt_versions.active` açılmaz). `scripts/eval.ts` şimdilik yalnız deterministik puan verir.
-- Diğer rotaların promptları (ders analizi, veli bildirimi, `style_question_gen`, `question_generation` — worker'da
+- Diğer rotaların promptları (veli bildirimi, `style_question_gen`, `question_generation` — worker'da
   geçici gömülü metin…) sonraki fazlarda. İçerik stüdyosu promptları (P3) gerçek modelle hiç koşmadı:
   `ANTHROPIC_API_KEY=… bun run eval --route notes_generation` (ve `OGRENMEN_FIGURES=code_execution` ile) ilk anahtarla
   denenmeli; `exam_generation`, `figure_check`, `personalization_check` için eval vakası henüz yok (sahte fikstürleri var). Deneme rotaları

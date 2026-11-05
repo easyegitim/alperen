@@ -47,9 +47,17 @@ test.afterAll(() => {
 test('çevrimdışı: gezinti isteği önbellekteki yedek sayfaya düşer, kişisel sayfa önbelleğe alınmaz', async ({ page, context }) => {
   await signInAs(context, 'student');
   await page.goto('/ogrenci/profil');
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
-  });
+  // Servis çalışanı devralırken sayfa yeniden yüklenebilir (yük altında bağlam yok olur): hata tekrar denemedir.
+  await expect
+    .poll(() =>
+      page
+        .evaluate(async () => {
+          await navigator.serviceWorker.ready;
+          return true;
+        })
+        .catch(() => false),
+    )
+    .toBe(true);
   // İlk sayfa kontrolsüzdür; çalışan clientsClaim ile devralana dek bekle.
   await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
   // Yedek sayfa önceden önbelleğe alınmış olmalı (kurulum tamamlandı).

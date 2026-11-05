@@ -1,0 +1,78 @@
+{
+  "course": { "code": "TYT-MAT-ARSIV", "title": "TYT Matematik (arşiv)" },
+  "styles": [
+    {
+      "key": "A", "first_cluster": "k1", "code": "kesir-islem-onceligi", "name": "Kesirlerle işlem önceliği",
+      "topic": "Kesirlerle işlem önceliği", "format": "text", "band": "easy",
+      "trick": "Bölme ve çarpma toplamadan önce yapılır; soldan sağa toplayan yanlış sonuca ulaşır",
+      "description": "Kesirlerle toplama, çıkarma, çarpma ve bölmenin birlikte geçtiği bir ifadenin değeri istenir; çözüm işlem önceliğini doğru uygulamaya ve payda eşitlemeye dayanır.",
+      "skill_ids": ["tyt.mat.temel.rasyonel-sayilar"]
+    },
+    {
+      "key": "B", "first_cluster": "k2", "code": "sayi-denklem-kurma", "name": "Sözel ifadeden denklem kurma",
+      "topic": "Denklem kurma problemi", "format": "word_problem", "band": "medium",
+      "trick": "Fazlası ve eksiği ifadeleri ters yöne çevrilince denklem yanlış kurulur",
+      "description": "Bir sayının katları ve farkları sözel olarak verilir, birinci dereceden bir denklem kurulup bilinmeyen sayı bulunur; ayrışma, sözel ifadenin denkleme doğru çevrilmesindedir.",
+      "skill_ids": ["tyt.mat.problem.sayi"]
+    },
+    {
+      "key": "C", "first_cluster": "k3", "code": "uslu-ifade-sadelestirme", "name": "Ortak tabana çevirerek üslü sadeleştirme",
+      "topic": "Üslü ifadeleri sadeleştirme", "format": "text", "band": "medium",
+      "trick": "Farklı görünen tabanlar aynı asal tabana çevrilmeden üsler toplanamaz",
+      "description": "Pay ve paydasında farklı tabanlı üslü sayılar bulunan bir kesir verilir; tabanlar ortak bir asal tabana çevrilip üs kurallarıyla sadeleştirilir.",
+      "skill_ids": ["tyt.mat.temel.uslu"]
+    },
+    {
+      "key": "D", "first_cluster": "k4", "code": "tablolu-indirim-problemi", "name": "Tabloda verilen indirim problemi",
+      "topic": "Yüzde ve indirim problemi", "format": "table", "band": "medium",
+      "trick": "İndirim her ürünün kendi fiyatına uygulanır, toplam fiyata uygulanmaz",
+      "description": "Ürün fiyatları bir tabloda verilir ve ürünlere farklı oranlarda indirim uygulanır; indirimli fiyatların toplamı ya da farkı istenir.",
+      "skill_ids": ["tyt.mat.problem.yuzde"]
+    }
+  ],
+  "sources": [
+    {
+      "year": 2024, "term": "final",
+      "items": [
+        { "no": 1, "style": "A", "points": 20, "difficulty": 0.3, "text": "$\\frac{3}{4} - \\frac{1}{2} : \\frac{2}{3}$ işleminin sonucu kaçtır? İşlem önceliğine dikkat ederek kesirleri sadeleştiriniz." },
+        { "no": 2, "style": "B", "points": 20, "difficulty": 0.5, "text": "Bir sayının 3 katının 5 fazlası, aynı sayının 2 katından 11 fazladır. Bu sayıyı denklem kurarak bulunuz." },
+        { "no": 3, "style": "C", "points": 15, "difficulty": 0.5, "text": "$\\frac{2^{5} \\cdot 4^{3}}{8^{2}}$ ifadesini üslü ifadelerin özelliklerini kullanarak sadeleştiriniz." },
+        { "no": 4, "style": "A", "points": 20, "difficulty": 0.35, "text": "$\\frac{5}{6} + \\frac{2}{3} \\cdot \\frac{3}{4}$ işleminin sonucunu işlem önceliğine dikkat ederek kesir olarak bulunuz." },
+        { "no": 5, "style": "D", "points": 25, "difficulty": 0.55, "text": "Bir mağazada ürünlerin etiket fiyatları tabloda verilmiştir: gömlek 150 TL, pantolon 240 TL. Gömlekte %20, pantolonda %25 indirim vardır. İndirimli fiyatların toplamı kaç TL'dir?" }
+      ]
+    },
+    {
+      "year": 2025, "term": "final",
+      "items": [
+        { "no": 1, "style": "A", "points": 20, "difficulty": 0.35, "text": "$\\left(\\frac{1}{2} + \\frac{1}{3}\\right) : \\frac{5}{6} - \\frac{1}{4}$ işleminin sonucu kaçtır? İşlem önceliğine dikkat ederek kesirleri sadeleştiriniz." },
+        { "no": 2, "style": "C", "points": 15, "difficulty": 0.5, "text": "$\\frac{3^{4} \\cdot 9^{2}}{27^{2}}$ ifadesini üslü ifadelerin özelliklerini kullanarak sadeleştiriniz." },
+        { "no": 3, "style": "B", "points": 20, "difficulty": 0.5, "text": "Bir sayının 4 katının 7 eksiği, aynı sayının 2 katının 9 fazlasına eşittir. Bu sayıyı denklem kurarak bulunuz." },
+        { "no": 4, "style": "B", "points": 20, "difficulty": 0.55, "text": "Ardışık üç tek sayının toplamı 57'dir. Denklem kurarak en büyük sayıyı bulunuz." },
+        { "no": 5, "style": "C", "points": 15, "difficulty": 0.55, "text": "$\\frac{5^{6} \\cdot 25}{125^{2}}$ ifadesinin değerini üslü ifadeleri ortak tabana çevirerek bulunuz." }
+      ]
+    }
+  ],
+  "expected": {
+    "clusters_2024": [["2024-1", "2024-4"], ["2024-2"], ["2024-3"], ["2024-5"]],
+    "clusters_all": [["2024-1", "2024-4", "2025-1"], ["2024-2", "2025-3", "2025-4"], ["2024-3", "2025-2", "2025-5"], ["2024-5"]]
+  },
+  "generated": [
+    {
+      "item": { "no": 1, "section": "TYT Matematik", "kind": "mcq", "stem": "$\\frac{1}{2} + \\frac{1}{3} \\cdot \\frac{3}{4}$ işleminin sonucu kaçtır?",
+        "options": [{ "key": "A", "text": "1/4" }, { "key": "B", "text": "5/8" }, { "key": "C", "text": "3/4" }, { "key": "D", "text": "1" }, { "key": "E", "text": "5/4" }],
+        "figure_svg": null, "skill_ids": ["tyt.mat.temel.rasyonel-sayilar"], "difficulty": "easy" },
+      "key": { "question_no": 1, "correct_option": "C", "numeric_value": null, "canonical_expr": "Rational(3,4)", "solution": "Önce çarpma yapılır: 1/3 · 3/4 = 1/4. Sonra 1/2 + 1/4 = 3/4. Soldan sağa toplayan 5/8 bulur." }
+    },
+    {
+      "item": { "no": 2, "section": "TYT Matematik", "kind": "mcq", "stem": "$\\frac{2}{3} : \\frac{4}{9} - \\frac{1}{2}$ işleminin sonucu kaçtır?",
+        "options": [{ "key": "A", "text": "-12" }, { "key": "B", "text": "1/2" }, { "key": "C", "text": "1" }, { "key": "D", "text": "3/2" }, { "key": "E", "text": "2" }],
+        "figure_svg": null, "skill_ids": ["tyt.mat.temel.rasyonel-sayilar"], "difficulty": "medium" },
+      "key": { "question_no": 2, "correct_option": "C", "numeric_value": null, "canonical_expr": "1", "solution": "Bölme önce yapılır: 2/3 : 4/9 = 2/3 · 9/4 = 3/2. Sonra 3/2 - 1/2 = 1. Önce çıkarma yapan -12 bulur." }
+    },
+    {
+      "item": { "no": 3, "section": "TYT Matematik", "kind": "numeric", "stem": "$\\left(\\frac{3}{5} - \\frac{1}{10}\\right) \\cdot 8 + 1$ işleminin sonucu kaçtır?",
+        "options": [], "figure_svg": null, "skill_ids": ["tyt.mat.temel.rasyonel-sayilar"], "difficulty": "medium" },
+      "key": { "question_no": 3, "correct_option": null, "numeric_value": 5, "canonical_expr": "5", "solution": "Parantez önce: 3/5 - 1/10 = 1/2. Sonra 1/2 · 8 = 4 ve 4 + 1 = 5." }
+    }
+  ]
+}

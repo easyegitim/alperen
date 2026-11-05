@@ -29,7 +29,8 @@ const EXAM_ROUTES = ['page_class', 'exam_page_items', 'answer_sheet', 'inferred_
 
 function fixtureFiles(route: string): { file: string; data: unknown }[] {
   return readdirSync(join(FIXTURES, route))
-    .filter((f) => f.endsWith('.json'))
+    // arsiv-*: P4 çıkmış sınav arşivi fikstürleri (apps/worker/test/fixtures/styles), bu denemeye ait değil
+    .filter((f) => f.endsWith('.json') && !f.startsWith('arsiv-'))
     .sort()
     .map((f) => ({ file: f, data: JSON.parse(readFileSync(join(FIXTURES, route, f), 'utf8')) as unknown }));
 }

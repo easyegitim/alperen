@@ -219,3 +219,74 @@ psql "$DB_URL" -c "select key, value from public.runtime_flags where key in ('pa
 Dış kemerler: Gemini ön ödemeli bakiye (5 $ ile başla, en çok 25 $ yükle) ve Google Cloud bütçe uyarıları
 (3 $ / 20 $); Groq ve OpenRouter ücretsiz anahtarlar fatura çıkarmaz; Cloudflare Workers Paid aylık sabit ücrettir.
 Ay sonunda panel `/maliyet` "Sohbet ve toplu işler" ve "Ders analizi" sütunlarını kontrol et.
+
+## 6. Anahtarlar ve ortam değişkenleri (v2)
+
+Bu bölüm v2 için geçerlidir ve yukarıdaki v1 adımlarının yerini almaz. Ad listesi `apps/web/.env.example` ve
+`apps/worker/.env.example` dosyalarından gelir; yeni bir ad eklenirse önce o dosyalara, sonra bu tabloya yazılır.
+Değerler depoya, `.env`'e ya da GitHub'a girmez.
+
+**Hangi yere:** web (Next.js) **Vercel** ortam değişkenleridir (Production ve Preview ayrı girilir; `NEXT_PUBLIC_`
+öneki olanlar tarayıcıya gider, diğerleri yalnız sunucuda kalır). Worker, PDF ve ders servisi **Fly.io sırlarıdır**
+(`fly secrets set NAME=değer`); `fly.toml` `[env]` altındaki değerler sır değildir. Web'de `service_role` ve veritabanı
+adresi **yoktur**; bunlar yalnız worker'dadır.
+
+**Anahtar yokken:** Anthropic, Groq, Voyage, VAPID ve Resend anahtarları henüz yoktur. Kod bu durumda sahte ya da
+yerel yollara düşer (aşağıdaki "yokken" sütunu); gerçek anahtar geldiğinde kod değişmeden çalışır.
+
+### Web (Vercel)
+
+| Ad | Zorunlu mu | Yokken / not |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | evet | Yerelde `supabase start` adresi |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | evet | Herkese açık (anon) anahtar; service_role değildir |
+| `NEXT_PUBLIC_SITE_URL` | evet | E-posta bağlantısı ve Google dönüşü için; boşsa istek başlığından türetilir |
+| `NEXT_PUBLIC_SUPABASE_REALTIME` | hayır | Boş: Realtime aboneliği; `off`: yalnız yoklama (Realtime'sız Supabase) |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | push için | Yoksa push açma düğmesi çalışmaz; özel anahtar burada yoktur |
+| `OGRENMEN_WEB_COACH_KEY` | Koç için | Yalnız sunucu. Değeri `select secret from secure.server_keys where name = 'web_coach'`; boşsa Koç "kullanılamıyor" der. Sızarsa satırı yenile ve buraya yaz |
+| `OGRENMEN_LLM` | evet | `fake` (önizleme, E2E) ya da boş (gerçek Anthropic) |
+| `ANTHROPIC_API_KEY` | gerçek kipte | `OGRENMEN_LLM` boşken gerekir; anahtar yoksa `fake` kullan |
+| `OGRENMEN_CHAT_STORE` | hayır | `memory` yalnız `fake` ile veritabanısız geliştirmede; üretimde boş |
+
+### Worker, PDF ve ders servisi (Fly.io)
+
+| Ad | Nerede | Zorunlu mu | Yokken / not |
+|---|---|---|---|
+| `DATABASE_URL` | secret | evet | Supabase doğrudan bağlantısı (5432); PgBouncer işlem havuzu değil |
+| `SUPABASE_URL` | secret | evet | Storage ve Realtime için |
+| `SUPABASE_SERVICE_ROLE_KEY` | secret | evet | Yalnız worker; web'e ve tarayıcıya asla gitmez |
+| `STORAGE_BUCKET_DOCUMENTS` | `fly.toml` `[env]` | hayır | Varsayılan `documents` |
+| `OGRENMEN_LLM` | secret/env | evet | `fake` (ağsız deterministik) ya da boş (gerçek Anthropic) |
+| `ANTHROPIC_API_KEY` | secret | gerçek kipte | Yoksa `OGRENMEN_LLM=fake` |
+| `OGRENMEN_FIGURES` | env | hayır | Boş/`auto`: gerçek anahtarla `code_execution`, sahte kipte yerel `py/figure_render.py`; `local` açıkça seçilmelidir |
+| `OGRENMEN_NOTIFICATION_COPY` | env | hayır | `template` bildirim metnindeki Haiku çağrısını kapatır |
+| `OGRENMEN_SUGGESTIONS_COPY` | env | hayır | `template` öneri metnini şablondan üretir |
+| `VOYAGE_API_KEY` | secret | hayır | Yoksa gömme atlanır; kümeleme tf-idf'e, teşhis gömmesi `null` kalır |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | secret | üçü birlikte | Yoksa push kuru çalışır (log) |
+| `RESEND_API_KEY` | secret | e-posta için | Yoksa `email.send` kuru çalışır: ileti günlüğe düşer, `payload.delivery.email = dry` |
+| `EMAIL_FROM` | env | e-posta ile | Gönderen adresi |
+| `OGRENMEN_SITE_URL` | env | e-posta ile | E-postadaki "Uygulamada aç" bağlantısının kökü |
+| `PDF_CHROMIUM_PATH` | env | hayır | Boşsa Playwright'ın Chromium'u |
+| `PDF_CONCURRENCY` | env | hayır | Varsayılan 2 |
+| `LESSON_SERVICE_URL` | `fly.toml` `[env]` | ders süreci için | Ders servisinin iç ağ adresi (6PN) |
+| `LESSON_SERVICE_TOKEN` | secret | ders süreci için | Worker ve ders servisinde aynı değer; tanımlıysa iki tarafta da olmalı |
+| `GROQ_API_KEY` | ders servisi secret | ses dökümü için | Yoksa döküm yapılmaz (`none`); ağsız deterministik kip `OGRENMEN_STT=fake` |
+| `OGRENMEN_STT` | ders servisi env | hayır | `fake`: fikstür transkript; `groq` anahtardan çıkar |
+
+Yapılandırma değerleri (sır değil): `WORKER_PROCESS`, `WORKER_SCHEDULES`, `WORKER_STARTUP_CHECKS`, `PGBOSS_SCHEMA`,
+`OUTBOX_DRAIN_INTERVAL_MS` gibi adlar `apps/worker/.env.example` ve `fly.toml` içindedir.
+
+### Kurallar
+
+- Sırrı yalnız kendi paneline gir: Vercel'de Settings → Environment Variables, Fly'da `fly secrets set`. Değer
+  ekrana ve kabuk geçmişine düşmesin diye `read -rs` kullan.
+- Fly'da `fly secrets list` yalnız adları gösterir; değer okunamaz. Doğrulama adlarla yapılır.
+- Döndürme: yeni değeri gir, sonra Vercel'de yeniden dağıt ya da `fly deploy` çalıştır. Eski değeri sağlayıcı panelinde iptal et.
+- `service_role` ve JWT secret'ı bu makinede kalmaz (bkz. §1.3); worker sırları dışındaki hiçbir yere kopyalanmaz.
+
+### Açık boşluklar
+
+- `apps/worker/.env.example` dosyasında `GROQ_API_KEY`, `VOYAGE_API_KEY` ve `OGRENMEN_STT` yoktur; kod bunları okur ve
+  yukarıdaki tablo tek kaynaktır. Örnek dosyaya eklenmesi bekliyor.
+- Hiçbir gerçek anahtar bu turda denenmedi (Anthropic, Groq, Voyage, VAPID, Resend). Anahtar geldiğinde
+  `OGRENMEN_LIVE=1 bash scripts/check-all.sh --live` ile ilk doğrulama yapılır.

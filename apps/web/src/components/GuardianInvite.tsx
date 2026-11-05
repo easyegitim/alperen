@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { Copy, UserPlus } from 'lucide-react';
+import { Copy, Share2, UserPlus } from 'lucide-react';
 import { Button, Notice } from '@/ds';
 import { SelectField } from '@/components/SelectField';
 import { formatDateTimeTr } from '@/lib/format';
@@ -18,9 +18,10 @@ const RELATION_OPTIONS = [
  * Veli daveti üretir ve kodu bir kez gösterir (süreyi RPC döndürür). Öğrenci Profil sayfasında `studentId` vermez
  * (sunucu kendi kaydını bulur); eğitmen öğrenci kartında verir.
  */
-export function GuardianInvite({ studentId, compact = false }: { studentId?: string; compact?: boolean }) {
+export function GuardianInvite({ studentId, compact = false, simple = false }: { studentId?: string; compact?: boolean; /** Öğrenci Profil'i: yakınlık seçimi yok, tek düğme "Veli davet et"; kod Paylaş ile gider. */ simple?: boolean }) {
   const [state, action, pending] = useActionState<InviteCreateState, FormData>(createGuardianInvite, {});
   const [copied, setCopied] = useState<'kod' | 'baglanti' | 'hata' | null>(null);
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const token = state.token;
   const link = token && typeof window !== 'undefined' ? `${window.location.origin}/davet?kod=${encodeURIComponent(token)}` : null;
 
@@ -33,14 +34,22 @@ export function GuardianInvite({ studentId, compact = false }: { studentId?: str
     }
   }
 
+  async function share(value: string, url: string | null) {
+    try {
+      await navigator.share({ title: 'Öğrenmen veli daveti', text: `Öğrenmen’de gelişimimi görebilmen için davet kodun: ${value}`, ...(url ? { url } : {}) });
+    } catch {
+      /* paylaşım iptal edildi */
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <form action={action} className={compact ? 'flex flex-wrap items-end gap-2' : 'flex max-w-md flex-col gap-3'}>
         {studentId ? <input type="hidden" name="studentId" value={studentId} /> : null}
-        <SelectField label="Yakınlık (isteğe bağlı)" name="relation" defaultValue="" placeholder="Seçmeden devam edebilirsin" options={RELATION_OPTIONS} />
+        {simple ? null : <SelectField label="Yakınlık (isteğe bağlı)" name="relation" defaultValue="" placeholder="Seçmeden devam edebilirsin" options={RELATION_OPTIONS} />}
         <div>
-          <Button type="submit" variant="secondary" icon={<UserPlus size={18} />} disabled={pending}>
-            {pending ? 'Üretiliyor' : token ? 'Yeni davet kodu üret' : 'Davet kodu üret'}
+          <Button type="submit" variant={simple ? 'primary' : 'secondary'} icon={<UserPlus size={18} />} disabled={pending}>
+            {pending ? 'Üretiliyor' : simple ? (token ? 'Yeni davet' : 'Veli davet et') : token ? 'Yeni davet kodu üret' : 'Davet kodu üret'}
           </Button>
         </div>
       </form>
@@ -56,6 +65,11 @@ export function GuardianInvite({ studentId, compact = false }: { studentId?: str
             {state.expiresAt ? ` Son kullanma: ${formatDateTimeTr(state.expiresAt)}.` : ''}
           </p>
           <div className="flex flex-wrap gap-2">
+            {simple && canShare ? (
+              <Button type="button" variant="secondary" size="sm" icon={<Share2 size={16} />} onClick={() => void share(token, link)}>
+                Paylaş
+              </Button>
+            ) : null}
             <Button type="button" variant="quiet" size="sm" icon={<Copy size={16} />} onClick={() => copy('kod', token)}>
               Kodu kopyala
             </Button>

@@ -115,14 +115,15 @@ test.describe('sayfa içerikleri', () => {
     await expect(page.getByRole('button', { name: /Fotoğraf çek/ })).toBeVisible();
   });
 
-  test('veli: özet çocuğu, bildirimler kayıtlı bildirimi gösterir', async ({ page, context }) => {
+  test('veli: özet çocuğu ve bildirim kartını, bildirim ayarları kural anahtarlarını gösterir', async ({ page, context }) => {
     await signInAs(context, 'parent');
     await page.goto('/veli');
-    await expect(page.getByText('Ayşe Yılmaz')).toBeVisible();
-    await page.goto('/veli/bildirimler');
+    await expect(page.getByRole('heading', { level: 1, name: 'Ayşe' })).toBeVisible();
     await expect(page.getByText('Haftalık özet hazır')).toBeVisible();
-    await page.goto('/veli');
-    await expect(page.getByRole('link', { name: 'Rapor iste' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Rapor iste' })).toBeVisible();
+    await page.getByRole('link', { name: 'Bildirim ayarları' }).click();
+    await expect(page).toHaveURL(`${WEB_URL}/veli/bildirimler`);
+    await expect(page.getByRole('switch', { name: 'Haftalık özet' })).toBeVisible();
     await page.goto('/veli/raporlar');
     await expect(page).toHaveURL(`${WEB_URL}/veli`);
     await page.getByRole('link', { name: /^Hesabın/ }).click();
@@ -135,7 +136,9 @@ test.describe('sayfa içerikleri', () => {
     await page.goto('/egitmen');
     await expect(page.getByText('Ayşe Yılmaz')).toBeVisible();
     await page.goto('/egitmen/dersler');
-    await expect(page.getByText('TYT Matematik')).toBeVisible();
+    // Dersler (P5-C): yüklenen ders kayıtları; ders yokken boş durum ve açık "Ders yükle" formu (öğrenci/ders seçimi)
+    await expect(page.getByText('Henüz ders yok')).toBeVisible();
+    await expect(page.getByLabel('Ders', { exact: true })).toBeVisible();
     for (const slug of ['mufredatlar', 'soru-tarzlari', 'icerik', 'sinavlar', 'kuyruk', 'maliyet', 'ayarlar']) {
       const res = await page.goto(`/egitmen/${slug}`);
       expect(res?.status(), slug).toBe(200);

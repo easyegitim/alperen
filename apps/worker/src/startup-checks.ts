@@ -29,7 +29,7 @@ export const PROBE_QUEUE = 'startup.probe';
 /**
  * SQL'in ya da web'in kuyruğa attığı, açık olması zorunlu kuyruklar. Kayıt defterindeki her ad zaten açılır; bu liste
  * kayıt defterinden bir ad düşerse bile denetimin onları istemesini sağlar (registry.test.ts ikisini karşılaştırır).
- * `memory.apply` yoktur: 0028 hafıza yazımını kuyruksuz (aynı turda RPC) seçti, üreticisi yok.
+ * `memory.apply` koç hafızası için kullanılmaz (0028 kuyruksuz yazar); üreticisi P5 ders hattıdır (0041 apply_lesson_claims).
  */
 export const REQUIRED_QUEUES: readonly string[] = [
   'curriculum.draft',
@@ -51,6 +51,9 @@ export const REQUIRED_QUEUES: readonly string[] = [
   'pdf.render',
   'push.send',
   'outbox.drain',
+  'style.ingest', 'style.coverage.refresh', 'style.question_gen', // P4 (ingest_exam_source → style.ingest)
+  'lesson.prepare', 'lesson.stt', 'lesson.label', 'lesson.analyse', 'lesson.retention', 'memory.apply', // P5 (register_lesson, apply_lesson_claims)
+  'notifications.evaluate', 'email.send', 'report.generate', // P6 (parent_request_report → report.generate; emit_notification → push.send)
 ];
 
 export type CheckStatus = 'ok' | 'fixed' | 'warn' | 'fail' | 'skip';

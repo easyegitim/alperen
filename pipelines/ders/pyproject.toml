@@ -4,18 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ogrenmen-ders"
-version = "0.1.0"
-description = "Öğrenmen ders videosu analizi (M08): kayıt, ses/kare çıkarımı, isimsiz transkript, güçlü model analizi, video silme"
+version = "2.0.0"
+description = "Öğrenmen ders medya servisi (P5): ffmpeg ses + sahne kareleri, Groq Whisper STT; HTTP, yalnız standart kitaplık"
 readme = "README.md"
 requires-python = ">=3.11"
-# Yerel yol bağımlılıkları (ogrenmen-common, ogrenmen-contracts, ogrenmen-pii) BLUEPRINT §2 gereği aynı ortamda
-# `pip install -e <yol>` ile önceden kurulmuş olmalıdır (pipelines/common README'si). Dış Python bağımlılığı yoktur:
-# ses ve kare çıkarımı sistemdeki ffmpeg/ffprobe ikilileriyle (subprocess) yapılır.
-dependencies = [
-  "ogrenmen-common==0.1.0",
-  "ogrenmen-contracts==0.1.0",
-  "ogrenmen-pii==0.1.0",
-]
+# Dış ya da yerel Python bağımlılığı yoktur (yalnız standart kitaplık): servis `python3 -I service.py` ile tek dosya
+# olarak çalışır; ses ve kare çıkarımı sistemdeki ffmpeg/ffprobe ikilileriyle (subprocess) yapılır.
+dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest==9.2.0", "ruff==0.17.3"]

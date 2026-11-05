@@ -233,14 +233,16 @@ describe('diagnosis.followup ve activity.completed', () => {
     await expect(getJob('diagnosis.followup')!.handler!({ analysis_id: AN, enrollment_id: ENR }, jobCtx())).rejects.toThrow(/teşhis yok/);
   });
 
-  it('activity.completed: suggestions.refresh (tekil) + dossier.render (kayıttan ders)', async () => {
+  it('activity.completed: suggestions.refresh (tekil) + dossier.render (kayıttan ders) + notifications.evaluate (P6)', async () => {
     const db = routedDb([[/select course_id from public\.enrollments/, () => [{ course_id: COURSE }]]]);
     const ctx = jobCtx({ db });
     const res = await getJob('activity.completed')!.handler!({ student_id: SID, enrollment_id: ENR, kind: 'practice' }, ctx);
-    expect(res).toEqual({ enqueued: ['suggestions.refresh', 'dossier.render'] });
+    expect(res).toEqual({ enqueued: ['suggestions.refresh', 'dossier.render', 'notifications.evaluate'] });
     expect(ctx.enqueued.map((e) => [e.name, e.opts])).toEqual([
       ['suggestions.refresh', { singletonKey: `suggestions:${SID}`, singletonSeconds: REFRESH_DEBOUNCE_SEC, debounce: true }],
       ['dossier.render', { singletonKey: `dossier:${SID}:${COURSE}`, singletonSeconds: REFRESH_DEBOUNCE_SEC, debounce: true }],
+      ['notifications.evaluate', { singletonKey: `notify:${SID}`, singletonSeconds: 60, debounce: true }],
     ]);
+    expect(ctx.enqueued[2]!.data).toEqual({ student_id: SID, kinds: ['improvement', 'misconception_resolved'], reason: 'practice' });
   });
 });

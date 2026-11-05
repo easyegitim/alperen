@@ -224,9 +224,9 @@ begin
   perform t.as_user(t.u('parent'));
   perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content)
                      values ('40000000-0000-4000-8000-0000000000a1', 'user', '[]')$q$, '42501', 'veli koç sohbetine yazamaz');
-  insert into public.conversation_messages (conversation_id, role, content)
-  values ('40000000-0000-4000-8000-0000000000a2', 'user', '[{"type":"text","text":"Teşekkürler"}]');
-  perform t.ok(true, 'veli kendi veli sohbetine doğrudan yazar (0018 hakkı koç dışı sohbetlerde kalır)');
+  perform t.raises($q$insert into public.conversation_messages (conversation_id, role, content)
+                     values ('40000000-0000-4000-8000-0000000000a2', 'user', '[{"type":"text","text":"Teşekkürler"}]')$q$,
+                   '42501', 'veli kendi veli sohbetine de doğrudan yazamaz (yalnız parent_append_message; 0043)');
   insert into public.conversations (student_id, kind, participant_id) values (t.u('A'), 'parent', auth.uid());
   perform t.ok(true, 'veli çocuğu için veli sohbeti açar');
   perform t.raises(format($q$insert into public.conversations (student_id, kind, participant_id) values (%L, 'parent', auth.uid())$q$, t.u('B')),

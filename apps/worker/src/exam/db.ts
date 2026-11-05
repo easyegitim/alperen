@@ -4,6 +4,8 @@
  * (doğrudan Postgres, app.is_trusted). Okumalar doğrudan tablolardan; anahtar değerleri yalnız worker içinde kalır.
  */
 import type { Db } from '../db.js';
+import type { JobContext } from '../jobs/types.js';
+import { emitNotification, enqueueEmailIfNeeded } from '../notifications/engine.js';
 import type { KeyRow } from './grading.js';
 import type { ReportData, ReportQuestion } from './report.js';
 import { foldTr, type SkillLeaf } from './skills.js';
@@ -343,20 +345,56 @@ export async function loadReportData(db: Db, s: SessionRow, doubleMarks: Readonl
   };
 }
 
-/** Velilere uygulama içi bildirim (push/e-posta gönderimi P6). Aynı oturum için bir kez. */
-export async function notifyParents(db: Db, s: SessionRow, line: string, documentId: string | null): Promise<number> {
-  const r = await db.query(
-    `insert into public.notifications (recipient_id, kind, title, body, payload, channels)
-     select gl.parent_id, 'exam_result', 'Deneme sonucu hazır', $2,
-            jsonb_build_object('student_id', $1::text, 'session_id', $3::text, 'exam_id', $4::text, 'document_id', $5::text), '{in_app}'
-       from public.guardian_links gl
+/**
+ * Velilere `exam_analysed` bildirimi (kural motoru: emit_notification; kural kapalıysa yazılmaz, kanallar kuraldan, push
+ * aboneliği varsa push.send, e-posta kanalı varsa email.send). Tekilleştirme anahtarı `session:<id>`, 0042 tetikleyicisinin
+ * (exam_sessions → done) anahtarıyla aynıdır: tetikleyici oturum `done` olurken (register_generated_document) genel metinle
+ * önce yazmışsa yeni satır açılmaz, o satırın metni hattın daha zengin cümlesiyle (net + en çok zorlandığı konu) ve rapor
+ * bağlantısıyla güncellenir. Döner: bildirimi olan veli sayısı.
+ */
+export async function notifyParents(
+  ctx: Pick<JobContext, 'db' | 'enqueue'>,
+  s: SessionRow,
+  line: string,
+  documentId: string | null,
+): Promise<number> {
+  const parents = await ctx.db.query(
+    `select gl.parent_id from public.guardian_links gl
       where gl.student_id = $1::uuid and gl.status = 'active' and gl.parent_id is not null
-        and not exists (select 1 from public.notifications n
-                         where n.recipient_id = gl.parent_id and n.kind = 'exam_result' and n.payload ->> 'session_id' = $3::text)
-     returning id`,
-    [s.student_id, line, s.id, s.exam_id, documentId],
+      order by gl.parent_id`,
+    [s.student_id],
   );
-  return r.rows.length;
+  const dedupeKey = `session:${s.id}`;
+  const url = documentId ? `/veli/rapor/${documentId}` : '/veli';
+  let n = 0;
+  for (const row of parents.rows) {
+    const parent = String(row.parent_id);
+    let id = await emitNotification(ctx, parent, 'exam_analysed', {
+      student_id: s.student_id,
+      session_id: s.id,
+      exam_id: s.exam_id,
+      exam_title: s.exam_title,
+      report_document_id: documentId,
+      dedupe_key: dedupeKey,
+      body: line,
+      url,
+    });
+    if (!id) {
+      const upd = await ctx.db.query(
+        `update public.notifications n
+            set body = $3,
+                payload = n.payload || jsonb_strip_nulls(jsonb_build_object('report_document_id', $4::text, 'url', $5::text))
+          where n.recipient_id = $1::uuid and n.kind = 'exam_analysed' and n.payload ->> 'dedupe_key' = $2
+            and n.read_at is null
+          returning n.id`,
+        [parent, dedupeKey, line, documentId, url],
+      );
+      id = upd.rows[0]?.id ? String(upd.rows[0].id) : null;
+      if (id) await enqueueEmailIfNeeded(ctx, id);
+    }
+    if (id) n += 1;
+  }
+  return n;
 }
 
 /**

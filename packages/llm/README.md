@@ -92,7 +92,7 @@ yeniden gönderilir; Batch içinde onarım turu yapılmaz.
 | question_generation | Opus · medium | exam-generation | — | senkron (practice.generate: şablon yetmezse; şekilsiz, tarzsız; sahte kipte `fixtures/question_generation/` 8 soru) |
 | speaker_label | Sonnet · low · kapalı | transcript | — | akış |
 | lesson_analysis | Opus · high | lesson-analysis | — | akış |
-| parent_chat | Sonnet · low | — | get_child_summary, get_mastery_overview, get_recent_activity, get_exam_sessions, get_reports, request_report (strict) | akış |
+| parent_chat | Sonnet · low · between_tools | — | get_child_summary, get_mastery_overview, get_recent_activity, get_exam_sessions, get_reports, request_report (strict; `request_report` {kind weekly \| exam \| topic \| trend \| custom, session_id?, topic?, weeks?, question?} = supabase 0043 `parent_request_report`) | akış |
 | report | Sonnet · medium | report-ast | get_mastery, get_recent_exams | akış |
 | memory_compaction | Sonnet · medium | memory-compaction | — | Batch |
 | memory_delta / conversation_summary / notification_copy / suggestions_copy | Haiku · low · kapalı | memory-delta / conversation-summary / notification-copy / notification-copy | — | senkron |

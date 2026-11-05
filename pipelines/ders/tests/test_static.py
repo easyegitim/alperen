@@ -1,8 +1,11 @@
-"""Statik kemerler: model adı koda yazılmaz, gözlem tablosuna yazım yok, text_raw okunmaz, metinler ünlemsiz."""
+"""Statik kemerler: paket yalnız standart kitaplığı kullanır, veritabanına yazmaz, STT model adı tek sabittedir,
+kullanıcıya dönen metinler ünlemsizdir."""
 
 from __future__ import annotations
 
+import ast
 import re
+import sys
 from pathlib import Path
 
 import ogrenmen_ders
@@ -11,27 +14,28 @@ SRC = Path(ogrenmen_ders.__file__).parent
 FILES = sorted(SRC.glob("*.py"))
 
 
-def test_no_model_names_in_code():
+def test_stdlib_only():
+    for path in FILES:
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            names = [a.name for a in node.names] if isinstance(node, ast.Import) else (
+                [node.module or ""] if isinstance(node, ast.ImportFrom) and node.level == 0 else [])
+            for name in names:
+                assert name.split(".")[0] in sys.stdlib_module_names or name == "__future__", (path.name, name)
+
+
+def test_service_is_self_contained():
+    """service.py tek dosya olarak (``python3 -I``) çalışır: paket içi göreli içe aktarma yok."""
+    tree = ast.parse((SRC / "service.py").read_text(encoding="utf-8"))
+    assert not [n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.level > 0]
+
+
+def test_no_database_access_and_model_name_once():
     for path in FILES:
         text = path.read_text(encoding="utf-8")
-        assert not re.search(r"gemini-|claude-|whisper-large|flash-lite|sonnet", text, re.I), path.name
-
-
-def test_never_writes_observations_or_reads_text_raw():
-    for path in FILES:
-        text = path.read_text(encoding="utf-8")
-        assert not re.search(r"""(insert|update|insert_minimal|update_minimal)\([^)]*["']observations["']""", text), \
-            path.name
-        assert "text_raw" not in text, path.name
-        assert "approve_lesson_analysis\"" not in text and "'approve_lesson_analysis'" not in text, path.name
-
-
-def test_rpc_names_are_blueprint_names():
-    names = set()
-    for path in FILES:
-        names |= set(re.findall(r"""\.rpc\(\s*["']([a-z_]+)["']""", path.read_text(encoding="utf-8")))
-    assert names == {"register_lesson", "resolve_lesson_labels", "profile_for_prompt", "write_lesson_analysis",
-                     "confirm_video_deleted"}
+        assert not re.search(r"\.rpc\(|/rest/v1/|psycopg|observations", text), path.name
+        assert not re.search(r"gemini-|claude-|flash-lite|sonnet", text, re.I), path.name
+    service = (SRC / "service.py").read_text(encoding="utf-8")
+    assert len(re.findall(r"whisper-large-v3-turbo", service)) == 1     # GROQ_DEFAULT_MODEL; GROQ_STT_MODEL ezer
 
 
 def test_user_facing_strings_have_no_exclamation():

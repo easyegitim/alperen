@@ -4,6 +4,7 @@
  */
 import type { Db } from '../db.js';
 import { consumedRefsOf, istanbulDay, refKey, type EnrollmentSignals, type StudentSignals, type UploadSignal } from './rules.js';
+import { styleGapOf } from './styles.js';
 
 const str = (v: unknown): string | null => (v === null || v === undefined || v === '' ? null : String(v));
 const iso = (v: unknown): string | null => (v instanceof Date ? v.toISOString() : str(v));
@@ -166,6 +167,7 @@ async function enrollmentSignals(db: Db, e: Record<string, unknown>): Promise<En
       : null,
     homework: homework.filter((h) => h.skillIds.length > 0),
     lessonReview,
+    styleGap: await styleGapOf(db, enr), // P4 tarz kapsaması (suggestions/styles.ts)
   };
 }
 
@@ -195,6 +197,7 @@ export async function collectSignals(db: Db, studentId: string, now: Date): Prom
                 order by e.started_at desc limit 1) as enrollment_id
          from public.generated_documents d
         where d.student_id = $1::uuid and d.status in ('rendered', 'published') and d.kind <> 'answer_key'
+          and not (d.kind = 'report' and coalesce(d.spec ->> 'source', '') = 'parent')
           and d.updated_at >= now() - interval '7 days'
         order by d.updated_at desc, d.id
         limit 3`,

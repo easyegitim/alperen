@@ -6,13 +6,15 @@ import { Button, Notice } from '@/ds';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 import { currentSubscription, isPushSupported, serializeSubscription, subscribeToPush } from '@/lib/push';
 
+type RpcOnly = { rpc(fn: string, args?: Record<string, unknown>): PromiseLike<{ error: { message: string } | null }> };
+
 type Phase = 'checking' | 'unsupported' | 'unconfigured' | 'off' | 'on' | 'denied' | 'busy' | 'error';
 
 /**
- * Bildirim aboneliği: tarayıcıdan web-push aboneliği alır ve public.push_subscriptions tablosuna yazar (RLS: kendi satırı).
+ * Bildirim aboneliği: tarayıcıdan web-push aboneliği alır ve register_push_subscription RPC'siyle kaydeder (0042).
  * Gönderim apps/worker'dadır. VAPID anahtarı yoksa düğme yerine açıklama gösterilir.
  */
-export function PushToggle({ userId, vapidPublicKey }: { userId: string; vapidPublicKey: string | null }) {
+export function PushToggle({ vapidPublicKey }: { /** Eski çağıranlar için; abonelik artık RPC ile oturumdaki kullanıcıya yazılır. */ userId?: string; vapidPublicKey: string | null }) {
   const [phase, setPhase] = useState<Phase>('checking');
 
   useEffect(() => {
@@ -29,31 +31,27 @@ export function PushToggle({ userId, vapidPublicKey }: { userId: string; vapidPu
     };
   }, [vapidPublicKey]);
 
-  /** Aboneliği bu kullanıcı adına yazar: 'ok' | 'conflict' (uç nokta başka satırda) | 'error'. */
-  async function persist(sub: PushSubscription): Promise<'ok' | 'conflict' | 'error'> {
+  /** Aboneliği bu kullanıcı adına yazar (register_push_subscription, 0042): uç nokta başka kullanıcıdaysa (paylaşılan cihaz) bu kullanıcıya taşınır. */
+  async function persist(sub: PushSubscription): Promise<boolean> {
     const row = serializeSubscription(sub);
-    if (!row) return 'error';
+    if (!row) return false;
     const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.from('push_subscriptions').insert({ user_id: userId, ...row, ua: navigator.userAgent.slice(0, 200) });
-    if (!error) return 'ok';
-    return error.code === '23505' ? 'conflict' : 'error';
+    const { error } = await (supabase as unknown as RpcOnly).rpc('register_push_subscription', {
+      p_endpoint: row.endpoint,
+      p_p256dh: row.p256dh,
+      p_auth: row.auth,
+      p_ua: navigator.userAgent.slice(0, 200),
+    });
+    return !error;
   }
 
   async function enable() {
     if (!vapidPublicKey) return;
     setPhase('busy');
     try {
-      let sub = await subscribeToPush(vapidPublicKey);
+      const sub = await subscribeToPush(vapidPublicKey);
       if (!sub) return setPhase(Notification.permission === 'denied' ? 'denied' : 'off');
-      let result = await persist(sub);
-      if (result === 'conflict') {
-        // 23505: bu uç nokta başka bir hesaba ait (paylaşılan cihazda önceki kullanıcı). Satır bize ait olmadığından
-        // "açık" sayılmaz: tarayıcı aboneliği iptal edilip yeni uç noktayla yeniden kaydedilir.
-        await sub.unsubscribe();
-        sub = await subscribeToPush(vapidPublicKey);
-        result = sub ? await persist(sub) : 'error';
-      }
-      setPhase(result === 'ok' ? 'on' : 'error');
+      setPhase((await persist(sub)) ? 'on' : 'error');
     } catch {
       setPhase('error');
     }
@@ -65,7 +63,7 @@ export function PushToggle({ userId, vapidPublicKey }: { userId: string; vapidPu
       const sub = await currentSubscription();
       if (sub) {
         const supabase = createSupabaseBrowserClient();
-        const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+        const { error } = await (supabase as unknown as RpcOnly).rpc('unregister_push_subscription', { p_endpoint: sub.endpoint });
         if (error) return setPhase('error');
         await sub.unsubscribe();
       }

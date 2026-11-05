@@ -301,7 +301,8 @@ export const ROUTES = {
   parent_chat: route('parent_chat', {
     progressNote: false,
     purpose: 'Veli sohbeti',
-    model: MODELS.sonnet, effort: 'low', thinking: 'adaptive', schema: null,
+    // Sonnet · low, düşünme kapalı ('off' = Sonnet between_tools: yalnız araç turları arasında): kısa, veriye dayalı yanıt (PLAN-v2 §10).
+    model: MODELS.sonnet, effort: 'low', thinking: 'off', schema: null,
     tools: PARENT_TOOLS, cache: CHAT, mode: 'sync', stream: true, maxTokens: 4000,
   }),
   report: route('report', {

@@ -35,7 +35,7 @@ export const examReportJob: JobDefinition<z.infer<typeof payload>, ExamReportRes
     if (s.status === 'done') return { sessionId: s.id, skipped: 'finished' };
     if (s.status !== 'analysing') return { sessionId: s.id, skipped: 'not_graded' };
     const rep = await produceReport(ctx, s, { lastAttempt: ctx.job.retryCount >= examReportJob.retry.retryLimit });
-    await notifyParents(ctx.db, s, rep.parentLine, rep.documentId);
+    await notifyParents(ctx, s, rep.parentLine, rep.documentId);
     return { sessionId: s.id, documentId: rep.documentId, status: rep.status, fallback: rep.fallback };
   },
 };

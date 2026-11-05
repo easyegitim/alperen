@@ -187,16 +187,16 @@ test.describe('öğrenci çekirdeği: Onboarding → Bugün → Test → Sonuç 
     await fetch(`${FAKE_URL}/__practice/cleanup`);
   });
 
-  test('veli kabuğu: 2 sekme, Özet ve Sohbet "Henüz veri yok."', async ({ page, context }) => {
+  test('veli kabuğu: 2 sekme; Özet tek cümle + üç sayı, Sohbet karşılama', async ({ page, context }) => {
     await signInAs(context, 'parent');
     await page.goto('/veli');
-    await expect(page.getByTestId('veli-durum')).toHaveText('Henüz veri yok.');
+    await expect(page.getByTestId('veli-durum')).toContainText('Ayşe bu hafta 4,5 saat çalıştı');
     await expect(page.getByRole('link', { name: 'Soru sor' })).toHaveAttribute('href', '/veli/sohbet');
     const bar = page.getByRole('navigation', { name: 'Ana gezinme (alt çubuk)' });
     await expect(bar.getByRole('link')).toHaveText(['Özet', 'Sohbet']);
     await page.screenshot({ path: `${SCREEN_DIR}/veli-ozet-390.png` });
     await bar.getByRole('link', { name: 'Sohbet' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Sohbet' })).toBeVisible();
-    await expect(page.getByTestId('veli-durum')).toHaveText('Henüz veri yok.');
+    await expect(page.getByText(/Çocuğunuzun bu hafta ne çalıştığını/)).toBeVisible();
   });
 });

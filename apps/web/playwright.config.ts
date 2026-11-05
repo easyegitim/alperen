@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
   // P1 yolculuğu kendi yığınıyla (gerçek Postgres + worker) ayrı yapılandırmada koşar: playwright.journey.config.ts
-  testIgnore: ['**/p1-journey.spec.ts', '**/p2-deneme.spec.ts', '**/p3-icerik.spec.ts'],
+  testIgnore: ['**/p1-journey.spec.ts', '**/p2-deneme.spec.ts', '**/p3-icerik.spec.ts', '**/p4-tarz.spec.ts', '**/p5-ders.spec.ts', '**/p6-veli.spec.ts'],
   outputDir: 'test-results',
   fullyParallel: false,
   workers: 1,
@@ -43,6 +43,8 @@ export default defineConfig({
         // Koç sohbeti: sahte LLM + süreç içi sohbet deposu (src/server/chat/memory-store.ts; yalnız fake ile açılır).
         OGRENMEN_LLM: 'fake',
         OGRENMEN_CHAT_STORE: 'memory',
+        // Veli sohbeti bellek deposu (src/server/parent/store.ts): örnek çocuğa ek olarak sahte Supabase'in öğrencisi.
+        OGRENMEN_PARENT_MEMORY_CHILDREN: '10000000-0000-4000-8000-000000000001',
       },
     },
   ],

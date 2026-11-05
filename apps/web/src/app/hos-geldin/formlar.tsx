@@ -20,7 +20,7 @@ export function VeliFormu({ defaultName, defaultToken = '', tokenOptional = fals
         autoCorrect="off"
         spellCheck={false}
         placeholder="gi_…"
-        hint={tokenOptional ? 'Davetin zaten kabul edildi; yalnız adını yazman yeterli.' : 'Öğrencinin ya da eğitmeninin gönderdiği kodu aynen yapıştır.'}
+        hint={tokenOptional ? 'Davetin zaten kabul edildi; yalnız adınızı yazmanız yeterli.' : 'Öğrencinin ya da eğitmeninin gönderdiği kodu aynen yapıştırın.'}
         error={state.errors?.token}
       />
       <Button type="submit" variant="primary" size="lg" block disabled={pending}>

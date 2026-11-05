@@ -34,7 +34,3 @@ venv/
 test-results/
 playwright-report/
 blob-report/
-
-# P2 sentetik deneme görselleri (küçük, deterministik; render.mjs ile yeniden üretilir) izlenir; Playwright çıktıları yok sayılır
-!fixtures/exams/synthetic/*.png
-**/test-results/

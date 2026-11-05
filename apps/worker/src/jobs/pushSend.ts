@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { markDelivery } from '../notifications/delivery.js';
 import { PermanentJobError } from './errors.js';
 import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobDefinition } from './types.js';
@@ -28,9 +29,11 @@ export interface PushSendResult {
 }
 
 /**
- * İSKELET (P6): web-push gönderimi. Bildirim satırından ya da doğrudan kullanıcıdan abonelikleri okur, VAPID ile
- * gönderir; 404/410 abonelikleri siler; en az biri gittiyse `notifications.sent_at` yazar. Kural motoru, sessiz
- * saatler ve e-posta kanalı P6'da eklenir.
+ * Web-push gönderimi (P6). Bildirim satırından (kural motoru: `emit_notification` push kanalı ve abonelik varsa
+ * aynı işlemde atar) ya da doğrudan kullanıcıdan abonelikleri okur, VAPID ile gönderir; 404/410 abonelikleri siler.
+ * Teslim `payload.delivery.push`'a yazılır (notifications/delivery.ts): en az biri gittiyse `sent` (+ `sent_at`),
+ * abonelik yoksa `none`. VAPID anahtarı yoksa kuru çalışma: ileti günlüğe yazılır (uç nokta yalnız ana makine adıyla),
+ * teslim `dry` olur ve `sent_at` boş kalır; anahtar gelince kod değişmeden gerçek gönderim başlar.
  */
 export const pushSendJob: JobDefinition<z.infer<typeof payload>, PushSendResult> = {
   name: 'push.send',
@@ -39,7 +42,6 @@ export const pushSendJob: JobDefinition<z.infer<typeof payload>, PushSendResult>
   payload,
   concurrency: 4,
   retry: { retryLimit: 5, retryDelay: 10, retryBackoff: true, retryDelayMax: 900, expireInSeconds: 120, deleteAfterSeconds: 86_400 },
-  skeleton: true,
   handler: async (p, ctx) => {
     let userId = p.user_id ?? null;
     let title = p.title ?? '';
@@ -65,9 +67,29 @@ export const pushSendJob: JobDefinition<z.infer<typeof payload>, PushSendResult>
     if (!userId) throw new PermanentJobError('alıcı yok', 'OGR-PUSH-003');
 
     const subs = await ctx.db.query('select id, endpoint, p256dh, auth from public.push_subscriptions where user_id = $1::uuid order by created_at', [userId]);
-    if (subs.rows.length === 0) return { subscriptions: 0, sent: 0, removed: 0, failed: 0 };
+    if (subs.rows.length === 0) {
+      if (p.notification_id) await markDelivery(ctx.db, p.notification_id, 'push', 'none', 'abonelik yok');
+      return { subscriptions: 0, sent: 0, removed: 0, failed: 0 };
+    }
     if (!ctx.push.configured) {
-      throw new PermanentJobError('VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT tanımlı değil', 'OGR-PUSH-001');
+      // Kuru çalışma (VAPID yok): ne gönderileceği günlükte görünür; uç nokta adresi sır sayılır, yalnız ana makine yazılır.
+      const hosts = subs.rows.map((row) => {
+        try {
+          return new URL(String(row.endpoint)).host;
+        } catch {
+          return '?';
+        }
+      });
+      // Başlık ve metin günlüğe yazılmaz (ad ve durum PII): yalnız uzunluklar.
+      ctx.log.info('push.send kuru çalışma (VAPID yok)', {
+        notification: p.notification_id ?? null,
+        title_length: title.length,
+        body_length: body.length,
+        url: url ?? '/',
+        hosts,
+      });
+      if (p.notification_id) await markDelivery(ctx.db, p.notification_id, 'push', 'dry');
+      return { subscriptions: subs.rows.length, sent: 0, removed: 0, failed: 0, skipped: 'dry-run' };
     }
 
     let sent = 0;
@@ -88,9 +110,8 @@ export const pushSendJob: JobDefinition<z.infer<typeof payload>, PushSendResult>
         lastMessage = `${out.status ?? 'ağ'}: ${out.message}`;
       }
     }
-    if (sent > 0 && p.notification_id) {
-      await ctx.db.query('update public.notifications set sent_at = now() where id = $1::uuid and sent_at is null', [p.notification_id]);
-    }
+    if (sent > 0 && p.notification_id) await markDelivery(ctx.db, p.notification_id, 'push', 'sent');
+    else if (sent === 0 && retryable === 0 && p.notification_id) await markDelivery(ctx.db, p.notification_id, 'push', removed > 0 && failed === 0 ? 'none' : 'failed', lastMessage || 'abonelikler geçersiz');
     // Hiçbiri gitmediyse ve hata geçiciyse yeniden dene (kalan geçerli abonelikler için).
     if (sent === 0 && retryable > 0) throw new Error(`push gönderilemedi (${lastMessage})`);
     ctx.log.info('push.send', { subscriptions: subs.rows.length, sent, removed, failed });

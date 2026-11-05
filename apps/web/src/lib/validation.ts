@@ -108,7 +108,7 @@ export function parseParentProfile(
   const token = parseInviteToken(rawToken);
   const errors: FieldErrors<'displayName' | 'token'> = {};
   if (displayName.length < 2 || displayName.length > 60) errors.displayName = 'Adın 2 ile 60 karakter arasında olmalı.';
-  if (!token && !(options.tokenOptional && rawToken === '')) errors.token = 'Davet kodu "gi_" ile başlar; öğrencinin gönderdiği kodu aynen yapıştır.';
+  if (!token && !(options.tokenOptional && rawToken === '')) errors.token = 'Davet kodu "gi_" ile başlar; öğrencinin gönderdiği kodu aynen yapıştırın.';
   if (Object.keys(errors).length > 0) return { ok: false, errors };
   return { ok: true, value: { displayName, token } };
 }

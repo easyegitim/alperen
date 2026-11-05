@@ -5,8 +5,10 @@
 * ``v2``: ``supabase/migrations/0017_rpc.sql``'de bulunan fonksiyonlar (``check_spend``, ``set_runtime_flag``,
   ``log_llm_call``); gövdeler aynı hata kodlarını ve yan etkileri izler.
 * ``legacy-v1``: v2 migration'larında karşılığı OLMAYAN ve kod yolları P3 (tablet doğrulama servisi) ile P5 (ders HTTP
-  servisi) gelene dek ayakta tutulan eşlenikler (cevap anahtarı/şablon soruları, ders kaydı ve analizi,
-  ``profile_for_prompt``). RPC paritesi bunları atlar (WARN); canlı DB'de bu çağrılar çalışmaz.
+  servisi) gelene dek ayakta tutulan eşlenikler (cevap anahtarı/şablon soruları, ders etiketleri,
+  ``profile_for_prompt``, video silme onayı). RPC paritesi bunları atlar (WARN); canlı DB'de bu çağrılar çalışmaz.
+  ``register_lesson`` ve ``write_lesson_analysis`` P5'te v2'de doğdu (supabase 0040, farklı imza): v1 eşlenikleri ve
+  pipelines/ders v1 çağrıları kaldırıldı; ders hattı apps/worker ``lesson.*`` işleri + pipelines/ders servisidir.
 
 SQL'de tek işlem olan gövdelerde tüm denetimler yazımdan **önce** yapılır, böylece hata yarım yazım bırakmaz.
 Dönüş biçimi PostgREST'in JSON'uyla aynıdır: ``returns table`` → satır listesi, ``jsonb`` → sözlük,
@@ -21,9 +23,8 @@ from typing import TYPE_CHECKING, Any
 
 from ogrenmen_pii import name_token_hashes
 
-from ..clock import hms_seconds, iso, istanbul_date, month_start, parse_ts
+from ..clock import iso, istanbul_date, month_start, parse_ts
 from ..errors import DbError, RpcError
-from ..ids import STUDENT_REF
 
 if TYPE_CHECKING:  # pragma: no cover
     from .jsonl_db import JsonlDb
@@ -345,29 +346,6 @@ def register_template_question(db: JsonlDb, p_item: Mapping[str, Any], p_key: Ma
 
 
 @rpc
-def register_lesson(db: JsonlDb, p_student_ref: str, p_staff_id: str, p_held_at: str, p_duration: int | None = None,
-                    p_video_ref: str | None = None) -> str:
-    """public_ref → aktif kayıt; ``lessons(status='uploaded')`` satırı (video Storage'a girmez)."""
-    _require_role(db, "OGR-AUTH-002")
-    if not isinstance(p_student_ref, str) or not STUDENT_REF.match(p_student_ref):
-        raise RpcError("OGR-LESSON-002 öğrenci kimliği student_ref (s_…) olmalı")
-    student = db._one("students", public_ref=p_student_ref)
-    if student is None or student.get("status") == "deleted":
-        raise RpcError("OGR-LESSON-002 öğrenci yok")
-    enr = _active_enrollment(db, student["id"])
-    if enr is None:
-        raise RpcError("OGR-LESSON-002 aktif kayıt yok")
-    staff = db._one("staff", id=p_staff_id, active=True)
-    if staff is None:
-        raise RpcError("OGR-LESSON-002 personel yok")
-    row = db._insert_internal("lessons", {"enrollment_id": enr["id"], "staff_id": staff["id"],
-                                          "held_at": iso(parse_ts(p_held_at)), "duration_min": p_duration,
-                                          "video_ref": p_video_ref, "status": "uploaded"})
-    _audit(db, "RPC:register_lesson", "lessons", row["id"], actor_id="batch_worker:ders")
-    return row["id"]
-
-
-@rpc
 def resolve_lesson_labels(db: JsonlDb, p_lesson: str) -> list[dict]:
     """§3.9 ``table(hash, label)``: dersin öğrencisinin ('ÖĞRENCİ') ve eğitmeninin ('EĞİTMEN') ad-token hash'leri;
     düz ad dönmez. ``student_pii.name_token_hashes``'teki diğer tokenlar (ör. veli adı) da 'ÖĞRENCİ' etiketiyle
@@ -450,83 +428,6 @@ def profile_for_prompt(db: JsonlDb, p_enrollment: str) -> dict | None:
         "explanation_notes": prefs.get("explanation_notes"),
         "weekly_line": weekly_line,
     }
-
-
-def _claims_from_analysis(analysis: Mapping[str, Any]) -> list[dict]:
-    """``write_lesson_analysis``'in iddia türetimi (§3.9 yorum satırları)."""
-    claims: list[dict] = []
-    for s in analysis.get("skills") or []:
-        ev = (s.get("evidence") or [{}])[0]
-        claims.append({"kind": "skill_mastery", "skill_id": s["skill_id"],
-                       "value": {"mastery": s["mastery_estimate"], "confidence": s["confidence"]},
-                       "quote": ev.get("quote") or "", "speaker": ev.get("speaker") or "ÖĞRENCİ",
-                       "t_start_sec": hms_seconds(ev.get("t")),
-                       "t_end_sec": hms_seconds(ev.get("t_end")) if ev.get("t_end") else None})
-    for mc in analysis.get("misconceptions") or []:
-        ev = (mc.get("evidence") or [{}])[0]
-        claims.append({"kind": "misconception", "skill_id": mc["skill_id"], "misconception_tag": mc.get("tag"),
-                       "value": {"text": mc["text_instructor"], "text_student": mc["text_student"],
-                                 "resolved_in_lesson": bool(mc.get("resolved_in_lesson", False))},
-                       "quote": ev.get("quote") or mc["text_instructor"], "speaker": ev.get("speaker") or "ÖĞRENCİ",
-                       "t_start_sec": hms_seconds(ev.get("t")),
-                       "t_end_sec": hms_seconds(ev.get("t_end")) if ev.get("t_end") else None})
-    for q in analysis.get("questions") or []:
-        claims.append({"kind": "question", "skill_id": q.get("skill_id"),
-                       "value": {"text": q["quote"], "answered": q.get("answered")},
-                       "quote": q["quote"], "speaker": "ÖĞRENCİ", "t_start_sec": hms_seconds(q["t"])})
-    for h in analysis.get("hesitations") or []:
-        claims.append({"kind": "hesitation", "skill_id": h.get("skill_id"), "value": {"kind": h["kind"]},
-                       "quote": h.get("quote") or h["kind"], "speaker": "ÖĞRENCİ", "t_start_sec": hms_seconds(h["t"])})
-    for c in analysis.get("commitments") or []:
-        claims.append({"kind": c["kind"], "value": {"text": c["text"], "due": c.get("due"), "who": c["who"]},
-                       "quote": c["text"], "speaker": c["who"], "t_start_sec": hms_seconds(c["t"])})
-    for f in analysis.get("previous_profile_check") or []:
-        ev = (f.get("evidence") or [{}])[0]
-        claims.append({"kind": "followup", "misconception_id": f["misconception_id"], "value": {"status": f["status"]},
-                       "quote": ev.get("quote") or "Önceki yanılgı denetimi", "speaker": ev.get("speaker") or "EĞİTMEN",
-                       "t_start_sec": hms_seconds(ev.get("t"))})
-    ns = analysis.get("next_step")
-    if ns:
-        claims.append({"kind": "next_step", "value": dict(ns), "quote": ns["for_instructor"], "speaker": "EĞİTMEN",
-                       "t_start_sec": 0})
-    talk = analysis.get("talk")
-    if talk:
-        claims.append({"kind": "talk",
-                       "value": {k: talk[k] for k in ("student_ratio", "student_questions", "attention", "morale")},
-                       "quote": talk.get("notes") or "Konuşma oranı özeti", "speaker": "EĞİTMEN", "t_start_sec": 0})
-    return claims
-
-
-@rpc
-def write_lesson_analysis(db: JsonlDb, p_lesson: str, p_seed_profile: Mapping[str, Any], p_analysis: Mapping[str, Any],
-                          p_model: str, p_cost: float = 0) -> str:
-    """``lesson_analyses(draft)`` + ``lesson_claims(pending)``; observations YAZILMAZ; ops alarmı."""
-    _require_role(db, "OGR-AUTH-002")
-    lesson = db._one("lessons", id=p_lesson)
-    if lesson is None:
-        raise RpcError("OGR-LESSON-002 ders yok")
-    enr = db._one("enrollments", id=lesson["enrollment_id"])
-    cur = enr["curriculum_id"]
-    claims = _claims_from_analysis(p_analysis)
-    skills = {s["id"] for s in db._find("skills", curriculum_id=cur)}
-    tags = {t["tag"] for t in db._all("misconception_tags")}
-    for c in claims:
-        if c.get("skill_id") is not None and c["skill_id"] not in skills:
-            raise RpcError(f"OGR-CURR-001 kazanım müfredatta yok: {c['skill_id']}")
-        if c.get("misconception_tag") is not None and c["misconception_tag"] not in tags:
-            raise RpcError(f"OGR-CURR-001 yanılgı etiketi katalogda yok: {c['misconception_tag']}")
-    versions = [int(a.get("version") or 1) for a in db._find("lesson_analyses", lesson_id=p_lesson)]
-    analysis = db._insert_internal("lesson_analyses", {
-        "lesson_id": p_lesson, "version": (max(versions) + 1) if versions else 1, "seed_profile": dict(p_seed_profile),
-        "analysis": dict(p_analysis), "model": p_model, "cost_usd": round(float(p_cost or 0), 6), "status": "draft"})
-    for c in claims:
-        db._insert_internal("lesson_claims", {"analysis_id": analysis["id"], "curriculum_id": cur, **c})
-    db._update_internal("lessons", db._one("lessons", id=p_lesson), {"status": "analyzed"})
-    _open_alert(db, {"kind": "ops", "severity": "neutral", "student_id": None, "staff_id": lesson.get("staff_id"),
-                     "detail": "Ders raporu onay bekliyor", "since": iso(db.now()), "ref": {"lesson_id": p_lesson}})
-    _audit(db, "RPC:write_lesson_analysis", "lesson_analyses", analysis["id"], {"claims": len(claims)},
-           actor_id="batch_worker:ders")
-    return analysis["id"]
 
 
 @rpc

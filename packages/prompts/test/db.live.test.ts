@@ -55,7 +55,7 @@ describe('prompt_versions eşitlemesi (canlı Postgres)', () => {
     expect(first.inserted).toHaveLength(prompts.length);
     expect(await syncPromptVersions(db, prompts)).toEqual({ inserted: [], unchanged: first.inserted, drifted: [] });
 
-    await db.query(`update public.prompt_versions set system_text = system_text || ' ' where route = 'parent_chat'`);
+    await db.query(`update public.prompt_versions set system_text = system_text || ' ' where route = 'parent_chat' and version = 'v1'`);
     expect((await syncPromptVersions(db, prompts)).drifted).toEqual(['parent_chat@v1']);
 
     await db.query(`update public.prompt_versions set active = true where route = 'coach_chat' and version = 'v1'`);

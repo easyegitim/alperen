@@ -616,7 +616,7 @@ async function finish(run: Run, uploadIds: string[], scratch: string[]): Promise
     { ref: refKey('session', s.id), state: 'result', analysisId: null, sessionId: s.id, examId: s.exam_id, uploadId: first, uploadIds, enrollmentId: s.enrollment_id, verdict: null, oneLine: rep.line, at: ctx.now().toISOString(), net: rep.net },
     ctx.now(),
   );
-  await notifyParents(ctx.db, s, rep.parentLine, rep.documentId);
+  await notifyParents(ctx, s, rep.parentLine, rep.documentId);
   const queued = scratch.length > 0 ? await enqueueExamDiagnoses(ctx.db, s.id, scratch, autoDiagnosisMax()) : 0;
   if (scratch.length === 0) warn(run, 'no_scratch');
   await setProgress(ctx.db, s.id, 'done', {

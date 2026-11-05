@@ -34,12 +34,12 @@ insert into expected_columns values
     ('public.preferences', 'student_id active_hours modality default_mode explanation_notes proactive_enabled created_at updated_at'),
     ('public.student_dossier_cache', 'student_id course_id hash rendered created_at updated_at'),
     ('public.figures', 'id tool code code_hash alt_text png_path svg_path width_px height_px bytes render_status vision_status vision_report attempts review_status reviewed_by reviewed_at render_log created_at'),
-    ('public.questions', 'id curriculum_id skill_ids kind stem stem_values figure_id options difficulty source template_id template_params content_hash verification status model cost_usd prompt_version reviewed_by reviewed_at review_note created_at'),
+    ('public.questions', 'id curriculum_id skill_ids kind stem stem_values figure_id options difficulty source template_id template_params content_hash verification status model cost_usd prompt_version reviewed_by reviewed_at review_note style_id created_at'),
     ('secure.answer_keys', 'question_id correct_option numeric_value numeric_tolerance canonical_expr solution sympy_status sympy_report written_by verified_at created_at'),
     ('public.question_templates', 'id curriculum_id skill_id module_path engine params_schema enabled has_figure created_at'),
     ('public.attempts', 'id enrollment_id question_id context session_id chosen attempt_no is_correct misconception_tag graded_at response_ms created_at'),
     ('public.content_pool', 'id kind curriculum_id skill_id misconception_tag mode body status model cost_usd hit_count approved_by approved_at created_at'),
-    ('public.question_styles', 'id course_id curriculum_id code name description format trick difficulty_band skill_ids years_hit years_total recency_score frequency_score exemplar_item_ids embedding source status created_by created_at'),
+    ('public.question_styles', 'id course_id curriculum_id code name description format trick difficulty_band skill_ids years_hit years_total recency_score frequency_score exemplar_item_ids embedding source status created_by syllabus_score priority_score reviewed_by reviewed_at updated_at created_at'),
     ('public.style_coverage', 'enrollment_id style_id seen_count solved_count correct_count last_seen_at created_at'),
     ('public.uploads', 'id owner_id student_id kind storage_path mime bytes sha256 width height pages anthropic_file_id status extracted_text embedding created_at'),
     ('public.conversations', 'id student_id kind participant_id course_id title mode summary summary_upto_message_id last_message_at created_at'),
@@ -54,15 +54,17 @@ insert into expected_columns values
     ('secure.exam_answer_keys', 'exam_question_id correct_option numeric_value source confidence created_at'),
     ('public.exam_sessions', 'id exam_id enrollment_id mode started_at finished_at duration_sec status score report_document_id created_at progress upload_ids'),
     ('public.exam_responses', 'id session_id exam_question_id answer outcome time_spent_sec flagged work_upload_ids how_far_text solution_analysis_id created_at blank_reason'),
-    ('public.exam_sources', 'id course_id year term instructor_alias upload_id storage_path uploaded_by status error created_at'),
-    ('public.exam_items', 'id source_id item_no topic kind format trick difficulty points curriculum_id skill_id ocr_text embedding style_id created_at'),
+    ('public.exam_sources', 'id course_id year term instructor_alias upload_id upload_ids storage_path uploaded_by status error created_at'),
+    ('public.exam_items', 'id source_id item_no topic kind format trick difficulty points curriculum_id skill_id ocr_text embedding style_id year term skill_ids created_at'),
     ('public.exam_priority_plans', 'id course_id period plan evidence_count status approved_by approved_at created_at'),
     ('public.generated_documents', 'id student_id course_id kind title spec content html_path pdf_path status version personalization verification model cost_usd created_by created_at updated_at review_required published_at reviewed_by reviewed_at review_note'),
     ('public.library_documents', 'id curriculum_id course_id upload_id title storage_path pages uploaded_by created_at'),
     ('public.library_chunks', 'id document_id page text embedding tsv created_at'),
-    ('public.lessons', 'id enrollment_id course_id upload_id instructor_id held_at duration_min transcript_path frames_count student_visible auto_apply_threshold status created_at'),
+    ('public.lessons', 'id enrollment_id course_id upload_id instructor_id held_at duration_min transcript_path frames_count student_visible auto_apply_threshold status created_at title duration_sec transcript_upload_id audio_path audio_deleted_at video_deleted_at retain_until progress frames_deleted_at transcript_deleted_at'),
     ('public.lesson_analyses', 'id lesson_id version seed_profile analysis model cost_usd status approved_by approved_at created_at'),
-    ('public.lesson_claims', 'id analysis_id kind curriculum_id skill_id misconception_tag misconception_id value confidence quote speaker t_start_sec t_end_sec status edited_value decided_by decided_at created_at'),
+    ('public.lesson_claims', 'id analysis_id kind curriculum_id skill_id misconception_tag misconception_id value confidence quote speaker t_start_sec t_end_sec status edited_value decided_by decided_at created_at applied_at applied_ref'),
+    -- P5 dersler (0039)
+    ('public.lesson_transcripts', 'id lesson_id segments language provider labeled segment_count edited_by created_at updated_at'),
     ('public.notifications', 'id recipient_id kind title body payload channels read_at sent_at created_at'),
     ('public.notification_rules', 'recipient_id kind enabled params created_at'),
     ('public.push_subscriptions', 'id user_id endpoint p256dh auth ua created_at'),
@@ -74,7 +76,7 @@ insert into expected_columns values
     ('audit.events', 'id actor_role actor_id action table_name row_id diff created_at'),
     -- P1 ekleri (0020–0023)
     ('public.suggestions', 'id student_id enrollment_id kind title subtitle payload rank expires_at consumed_at created_at'),
-    ('public.practice_sets', 'id enrollment_id suggestion_id status skill_ids target_count summary started_at finished_at created_at'),
+    ('public.practice_sets', 'id enrollment_id suggestion_id status skill_ids target_count summary started_at finished_at created_at style_id'),
     ('public.practice_set_items', 'set_id no question_id attempt_id answered_at created_at'),
     ('public.memory_corrections', 'id student_id path text status requested_by resolved_by resolution_note resolved_at created_at'),
     ('secure.server_keys', 'name secret rotated_at created_at'),
@@ -100,7 +102,7 @@ begin
      and not exists (select 1 from expected_columns e where e.tbl = n.nspname || '.' || c.relname);
   perform t.ok(v_extra is null, 'listede olmayan tablo yok (fazla: ' || coalesce(v_extra, '-') || ')');
   select count(*) into v_n from expected_columns;
-  perform t.ok(v_n = 69, 'v2 tabanı 61 tablo + P1 ekleri 4 tablo + koç üretim yolu 2 tablo + iş outbox''ı 1 tablo + belge istekleri 1 tablo (' || v_n || ')');
+  perform t.ok(v_n = 70, 'v2 tabanı 61 tablo + P1 ekleri 4 tablo + koç üretim yolu 2 tablo + iş outbox''ı 1 tablo + belge istekleri 1 tablo + ders transkriptleri 1 tablo (' || v_n || ')');
   perform t.ok(to_regclass('public.staff') is null and to_regclass('public.messages') is null and to_regclass('public.consents') is null
                and to_regclass('public.tg_chats') is null and to_regclass('public.quota_usage') is null
                and to_regclass('public.diagnostic_tests') is null and to_regclass('public.legal_texts') is null
@@ -226,7 +228,7 @@ begin
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where c.relkind = 'r' and n.nspname = 'public'
      and (has_any_column_privilege('authenticated', c.oid, 'insert') or has_any_column_privilege('authenticated', c.oid, 'update'));
-  perform t.ok(v_bad = 'conversation_messages, conversations, enrollments, notification_rules, notifications, preferences, profiles, push_subscriptions, students, uploads',
+  perform t.ok(v_bad = 'conversation_messages, conversations, enrollments, notifications, preferences, profiles, students, uploads',
                'authenticated sütun düzeyi yazımları yalnız kullanıcıya ait tablolarda (' || coalesce(v_bad, '-') || ')');
   select string_agg(c.relname, ', ') into v_bad
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -420,8 +422,8 @@ declare
 begin
   if to_regclass('cron.job') is not null then
     select array_agg(j.jobname order by j.jobname) into v_jobs from cron.job j where j.jobname like 'ogrenmen-%';
-    perform t.ok(v_jobs = array['ogrenmen-memory-compact', 'ogrenmen-weekly-summary'],
-                 format('pg_cron tam iki zamanlama kurar: memory.compact, weekly.summary (%s)', v_jobs));
+    perform t.ok(v_jobs = array['ogrenmen-lesson-retention', 'ogrenmen-memory-compact', 'ogrenmen-notifications-evaluate', 'ogrenmen-weekly-summary'],
+                 format('pg_cron tam dört zamanlama kurar: lesson.retention (0040), memory.compact, notifications.evaluate (0042), weekly.summary (%s)', v_jobs));
     perform t.ok(not exists (select 1 from cron.job j
                               where j.jobname like 'ogrenmen-%'
                                 and (j.command !~ '^select public\.enqueue_job\(''[a-z0-9.]+'', ''\{\}''::jsonb\)$'
@@ -434,6 +436,7 @@ begin
         v_job := split_part(v_def, '|', 1);
         v_f := regexp_split_to_array(split_part(v_def, '|', 2), ' ');
         v_worker := array_append(v_worker, v_job);
+        v_utc := v_f;  -- saat alanı sayı değilse (saatlik) zamanlama değişmeden karşılaştırılır
         -- Istanbul → UTC: saat −3; gece yarısını geçerse haftanın günü bir geri (ayın günü/ay sabitse denetlenemez)
         if v_f[2] ~ '^\d+$' then
           v_utc := array[v_f[1], ((v_f[2]::int + 21) % 24)::text, v_f[3], v_f[4],

@@ -8,3 +8,4 @@ export const WORKER_HEALTH_PORT = Number(process.env.JOURNEY_WORKER_PORT || 3103
 export const JOURNEY_OTP = '246810';
 // Yerel köprünün JWT imza anahtarı (yalnız 127.0.0.1'de dinleyen geçici sınama köprüsü; sır değildir).
 export const JOURNEY_JWT_SECRET = 'journey-local-hs256-not-a-secret';
+export const LESSON_SERVICE_PORT = Number(process.env.JOURNEY_LESSON_PORT || 8712);

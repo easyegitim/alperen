@@ -146,8 +146,9 @@ Web Crypto ile, `bun` altında) `fixtures/llm/chat` üzerinde aynı dosyayı se�
 **RPC eşlenikleri.** v2 kümesi (`fakes/rpc-names.json`; `scripts/check-rpc-parity.py` migration'larla ad ve parametre
 adı eşler): `check_spend(p_purpose, p_student_ref)`, `log_llm_call`, `set_runtime_flag`. `fakes/rpc-names-legacy-v1.json`
 v2 migration'larında karşılığı olmayan, P3 (doğrulama servisi) ve P5 (ders servisi) gelene dek duran eşlenikleri
-listeler: `register_answer_key`, `register_template_question`, `register_lesson`, `resolve_lesson_labels`,
-`write_lesson_analysis`, `confirm_video_deleted`, `profile_for_prompt` (parite tablosunda WARN; canlı DB'de çalışmazlar).
+listeler: `register_answer_key`, `register_template_question`, `resolve_lesson_labels`, `confirm_video_deleted`,
+`profile_for_prompt` (parite tablosunda WARN; canlı DB'de çalışmazlar). `register_lesson` ve `write_lesson_analysis`
+P5'te v2'de farklı imzayla doğdu (supabase 0040); v1 eşlenikleri ve pipelines/ders v1 çağrıları kaldırıldı.
 Dönüş biçimi PostgREST'inkiyle aynıdır (`check_spend` tek satırlık liste: `paid_allowed, degraded, downgrade, state,
 day_usd, month_usd, daily_cap, monthly_cap, student_month_usd, student_cap, alert_level`).
 

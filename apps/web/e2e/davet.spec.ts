@@ -13,7 +13,7 @@ test.describe('veli daveti (uçtan uca)', () => {
     // 1) Öğrenci davet üretir.
     await signInAs(context, 'student');
     await page.goto('/ogrenci/profil');
-    await page.getByRole('button', { name: 'Davet kodu üret' }).click();
+    await page.getByRole('button', { name: 'Veli davet et' }).click();
     const kodEl = page.getByTestId('davet-kodu');
     await expect(kodEl).toBeVisible();
     const kod = (await kodEl.textContent())?.trim() ?? '';
@@ -32,7 +32,7 @@ test.describe('veli daveti (uçtan uca)', () => {
 
     // 3) Çocuk özet sayfasında görünür.
     await expect(page).toHaveURL(`${WEB_URL}/veli`);
-    await expect(page.getByRole('list', { name: 'Çocukların' }).getByText('Ayşe Yılmaz')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Ayşe' })).toBeVisible();
 
     // 4) Kullanılmış kod yeniden kabul edilemez.
     await page.goto(`/veli/ayarlar?kod=${kod}`);
