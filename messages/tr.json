@@ -67,7 +67,7 @@
       },
       "s3": {
         "title": "Planla yükselt",
-        "body": "Saç, sakal, cilt ve stil planı. 60 stili kendi fotoğrafında dene, rutinle takip et."
+        "body": "Saç, sakal, cilt ve stil planı. 76 stili kendi fotoğrafında dene, rutinle takip et."
       }
     },
     "pricingTitle": "Planlar",
@@ -102,7 +102,7 @@
     "includes": {
       "i1": "Her 7 günde 1 yeni analiz; genel skor, 6 alt skor ve potansiyel skor",
       "i2": "Kişisel koç raporu: saç, sakal, cilt, yüz hatları, stil",
-      "i3": "Her 7 günde 10 sanal deneme: 60 saç, sakal ve renk stili kendi fotoğrafında",
+      "i3": "Her 7 günde 10 sanal deneme: 76 saç, sakal ve renk stili kendi fotoğrafında",
       "i4": "Günlük rutin, ılımlı egzersizler ve seri sayacı",
       "i5": "Skor trendi ve cihazında kalan ilerleme fotoğrafları",
       "i6": "Paylaşım kartı"
@@ -322,7 +322,7 @@
     },
     "tryon": {
       "title": "Dene",
-      "body": "60 saç, sakal ve renk stilini kendi fotoğrafında dene."
+      "body": "76 saç, sakal ve renk stilini kendi fotoğrafında dene."
     },
     "routine": {
       "title": "Rutin",
@@ -975,7 +975,7 @@
     "narrative": "Genel skorun {overall}. 8–12 haftalık planla ulaşabileceğin potansiyel {potential}.",
     "ratiosTitle": "Oranların",
     "planTitle": "Sana özel plan",
-    "planBody": "3 saç kesimi, sakal ve cilt rutini; 60 stili kendi yüzünde dene.",
+    "planBody": "3 saç kesimi, sakal ve cilt rutini; 76 stili kendi yüzünde dene.",
     "seePlan": "Planı gör",
     "tryStyles": "Stilleri dene",
     "unlock": "Kilidi aç",
@@ -1310,7 +1310,7 @@
     "includes": {
       "i1": "Genel skor, potansiyel ve 6 alt skor",
       "i2": "Kişisel koç raporu ve rutin",
-      "i3": "Her 7 günde 10 sanal deneme (60 stil)",
+      "i3": "Her 7 günde 10 sanal deneme (76 stil)",
       "i4": "Haftalık yeniden analiz ve skor trendi",
       "i5": "Önce odaklanacağın adımlar ve fotoğrafındaki ölçülerin açıklaması",
       "i6": "Ödeme sonrası bu analiz yeni çekim gerekmeden açılır"
@@ -1369,7 +1369,7 @@
         "b1": "Genel skor, aralığı ve potansiyelin",
         "b2": "7 alt skor ve her birinin açıklaması",
         "b3": "Bölge bölge rapor ve kişisel plan",
-        "b4": "60 saç, sakal ve renk stilini kendi yüzünde dene"
+        "b4": "76 saç, sakal ve renk stilini kendi yüzünde dene"
       },
       "illustrativeLabel": "İllüstratif",
       "offerTitle": "Tanıtım fiyatı",
