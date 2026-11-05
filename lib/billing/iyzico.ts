@@ -18,6 +18,11 @@ export class IyzicoError extends Error {
   }
 }
 
+/** Anahtarlar tanımlı mı (boş/yalnız boşluk = yok). Ödeme başlatmadan önce sorulur: eksikse bekleyen satır açılmaz. */
+export function iyzicoConfigured(env: Record<string, string | undefined> = process.env): boolean {
+  return Boolean(env.IYZICO_API_KEY?.trim() && env.IYZICO_SECRET_KEY?.trim());
+}
+
 export function iyzicoEnv() {
   const apiKey = process.env.IYZICO_API_KEY;
   const secretKey = process.env.IYZICO_SECRET_KEY;

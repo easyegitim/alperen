@@ -3,10 +3,10 @@ import { ApiError } from "@/lib/api/errors";
 import { withGuard } from "@/lib/api/guard";
 import { getPremiumStatus } from "@/lib/api/premium";
 import { renderContracts } from "@/lib/billing/contracts";
-import { IyzicoError } from "@/lib/billing/iyzico";
+import { IyzicoError, iyzicoConfigured } from "@/lib/billing/iyzico";
 import { effectivePriceTry } from "@/lib/billing/offer";
 import { loadOrStartOffer } from "@/lib/billing/offerStore";
-import { createPendingPurchase, hasPaidOneTimeFor } from "@/lib/billing/purchases";
+import { createPendingPurchase, hasPaidOneTimeFor, markPurchaseFailed } from "@/lib/billing/purchases";
 import { initializeOneTimeCheckout, initializeSubscriptionCheckout } from "@/lib/billing/subscriptions";
 import { APP_NAME, APP_URL } from "@/lib/config/app";
 import { isFeatureEnabled } from "@/lib/config/flags";
@@ -47,6 +47,11 @@ const Input = z
 export const POST = withGuard({ schema: Input, allowAnonymous: false, requireAdult: true }, async ({ user, supabase, input }) => {
   if (input.plan === "week_pass" && !isFeatureEnabled("weekPass")) throw new ApiError("FEATURE_DISABLED", "Bu plan kapalı.");
   if (input.plan === "yearly" && !isFeatureEnabled("yearlyPlan")) throw new ApiError("FEATURE_DISABLED", "Bu plan kapalı.");
+  // Sağlayıcı anahtarı yoksa onay, bekleyen satın alma veya abonelik satırı yazılmadan açık bir hata döner (500 değil).
+  if (!iyzicoConfigured()) {
+    console.warn("[billing] iyzico anahtarları tanımlı değil; ödeme başlatılamaz");
+    throw new ApiError("AI_FAILED", "Ödeme sağlayıcısı yapılandırılmamış.");
+  }
   const { premium } = await getPremiumStatus(supabase, user.id);
   if (premium) throw new ApiError("ALREADY_SUBSCRIBED", "Zaten aktif bir aboneliğin var.");
   const email = user.email;
@@ -84,17 +89,24 @@ export const POST = withGuard({ schema: Input, allowAnonymous: false, requireAdu
     if (input.plan === "one_time_report") {
       if (!oneTime) throw new Error("one_time state missing");
       const purchaseId = await createPendingPurchase(admin, { userId: user.id, product: "one_time_report", provider: "iyzico" });
-      const init = await initializeOneTimeCheckout({
-        buyer,
-        userId: user.id,
-        conversationId,
-        callbackUrl,
-        priceTry: oneTime.priceTry,
-        name: `${APP_NAME} Tek Seferlik Rapor`,
-        ip: "0.0.0.0",
-        itemId: "one_time_report",
-      });
-      if (!init.checkoutFormContent || !init.token) throw new ApiError("AI_FAILED", "Ödeme formu alınamadı.");
+      let init: Awaited<ReturnType<typeof initializeOneTimeCheckout>>;
+      try {
+        init = await initializeOneTimeCheckout({
+          buyer,
+          userId: user.id,
+          conversationId,
+          callbackUrl,
+          priceTry: oneTime.priceTry,
+          name: `${APP_NAME} Tek Seferlik Rapor`,
+          ip: "0.0.0.0",
+          itemId: "one_time_report",
+        });
+        if (!init.checkoutFormContent || !init.token) throw new ApiError("AI_FAILED", "Ödeme formu alınamadı.");
+      } catch (e) {
+        // Form açılamadı: bekleyen satır sahipsiz kalmasın (hak yalnız paid satırdan; bu yalnız kayıt düzeni).
+        await markPurchaseFailed(admin, purchaseId).catch(() => undefined);
+        throw e;
+      }
       await admin.from("payment_events").insert({
         provider: "iyzico",
         event_key: `checkout:${init.token}`,

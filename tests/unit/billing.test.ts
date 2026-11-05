@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isPremium } from "@/lib/billing/entitlement";
+import { iyzicoConfigured } from "@/lib/billing/iyzico";
 import { PAST_DUE_GRACE_DAYS, applyRemoteStatus, periodEndFor, webhookEventKey, type SubscriptionRow } from "@/lib/billing/sync";
 
 const now = new Date("2026-10-09T12:00:00Z");
@@ -67,5 +68,14 @@ describe("webhookEventKey", () => {
   });
   it("tanınan alan yoksa gövdenin tamamı anahtardır", () => {
     expect(webhookEventKey({ foo: 1 })).toBe('{"foo":1}');
+  });
+});
+
+describe("iyzicoConfigured (checkout anahtar yokken 500 yerine açık hata, bekleyen satır yok)", () => {
+  it("iki anahtar da dolu olmalı; boş veya yalnız boşluk yok sayılır", () => {
+    expect(iyzicoConfigured({ IYZICO_API_KEY: "sandbox-a", IYZICO_SECRET_KEY: "sandbox-b" })).toBe(true);
+    expect(iyzicoConfigured({ IYZICO_API_KEY: "", IYZICO_SECRET_KEY: "sandbox-b" })).toBe(false);
+    expect(iyzicoConfigured({ IYZICO_API_KEY: "sandbox-a", IYZICO_SECRET_KEY: "   " })).toBe(false);
+    expect(iyzicoConfigured({})).toBe(false);
   });
 });
