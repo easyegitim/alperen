@@ -12,6 +12,10 @@ ogr_bun_install
 ogr_step "web: typecheck (next typegen + tsc + servis çalışanı tsconfig'i)"
 bun run --cwd "$HERE" typecheck
 
+ogr_step "web: yerel deneme betiği typecheck (scripts/dev-local: up.ts → e2e/journey/bridge.ts, packages/llm testing)"
+# Kök betiğin kendi node_modules'u yok (bun izole kurulum); tsc ve @types/node web paketinden kullanılır.
+"$HERE/node_modules/.bin/tsc" -p "$ROOT/scripts/dev-local/tsconfig.json"
+
 ogr_step "web: eslint (eslint-config-next, 0 uyarı)"
 bun run --cwd "$HERE" lint
 

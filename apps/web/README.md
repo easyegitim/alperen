@@ -31,6 +31,12 @@ Paket kurulumu her zaman kökten: `cd /home/user/alperen && flock /tmp/ogrenmen-
 
 Ayrıca (yalnız E2E): `E2E_WEB_PORT` (3101), `E2E_SUPABASE_PORT` (54399), `E2E_OFFLINE_PORT` (3102).
 
+Yerel deneme (kurucunun makinesi; kökte `bun run local`, `scripts/dev-local/up.ts`): `NEXT_PUBLIC_LOCAL_DEV=1` giriş sayfasında
+"Yerel deneme: kod 246810" notunu ve demo hesap kısayollarını açar (`src/lib/local-dev.ts`; üretim derlemesinde tanımsız, görünmez).
+Supabase yerine `e2e/journey/bridge.ts` köprüsü (yolculuk yığını `e2e/journey/stack.ts` ile paylaşılır) 127.0.0.1:54321'de çalışır;
+web derlemesi `.next-local`'a yazılır. Açık yığına duman testi: `bunx playwright test -c playwright.local.config.ts`
+(giriş → Bugün → Başla → bir soru; veli ve eğitmen girişi).
+
 ## Rotalar
 
 | Yol | Rol | İçerik |

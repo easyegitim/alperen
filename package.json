@@ -18,6 +18,9 @@
     "check:live": "bash scripts/check-all.sh --live",
     "dev:web": "bun run --cwd apps/web dev",
     "dev:worker": "bun run --cwd apps/worker dev",
+    "doctor": "bun scripts/dev-local/doctor.ts",
+    "local": "bun scripts/dev-local/up.ts",
+    "local:reset": "bun scripts/dev-local/up.ts --reset",
     "secret-scan": "bash scripts/secret-scan.sh"
   }
 }

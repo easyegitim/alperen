@@ -35,6 +35,17 @@ Kök bir **bun çalışma alanıdır** (`apps/*`, `packages/*`); Python boru hat
 | `scripts/` | `check-all.sh`, `lib.sh`, RPC/kopya/fixture denetimleri, `secret-scan.sh` | var |
 | `docs/` | planlar, `SISTEM.md` (v1 anlatımı), `hukuk/` (dokunulmaz), `runbook/` | var |
 
+## Yerelde dene
+
+```
+bun install && bunx playwright@1.56.1 install chromium   # bağımlılıklar + PDF için Chromium (Linux/WSL: install --with-deps chromium)
+cp .env.local.example .env.local   # sonra dosyaya ANTHROPIC_API_KEY'ini yaz
+make local-db && bun run doctor    # veritabanını aç, eksik var mı bak
+bun run local                      # http://localhost:3000  (giriş kodu 246810)
+```
+
+Adım adım kılavuz, test senaryoları ve sık hatalar: [docs/YEREL-DENEME.md](docs/YEREL-DENEME.md).
+
 ## Nasıl çalıştırılır
 
 Gerekenler: Node 22 (`.nvmrc`), bun 1.4, Python 3.13, ffmpeg. İsteğe bağlı: Postgres 16 + pgvector ve `psql` (canlı

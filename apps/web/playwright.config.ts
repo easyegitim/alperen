@@ -5,8 +5,9 @@ import { FAKE_ANON_KEY, FAKE_PORT, FAKE_URL, WEB_PORT, WEB_URL } from './e2e/fix
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
-  // P1 yolculuğu kendi yığınıyla (gerçek Postgres + worker) ayrı yapılandırmada koşar: playwright.journey.config.ts
-  testIgnore: ['**/p1-journey.spec.ts', '**/p2-deneme.spec.ts', '**/p3-icerik.spec.ts', '**/p4-tarz.spec.ts', '**/p5-ders.spec.ts', '**/p6-veli.spec.ts'],
+  // P1 yolculuğu kendi yığınıyla (gerçek Postgres + worker) ayrı yapılandırmada koşar: playwright.journey.config.ts;
+  // yerel deneme dumanı açık `bun run local` yığınına bağlanır: playwright.local.config.ts
+  testIgnore: ['**/local-smoke.spec.ts', '**/p1-journey.spec.ts', '**/p2-deneme.spec.ts', '**/p3-icerik.spec.ts', '**/p4-tarz.spec.ts', '**/p5-ders.spec.ts', '**/p6-veli.spec.ts'],
   outputDir: 'test-results',
   fullyParallel: false,
   workers: 1,

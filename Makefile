@@ -6,7 +6,7 @@ ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PYTHON ?= python3
 FILL_OUT ?= /tmp/ogrenmen-fill-dry
 
-.PHONY: help check check-quick check-live db-test db-migrate rpc-parity fixtures-valid drift fill-dry dev-web dev-worker
+.PHONY: help check check-quick check-live db-test db-migrate rpc-parity fixtures-valid drift fill-dry dev-web dev-worker local local-reset local-db doctor
 
 help:
 	@echo "Öğrenmen hedefleri:"
@@ -22,6 +22,11 @@ help:
 	@echo "  make fill-dry      tablet template --fill dry-run (çıktı: FILL_OUT=$(FILL_OUT))"
 	@echo "  make dev-web       apps/web geliştirme sunucusu (bun run --cwd apps/web dev)"
 	@echo "  make dev-worker    apps/worker geliştirme süreci (bun run --cwd apps/worker dev)"
+	@echo "  make local         yerel deneme: tüm uygulama tek komutla (veritabanı ogrenmen_dev + köprü + worker + web;"
+	@echo "                     http://localhost:3000, giriş kodu 246810; anahtar .env.local'dan)"
+	@echo "  make local-db      yerel veritabanını Docker ile aç (docker compose up -d db; pgvector hazır gelir)"
+	@echo "  make doctor        yerel deneme için eksik var mı? Türkçe rapor (bun run doctor)"
+	@echo "  make local-reset   aynısı, yerel veritabanını ve yüklenen dosyaları silip baştan kurarak"
 
 check:
 	bash "$(ROOT)/scripts/check-all.sh"
@@ -82,3 +87,16 @@ dev-web:
 
 dev-worker:
 	bun run --cwd "$(ROOT)/apps/worker" dev
+
+# Kurucunun yerel denemesi (scripts/dev-local/up.ts): Ctrl+C kapatır, veritabanı silinmez.
+local:
+	cd "$(ROOT)" && bun scripts/dev-local/up.ts
+
+local-db:
+	cd "$(ROOT)" && docker compose up -d --wait db
+
+doctor:
+	cd "$(ROOT)" && bun scripts/dev-local/doctor.ts
+
+local-reset:
+	cd "$(ROOT)" && bun scripts/dev-local/up.ts --reset

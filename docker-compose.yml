@@ -1,0 +1,20 @@
+# Yerel deneme için veritabanı (pgvector hazır Postgres 16). Kullanım:  make local-db
+# Yalnız bu bilgisayardan erişilir (127.0.0.1). Parola yerel deneme içindir, gerçek veri koyma.
+# Durdurmak:  docker compose stop     Verileri de silmek:  docker compose down -v
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ogrenmen_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  ogrenmen_pg:

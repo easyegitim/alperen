@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Notice } from '@/ds';
 import { AppBrand } from '@/components/AppBrand';
+import { isLocalDev, LOCAL_DEMO_ACCOUNTS, LOCAL_DEV_OTP } from '@/lib/local-dev';
 import { safeNextPath } from '@/lib/routing';
 import { GirisFormu } from './giris-formu';
 
@@ -17,6 +18,7 @@ export default async function GirisPage({ searchParams }: { searchParams: Promis
   const errorKey = Array.isArray(params.hata) ? params.hata[0] : params.hata;
   const next = safeNextPath(nextRaw);
   const errorText = errorKey ? ERRORS[errorKey] : undefined;
+  const local = isLocalDev();
 
   return (
     <main id="icerik" className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-8 px-4 py-10">
@@ -28,7 +30,13 @@ export default async function GirisPage({ searchParams }: { searchParams: Promis
         </div>
       </div>
       {errorText ? <Notice tone="warning">{errorText}</Notice> : null}
-      <GirisFormu next={next} />
+      {local ? (
+        <Notice tone="info" data-testid="yerel-deneme">
+          Yerel deneme: e-posta gönderilmez, kod her hesap için <strong className="font-mono">{LOCAL_DEV_OTP}</strong>. Aşağıdaki
+          düğmelerle demo hesabı seçebilirsin.
+        </Notice>
+      ) : null}
+      <GirisFormu next={next} localAccounts={local ? LOCAL_DEMO_ACCOUNTS : undefined} />
       <p className="text-small m-0 text-ink-muted">
         Öğrenmen, easy eğitim şirketinin yapay zekâ destekli öğrenme modelidir. Öğretmenin bir yapay zekâdır ve bunu her zaman söyler.
       </p>

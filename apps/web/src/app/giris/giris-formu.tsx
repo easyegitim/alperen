@@ -1,16 +1,21 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useRef } from 'react';
 import { Mail } from 'lucide-react';
 import { Button, TextField } from '@/ds';
+import type { LocalDemoAccount } from '@/lib/local-dev';
 import { loginStep, signInWithGoogle, type LoginState } from './actions';
 
 const INITIAL: LoginState = { step: 'email' };
 
-/** Giriş formu: e-posta -> kod; ayrıca Google. Tüm metinler Türkçe, hatalar kelimeyle söylenir. */
-export function GirisFormu({ next }: { next: string }) {
+/**
+ * Giriş formu: e-posta -> kod; ayrıca Google. Tüm metinler Türkçe, hatalar kelimeyle söylenir.
+ * `localAccounts` yalnız yerel denemede (NEXT_PUBLIC_LOCAL_DEV=1) verilir: tek dokunuşla e-posta alanını doldurur.
+ */
+export function GirisFormu({ next, localAccounts }: { next: string; localAccounts?: readonly LocalDemoAccount[] }) {
   const [state, action, pending] = useActionState(loginStep, INITIAL);
   const email = state.email ?? '';
+  const emailRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="flex flex-col gap-6">
@@ -26,9 +31,29 @@ export function GirisFormu({ next }: { next: string }) {
             inputMode="email"
             required
             defaultValue={email}
+            ref={emailRef}
             error={state.error}
             hint="Sana 6 haneli bir kod ve giriş bağlantısı göndereceğiz."
           />
+          {localAccounts?.length ? (
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Yerel deneme hesapları">
+              {localAccounts.map((a) => (
+                <Button
+                  key={a.email}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    if (!emailRef.current) return;
+                    emailRef.current.value = a.email;
+                    emailRef.current.focus();
+                  }}
+                >
+                  {a.label}
+                </Button>
+              ))}
+            </div>
+          ) : null}
           <Button type="submit" variant="primary" size="lg" block icon={<Mail size={20} />} disabled={pending}>
             {pending ? 'Gönderiliyor' : 'Kod gönder'}
           </Button>

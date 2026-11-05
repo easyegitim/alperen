@@ -69,7 +69,8 @@ root_rpc_parity() {
   python3 "$ROOT/scripts/check-rpc-parity.py" --only-problems
 }
 root_scripts_tests() {
-  ruff check "$ROOT/scripts" "$ROOT/fixtures/scripts" && python3 -m pytest "$ROOT/scripts/tests" -q
+  ruff check "$ROOT/scripts" "$ROOT/fixtures/scripts" && python3 -m pytest "$ROOT/scripts/tests" -q \
+    && (cd "$ROOT" && bun test scripts/dev-local)
 }
 root_workflows() {
   yamllint -d relaxed "$ROOT/.github/workflows" \

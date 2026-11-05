@@ -2,6 +2,7 @@
 .next/
 .next-e2e/
 .next-journey/
+.next-local/
 next-env.d.ts
 test-results/
 playwright-report/
