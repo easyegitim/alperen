@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, LoaderCircle, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, KeyRound, LoaderCircle, Mail, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { track } from "@/lib/analytics";
 import { postJson } from "@/lib/api/client";
+import { TEST_PASSWORD_MIN_LENGTH, testPasswordLoginEnabled } from "@/lib/auth/testLogin";
 import { createClient } from "@/lib/db/browser";
 import { AGE_GATE_PATH } from "@/lib/onboarding/gate";
 import { clearDraft, readDraft } from "@/lib/onboarding/draft";
@@ -27,6 +28,8 @@ type Props = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CODE_RE = /^\d{6}$/;
+/** Yalnız yerel/ekip içi test (lib/auth/testLogin.ts); üretimde tanımsız → kapalı. */
+const TEST_PASSWORD_LOGIN = testPasswordLoginEnabled(process.env.NEXT_PUBLIC_TEST_PASSWORD_LOGIN);
 
 /**
  * KB §3.1 adım 3 (P#2): taramadan önce Google ya da Apple ile giriş. Anonim oturum kalktı. E-posta (tek kullanımlık kod)
@@ -42,6 +45,7 @@ export function SignIn({ session, returnPath, nextPath, authError }: Props) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const [password, setPassword] = useState("");
   const [flushState, setFlushState] = useState<"idle" | "running" | "missing" | "error">("idle");
   const flushedRef = useRef(false);
 
@@ -145,6 +149,31 @@ export function SignIn({ session, returnPath, nextPath, authError }: Props) {
     }
   }
 
+  async function passwordSignIn(e: FormEvent) {
+    e.preventDefault();
+    const value = email.trim().toLowerCase();
+    if (!EMAIL_RE.test(value) || password.length < TEST_PASSWORD_MIN_LENGTH) {
+      toast.error(t("testLogin.invalid"));
+      return;
+    }
+    setBusy("email");
+    track("sign_in_started", { method: "email" });
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({ email: value, password });
+      if (error) {
+        // Teşhis için yalnız hata kodu (e-posta/şifre yazılmaz).
+        console.warn("[auth] test login failed", error.code ?? error.status ?? "unknown");
+        toast.error(t("testLogin.failed"));
+        return;
+      }
+      track("account_linked", { method: "email" });
+      router.refresh();
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (session.signedIn && !session.anonymous) {
     if (flushState === "missing") {
       return (
@@ -187,6 +216,28 @@ export function SignIn({ session, returnPath, nextPath, authError }: Props) {
           <p className="text-sm text-muted-foreground">{t("body")}</p>
         </div>
       </div>
+
+      {TEST_PASSWORD_LOGIN ? (
+        <form onSubmit={passwordSignIn} className="space-y-3 rounded-2xl border border-brand/40 bg-card p-4 shadow-card" aria-labelledby="test-login-title">
+          <p id="test-login-title" className="flex items-center gap-2 text-sm font-semibold">
+            <KeyRound aria-hidden="true" className="size-4 text-brand" />
+            {t("testLogin.title")}
+          </p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">{t("testLogin.note")}</p>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium">{ta("emailLabel")}</span>
+            <Input type="email" name="email" autoComplete="email" inputMode="email" placeholder={ta("emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium">{t("testLogin.password")}</span>
+            <Input type="password" name="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          </label>
+          <Button type="submit" size="lg" className="w-full" disabled={busy !== null}>
+            {t("testLogin.submit")}
+            <ArrowRight aria-hidden="true" />
+          </Button>
+        </form>
+      ) : null}
 
       <div className="grid gap-2">
         <Button size="lg" className="w-full" disabled={busy !== null} onClick={() => void oauth("google")}>

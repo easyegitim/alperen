@@ -198,7 +198,15 @@
       "saveError": "Seçimlerin kaydedilemedi. Tekrar dene.",
       "retry": "Tekrar dene",
       "finishing": "Hesabın hazırlanıyor…",
-      "terms": "Metni oku"
+      "terms": "Metni oku",
+      "testLogin": {
+        "title": "Test girişi",
+        "note": "Yalnız ekip içi test için açık. E-posta ve sana verilen şifreyle gir.",
+        "password": "Şifre",
+        "submit": "Test hesabıyla gir",
+        "invalid": "E-posta ya da şifre eksik.",
+        "failed": "E-posta ya da şifre hatalı. Tekrar dene."
+      }
     }
   },
   "account": {
