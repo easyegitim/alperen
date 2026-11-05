@@ -13,6 +13,7 @@
     "test:e2e": "playwright test",
     "db:types": "supabase gen types typescript --linked > lib/db/types.ts",
     "calibrate": "tsx scripts/calibrate-scores.ts",
+    "grant:tester": "tsx scripts/grant-tester.ts",
     "fairness": "tsx --conditions=react-server scripts/fairness-report.ts",
     "compare:observers": "tsx --conditions=react-server scripts/compare-observers.ts",
     "refit:engine": "tsx --conditions=react-server scripts/refit-engine.ts",
