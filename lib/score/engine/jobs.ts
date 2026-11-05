@@ -86,11 +86,11 @@ export async function runAnalysisJob(args: JobArgs): Promise<JobResult> {
           prompt_version: hit.prompt_version,
           engine_version: ENGINE_H2.version,
           scoring_model: hit.model,
-          ai_usage: { calls: 0, attempts: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, estUsd: 0, servedModels: [] },
+          ai_usage: zeroUsage(),
           sections_ready: [...SECTION_KEYS],
           completed_at: iso(),
         });
-        await repo.insertReport({ user_id: args.userId, analysis_id: analysisId, model: hit.model, prompt_version: "report.v3", report: cached.report, is_fallback: false, safety_flags: [], input_tokens: 0, output_tokens: 0, ai_usage: null });
+        await repo.insertReport({ user_id: args.userId, analysis_id: analysisId, model: hit.model, prompt_version: "report.v3", report: cached.report, is_fallback: false, safety_flags: [], input_tokens: 0, output_tokens: 0, ai_usage: zeroUsage() });
         return { status: "completed", cacheHit: true };
       }
     }
@@ -112,9 +112,11 @@ export async function runAnalysisJob(args: JobArgs): Promise<JobResult> {
       report: scored.report,
       is_fallback: scored.signals.audit.fallbacks > 0,
       safety_flags: scored.signals.audit.flags,
-      input_tokens: scored.aiUsage.input + scored.aiUsage.cacheRead + scored.aiUsage.cacheWrite,
-      output_tokens: scored.aiUsage.output,
-      ai_usage: scored.aiUsage,
+      // hybrid.v2'de rapor skor çağrılarının çıktısıdır: maliyet yalnız analyses.ai_usage'ta durur. Rapora aynı kullanım
+      // yazılırsa ops.daily_ai_cost (analyses + coach_reports toplamı) her analizi iki kez sayar; null ise 0.005 varsayar.
+      input_tokens: 0,
+      output_tokens: 0,
+      ai_usage: zeroUsage(),
     });
     await repo.updateAnalysis(analysisId, {
       status: "completed",
@@ -156,4 +158,9 @@ export async function runAnalysisJob(args: JobArgs): Promise<JobResult> {
     }
     return { status: "failed", failure };
   }
+}
+
+/** Maliyeti başka satırda sayılan kayıtlar için (önbellek isabeti; hybrid.v2 raporu): estUsd 0 açıkça yazılır. */
+function zeroUsage(): AiUsage {
+  return { calls: 0, attempts: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, estUsd: 0, servedModels: [] };
 }
