@@ -67,8 +67,19 @@ ogr_bun_install() {
 }
 
 # pip install -e <yol>... (kilitli, sessiz). Yerel paket yolları mutlak olmalı.
+# Ağ kopması (PyPI "Connection reset by peer") tek seferde adımı düşürmesin: üç deneme, artan bekleme.
 ogr_pip() {
-  PIP_ROOT_USER_ACTION=ignore flock /tmp/ogrenmen-pip.lock python -m pip install -q --disable-pip-version-check "$@"
+  local attempt
+  for attempt in 1 2 3; do
+    if PIP_ROOT_USER_ACTION=ignore flock /tmp/ogrenmen-pip.lock python -m pip install -q --disable-pip-version-check "$@"; then
+      return 0
+    fi
+    [ "$attempt" -lt 3 ] || break
+    echo "pip kurulumu başarısız (deneme $attempt/3); $((attempt * 10)) sn sonra yeniden denenecek" >&2
+    sleep "$((attempt * 10))"
+  done
+  echo "HATA: pip kurulumu üç denemede de başarısız: $*" >&2
+  return 1
 }
 
 # Python boru hatlarının ortak tabanı (pipelines/common README'si); ek pip argümanları sona eklenir.
