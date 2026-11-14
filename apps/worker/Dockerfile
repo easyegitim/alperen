@@ -1,11 +1,23 @@
 # Öğrenmen işçisi. Bağlam depo kökü olmalıdır (çalışma alanı paketleri @ogrenmen/contracts, @ogrenmen/llm):
 #   docker build -f apps/worker/Dockerfile -t ogrenmen-worker .
 # Tek imaj iki süreç türünü çalıştırır (fly.toml processes): worker (genel işler + zamanlayıcı) ve pdf (Playwright Chromium).
-FROM node:22-bookworm
+# Taban Python 3.13: şablon doldurucu / anahtar doğrulayıcı / figür çizici testlerde ve CI'da bu sürümle ve aşağıdaki sabit
+# paket sürümleriyle koşar (Debian'ın apt paketleri Python 3.11 + eski SymPy/NumPy'dir; üretim testten sapmasın).
+# Node 22 üstüne eklenir (Dockerfile.local ile aynı düzen).
+FROM python:3.13-bookworm
 
 ENV NODE_ENV=production \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
-    HEALTH_PORT=8080
+    HEALTH_PORT=8080 \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 1000 --shell /bin/bash node \
+    && node --version && python3 --version
 
 COPY --from=oven/bun:1.4.2 /usr/local/bin/bun /usr/local/bin/bun
 
@@ -27,15 +39,17 @@ RUN bun install --frozen-lockfile --production --filter @ogrenmen/worker
 
 # Chromium ve sistem bağımlılıkları (yalnız pdf süreci kullanır; imaj tek). Şablon doldurucu (practice.generate:
 # py/template_fill.py, `python3 -I`), anahtar doğrulayıcı (py/key_verify.py) ve belge figürleri (document.generate:
-# py/figure_render.py; sahte LLM ya da açıkça OGRENMEN_FIGURES=local) için SymPy + matplotlib + NumPy (Debian paketleri;
-# yoksa şablon yolu LLM'e, figür yeniden üretime/figürsüz belgeye düşer). Yerel figür kodu OS yalıtımında çalışır
+# py/figure_render.py; sahte LLM ya da açıkça OGRENMEN_FIGURES=local) için SymPy + matplotlib + NumPy (pip, CI ile aynı
+# sabit sürümler; yoksa şablon yolu LLM'e, figür yeniden üretime/figürsüz belgeye düşer). Yerel figür kodu OS yalıtımında çalışır
 # (src/documents/sandbox.ts: util-linux setpriv + unshare, kullanıcı ad alanı); Fly makinesinde (Firecracker VM) açıktır,
 # Docker'ın varsayılan seccomp profili kapatır: o zaman model kodu yerelde çalışmaz (varsayılan code_execution etkilenmez).
 # poppler-utils (pdftoppm): style.ingest çıkmış sınav PDF'ini sayfa görüntülerine böler (yoksa PDF belge olarak okunur).
 # ffmpeg: ders medya servisi (pipelines/ders service.py, `ders` süreci; fly.toml) ses + sahne karesi çıkarır.
 RUN node apps/worker/node_modules/playwright-core/cli.js install --with-deps chromium \
-    && apt-get update && apt-get install -y --no-install-recommends python3-sympy python3-matplotlib python3-numpy poppler-utils ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get update && apt-get install -y --no-install-recommends poppler-utils ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir sympy==1.14.0 matplotlib==3.11.2 numpy==2.5.3 \
+    && python3 -I -c "import sympy, matplotlib, numpy; print('python paketleri tamam')"
 
 # Yalnız gereken dosyalar (yerel .env* / node_modules imaja girmesin; kökteki .dockerignore da bunları dışlamalı).
 COPY apps/worker/tsconfig.json apps/worker/tsconfig.json

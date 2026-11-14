@@ -19,6 +19,7 @@ ogr_step "web: yerel deneme betiği typecheck (scripts/dev-local: up.ts → e2e/
 ogr_step "web: eslint (eslint-config-next, 0 uyarı)"
 bun run --cwd "$HERE" lint
 
+ogr_live_env   # canlı kipte veritabanı adresi + geçici veritabanı kurulumunun Python paketleri
 if ogr_is_live; then
   ogr_step "web: vitest (yönlendirme, doğrulama, tema, push, tip uyumu, DS giriş noktası, koç sohbeti, Bugün/Test/Gelişim + Postgres entegrasyonu: koç sohbeti, öğrenci akışı)"
 else

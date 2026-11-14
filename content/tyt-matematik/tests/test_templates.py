@@ -109,6 +109,12 @@ def test_variety_and_determinism(generated):
     assert keys == {"A", "B", "C", "D"}, f"{tid}: doğru şık konumu karışmıyor"
 
 
+def _digest(path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def test_figures_render_png_within_bounds(generated_with_figure, tmp_path):
     tid, _mod, rows = generated_with_figure
     for seed, item, _key, fig in rows:
@@ -125,7 +131,9 @@ def test_figures_render_png_within_bounds(generated_with_figure, tmp_path):
     # aynı parametre aynı PNG'yi verir
     _s, _i, _k, fig = rows[0]
     a, b = fig.render(tmp_path / "a.png"), fig.render(tmp_path / "b.png")
-    assert (tmp_path / "a.png").read_bytes() == (tmp_path / "b.png").read_bytes()
+    # Özet karşılaştırılır: bayt dökümü başarısızlık günlüğünü boğmasın.
+    assert _digest(tmp_path / "a.png") == _digest(tmp_path / "b.png"), \
+        "aynı parametreyle iki çizim farklı PNG verdi"
     assert a["bytes"] == b["bytes"]
 
 

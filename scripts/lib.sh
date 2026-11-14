@@ -33,11 +33,20 @@ ogr_skip_all() { ogr_skip "$*"; exit 77; }
 ogr_is_live() { [ "$OGRENMEN_LIVE" = "1" ]; }
 ogr_is_quick() { [ "$OGRENMEN_QUICK" = "1" ]; }
 
-# Canlı kipte OGRENMEN_DATABASE_URL'i dışa aktarır (yoksa yerel varsayılan). Canlı değilse dokunmaz.
+# Canlı kipte OGRENMEN_DATABASE_URL'i dışa aktarır (yoksa yerel varsayılan) ve geçici veritabanı kurulumunun ihtiyaç
+# duyduğu Python paketlerini kurar. Canlı değilse dokunmaz.
 ogr_live_env() {
   if ogr_is_live; then
     export OGRENMEN_DATABASE_URL="${OGRENMEN_DATABASE_URL:-$OGR_DEFAULT_DB_URL}"
+    ogr_pip_content
   fi
+}
+
+# Geçici veritabanı kurulumu (packages/llm/src/testing/tempDb.ts) content/tyt-matematik/scripts/export-sql.py ve
+# seed-keys.py'yi çağırır; bunlar ogrenmen_contracts + pglast + sympy ister. Canlı test koşan her modül bunu kurmalıdır
+# (temiz makinede "No module named 'ogrenmen_contracts'" hatasının nedeni buydu).
+ogr_pip_content() {
+  ogr_pip -e "$OGR_ROOT/packages/contracts/python" sympy matplotlib numpy pglast
 }
 
 # Bu check.sh'e özel geçici dizin ($WORK); çıkışta silinir.

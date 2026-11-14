@@ -5,6 +5,9 @@
 #            sistemi önizleme derlemesi, apps/web Playwright E2E
 #   live-db: pgvector'lü Postgres hizmet konteyneriyle veritabanına bağlı
 #            modüller canlı kipte (make db-test; apps/worker pg-boss dahil)
+#   docker:  iki imaj da derlenir (Dockerfile.local, apps/worker/Dockerfile) ve
+#            yerel deneme yığını compose ile gerçekten açılır (sahte LLM).
+#            Bu iş yokken imajlar yalnız kurucunun makinesinde denenmiş oluyordu.
 # apps/worker PDF testleri ve apps/web E2E Chromium ister: Playwright 1.56.1
 # (apps/web @playwright/test ve apps/worker playwright-core ile aynı sürüm).
 # Araçlar: Node 22 (.nvmrc), bun 1.4, Python 3.13, ffmpeg, psql.
@@ -232,3 +235,56 @@ jobs:
 
       - name: Canlı testler (atlanan canlı test FAIL sayılır)
         run: make db-test
+
+  docker:
+    name: Docker imajları (yerel deneme + worker)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      # actions/checkout v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Yerel deneme imajı (derleme sırasında müfredat dışa aktarımı da koşar)
+        run: docker compose -f docker-compose.local.yml build app
+
+      - name: Yerel deneme imajı araçları
+        run: >-
+          docker compose -f docker-compose.local.yml run --rm --no-deps -T app sh -c
+          'node --version && bun --version && python3 --version
+          && python3 -I -c "import sympy, matplotlib, numpy, pglast; from ogrenmen_contracts import errors"
+          && ffmpeg -version | head -1 && test -s /app/.image-build-id'
+
+      - name: Yerel deneme yığını açılıyor (compose; sahte LLM, anahtar gerekmez)
+        run: |
+          docker compose -f docker-compose.local.yml run -d --service-ports \
+            -e OGRENMEN_LLM=fake --name ogrenmen-smoke app
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
+              echo "web hazır (${i}. deneme)"; break
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' ogrenmen-smoke)" != "true" ]; then
+              echo "kapsayıcı durdu"; docker logs ogrenmen-smoke; exit 1
+            fi
+            sleep 5
+          done
+          curl -fsS http://127.0.0.1:3000/api/health
+          curl -fsS -o /dev/null -w 'giriş sayfası %{http_code}\n' http://127.0.0.1:3000/giris
+          docker exec ogrenmen-smoke test -s /data/dev/jwt-secret
+          docker logs ogrenmen-smoke | tail -30
+
+      - name: Yığın günlükleri (hata olursa)
+        if: failure()
+        run: |
+          docker logs ogrenmen-smoke || true
+          docker exec ogrenmen-smoke sh -c 'tail -n 60 /data/dev/logs/*.log' || true
+
+      - name: Worker imajı (üretim)
+        run: docker build -f apps/worker/Dockerfile -t ogrenmen-worker .
+
+      - name: Worker imajı araçları
+        run: >-
+          docker run --rm ogrenmen-worker sh -c
+          'node --version && python3 --version
+          && python3 -I -c "import sympy, matplotlib, numpy; print(sympy.__version__, numpy.__version__, matplotlib.__version__)"
+          && node --import tsx --input-type=module -e "await import(\"./src/jobs/registry.ts\"); console.log(\"iş kayıt defteri yüklendi\")"
+          && pdftoppm -v 2>&1 | head -1 && ffmpeg -version | head -1 && id -un'

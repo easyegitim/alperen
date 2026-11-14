@@ -12,14 +12,16 @@ git checkout claude/festive-feynman-qjnn4i
 docker compose -f docker-compose.local.yml run --rm --service-ports app
 ```
 
-- İlk çalıştırma **5–10 dakika** sürer (imaj derlenir: Python, ffmpeg, Chromium, bağımlılıklar). Sonraki açılışlar birkaç saniye.
+- İlk çalıştırma **5–10 dakika** sürer (imaj derlenir: Python, ffmpeg, Chromium, bağımlılıklar). Sonraki açılışlar
+  yaklaşık bir dakika (derleme önbelleği saklanır; kod güncellendikten sonraki ilk açılış yine 1–3 dakika).
 - Terminal sizden **Claude anahtarını** ister. console.anthropic.com → API Keys → Create Key ile aldığınız `sk-ant-...`
   anahtarını yapıştırıp Enter'a basın. Anahtar yalnız bu bilgisayardaki Docker biriminde saklanır, bir daha sorulmaz.
   Geçersizse silinir ve sonraki açılışta yenisi sorulur. Anahtarı sohbete/GitHub'a yazmayın.
 - "Tarayıcıda aç: http://localhost:3000" yazınca tarayıcıda o adresi açın. Giriş: e-posta kutusunun altındaki
   **Öğrenci / Veli / Eğitmen** düğmesi, kod her zaman **246810**.
-- Kapatmak: terminalde **Ctrl+C**. Aynı komutla yeniden açarsınız; veriler durur.
-- Tamamen sıfırlamak: `docker compose -f docker-compose.local.yml down -v`
+- Kapatmak: terminalde **Ctrl+C**. Aynı komutla yeniden açarsınız; veritabanı, yüklediğiniz dosyalar, üretilen PDF'ler ve
+  kayıtlı anahtar durur.
+- Tamamen sıfırlamak (veritabanı, yüklemeler ve kayıtlı anahtar silinir): `docker compose -f docker-compose.local.yml down -v`
 - Dalda güncelleme olursa: `git pull` ve komutu `--build` ile çalıştırın:
   `docker compose -f docker-compose.local.yml run --rm --service-ports --build app`
 

@@ -1,0 +1,10 @@
+# Satır sonları her işletim sisteminde LF (Windows'ta Git varsayılanı CRLF'e çevirir; kabuk/Python betikleri bozulur).
+* text=auto eol=lf
+
+*.png binary
+*.webp binary
+*.woff2 binary
+*.pdf binary
+*.wav binary
+*.ico binary
+bun.lock text eol=lf

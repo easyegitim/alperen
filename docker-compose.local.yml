@@ -3,7 +3,10 @@
 # İlk çalıştırma (anahtar sorulur, bir kez):
 #   docker compose -f docker-compose.local.yml run --rm --service-ports app
 # Sonraki çalıştırmalar aynı komut (anahtar hatırlanır). Durdurmak: Ctrl+C.
-# Veritabanını sıfırlamak:  docker compose -f docker-compose.local.yml down -v
+# Kod güncellenince (git pull) aynı komuta --build ekle:
+#   docker compose -f docker-compose.local.yml run --rm --service-ports --build app
+# Arka plandaki veritabanını da durdurmak:  docker compose -f docker-compose.local.yml down
+# Her şeyi sıfırlamak (veritabanı, yüklemeler, kayıtlı anahtar):  docker compose -f docker-compose.local.yml down -v
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -26,14 +29,18 @@ services:
         condition: service_healthy
     stdin_open: true
     tty: true
+    init: true          # Ctrl+C temiz kapansın, yetim süreç (Chromium, ffmpeg) kalmasın
+    shm_size: "1gb"     # Chromium (PDF üretimi) varsayılan 64 MB'lık /dev/shm ile çökebilir
     environment:
       OGRENMEN_DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres
     ports:
       - "127.0.0.1:3000:3000"     # uygulama
       - "127.0.0.1:54321:54321"   # yerel giriş/veri köprüsü (tarayıcı kullanır)
     volumes:
-      - ogrenmen_data:/data       # anahtar ve yüklenen dosyalar burada kalır
+      - ogrenmen_data:/data                       # anahtar, yüklenen dosyalar, giriş oturumu sırrı, günlükler
+      - ogrenmen_next:/app/apps/web/.next-local   # web derleme önbelleği (sonraki açılışlar hızlı)
 
 volumes:
   ogrenmen_pg:
   ogrenmen_data:
+  ogrenmen_next:

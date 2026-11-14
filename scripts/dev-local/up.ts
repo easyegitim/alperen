@@ -48,8 +48,12 @@ const KEY_TTL = 20 * 365 * 86_400;
 const MIGRATION_ROLE = 'ogrenmen_owner';
 const EXAM_DATE = '2027-06-19'; // TYT 2027 (tahmini)
 
-const DEV_DIR = path.join(REPO_ROOT, '.dev-local');
+// Çalışma dizini: günlükler, yüklenen dosyalar, ders servisi dosyaları, köprünün imza sırrı. Docker'da kalıcı birime
+// (/data) alınır (OGRENMEN_DEV_DIR); yoksa her açılışta yüklemeler kaybolur, veritabanındaki satırlar boşa düşerdi.
+const DEV_DIR = process.env.OGRENMEN_DEV_DIR || path.join(REPO_ROOT, '.dev-local');
 const LOG_DIR = path.join(DEV_DIR, 'logs');
+/** Kullanıcıya gösterilen günlük yolu (depo köküne göre; Docker'da mutlak). */
+const LOG_HINT = path.relative(REPO_ROOT, LOG_DIR).startsWith('..') ? LOG_DIR : path.relative(REPO_ROOT, LOG_DIR);
 const STORAGE_DIR = path.join(DEV_DIR, 'storage');
 const DERS_DIR = path.join(DEV_DIR, 'ders');
 const WEB_DIR = path.join(REPO_ROOT, 'apps', 'web');
@@ -110,11 +114,31 @@ function loadEnvFile(file: string): string[] {
   return loaded;
 }
 
+/**
+ * Docker: web derleme önbelleği (apps/web/.next-local) kalıcı birimdedir ki sonraki açılışlar hızlı olsun. İmaj
+ * yenilendiyse (kod değişti; Dockerfile.local /app/.image-build-id yazar) önbellek boşaltılır: eski derleme yeni kodla
+ * karışmasın. Kapsayıcı dışında dosya yoktur, hiçbir şey yapmaz.
+ */
+function refreshWebCacheIfImageChanged(): void {
+  const idFile = path.join(REPO_ROOT, '.image-build-id');
+  if (!fs.existsSync(idFile)) return;
+  const current = fs.readFileSync(idFile, 'utf8').trim();
+  const seenFile = path.join(DEV_DIR, 'image-build-id');
+  const seen = fs.existsSync(seenFile) ? fs.readFileSync(seenFile, 'utf8').trim() : '';
+  if (seen === current) return;
+  const dist = path.join(WEB_DIR, '.next-local');
+  // Dizin bir bağlama noktası olabilir: kendisi değil içeriği silinir.
+  for (const entry of fs.existsSync(dist) ? fs.readdirSync(dist) : []) fs.rmSync(path.join(dist, entry), { recursive: true, force: true });
+  fs.mkdirSync(DEV_DIR, { recursive: true });
+  fs.writeFileSync(seenFile, `${current}\n`);
+}
+
 type LlmMode = 'gerçek' | 'sahte';
 
 /**
- * Gerçek kipte anahtar yoksa ve terminal etkileşimliyse anahtarı sorar, ENV_FILE'a yazar (bir kez). Değer ekrana
- * yazılmaz. Etkileşimsiz ortamda (TTY yok) hiçbir şey yapmaz; decideLlm açıklayıcı hata verir.
+ * Gerçek kipte anahtar yoksa ve terminal etkileşimliyse anahtarı sorar, ENV_FILE'a yazar (bir kez). Yapıştırılan değer
+ * Enter'dan sonra ekrandan silinir (ekran paylaşımında/kaydırma geçmişinde kalmasın). Etkileşimsiz ortamda (TTY yok)
+ * hiçbir şey yapmaz; decideLlm açıklayıcı hata verir.
  */
 async function promptForKey(): Promise<void> {
   if (process.env.OGRENMEN_LLM === 'fake') return;
@@ -124,7 +148,18 @@ async function promptForKey(): Promise<void> {
   say('Claude anahtarı gerekiyor (bir kez sorulur, bu bilgisayarda saklanır).');
   say('console.anthropic.com → API Keys → Create Key; "sk-ant-" ile başlar.');
   const rl = (await import('node:readline')).createInterface({ input: process.stdin, output: process.stdout });
-  const ask = () => new Promise<string>((resolve) => rl.question('Anahtarı yapıştır ve Enter\'a bas: ', (a) => resolve(a.trim())));
+  const question = 'Anahtarı yapıştır ve Enter\'a bas: ';
+  const ask = () =>
+    new Promise<string>((resolve) =>
+      rl.question(question, (a) => {
+        if (process.stdout.isTTY) {
+          // Soru + yapıştırılan değer kaç satır tuttuysa o kadar yukarı çık ve oradan aşağısını sil.
+          const rows = Math.max(1, Math.ceil((question.length + a.length) / (process.stdout.columns || 80)));
+          process.stdout.write(`\x1b[${rows}A\r\x1b[0J${question}(gizlendi)\n`);
+        }
+        resolve(a.trim());
+      }),
+    );
   for (let i = 0; i < 3; i++) {
     const key = (await ask()).replace(/^["']|["']$/g, '');
     if (!key.startsWith('sk-ant-') || key.length < 40 || /\s/.test(key)) {
@@ -277,7 +312,7 @@ function databaseHint(url: string, err: unknown): SetupError {
   if (e.code === '42501' || /permission denied|must be superuser/i.test(msg)) {
     return new SetupError(`Postgres kullanıcısının yetkisi yetmiyor (${safe}).`, ['Veritabanı açabilen bir yönetici kullanıcı gerekir (docker compose\'daki "postgres" kullanıcısı uygundur).']);
   }
-  return new SetupError(`Veritabanı kurulamadı: ${msg}`, ['Baştan kurmayı dene:  bun run local:reset', `Ayrıntı: ${path.join('.dev-local', 'logs')}`]);
+  return new SetupError(`Veritabanı kurulamadı: ${msg}`, ['Baştan kurmayı dene:  bun run local:reset', `Ayrıntı: ${LOG_HINT}`]);
 }
 
 // ------------------------------------------------------------------------------------------------ süreçler
@@ -295,7 +330,7 @@ function startChild(name: string, cmd: string, args: string[], cwd: string, env:
     if (stopping) return;
     say();
     say(`HATA: "${name}" beklenmedik şekilde durdu (kod ${code ?? '-'}, sinyal ${signal ?? '-'}).`);
-    say(`  Son satırlar (${path.join('.dev-local', 'logs', `${name}.log`)}):`);
+    say(`  Son satırlar (${path.join(LOG_HINT, `${name}.log`)}):`);
     for (const line of tail(path.join(LOG_DIR, `${name}.log`), 15)) say(`    ${line}`);
     say('  Her şey kapatılıyor; sorunu giderip yeniden çalıştır:  bun run local');
     void stop(1);
@@ -335,7 +370,7 @@ async function waitFor(what: string, check: () => Promise<boolean>, ms: number):
     if (await check()) return;
     await sleep(1_000);
   }
-  throw new SetupError(`${what} ${Math.round(ms / 1000)} saniyede hazır olmadı.`, [`Günlüklere bak: ${path.join('.dev-local', 'logs')}`, 'Yeniden dene:  bun run local']);
+  throw new SetupError(`${what} ${Math.round(ms / 1000)} saniyede hazır olmadı.`, [`Günlüklere bak: ${LOG_HINT}`, 'Yeniden dene:  bun run local']);
 }
 
 // ------------------------------------------------------------------------------------------------ demo hesaplar
@@ -528,6 +563,7 @@ async function main(): Promise<void> {
   const demo = await ensureDemoAccounts(database);
   step(demo.created.length ? `demo hesaplar kuruldu: ${demo.created.join(', ')}` : 'demo hesaplar hazır');
 
+  refreshWebCacheIfImageChanged();
   startChild('web', 'node', [path.join(WEB_DIR, 'node_modules/next/dist/bin/next'), 'dev', '--webpack', '-p', String(PORTS.web), '-H', BIND_HOST], WEB_DIR, {
     NEXT_DIST_DIR: '.next-local',
     NEXT_PUBLIC_SUPABASE_URL: BRIDGE_URL,
@@ -558,7 +594,7 @@ async function main(): Promise<void> {
       ['Ders yazıya dökme', sttReal ? 'gerçek (GROQ_API_KEY)' : 'sahte (GROQ_API_KEY yok; örnek transkript)'],
       ['Anlamsal arama', process.env.VOYAGE_API_KEY ? 'açık (VOYAGE_API_KEY)' : 'kapalı (VOYAGE_API_KEY yok)'],
       ['Veritabanı', `${DB_NAME} (Ctrl+C ile silinmez)`],
-      ['Günlükler', path.join('.dev-local', 'logs')],
+      ['Günlükler', LOG_HINT],
       ['Kapatmak', 'Ctrl+C'],
     ]),
   );

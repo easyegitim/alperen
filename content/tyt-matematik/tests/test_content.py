@@ -112,6 +112,20 @@ def test_dev_seed_compatibility(lib):
     assert {t["tag"] for t in seed["misconception_tags"]} == {t["tag"] for t in content.tags}
 
 
+def _assert_same_picture(out, committed, name):
+    """İki PNG aynı resmi gösteriyor mu: aynı boyut; ortalama fark çok küçük; belirgin farklı piksel oranı çok küçük."""
+    import matplotlib.image as mpimg
+    import numpy as np
+
+    a = np.asarray(mpimg.imread(str(out)), dtype=float)
+    b = np.asarray(mpimg.imread(str(committed)), dtype=float)
+    assert a.shape == b.shape, f"{name}: boyut/kanal farklı {a.shape} != {b.shape}"
+    diff = np.abs(a - b)
+    assert diff.mean() < 0.005, f"{name} PNG'yi yeniden üretmiyor (ortalama fark {diff.mean():.4f})"
+    changed = (diff.max(axis=-1) > 0.25).mean() if diff.ndim == 3 else (diff > 0.25).mean()
+    assert changed < 0.01, f"{name} PNG'yi yeniden üretmiyor (belirgin farklı piksel oranı {changed:.4f})"
+
+
 def test_figure_sources_reproduce_pngs(tmp_path, lib):
     content = lib.load_content()
     for item in content.items:
@@ -124,7 +138,8 @@ def test_figure_sources_reproduce_pngs(tmp_path, lib):
         assert proc.returncode == 0, proc.stderr
         committed = CONTENT_DIR / "diagnostic" / fig["png_path"]
         assert C.png_size(out) == C.png_size(committed)
-        assert out.read_bytes() == committed.read_bytes(), f"{src.name} PNG'yi yeniden üretmiyor"
+        # Bayt eşitliği makineye bağlıdır (zlib/libpng/FreeType sürümü); karşılaştırma piksel üzerinden yapılır.
+        _assert_same_picture(out, committed, src.name)
         w, h = C.png_size(committed)
         assert 200 <= w <= 1600 and 200 <= h <= 1600
 

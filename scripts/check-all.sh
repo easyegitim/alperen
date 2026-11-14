@@ -50,6 +50,10 @@ else
   export OGRENMEN_LIVE="${OGRENMEN_LIVE:-0}" OGRENMEN_QUICK=0
 fi
 
+# Ortak yardımcılar (ogr_pip_base …): kök adımları da kullanır. Kip değişkenleri yukarıda dışa aktarıldıktan sonra yüklenir.
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
+
 # ------------------------------------------------------------------------------------------- kök adımları
 # Her adım bir fonksiyondur; kök yolu $ROOT'tan alınır.
 
@@ -59,8 +63,11 @@ root_secret_scan() {
 root_drift() {
   python3 "$ROOT/scripts/check-drift.py"
 }
+# Kök adımları modül check.sh'lerinden ÖNCE koşar; yerel Python paketlerini (ogrenmen_contracts, ogrenmen_common …) kendileri
+# kurmalıdır. Aksi hâlde temiz bir makinede (CI) "ogrenmen_contracts kurulu değil" ile düşer.
 root_fixtures() {
-  python3 "$ROOT/scripts/check-fixtures.py" \
+  ogr_pip_base \
+    && python3 "$ROOT/scripts/check-fixtures.py" \
     && python3 "$ROOT/fixtures/scripts/build_fixtures.py" --check \
     && python3 -m pytest "$ROOT/fixtures/scripts" -q \
     && ffmpeg -v error -i "$ROOT/fixtures/ders/lesson-01.wav" -f null -
@@ -69,7 +76,7 @@ root_rpc_parity() {
   python3 "$ROOT/scripts/check-rpc-parity.py" --only-problems
 }
 root_scripts_tests() {
-  ruff check "$ROOT/scripts" "$ROOT/fixtures/scripts" && python3 -m pytest "$ROOT/scripts/tests" -q \
+  ogr_pip_base && ruff check "$ROOT/scripts" "$ROOT/fixtures/scripts" && python3 -m pytest "$ROOT/scripts/tests" -q \
     && (cd "$ROOT" && bun test scripts/dev-local)
 }
 root_workflows() {
