@@ -8,7 +8,7 @@
  * geçit istek başına kurulur (defter yazıcısı isteğin kullanıcısına bağlıdır).
  */
 import 'server-only';
-import { createTransport, Gateway, type LlmTransport, type FakeTransport } from '@ogrenmen/llm';
+import { checkSpend, createTransport, Gateway, rpcSpendQuery, type LlmTransport, type FakeTransport, type RpcClientLike } from '@ogrenmen/llm';
 import { requestDocument } from '@/server/documents/request';
 import type { RpcClient } from '@/server/practice/rpc';
 import { fakeCoachScript } from './fake-script';
@@ -102,6 +102,8 @@ export async function chatDeps(user: CoachDbClient | null, env: Env = process.en
     gateway,
     product,
     requestDocument: (input, ctx) => requestDocument(user as unknown as RpcClient, input, ctx.messageId),
+    // Harcama kapısı yalnız gerçek taşımada (sahte LLM ücretsiz; worker işleriyle aynı kural).
+    ...(transport.kind !== 'fake' ? { spend: (route, ref) => checkSpend(rpcSpendQuery(user as unknown as RpcClientLike), route, ref) } : {}),
     ...(transport.kind === 'fake' ? { onTurn: ({ route, text }) => fakeCoachScript(transport as FakeTransport, route, text) } : {}),
   };
 }

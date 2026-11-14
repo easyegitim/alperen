@@ -4,7 +4,7 @@
  * Supabase istemcisi + parent_* RPC'leri; ikisi de yoksa 503. Yalnız `parent` rolü (admin ve öğrenci 403).
  */
 import 'server-only';
-import { createTransport, Gateway, type FakeTransport, type LlmTransport } from '@ogrenmen/llm';
+import { checkSpend, createTransport, Gateway, rpcSpendQuery, type FakeTransport, type LlmTransport, type RpcClientLike } from '@ogrenmen/llm';
 import { loadPrompt } from '@ogrenmen/prompts';
 import { getCurrentProfile } from '@/server/auth';
 import { COACH_KEY_ENV } from '@/server/chat/server-token';
@@ -81,7 +81,9 @@ export async function parentDeps(user: ParentDbClient | null, env: Env = process
   }
   if (!user) throw new ParentChatError('unauthenticated', 401, 'Oturumunuz kapanmış. Yeniden giriş yapın.');
   const store = new SupabaseParentStore(user, env[COACH_KEY_ENV]!);
-  return { store, gateway: new Gateway({ transport, ledger: store.ledger() }), product: parentProduct, ...(onTurn ? { onTurn } : {}) };
+  // Harcama kapısı yalnız gerçek taşımada (sahte LLM ücretsiz).
+  const spend = transport.kind !== 'fake' ? (ref: string | null) => checkSpend(rpcSpendQuery(user as unknown as RpcClientLike), PARENT_ROUTE, ref) : undefined;
+  return { store, gateway: new Gateway({ transport, ledger: store.ledger() }), product: parentProduct, ...(spend ? { spend } : {}), ...(onTurn ? { onTurn } : {}) };
 }
 
 export interface ParentSession {

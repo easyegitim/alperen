@@ -14,7 +14,7 @@ import { CHAT_COPY, type DocRef } from '@/lib/chat';
 import { toolError, toolReply } from '@/server/documents/status';
 import type { RequestView } from '@/server/documents/types';
 import { appErrorCode, type RpcResult } from '@/server/practice/rpc';
-import type { CallResult, CoachMode, Gateway, RequestDocumentInput, StreamEvent, ToolRunners } from '@ogrenmen/llm';
+import type { CallResult, CoachMode, Gateway, RequestDocumentInput, SpendDecision, StreamEvent, ToolRunners } from '@ogrenmen/llm';
 import {
   base64Size,
   buildHistory,
@@ -35,6 +35,11 @@ export const MAX_UPLOADS = 4;
 export const COACH_ROUTE = 'coach_chat' as const;
 export const COACH_DEEP_ROUTE = 'coach_deep' as const;
 export type CoachRoute = typeof COACH_ROUTE | typeof COACH_DEEP_ROUTE;
+/** Harcama tavanında (check_spend.downgrade) iki koç rotasının yerine geçen Haiku rotası; prompt coach_chat'inki. */
+export const COACH_LITE_ROUTE = 'coach_lite' as const;
+export type CoachCallRoute = CoachRoute | typeof COACH_LITE_ROUTE;
+/** Harcama kapısı kapalıyken (paid_allowed = false ya da okunamadı) öğrenciye giden yanıt; model çağrılmaz. */
+export const SPEND_BLOCKED_TEXT = 'Şu an yanıt veremiyorum; biraz sonra tekrar dene.';
 
 /**
  * Mod → rota (PLAN-v2 §5): "Çözümü göster" tam çözüm/derin açıklama isteğidir → `coach_deep` (Opus 5.5 · high).
@@ -80,8 +85,13 @@ export interface TurnDeps {
   requestDocument?: (input: RequestDocumentInput, ctx: { messageId: number | null }) => Promise<RpcResult<RequestView>>;
   /** Kayıtlı sohbet mesaj kimlikleri gerçek (veritabanı) mi; bellek deposunda değil. */
   persistentIds?: boolean;
+  /**
+   * Harcama kapısı (packages/llm `checkSpend`; amaç = koç rotası). Verilmezse (sahte LLM) kapı atlanır. `allowed: false`
+   * → model çağrılmaz, `SPEND_BLOCKED_TEXT` döner; `downgrade` → `coach_lite`.
+   */
+  spend?: (route: CoachRoute, studentRef: string) => Promise<SpendDecision>;
   /** Her turda gateway çağrısından önce (yalnız sahte LLM'de betik sıraya koymak için). */
-  onTurn?: (info: { route: CoachRoute; text: string }) => void;
+  onTurn?: (info: { route: CoachCallRoute; text: string }) => void;
 }
 
 export interface TurnRequest {
@@ -201,7 +211,8 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
   const { store, gateway } = deps;
   const { req, conversation, uploads, seed } = prepared;
   const student = req.student;
-  const route = coachRouteFor(conversation.mode);
+  const baseRoute = coachRouteFor(conversation.mode);
+  let route: CoachCallRoute = baseRoute;
   const documents: DocRef[] = [];
   let userMessageId: number | null = null;
 
@@ -225,6 +236,15 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
   }
 
   try {
+    if (deps.spend) {
+      const gate = await deps.spend(baseRoute, student.publicRef);
+      if (!gate.allowed) {
+        console.warn('OGR-CHAT-021 harcama kapısı kapalı; koç çağrılmadı', gate.state);
+        emit({ type: 'done', messageId: null, text: SPEND_BLOCKED_TEXT, refusal: false, escalated: false, modeSuggestion: null });
+        return;
+      }
+      if (gate.downgrade) route = COACH_LITE_ROUTE;
+    }
     // Ek bütçesi için geçmişteki eklerin boyları (satır meta verisinden; dosyalar yalnız pencerede kalırsa indirilir).
     const historyIds = [...new Set(stored.flatMap(uploadIdsOf))].filter((id) => !uploads.some((u) => u.id === id));
     const known = [...uploads, ...(historyIds.length > 0 ? await store.getUploads(student, historyIds) : [])];
@@ -237,7 +257,7 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
       reserve: cost(uploads.map((u) => u.id)),
     });
     const userBlocks = await hydrateBlocks(content, load);
-    const product = await deps.product(route);
+    const product = await deps.product(route === COACH_LITE_ROUTE ? COACH_ROUTE : route);
     const blocks = await store.systemBlocks(student, conversation.id);
 
     let turnMeta: TurnMeta | null = null;

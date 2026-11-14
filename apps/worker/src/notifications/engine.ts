@@ -230,7 +230,7 @@ export async function evaluateNotifications(ctx: JobContext, opts: EvaluateOptio
           if (!copy) {
             const ref = await publicRef(ctx.db, t.student_id);
             copy = writeNotificationCopy(
-              { mode, gateway: ctx.gateway, system, log: ctx.log, signal: ctx.signal },
+              { mode, gateway: ctx.gateway, db: ctx.db, system, log: ctx.log, signal: ctx.signal },
               { kind: 'weekly_summary', audience: 'parent', data: weeklyCopyData(s), template: weeklyTemplate(s), studentRef: ref, studentId: t.student_id },
             );
             copies.set(t.student_id, copy);

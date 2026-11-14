@@ -12,6 +12,7 @@ import { buildPromptSystem, classifyError, MaxTokensError, ParseError, RefusalEr
 import { examReportUserText } from '@ogrenmen/prompts';
 import type { Db } from '../db.js';
 import { PermanentJobError } from '../jobs/errors.js';
+import { assertSpend } from '../jobs/spend.js';
 import type { JobContext } from '../jobs/types.js';
 import { systemPrompt } from '../prompts.js';
 import type { StorageLike } from '../storage.js';
@@ -97,6 +98,8 @@ async function modelReport(ctx: JobContext, s: SessionRow, data: ReportData): Pr
   const cached = await stashGet<{ ast: ExamReport }>(ctx.db, s.id, 'report');
   if (cached?.ast) return { ast: cached.ast, costUsd: 0 };
   const gateway = await ctx.gateway();
+  // Harcama kapısı (kapalı başarısız; downgrade'de çalışır). Kapalıysa SpendGateError → deterministik rapor.
+  await assertSpend(ctx, gateway, 'exam.report', s.public_ref);
   const prompt = await systemPrompt(ctx.db, 'exam_report');
   const system = s.course_id ? (await buildPromptSystem(ctx.db, { product: prompt.text, studentId: s.student_id, courseId: s.course_id })).system : { product: prompt.text };
   const res = await gateway.call('exam_report', {

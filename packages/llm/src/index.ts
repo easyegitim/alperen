@@ -16,4 +16,5 @@ export * from './files.js';
 export * from './memory/pgMemory.js';
 export * from './dossier.js';
 export * from './gateway.js';
+export * from './spendGate.js';
 export { FakeTransport, sampleFromSchema, type FakeReply, type FakeToolUse, type FakeRequestRecord } from './fake.js';

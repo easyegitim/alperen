@@ -9,6 +9,7 @@
 import { MEMORY_COMPACT_ACTOR, PARENT_SUMMARY_MAX_BYTES, PARENT_SUMMARY_PATH, PgStore, type Gateway } from '@ogrenmen/llm';
 import { notificationCopyUserText } from '@ogrenmen/prompts';
 import type { Db } from '../db.js';
+import { spendGate } from '../jobs/spend.js';
 import type { Logger } from '../log.js';
 import { addDays, trMinutes, trNum } from './rules.js';
 
@@ -177,6 +178,8 @@ export function notificationCopyMode(env: NodeJS.ProcessEnv = process.env): Noti
 export interface CopyDeps {
   mode: NotificationCopyMode;
   gateway: () => Promise<Gateway>;
+  /** Verilirse harcama kapısı okunur (jobs/spend.ts); kapalıysa model çağrılmaz, şablon döner. */
+  db?: Db;
   system: () => Promise<{ text: string; version: string }>;
   log: Logger;
   signal?: AbortSignal;
@@ -190,6 +193,10 @@ export async function writeNotificationCopy(
   if (deps.mode === 'template') return { ...input.template, source: 'template' };
   try {
     const [gateway, system] = await Promise.all([deps.gateway(), deps.system()]);
+    if (deps.db && !(await spendGate({ db: deps.db }, gateway, 'notifications.copy', input.studentRef)).allowed) {
+      deps.log.warn('bildirim metni şablona döndü (harcama kapısı kapalı)', { kind: input.kind });
+      return { ...input.template, source: 'fallback' };
+    }
     const res = await gateway.call('notification_copy', {
       system: { product: system.text },
       user: notificationCopyUserText({ kind: input.kind, audience: input.audience, data: input.data, template: input.template }),

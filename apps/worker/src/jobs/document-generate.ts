@@ -67,6 +67,7 @@ import { pythonKeyVerifier, type KeyVerifier } from '../practice/bank.js';
 import { systemPrompt } from '../prompts.js';
 import type { StorageLike } from '../storage.js';
 import { PermanentJobError } from './errors.js';
+import { generationBlock, SPEND_CAP_REASON, spendGate } from './spend.js';
 import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
 
@@ -134,10 +135,6 @@ async function setStatus(db: Db, docId: string, status: string, patch: Record<st
   return (r.rows[0]?.r ?? {}) as Record<string, unknown>;
 }
 
-async function spendAllowed(db: Db, studentRef: string | null): Promise<boolean> {
-  const r = await db.query(`select paid_allowed from public.check_spend('document.generate', $1)`, [studentRef]);
-  return (r.rows[0] as { paid_allowed?: boolean } | undefined)?.paid_allowed !== false;
-}
 
 /**
  * Figür kipi: sahte taşıma ya da Files istemcisi yoksa `local`; gerçek anahtarla `code_execution` (model kodu worker'da
@@ -246,8 +243,10 @@ export async function runDocumentGenerate(p: DocumentGeneratePayload, ctx: JobCo
 
   await setStatus(ctx.db, doc.id, 'generating');
   const gateway = await ctx.gateway();
-  if (gateway.transport.kind !== 'fake' && !(await spendAllowed(ctx.db, doc.student_ref))) {
-    throw new DocumentFailure('Bugünkü üretim sınırına ulaşıldı; yarın yeniden isteyebilirsin.', 'check_spend: paid_allowed = false');
+  // Harcama kapısı (kapalı başarısız). Tavanda (downgrade) belge üretimi çalışmaz: aynı sonuç, gerekçe spend_cap.
+  const spend = generationBlock(await spendGate(ctx, gateway, 'document.generate', doc.student_ref));
+  if (spend) {
+    throw new DocumentFailure('Bugünkü üretim sınırına ulaşıldı; yarın yeniden isteyebilirsin.', spend === SPEND_CAP_REASON ? 'spend_cap: check_spend downgrade' : 'check_spend: paid_allowed = false');
   }
 
   // kapsam

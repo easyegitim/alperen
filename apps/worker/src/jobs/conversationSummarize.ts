@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { systemPrompt } from '../prompts.js';
 import { PermanentJobError } from './errors.js';
+import { assertSpend } from './spend.js';
 import { oncePer } from './dedupe.js';
 import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
@@ -150,6 +151,8 @@ export const conversationSummarizeJob: JobDefinition<z.infer<typeof payload>, Co
     const lastId = old[old.length - 1]!.id;
     const system = await systemPrompt(ctx.db, 'conversation_summary');
     const gateway = await ctx.gateway();
+    // Harcama kapısı (kapalı başarısız; downgrade'de özet çalışır, Haiku).
+    await assertSpend(ctx, gateway, 'conversation.summarize', conv.public_ref ? String(conv.public_ref) : null);
     const res = await gateway.call('conversation_summary', {
       system: { product: system.text },
       user: JSON.stringify({ kind: conv.kind === 'parent' ? 'parent' : 'student', previous_summary: conv.summary ?? null, messages: lines }),

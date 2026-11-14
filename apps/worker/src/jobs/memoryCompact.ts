@@ -3,6 +3,7 @@ import { MEMORY_COMPACT_ACTOR, MEMORY_CONFLICT_CODE, memoryContentHash, MemoryEr
 import { systemPrompt } from '../prompts.js';
 import { nextIstanbulTime } from '../schedules.js';
 import { PermanentJobError } from './errors.js';
+import { assertSpend } from './spend.js';
 import { oncePer } from './dedupe.js';
 import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
@@ -140,6 +141,8 @@ async function submit(p: z.infer<typeof payload>, ctx: JobContext): Promise<Memo
   if (list.length === 0) return { phase: 'submit', students: 0, files: 0, batchId: null, chained };
   const system = await systemPrompt(ctx.db, 'memory_compaction', { name: 'memory_compaction', text: MEMORY_COMPACTION_FALLBACK });
   const gateway = await ctx.gateway();
+  // Harcama kapısı (kapalı başarısız; downgrade'de gece sıkıştırması çalışır). Toplama aşaması yeni Batch açmaz.
+  await assertSpend(ctx, gateway, 'memory.compact');
   const { batch, meta } = await gateway.submitBatch(
     'memory_compaction',
     list.map((c) => ({ customId: customIdOf(c.studentId), input: itemInput(c, system) })),

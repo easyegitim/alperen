@@ -66,6 +66,7 @@ import { systemPrompt } from '../prompts.js';
 import type { StorageLike } from '../storage.js';
 import { debounced } from './dedupe.js';
 import { PermanentJobError } from './errors.js';
+import { spendGate } from './spend.js';
 import { uuid } from './schemas.js';
 import type { AnyJobDefinition, JobContext, JobDefinition, QueuePolicy } from './types.js';
 
@@ -457,9 +458,8 @@ export const lessonLabelJob: JobDefinition<z.infer<typeof stagePayload>, StageRe
 // --- lesson.analyse -----------------------------------------------------------------------------------------------------
 
 async function paidAllowed(ctx: JobContext, gateway: Gateway, studentRef: string | null): Promise<boolean> {
-  if (gateway.transport.kind === 'fake') return true;
-  const r = await ctx.db.query('select paid_allowed from public.check_spend($1, $2)', ['lesson_analysis', studentRef]).catch(() => ({ rows: [] as Record<string, unknown>[] }));
-  return r.rows[0]?.paid_allowed !== false;
+  // Harcama kapısı (kapalı başarısız); downgrade'de ders analizi çalışır (arka plan işi).
+  return (await spendGate(ctx, gateway, 'lesson_analysis', studentRef)).allowed;
 }
 
 /** Analize giden görsel kareler: kare başına ≤ FRAME_MAX_BYTES, toplam base64 ≤ FRAMES_BASE64_BUDGET (dolunca kalan atlanır). */

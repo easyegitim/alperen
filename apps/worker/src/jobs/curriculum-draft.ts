@@ -25,7 +25,7 @@
  */
 import { z } from 'zod';
 import type { CurriculumDraft } from '@ogrenmen/contracts';
-import { classifyError } from '@ogrenmen/llm';
+import { classifyError, type Gateway } from '@ogrenmen/llm';
 import {
   checkDraft,
   citationRefs,
@@ -43,6 +43,7 @@ import type { Db } from '../db.js';
 import { routePrompt } from '../curriculum/prompt.js';
 import { oncePer } from './dedupe.js';
 import { PermanentJobError } from './errors.js';
+import { spendGate } from './spend.js';
 import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
 
@@ -155,11 +156,11 @@ export async function loadUploads(
 }
 
 /** Ücretli çağrı izni (yalnız gerçek taşımada; sahte taşıma ücretsizdir). */
-async function assertPaidAllowed(ctx: JobContext): Promise<void> {
-  const r = await ctx.db.query(`select paid_allowed, state from public.check_spend('curriculum.draft')`);
-  const row = r.rows[0] as { paid_allowed?: boolean; state?: string } | undefined;
-  if (row && row.paid_allowed === false) {
-    throw new PermanentJobError(`ücretli LLM çağrısı kapalı (${row.state ?? 'disabled'}); taslak eğitmen onayıyla yeniden başlatılır`, 'OGR-JOB-110');
+async function assertPaidAllowed(ctx: JobContext, gateway: Gateway): Promise<void> {
+  // Kapalı başarısız; downgrade'de taslak çalışır.
+  const spend = await spendGate(ctx, gateway, 'curriculum.draft');
+  if (!spend.allowed) {
+    throw new PermanentJobError(`ücretli LLM çağrısı kapalı (${spend.state}); taslak eğitmen onayıyla yeniden başlatılır`, 'OGR-JOB-110');
   }
 }
 
@@ -188,7 +189,7 @@ export async function runCurriculumDraft(p: CurriculumDraftPayload, ctx: JobCont
     prefix: codePrefix(p.course_text),
   };
   const gateway = await ctx.gateway();
-  if (gateway.transport.kind !== 'fake') await assertPaidAllowed(ctx);
+  await assertPaidAllowed(ctx, gateway);
   const uploads = await loadUploads(ctx.db, p.upload_ids, { curriculumId: cur.id, studentId: p.student_id, requestedBy: p.requested_by });
   if (uploads.length < p.upload_ids.length) {
     const kept = new Set(uploads.map((u) => u.id));

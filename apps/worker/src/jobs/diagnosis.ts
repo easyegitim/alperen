@@ -35,6 +35,7 @@ import { RANK_UPLOAD_RESULT, refKey, UPLOAD_CARD, uploadNotice, type UploadSigna
 import type { StorageLike } from '../storage.js';
 import { runExamDiagnosis } from './diagnosis-exam.js';
 import { PermanentJobError } from './errors.js';
+import { assertSpend } from './spend.js';
 import { uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
 
@@ -449,6 +450,8 @@ async function runDiagnosis(p: DiagnosisRunPayload, ctx: JobContext, e: Enrollme
   const rawReused = stored !== null;
   if (!stored) {
     const gateway = await ctx.gateway();
+    // Harcama kapısı (kapalı başarısız; downgrade'de teşhis çalışır): kapalıysa kalıcı hata (dış yakalayıcı failed yapar).
+    await assertSpend(ctx, gateway, 'diagnosis.run', e.public_ref ? String(e.public_ref) : null);
     // 1. Files API (kimlik saklanır, tekrar kullanılır)
     const uploader = fileUploaderFor(gateway, ctx.storage);
     let fileIds = await ensureFiles(ctx.db, uploader, uploads, false);

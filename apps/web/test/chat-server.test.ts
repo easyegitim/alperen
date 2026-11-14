@@ -27,7 +27,7 @@ import { encodeEvent } from '@/server/chat/sse';
 import { storeKindFor } from '@/server/chat/store-kind';
 import { mintServerToken } from '@/server/chat/server-token';
 import { SupabaseChatStore, type CoachDbClient } from '@/server/chat/supabase-store';
-import { ChatError, executeTurn, prepareTurn, type ChatEvent, type TurnDeps } from '@/server/chat/turn';
+import { ChatError, executeTurn, prepareTurn, SPEND_BLOCKED_TEXT, type ChatEvent, type TurnDeps } from '@/server/chat/turn';
 import type { ChatStudent, StoredMessage } from '@/server/chat/types';
 import { parseSseChunk } from '@/components/chat/sse-client';
 
@@ -369,6 +369,28 @@ describe('koç turu: rota, tur kilidi, pencere ve ek bütçesi', () => {
     await turn(deps, student, { text: 'Şimdi ipucu', mode: 'hint', conversationId: prepared.conversation.id });
     expect(fake.requests[1]!.route).toBe('coach_chat');
     expect(store.rawMessages(prepared.conversation.id).at(-1)!.toolCalls?.route).toBe('coach_chat');
+  });
+
+  it('harcama kapısı: downgrade → coach_lite (Haiku, coach_chat promptu); kapalı → Türkçe ileti, LLM çağrısı yok', async () => {
+    const { fake, store, deps, student } = await setup();
+    const purposes: string[] = [];
+    const down: TurnDeps = { ...deps, spend: async (route) => (purposes.push(route), { allowed: true, downgrade: true, state: 'soft_cap' }) };
+    const { prepared } = await turn(down, student, { text: 'Tam çözümü göster', mode: 'solve' });
+    expect(purposes).toEqual(['coach_deep']);
+    const req = fake.requests[0]!;
+    expect(req.route).toBe('coach_lite');
+    expect(req.body.model).toBe('claude-haiku-5-5');
+    expect((req.body.system as { text: string }[])[0]!.text).toBe(loadPrompt('coach_chat').text);
+    expect(store.rawMessages(prepared.conversation.id).at(-1)!.toolCalls?.route).toBe('coach_lite');
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const closed: TurnDeps = { ...deps, spend: async () => ({ allowed: false, downgrade: false, state: 'unknown' }) };
+    const { done, events } = await turn(closed, student, { text: 'Merhaba', conversationId: prepared.conversation.id });
+    warn.mockRestore();
+    expect(fake.requests).toHaveLength(1);
+    expect(done?.text).toBe(SPEND_BLOCKED_TEXT);
+    expect(SPEND_BLOCKED_TEXT).toBe('Şu an yanıt veremiyorum; biraz sonra tekrar dene.');
+    expect(events.some((e) => e.type === 'error')).toBe(false);
   });
 
   it('önceki turların thinking blokları geçmişe girmez: özet, pencere kayması, dossier değişimi, ipucu → çözüm', async () => {

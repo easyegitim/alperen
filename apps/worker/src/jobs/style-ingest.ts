@@ -36,6 +36,7 @@ import { loadArchivePages, type PdfRasterizer } from '../styles/pages.js';
 import { stashed } from '../styles/stash.js';
 import { debounced } from './dedupe.js';
 import { PermanentJobError } from './errors.js';
+import { spendGate } from './spend.js';
 import { uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
 
@@ -96,11 +97,9 @@ export const SPEND_RETRY_AFTER_SEC = 6 * 3600;
 
 async function paidGateway(ctx: JobContext): Promise<Gateway> {
   const gateway = await ctx.gateway();
-  if (gateway.transport.kind !== 'fake') {
-    const r = await ctx.db.query(`select paid_allowed, state from public.check_spend('style.ingest')`).catch(() => ({ rows: [] as Record<string, unknown>[] }));
-    const row = r.rows[0] as { paid_allowed?: boolean; state?: string } | undefined;
-    if (row && row.paid_allowed === false) throw new SpendBlockedError(row.state ?? 'tavan');
-  }
+  // Harcama kapısı (kapalı başarısız); downgrade'de çalışır.
+  const spend = await spendGate(ctx, gateway, 'style.ingest');
+  if (!spend.allowed) throw new SpendBlockedError(spend.state);
   return gateway;
 }
 

@@ -25,8 +25,8 @@ function body(route: RouteName, opts: { batch?: boolean } = {}) {
 }
 
 describe('rota tablosu', () => {
-  it('görevdeki 26 rota + curriculum_research (müfredat iki adım) + suggestions_copy (Bugün kartları) + question_generation (alıştırma bankası) + personalization_check (P3 doğrulama merdiveni) tanımlı', () => {
-    expect(ROUTE_NAMES).toHaveLength(30);
+  it('görevdeki 26 rota + curriculum_research (müfredat iki adım) + suggestions_copy (Bugün kartları) + question_generation (alıştırma bankası) + personalization_check (P3 doğrulama merdiveni) + coach_lite (harcama tavanı) tanımlı', () => {
+    expect(ROUTE_NAMES).toHaveLength(31);
     for (const n of ROUTE_NAMES) expect(ROUTES[n].name).toBe(n);
   });
 
@@ -47,6 +47,7 @@ describe('rota tablosu', () => {
     expect(ROUTES.solution_diagnosis.effort).toBe('high');
     expect(ROUTES.coach_chat.model).toBe(MODELS.sonnet);
     expect(ROUTES.coach_chat.effort).toBe('medium');
+    expect(ROUTES.coach_lite).toMatchObject({ model: MODELS.haiku, effort: 'low', thinking: 'off', tools: ROUTES.coach_chat.tools, cache: ROUTES.coach_chat.cache });
     expect(ROUTES.page_class.model).toBe(MODELS.haiku);
     // Biçimli çıktı Citations ile uyumsuz: web araçları araştırma rotasında, taslak araçsız ve biçimli.
     expect(ROUTES.curriculum_research.tools).toEqual(['web_search', 'web_fetch']);

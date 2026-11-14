@@ -10,12 +10,14 @@
  * Kapsam veritabanındadır: depo velinin JWT'siyle yalnız `parent_*` RPC'lerini çağırır; koç sohbeti, soru metni, cevap
  * ve anahtar, ham yüklemeler ve olasılık p hiçbir araçta dönmez (supabase 0043, tests/30_parent_rpcs.sql).
  */
-import type { CallResult, Gateway, StreamEvent } from '@ogrenmen/llm';
+import type { CallResult, Gateway, SpendDecision, StreamEvent } from '@ogrenmen/llm';
 import { buildHistory, steppedStart, toStored } from '@/server/chat/history';
 import type { ParentChatStore, ParentDisplayMessage, ParentTurnRecord, ReportRef, StoredBlock, StoredMessage, TurnClaim } from './types';
 
 export const PARENT_ROUTE = 'parent_chat' as const;
 export const PARENT_MAX_TEXT = 2000;
+/** Harcama kapısı kapalıyken (paid_allowed = false ya da okunamadı) veliye giden yanıt; model çağrılmaz. */
+export const PARENT_SPEND_BLOCKED_TEXT = 'Şu an yanıt veremiyorum; lütfen biraz sonra tekrar deneyin.';
 
 export class ParentChatError extends Error {
   constructor(
@@ -34,6 +36,11 @@ export interface ParentTurnDeps {
   /** system[0] (packages/prompts `loadPrompt('parent_chat')`). */
   product: () => { text: string; version: string } | Promise<{ text: string; version: string }>;
   now?: () => Date;
+  /**
+   * Harcama kapısı (packages/llm `checkSpend('parent_chat')`). Verilmezse (sahte LLM) atlanır. `allowed: false` → model
+   * çağrılmaz; downgrade rotayı değiştirmez (parent_chat zaten ucuz).
+   */
+  spend?: (studentRef: string | null) => Promise<SpendDecision>;
   /** Her turda gateway çağrısından önce (yalnız sahte LLM'de betik sıraya koymak için). */
   onTurn?: (info: { text: string }) => void;
 }
@@ -129,6 +136,14 @@ async function runTurn(deps: ParentTurnDeps, prepared: PreparedParentTurn, emit:
   }
 
   try {
+    if (deps.spend) {
+      const gate = await deps.spend(req.studentRef);
+      if (!gate.allowed) {
+        console.warn('OGR-PARENT-023 harcama kapısı kapalı; veli asistanı çağrılmadı', gate.state);
+        emit({ type: 'done', messageId: null, text: PARENT_SPEND_BLOCKED_TEXT, refusal: false });
+        return;
+      }
+    }
     const history = await buildHistory(stored, prepared.summary, async () => null, { total });
     const product = await deps.product();
     const dossier = await store.childContext(req.studentId);

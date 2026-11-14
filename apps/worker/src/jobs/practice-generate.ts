@@ -139,7 +139,7 @@ async function llmGateway(ctx: JobContext): Promise<Gateway | null> {
   if (gateway.transport.kind !== 'fake') {
     const spend = await paidAllowed(ctx.db);
     if (!spend.ok) {
-      ctx.log.warn('practice: ücretli LLM çağrısı kapalı; yalnız şablon yolu', { state: spend.state });
+      ctx.log.warn('practice: ücretli LLM çağrısı kapalı; yalnız şablon yolu', { state: spend.state, reason: spend.reason });
       return null;
     }
   }

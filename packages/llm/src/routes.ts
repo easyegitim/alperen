@@ -93,6 +93,7 @@ export interface RouteConfig {
 export const ROUTE_NAMES = [
   'coach_chat',
   'coach_deep',
+  'coach_lite',
   'solution_diagnosis',
   'page_class',
   'exam_page_items',
@@ -183,6 +184,13 @@ export const ROUTES = {
     purpose: 'Koç: istek üzerine tam çözüm / derin açıklama',
     model: MODELS.opus, effort: 'high', thinking: 'adaptive', schema: null,
     tools: COACH_TOOLS, cache: CHAT, mode: 'sync', stream: true, maxTokens: 32000,
+  }),
+  // Harcama kapısı downgrade (check_spend.downgrade): coach_chat/coach_deep yerine; araçlar ve prompt coach_chat ile aynı.
+  coach_lite: route('coach_lite', {
+    progressNote: false,
+    purpose: 'Koç sohbeti (harcama tavanında Haiku)',
+    model: MODELS.haiku, effort: 'low', thinking: 'off', schema: null,
+    tools: COACH_TOOLS, cache: CHAT, mode: 'sync', stream: true, maxTokens: 8000,
   }),
   solution_diagnosis: route('solution_diagnosis', {
     purpose: 'Soru + çözüm fotoğrafı teşhisi',

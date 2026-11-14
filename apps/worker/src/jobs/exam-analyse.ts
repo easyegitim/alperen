@@ -68,6 +68,7 @@ import { mapLimit } from '../exam/util.js';
 import { refKey } from '../suggestions/rules.js';
 import { UPLOAD_BUCKET, writeUploadCard } from './diagnosis.js';
 import { PermanentJobError } from './errors.js';
+import { spendGate } from './spend.js';
 import { uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
 
@@ -797,10 +798,8 @@ export const examAnalyseJob: JobDefinition<ExamAnalysePayload, ExamAnalyseResult
     try {
       if (runsStage(plan, 'classify')) {
         const gateway = await ctx.gateway();
-        if (gateway.transport.kind !== 'fake') {
-          const sp = await ctx.db.query(`select paid_allowed from public.check_spend('exam.analyse', $1)`, [s.public_ref]);
-          if (sp.rows[0] && sp.rows[0].paid_allowed === false) throw new PermanentJobError('harcama sınırı: deneme analizi şu an yapılamıyor', 'OGR-JOB-152');
-        }
+        // Harcama kapısı (kapalı başarısız); downgrade'de analiz çalışır.
+        if (!(await spendGate(ctx, gateway, 'exam.analyse', s.public_ref)).allowed) throw new PermanentJobError('harcama sınırı: deneme analizi şu an yapılamıyor', 'OGR-JOB-152');
         run.ec = { ctx, gateway, sessionId: s.id, studentRef: s.public_ref, courseId: s.course_id, curriculumId: s.curriculum_id };
         return await analyse(run, uploads);
       }

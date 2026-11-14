@@ -17,6 +17,7 @@ import { reportUserText } from '@ogrenmen/prompts';
 import type { Db } from '../db.js';
 import { leaksKey } from '../exam/report.js';
 import { PermanentJobError } from '../jobs/errors.js';
+import { generationBlock, SpendGateError, spendGate } from '../jobs/spend.js';
 import type { JobContext } from '../jobs/types.js';
 import { emitNotification } from '../notifications/engine.js';
 import { systemPrompt } from '../prompts.js';
@@ -129,16 +130,21 @@ function fallbackWorthy(err: unknown): boolean {
 
 async function modelReport(ctx: JobContext, doc: ReportDoc, d: ReportData): Promise<{ ast: ReportAst; costUsd: number; model: string }> {
   const gateway = await ctx.gateway();
+  const ref = await ctx.db.query('select public_ref from public.students where id = $1::uuid', [doc.studentId]);
+  const studentRef = ref.rows[0]?.public_ref ? String(ref.rows[0].public_ref) : null;
+  // Harcama kapısı: kapalı (spend_blocked) ya da tavanda (downgrade → spend_cap) model çağrılmaz → deterministik rapor.
+  const spend = await spendGate(ctx, gateway, 'report.generate', studentRef);
+  const block = generationBlock(spend);
+  if (block) throw new SpendGateError(block, spend.state);
   const prompt = await systemPrompt(ctx.db, 'report');
   // Ders bloğu (müfredat) önbellekli; dossier (koç hafızası) veli raporuna girmez.
   const system = doc.courseId ? { product: prompt.text, course: (await buildPromptSystem(ctx.db, { product: prompt.text, studentId: doc.studentId, courseId: doc.courseId })).system.course ?? null } : { product: prompt.text };
-  const ref = await ctx.db.query('select public_ref from public.students where id = $1::uuid', [doc.studentId]);
   const res = await gateway.call('report', {
     system,
     user: reportUserText({ kind: d.kind, title: d.title, period: d.period, course_title: d.courseTitle, generated_on: d.generatedOn, charts: d.charts, data: d.data, question: d.question }),
     turn: { now: ctx.now() },
     promptVersion: prompt.version,
-    studentRef: ref.rows[0]?.public_ref ? String(ref.rows[0].public_ref) : null,
+    studentRef,
     ref: { table: 'generated_documents', id: doc.id },
     purpose: 'report.generate',
     tools: { runners: parentReportRunners(ctx.db, doc.studentId, doc.courseId) },
@@ -162,6 +168,7 @@ export async function produceParentReport(ctx: JobContext, documentId: string, o
   let fallback = false;
   let costUsd = 0;
   let model = 'deterministic';
+  let spendReason: string | null = null;
   try {
     const m = await modelReport(ctx, doc, data);
     costUsd = m.costUsd;
@@ -176,6 +183,7 @@ export async function produceParentReport(ctx: JobContext, documentId: string, o
     }
   } catch (err) {
     if (!fallbackWorthy(err) && !opts.lastAttempt) throw err;
+    if (err instanceof SpendGateError) spendReason = err.reason;
     ctx.log.warn('rapor modeli düştü; deterministik rapor', { document: doc.id, error: (err as Error).message });
     ast = fallbackParentReport(data);
     fallback = true;
@@ -223,5 +231,5 @@ export async function produceParentReport(ctx: JobContext, documentId: string, o
       ctx.log.warn('report_ready bildirimi yazılamadı', { document: doc.id, error: (err as Error).message });
     }
   }
-  return { documentId, status: 'rendered', fallback, pdfPath, notificationId };
+  return { documentId, status: 'rendered', fallback, pdfPath, notificationId, ...(spendReason ? { reason: spendReason } : {}) };
 }

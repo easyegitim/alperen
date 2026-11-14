@@ -24,7 +24,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ExamGeneration } from '@ogrenmen/contracts';
-import type { Gateway } from '@ogrenmen/llm';
+import { checkSpend, pgSpendQuery, type Gateway } from '@ogrenmen/llm';
 import type { Db } from '../db.js';
 import { routePrompt } from '../curriculum/prompt.js';
 import type { Logger } from '../log.js';
@@ -504,11 +504,14 @@ export async function llmPhase(inp: LlmPhaseInput, jobRef: string): Promise<LlmP
   return { items: checked.items, dropped: mapped.dropped + checked.summary.dropped, costUsd: res.costUsd, model: res.model, verify: checked.summary };
 }
 
-/** Ücretli çağrı izni (yalnız gerçek taşımada). */
-export async function paidAllowed(db: Db): Promise<{ ok: boolean; state: string | null }> {
-  const r = await db.query(`select paid_allowed, state from public.check_spend('practice.generate')`);
-  const row = r.rows[0] as { paid_allowed?: boolean; state?: string } | undefined;
-  return { ok: !row || row.paid_allowed !== false, state: row?.state ?? null };
+/**
+ * Ücretli çağrı izni (yalnız gerçek taşımada; kapalı başarısız). Tavanda (downgrade) alıştırma üretimi çalışmaz:
+ * `ok: false, reason: 'spend_cap'`.
+ */
+export async function paidAllowed(db: Db): Promise<{ ok: boolean; state: string | null; reason: string | null }> {
+  const d = await checkSpend(pgSpendQuery(db), 'practice.generate');
+  const reason = !d.allowed ? 'spend_blocked' : d.downgrade ? 'spend_cap' : null;
+  return { ok: reason === null, state: d.state, reason };
 }
 
 /** `count` soruyu yapraklara sırayla dağıtır (ilk yaprak artanı alır). */

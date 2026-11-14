@@ -25,6 +25,7 @@ import { frequencyBand, styleScore } from '../src/styles/score.js';
 import { loadArchivePages, pdftoppmRasterizer } from '../src/styles/pages.js';
 import { FakeTransport, Gateway, InMemoryLedger } from '@ogrenmen/llm';
 import { SPEND_RETRY_AFTER_SEC, itemText, styleIngestJob, toItemPayload } from '../src/jobs/style-ingest.js';
+import { runStyleQuestionGen } from '../src/jobs/style-question-gen.js';
 import { jobCtx, routedDb } from './support.js';
 import { getJob, jobNames } from '../src/jobs/registry.js';
 import { REQUIRED_QUEUES } from '../src/startup-checks.js';
@@ -186,7 +187,7 @@ describe('style.ingest yardımcıları', () => {
     const SRC = '00000000-0000-4000-8000-0000000000aa';
     const db = routedDb([
       [/from public\.exam_sources s join public\.courses/, () => [{ id: SRC, course_id: 'c1', course_code: 'MAT', course_title: 'Mat', curriculum_id: 'cur', year: 2024, term: 'osym', status: 'uploaded', upload_ids: ['u1'] }]],
-      [/check_spend\('style\.ingest'\)/, () => [{ paid_allowed: false, state: 'hard_cap' }]],
+      [/check_spend\(\$1, \$2\)/, (v) => (v?.[0] === 'style.ingest' ? [{ paid_allowed: false, downgrade: false, state: 'hard_cap' }] : [])],
     ]);
     const paid = { transport: { kind: 'anthropic' } } as unknown as Gateway;
     const ctx = jobCtx({ db, gateway: async () => paid, job: { id: 'j', name: 'style.ingest', retryCount: 3 } });
@@ -195,6 +196,21 @@ describe('style.ingest yardımcıları', () => {
     expect(r.warnings[0]).toMatch(/kaynak bekletildi/);
     expect(db.calls.some((c) => /set status = 'failed'/.test(c.text))).toBe(false);
     expect(ctx.enqueued).toEqual([{ name: 'style.ingest', data: { source_id: SRC, reason: 'spend_blocked' }, opts: expect.objectContaining({ startAfter: SPEND_RETRY_AFTER_SEC }) }]);
+  });
+  it('harcama kapısı: style.question_gen tavanda (downgrade) LLM çağırmaz, spend_cap ile atlanır', async () => {
+    const STYLE = '00000000-0000-4000-8000-0000000000bb';
+    const db = routedDb([
+      [/from public\.question_styles qs join public\.courses co/, () => [{ id: STYLE, code: 'MAT.T1', name: 'Tarz', status: 'active', source: 'ai', reviewed: true, skill_ids: ['k1'], exemplar_item_ids: [], years_hit: [2024], course_id: 'c1', curriculum_id: 'cur' }]],
+      [/from public\.skills where curriculum_id/, () => [{ id: 'k1', name: 'Kazanım', description: null, is_leaf: true }]],
+      [/check_spend\(\$1, \$2\)/, (v) => (v?.[0] === 'style.question_gen' ? [{ paid_allowed: true, downgrade: true, state: 'soft_cap' }] : [])],
+    ]);
+    let llmCalls = 0;
+    const paid = { transport: { kind: 'anthropic' }, call: async () => { llmCalls++; throw new Error('LLM çağrılmamalı'); } } as unknown as Gateway;
+    const ctx = jobCtx({ db, gateway: async () => paid, job: { id: 'j', name: 'style.question_gen', retryCount: 0 } });
+    const r = await runStyleQuestionGen({ style_id: STYLE, count: 3 } as Parameters<typeof runStyleQuestionGen>[0], ctx);
+    expect(r).toMatchObject({ style_id: STYLE, status: 'skipped', reason: 'spend_cap' });
+    expect(llmCalls).toBe(0);
+    expect(db.calls.some((c) => /check_spend/.test(c.text))).toBe(true);
   });
   it('madde metni: kök + şıklar; model yoksa OCR türünden', () => {
     const q = { no: 3, section: null, kind: 'mcq' as const, stem_text: 'Kök', options: [{ key: 'A', text: '1' }, { key: 'B', text: '2' }], figures: [], pageUploadId: 'u', pageUploadIds: ['u'], legibility: 'clear' as const, skillIds: [], bbox: null };

@@ -10,10 +10,11 @@
  *      denetimi (py/key_verify.py) → yalnız doğrulananlar register_practice_questions ile bankaya (approved), style_id ve
  *      şekil bağlanır (styles/bank.ts). Şekilli soru yalnız Storage varken (PNG figures kovasına) girer.
  *   4. enrollment_id verildiyse öğrencinin Bugün kartları yenilenir (suggestions.refresh).
- * Gerçek taşımada ücretli çağrı check_spend('style.question_gen') ile denetlenir; kapalıysa iş atlanır.
+ * Gerçek taşımada ücretli çağrı check_spend('style.question_gen') ile denetlenir (jobs/spend.ts); kapalıysa ya da
+ * tavandaysa (downgrade → reason spend_cap) iş atlanır.
  */
 import { z } from 'zod';
-import { collectOutputFiles, type Gateway } from '@ogrenmen/llm';
+import { collectOutputFiles } from '@ogrenmen/llm';
 import { downloadedFigures } from '../documents/figures.js';
 import { pythonKeyVerifier, type KeyVerifier } from '../practice/bank.js';
 import { systemPrompt } from '../prompts.js';
@@ -24,6 +25,7 @@ import { generateStyleQuestions, type StyleCallEnv } from '../styles/llm.js';
 import { debounced } from './dedupe.js';
 import { figuresMode } from './document-generate.js';
 import { PermanentJobError } from './errors.js';
+import { SPEND_CAP_REASON, spendGate } from './spend.js';
 import { uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
 
@@ -64,12 +66,6 @@ function safeStorage(ctx: JobContext): StorageLike | null {
   }
 }
 
-async function paidAllowed(ctx: JobContext, gateway: Gateway): Promise<{ ok: boolean; state: string | null }> {
-  if (gateway.transport.kind === 'fake') return { ok: true, state: null };
-  const r = await ctx.db.query(`select paid_allowed, state from public.check_spend('style.question_gen')`).catch(() => ({ rows: [] as Record<string, unknown>[] }));
-  const row = r.rows[0] as { paid_allowed?: boolean; state?: string } | undefined;
-  return { ok: !row || row.paid_allowed !== false, state: row?.state ?? null };
-}
 
 export async function runStyleQuestionGen(p: StyleQuestionGenPayload, ctx: JobContext): Promise<StyleQuestionGenResult> {
   const style = await loadStyle(ctx.db, p.style_id);
@@ -91,8 +87,10 @@ export async function runStyleQuestionGen(p: StyleQuestionGenPayload, ctx: JobCo
   if (leaves.length === 0) return skip('no_skills');
 
   const gateway = await ctx.gateway();
-  const spend = await paidAllowed(ctx, gateway);
-  if (!spend.ok) return skip(`spend_${spend.state ?? 'blocked'}`);
+  // Harcama kapısı: kapalı → spend_<state>; downgrade (tavan) → spend_cap (pahalı üretim tavanda çalışmaz).
+  const spend = await spendGate(ctx, gateway, 'style.question_gen');
+  if (!spend.allowed) return skip(`spend_${spend.state}`);
+  if (spend.downgrade) return skip(SPEND_CAP_REASON);
 
   const [course, exemplars, avoid, student, archive] = await Promise.all([
     ctx.db.query('select title from public.courses where id = $1::uuid', [style.course_id]),
