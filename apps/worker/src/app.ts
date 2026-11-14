@@ -2,7 +2,7 @@
  * Uygulama kurulumu: havuz, pg-boss, kuyruklar, işçiler, zamanlayıcı, sağlık sunucusu.
  * Test ve entegrasyon için bağımlılıklar (`overrides`) değiştirilebilir.
  */
-import { createGateway, PgLedger, type Gateway } from '@ogrenmen/llm';
+import { assertNotFakeInProduction, createGateway, PgLedger, type Gateway } from '@ogrenmen/llm';
 import { PgBoss, type Job, type JobResult, type Queue } from 'pg-boss';
 import { describeConfig, type WorkerConfig } from './config.js';
 import { createPool, pingDb, type Db, type DbPool } from './db.js';
@@ -88,6 +88,11 @@ export function createApp(config: WorkerConfig, overrides: AppOverrides = {}): A
   const log = overrides.log ?? createLogger(config.logLevel, { process: config.process });
   const problems = validateRegistry();
   if (problems.length > 0) throw new Error(`iş kayıt defteri geçersiz: ${problems.join('; ')}`);
+  // Üretim yapılandırma denetimi: sahte LLM ve kimliksiz ders servisi açılışta reddedilir (bağlantı açılmadan).
+  assertNotFakeInProduction();
+  if (process.env.NODE_ENV === 'production' && process.env.LESSON_SERVICE_URL && !process.env.LESSON_SERVICE_TOKEN?.trim()) {
+    throw new Error('OGR-JOB-185 LESSON_SERVICE_TOKEN üretimde zorunlu (ders servisi kimliksiz çağrılamaz).');
+  }
 
   const db = overrides.db ?? createPool({ databaseUrl: config.databaseUrl, max: config.dbPoolMax });
   const runsSchedules = config.process !== 'pdf';

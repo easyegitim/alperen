@@ -13,6 +13,7 @@ export function GET() {
       time: new Date().toISOString(),
       supabase: isSupabaseConfigured() ? 'configured' : 'missing',
       site_url: isSiteUrlConfigured() ? 'configured' : 'missing',
+      llm: process.env.OGRENMEN_LLM === 'fake' ? 'fake' : 'real',
     },
     { headers: { 'Cache-Control': 'no-store' } },
   );

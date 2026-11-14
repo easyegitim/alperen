@@ -44,6 +44,8 @@ export default defineConfig({
         // Koç sohbeti: sahte LLM + süreç içi sohbet deposu (src/server/chat/memory-store.ts; yalnız fake ile açılır).
         OGRENMEN_LLM: 'fake',
         OGRENMEN_CHAT_STORE: 'memory',
+        // Üretim derlemesinde sahte model/bellek deposu yalnız bu bayrakla açılır (üretimde reddedilir: OGR-LLM-012, OGR-CHAT-022).
+        OGRENMEN_E2E: '1',
         // Veli sohbeti bellek deposu (src/server/parent/store.ts): örnek çocuğa ek olarak sahte Supabase'in öğrencisi.
         OGRENMEN_PARENT_MEMORY_CHILDREN: '10000000-0000-4000-8000-000000000001',
       },

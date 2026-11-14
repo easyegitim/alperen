@@ -76,6 +76,7 @@ export async function chatDeps(user: CoachDbClient | null, env: Env = process.en
     console.warn(`OGR-CHAT-012 ${RETIRED_COACH_ENV.join(', ')} artık okunmaz; koç yalnız kullanıcının JWT'si ve ${COACH_KEY_ENV} ile çalışır.`);
   }
   if (kind === 'memory') {
+    if (env.NODE_ENV === 'production' && env.OGRENMEN_E2E !== '1') throw new Error('OGR-CHAT-022 OGRENMEN_CHAT_STORE=memory üretimde kullanılamaz.');
     const store = new MemoryChatStore();
     s.memoryGateway ??= (async () => new Gateway({ transport: await transportOf(env), ledger: store.ledger() }))();
     const transport = await transportOf(env);

@@ -139,11 +139,23 @@ export interface CreateTransportOptions {
 }
 
 /**
+ * Üretimde sahte taşıma yasak: `NODE_ENV=production` iken `OGRENMEN_LLM=fake` bir hatadır.
+ * Yalnız çağrıldığında denetler (içe aktarımda değil); çağıran yapılandırmayı okuduğu yerde çağırır.
+ */
+export function assertNotFakeInProduction(env: Record<string, string | undefined> = process.env): void {
+  // OGRENMEN_E2E=1: uçtan uca testler üretim derlemesini (`next start`) sahte modelle açar; yalnız test koşucusu ayarlar.
+  if (env.NODE_ENV === 'production' && env.OGRENMEN_LLM === 'fake' && env.OGRENMEN_E2E !== '1') {
+    throw new Error('OGR-LLM-012 OGRENMEN_LLM=fake üretimde kullanılamaz (sahte model yanıtları). Değişkeni kaldır.');
+  }
+}
+
+/**
  * Taşıma fabrikası: `OGRENMEN_LLM=fake` → sahte (fake.ts); aksi halde gerçek istemci.
  * Sahte modül dinamik yüklenir; üretim yolunda fikstür okuyucu yüklenmez.
  */
 export async function createTransport(opts: CreateTransportOptions = {}): Promise<LlmTransport> {
   const env = opts.env ?? process.env;
+  assertNotFakeInProduction(env);
   const kind = opts.kind ?? (env.OGRENMEN_LLM === 'fake' ? 'fake' : 'anthropic');
   if (kind === 'fake') {
     const { FakeTransport } = await import('./fake.js');
