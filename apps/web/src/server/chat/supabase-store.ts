@@ -544,9 +544,8 @@ export class CoachLedger implements LedgerWriter {
       if (row.ref_table !== 'conversations' || !row.ref_id) throw new Error('koç defter satırı sohbete bağlı olmalı (ref conversations)');
       const id = await this.store.call('coach_log_llm_call', {
         p_conversation: row.ref_id,
-        // coach_lite (harcama tavanında Haiku) coach_log_llm_call'da coach_chat olarak yazılır (RPC yalnız
-        // coach_chat|coach_deep kabul eder); model sütunu Haiku kalır, maliyet doğru düşer.
-        p_call: toLedgerRecord(row.route === 'coach_lite' ? { ...row, route: 'coach_chat', purpose: 'coach_chat' } : row),
+        // coach_lite (harcama tavanında Haiku) kendi rota adıyla yazılır (0045: RPC coach_chat|coach_deep|coach_lite kabul eder).
+        p_call: toLedgerRecord(row),
         p_server_token: this.store.token(row.ref_id),
       });
       return id === null || id === undefined ? null : Number(id);

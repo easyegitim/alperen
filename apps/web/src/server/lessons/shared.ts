@@ -2,6 +2,7 @@
 // İstemci ve sunucu kullanır; 'server-only' değildir. RPC yanıt biçimleri supabase/migrations/0040–0041'den
 // (list_lessons, lesson_view, register_lesson, review_lesson_claim, apply_lesson_claims, lesson_set_options).
 import { z } from 'zod';
+import { DAILY_LIMIT_MESSAGES } from '@/server/documents/status';
 
 // --- Yükleme kuralları ------------------------------------------------------------------------------------------------
 
@@ -457,4 +458,5 @@ export const LESSON_ERRORS: Record<string, string> = {
   'OGR-LESSON-004': 'Bu dersin henüz incelemesi yok.',
   'OGR-LESSON-005': 'Bu iddia artık güncel değil. Sayfayı yenile.',
   'OGR-LESSON-006': 'Bu iddia geri alınamıyor: sonrasında aynı kazanımda yeni bir gözlem var.',
+  'OGR-LESSON-008': DAILY_LIMIT_MESSAGES['OGR-LESSON-008']!,
 };

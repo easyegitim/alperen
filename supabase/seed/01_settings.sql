@@ -27,5 +27,10 @@ insert into public.settings (key, value, description) values
   ('practice_inferred_key_weight', '0.5'::jsonb, 'Anahtarı SymPy ile doğrulanmamış (questions.verification.sympy = inferred) alıştırma sorusunun gözlem ağırlığı (answer_practice_item; 0–1)'),
   ('onboarding_created_daily', '3'::jsonb, 'Öğrencinin onboarding''de son 24 saatte en çok açabileceği yeni ders taslağı (OGR-ONB-003)'),
   ('documents_daily_max', '3'::jsonb, 'Öğrencinin bir İstanbul gününde en çok belge isteği (request_document; başarısızlar ve eğitmen istekleri sayılmaz, OGR-DOC-004)'),
-  ('documents_block_regen_max', '2'::jsonb, 'Belgede hatalı bir bloğun en çok yeniden üretim denemesi (document_block_regen_note)')
+  ('documents_block_regen_max', '2'::jsonb, 'Belgede hatalı bir bloğun en çok yeniden üretim denemesi (document_block_regen_note)'),
+  ('coach_turns_daily_max', '150'::jsonb, 'Öğrencinin bir İstanbul gününde en çok koç turu (coach_append_message user mesajı; OGR-COACH-008)'),
+  ('coach_deep_daily_max', '20'::jsonb, 'Öğrencinin bir İstanbul gününde en çok "Çözümü göster" (coach_deep) çağrısı (OGR-COACH-009)'),
+  ('uploads_daily_max', '20'::jsonb, 'Öğrencinin bir İstanbul gününde en çok Kendi çalışmam gönderimi (submit_upload; OGR-UPL-005)'),
+  ('exam_uploads_daily_max', '3'::jsonb, 'Öğrencinin bir İstanbul gününde en çok okul denemesi yüklemesi (submit_exam_upload; başarısızlar sayılmaz, OGR-UPL-006)'),
+  ('lesson_uploads_daily_max', '10'::jsonb, 'Eğitmenin bir İstanbul gününde en çok ders yüklemesi (register_lesson; başarısızlar sayılmaz, OGR-LESSON-008)')
 on conflict (key) do nothing;

@@ -1,5 +1,6 @@
 // Deneme sonuç ekranının saf metinleri ve hesapları (test/exam-result.test.ts). Öğrenciye yüzde gösterilmez: sayılar
 // "doğru/toplam" ve kelime bandıdır. Ünlem ve emoji yok.
+import { DAILY_LIMIT_MESSAGES } from '@/server/documents/status';
 import { BAND_WORDS, formatNet } from '@/server/progress/present';
 import type { ExamHeatCell, ExamProgress, ExamResultItem, ExamSection, ExamSessionView } from './types';
 
@@ -206,6 +207,9 @@ export function submitExamError(code: string | null | undefined): string {
       return 'Bu sayfaların bir kısmı önceki gönderiminde. Gönder’e yeniden basarsan yeni gönderim olarak alırım.';
     case 'OGR-UPL-004':
       return 'Önce bir ders seçmen gerekiyor; sonra yeniden yükleyebilirsin.';
+    case 'OGR-UPL-005':
+    case 'OGR-UPL-006':
+      return DAILY_LIMIT_MESSAGES[code]!;
     case 'OGR-AUTH-001':
     case '42501':
       return 'Bu yükleme için oturumun uygun değil. Yeniden giriş yap.';

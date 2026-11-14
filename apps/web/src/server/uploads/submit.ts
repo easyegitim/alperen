@@ -1,6 +1,7 @@
 import 'server-only';
 import type { UploadClient } from './client';
 import { parseSubmitInput, resultHref, type UploadKind } from './shared';
+import { dailyLimitMessage } from '@/server/documents/status';
 
 /** `stale`: sayfaların bir kısmı başka bir gönderime ait (OGR-UPL-003); istemci yeni sayfa anahtarlarıyla yeniden gönderir. */
 export type SubmitResult = { ok: true; href: string; uploadIds: string[]; kind: UploadKind } | { ok: false; error: string; stale?: true };
@@ -9,6 +10,8 @@ export type SubmitResult = { ok: true; href: string; uploadIds: string[]; kind: 
 export function submitErrorMessage(err: { code?: string | null; message?: string | null } | null | undefined): string {
   const msg = err?.message ?? '';
   if (err?.code === 'PGRST202' || err?.code === '42883') return 'Yükleme şu an alınamıyor. Biraz sonra yeniden dene.';
+  const limit = dailyLimitMessage(msg);
+  if (limit) return limit;
   if (/OGR-UPL-004/.test(msg)) return 'Önce bir ders seçmen gerekiyor; sonra yeniden yükleyebilirsin.';
   if (/OGR-UPL-003/.test(msg)) return 'Bu sayfaların bir kısmı önceki gönderiminde. Gönder’e yeniden basarsan yeni gönderim olarak alırım.';
   if (/OGR-UPL-002/.test(msg)) return 'Sayfalar bulunamadı. Yeniden seçip gönder.';

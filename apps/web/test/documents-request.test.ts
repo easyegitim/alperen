@@ -15,7 +15,7 @@ import type { ChatStudent } from '@/server/chat/types';
 import { libraryRows } from '@/server/documents/present';
 import { documentRequestView, requestDocument, toSpec } from '@/server/documents/request';
 import { kindWord, verificationLines, reviewWarning } from '@/server/documents/review-present';
-import { chatCardLine, documentStatus, phaseOf, statusWord, toolError, toolReply } from '@/server/documents/status';
+import { chatCardLine, dailyLimitMessage, documentStatus, phaseOf, statusWord, toolError, toolReply } from '@/server/documents/status';
 import { parseDocumentList, parseRequestView } from '@/server/documents/types';
 import type { RpcClient } from '@/server/practice/rpc';
 
@@ -98,6 +98,16 @@ describe('durum metinleri', () => {
     expect(toolError('OGR-DOC-004')).toMatch(/yarın/);
     expect(toolError('OGR-DOC-006')).toMatch(/ders/);
     expect(toolError(null)).toMatch(/biraz sonra/);
+  });
+
+  it('günlük sınır kodları (0045) kısa Türkçe iletiye eşlenir', () => {
+    expect(dailyLimitMessage('coach_append_message: OGR-COACH-008 bugünkü sohbet sınırı doldu (150)')).toBe('Bugünlük sohbet sınırına ulaştın. Yarın devam edelim.');
+    expect(dailyLimitMessage('OGR-COACH-009')).toBe('Bugünlük sohbet sınırına ulaştın. Yarın devam edelim.');
+    expect(dailyLimitMessage('OGR-UPL-005 bugünkü yükleme sınırı doldu (20)')).toBe('Bugünlük yükleme sınırına ulaştın.');
+    expect(dailyLimitMessage('OGR-UPL-006')).toBe('Bugünlük yükleme sınırına ulaştın.');
+    expect(dailyLimitMessage('OGR-LESSON-008')).toBe('Bugünlük ders yükleme sınırına ulaşıldı.');
+    expect(dailyLimitMessage('OGR-UPL-003 yükleme zaten işlendi')).toBeNull();
+    expect(dailyLimitMessage(null)).toBeNull();
   });
 
   it('Belgelerim: hazırlananlar dahil, durum kelimesiyle; anahtar ve başarısızlar yok', () => {

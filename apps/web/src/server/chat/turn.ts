@@ -11,7 +11,7 @@
  * gerektiriyorsa (ya da koç turu `escalate_to_instructor` ile işaretlediyse) eğitmene not düşülür.
  */
 import { CHAT_COPY, type DocRef } from '@/lib/chat';
-import { toolError, toolReply } from '@/server/documents/status';
+import { dailyLimitMessage, toolError, toolReply } from '@/server/documents/status';
 import type { RequestView } from '@/server/documents/types';
 import { appErrorCode, type RpcResult } from '@/server/practice/rpc';
 import type { CallResult, CoachMode, Gateway, RequestDocumentInput, SpendDecision, StreamEvent, ToolRunners } from '@ogrenmen/llm';
@@ -230,6 +230,12 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
     userMessageId = firstId ?? null;
     emit({ type: 'start', conversationId: conversation.id, userMessageId: userMessageId ?? 0, mode: conversation.mode });
   } catch (err) {
+    const limit = dailyLimitMessage(err instanceof Error ? err.message : null);
+    if (limit) {
+      // günlük koç sınırı (OGR-COACH-008/009): beklenen durum, hata günlüğü değil
+      emit({ type: 'error', code: 'daily_limit', message: limit });
+      return;
+    }
     console.error('OGR-CHAT-009 kullanıcı turu kaydedilemedi', err);
     emit({ type: 'error', code: 'store_error', message: 'Mesajın kaydedilemedi. Biraz sonra yeniden dene.' });
     return;

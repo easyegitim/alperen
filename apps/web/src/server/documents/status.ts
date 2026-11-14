@@ -58,6 +58,21 @@ export function toolReply(kind: RequestKind, reused: boolean): string {
   return `${what} hazırlatmaya başladım${reused ? ' (bu istek zaten alınmıştı)' : ''}. Hazır olunca Bugün’de kartı çıkar. Öğrenciye tek cümleyle bunu söyle; belgenin içeriğini yazma.`;
 }
 
+/** Günlük sınır kodları (0045) → kullanıcıya gösterilen kısa ileti; documents_daily_max (OGR-DOC-004) toolError'da. */
+export const DAILY_LIMIT_MESSAGES: Readonly<Record<string, string>> = {
+  'OGR-COACH-008': 'Bugünlük sohbet sınırına ulaştın. Yarın devam edelim.',
+  'OGR-COACH-009': 'Bugünlük sohbet sınırına ulaştın. Yarın devam edelim.',
+  'OGR-UPL-005': 'Bugünlük yükleme sınırına ulaştın.',
+  'OGR-UPL-006': 'Bugünlük yükleme sınırına ulaştın.',
+  'OGR-LESSON-008': 'Bugünlük ders yükleme sınırına ulaşıldı.',
+};
+
+/** Hata kodu ya da OGR- kodlu ileti → günlük sınır iletisi; sınır hatası değilse null. */
+export function dailyLimitMessage(codeOrMessage: string | null | undefined): string | null {
+  const code = /OGR-[A-Z]+-\d{3}/.exec(codeOrMessage ?? '')?.[0];
+  return (code && DAILY_LIMIT_MESSAGES[code]) ?? null;
+}
+
 /** request_document hata kodu → modele (ve oradan öğrenciye) söylenecek iletiler. */
 export function toolError(code: string | null): string {
   switch (code) {
