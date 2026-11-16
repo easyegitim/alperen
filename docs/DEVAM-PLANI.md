@@ -7,7 +7,7 @@ yeniden keşif yapmadan kaldığı yerden devam etmesi için yazıldı. Ürün p
 `docs/PLAN-v2-detail.md` dosyalarındadır (yalnız gerektiğinde, ilgili bölümü okunur).
 
 ## Şu anki durum (doğrulanmış)
-- Dal `claude/festive-feynman-qjnn4i`, PR easyegitim/alperen#2, son commit `a52570c`. GitHub CI'ın **dört işi yeşil**
+- Dal `claude/festive-feynman-qjnn4i`, PR easyegitim/alperen#2, son commit `a112c5c` (bu belge `docs/DEVAM-PLANI.md` olarak depoda; son kod commit'i `a52570c`). GitHub CI'ın **dört işi yeşil**
   (hızlı, ağır, canlı veritabanı, Docker), çakışma ve inceleme yorumu yok. Çalışma ağacı temiz.
 - Biten işler: CI kırığı (yerel Python paketleri, şekil testi, pip yeniden deneme); CI'da Docker işi (iki imaj + compose
   ile yerel yığın); worker imajı Python 3.13; yerel Docker kalıcılığı (`OGRENMEN_DEV_DIR=/data/dev`); **1a harcama kapısı**
@@ -17,6 +17,14 @@ yeniden keşif yapmadan kaldığı yerden devam etmesi için yazıldı. Ürün p
   derin çözüm sınırı model çağrısı sayar; harcama kapısı sahte modelde devreye girmez; uçtan uca testler üretim
   derlemesini `OGRENMEN_E2E=1` ile açar.
 - Teyit edilmemiş: kurucunun Windows makinesinde Docker komutunun açılıp açılmadığı.
+
+## Güncel durum (2026-11-16): Aşama 1 TAMAMLANDI — sıradaki Aşama 2 (kart 2a)
+Bu oturumda gönderilenler: 1c çifte ödeme (taslak `audit.events`'te), 1d betik yalıtımı (`minimalPythonEnv`), 1e hafıza
+yazım politikası (`MemoryWritePolicy`: trusted | coach | delta), 1g PDF işleri `pdf` sürecinde + Chromium korumalı alan.
+Açık notlar: (a) 1c yalnız ana üretim çağrısını atlar, doğrulama adımları yeniden koşar; (b) 1e kuralı veritabanında değil
+hafıza işleyicisinde; (c) 1g: üretim imajı root olmayan kullanıcıyla çalışır, Chromium korumalı alanla açılamazsa
+`--no-sandbox` ile yeniden dener (OGR-DOC-031) — Fly üzerinde 3g duman testinde bakılacak; 2 GB'lık `pdf` sürecinin
+eşzamanlı üretime yettiği de orada ölçülecek.
 
 ## Çalışma kuralları (her iş kartı için geçerli)
 1. **Az token:** ana oturum yönetir; her kart tek bir alt ajana dar görev tanımıyla verilir (kartın metni + "yalnız adı

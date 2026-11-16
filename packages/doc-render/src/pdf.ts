@@ -28,6 +28,15 @@ const RENDER_TIMEOUT_MS = 60_000;
 
 let browserPromise: Promise<Browser> | undefined;
 
+/**
+ * Chromium başlatma bayrakları (worker'ın kendi çizicisiyle aynı kural, apps/worker/src/pdf/render.ts): kök kullanıcıda
+ * sandbox açılamaz, bu yüzden `--no-sandbox` yalnız kök ise eklenir; küçük /dev/shm'li konteynerde çökmesin diye
+ * `--disable-dev-shm-usage` her zaman verilir.
+ */
+export function chromiumLaunchArgs(root: boolean): string[] {
+  return [...(root ? ['--no-sandbox'] : []), '--disable-dev-shm-usage', '--font-render-hinting=none'];
+}
+
 /** Paylaşılan tarayıcı; kapanmışsa yeniden başlatır. */
 export async function getBrowser(): Promise<Browser> {
   if (browserPromise) {
@@ -35,7 +44,14 @@ export async function getBrowser(): Promise<Browser> {
     if (b?.isConnected()) return b;
     browserPromise = undefined;
   }
-  browserPromise = chromium.launch({ args: ['--no-sandbox', '--font-render-hinting=none'] });
+  const root = typeof process.getuid === 'function' && process.getuid() === 0;
+  // Root değilken Chromium kendi korumalı alanını (sandbox) ister; çekirdek buna izin vermiyorsa (ör. kullanıcı ad alanı
+  // kapalı bir kapsayıcı) hiç açılamaz. PDF üretimi tümden durmasın: bir kez uyarıp korumasız kiple yeniden dene.
+  browserPromise = chromium.launch({ args: chromiumLaunchArgs(root) }).catch((err: unknown) => {
+    if (root) throw err;
+    console.warn('OGR-DOC-031 Chromium korumalı alanla açılamadı; --no-sandbox ile yeniden deneniyor', err instanceof Error ? err.message.split('\n')[0] : err);
+    return chromium.launch({ args: chromiumLaunchArgs(true) });
+  });
   return browserPromise;
 }
 

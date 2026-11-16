@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type ChartDataMap, closeBrowser, getBrowser, isRequestAllowed, normalizeOrigins, renderDocumentPdf, renderHtml, renderPdf } from '../src/index.js';
-import { fitWideMath } from '../src/pdf.js';
+import { chromiumLaunchArgs, fitWideMath } from '../src/pdf.js';
 import { pdfPages, pngDiffRatio, rasterize, readFixture } from './helpers.js';
 
 type Doc = Parameters<typeof renderHtml>[0] & { keys: { question_no: number; correct_option: string | null; numeric_value: number | null }[] };
@@ -299,5 +299,18 @@ describe('PDF: taşma ve sayfa sonu', () => {
       expect(at, `örnek ${i}`).toBeGreaterThanOrEqual(0);
       expect(pages[at], `örnek ${i} bölündü`).toContain(`SON${i}`);
     }
+  });
+});
+
+describe('chromiumLaunchArgs', () => {
+  it('kök değilse --no-sandbox yok', () => {
+    expect(chromiumLaunchArgs(false)).not.toContain('--no-sandbox');
+  });
+  it('kök ise --no-sandbox var', () => {
+    expect(chromiumLaunchArgs(true)).toContain('--no-sandbox');
+  });
+  it('--disable-dev-shm-usage her zaman var', () => {
+    expect(chromiumLaunchArgs(false)).toContain('--disable-dev-shm-usage');
+    expect(chromiumLaunchArgs(true)).toContain('--disable-dev-shm-usage');
   });
 });

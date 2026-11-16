@@ -23,7 +23,7 @@ const RETRY = { retryLimit: 3, retryDelay: 30, retryBackoff: true, retryDelayMax
 export const reportGenerateJob: JobDefinition<z.infer<typeof payload>, ParentReportOutcome> = {
   name: 'report.generate',
   description: 'Veli raporu: report rotası (report-ast) → doc-render PDF → Storage → rendered → report_ready.',
-  process: 'worker',
+  process: 'pdf',
   payload,
   concurrency: 2,
   retry: RETRY,

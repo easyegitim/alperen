@@ -20,6 +20,9 @@ kill_timeout = 45
   # Ders medya servisi (pipelines/ders): `ders` süreç grubunun iç ağ adresi (6PN, IPv6)
   LESSON_SERVICE_URL = "http://ders.process.ogrenmen-worker.internal:8711"
 
+# worker (512 MB): genel işler + zamanlayıcı + outbox. pdf (2 GB): Chromium ile PDF üreten işler (document.generate,
+# exam.report, report.generate, pdf.render); zamanlayıcı kurmaz. İkisi de aynı uygulama sırlarını (ANTHROPIC_API_KEY,
+# SUPABASE_*, DATABASE_URL) kullanır; pdf süreci de Anthropic çağırır ve Storage'a yükler.
 [processes]
   worker = "node --import tsx src/index.ts --process=worker"
   pdf = "node --import tsx src/index.ts --process=pdf"

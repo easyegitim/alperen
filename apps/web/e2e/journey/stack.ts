@@ -98,7 +98,7 @@ async function main() {
   startChild('worker', 'node', ['--import', 'tsx', 'src/index.ts'], WORKER_DIR, {
     DATABASE_URL: db.url,
     PGOPTIONS: '-c role=ogrenmen_owner',
-    WORKER_PROCESS: 'worker',
+    WORKER_PROCESS: 'all',
     WORKER_SCHEDULES: 'off',
     HEALTH_HOST: '127.0.0.1',
     HEALTH_PORT: String(WORKER_HEALTH_PORT),

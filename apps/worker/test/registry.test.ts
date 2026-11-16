@@ -22,10 +22,16 @@ describe('iş kayıt defteri', () => {
     expect(validateRegistry([bad, bad]).length).toBeGreaterThanOrEqual(3);
   });
 
-  it('pdf.render yalnız pdf sürecinde, diğerleri worker sürecinde çalışır', () => {
+  it('Chromium kullanan işler (PDF) yalnız pdf sürecinde, diğerleri worker sürecinde çalışır', () => {
     const pdf = jobsForProcess('pdf').map((j) => j.name);
-    expect(pdf).toEqual(['pdf.render']);
-    expect(jobsForProcess('worker').map((j) => j.name)).not.toContain('pdf.render');
+    expect(pdf.sort()).toEqual(['document.generate', 'exam.report', 'pdf.render', 'report.generate']);
+    const worker = jobsForProcess('worker').map((j) => j.name);
+    for (const n of pdf) expect(worker).not.toContain(n);
+    // Zamanlayıcı ve outbox yalnız worker sürecinde kalır (pdf sürecinde zamanlama kurulmaz)
+    for (const n of ['memory.compact', 'weekly.summary', 'notifications.evaluate', 'lesson.retention', 'outbox.drain']) {
+      expect(pdf).not.toContain(n);
+      expect(worker).toContain(n);
+    }
     expect(jobsForProcess('all')).toHaveLength(JOBS.length);
   });
 

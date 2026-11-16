@@ -1,6 +1,7 @@
 # Öğrenmen işçisi. Bağlam depo kökü olmalıdır (çalışma alanı paketleri @ogrenmen/contracts, @ogrenmen/llm):
 #   docker build -f apps/worker/Dockerfile -t ogrenmen-worker .
-# Tek imaj iki süreç türünü çalıştırır (fly.toml processes): worker (genel işler + zamanlayıcı) ve pdf (Playwright Chromium).
+# Tek imaj iki süreç türünü çalıştırır (fly.toml processes): worker (genel işler + zamanlayıcı) ve pdf (Playwright Chromium:
+# document.generate, exam.report, report.generate, pdf.render; 2 GB VM).
 # Taban Python 3.13: şablon doldurucu / anahtar doğrulayıcı / figür çizici testlerde ve CI'da bu sürümle ve aşağıdaki sabit
 # paket sürümleriyle koşar (Debian'ın apt paketleri Python 3.11 + eski SymPy/NumPy'dir; üretim testten sapmasın).
 # Node 22 üstüne eklenir (Dockerfile.local ile aynı düzen).
@@ -37,7 +38,7 @@ COPY packages/mastery-math/package.json packages/mastery-math/package.json
 # packages/pii çalışma alanı üyesi değildir (kendi ts/ kurulumu): manifestosu yok; kaynağı aşağıda kopyalanır.
 RUN bun install --frozen-lockfile --production --filter @ogrenmen/worker
 
-# Chromium ve sistem bağımlılıkları (yalnız pdf süreci kullanır; imaj tek). Şablon doldurucu (practice.generate:
+# Chromium ve sistem bağımlılıkları (yalnız pdf süreci grubu kullanır: PDF üreten işler orada çalışır; imaj tek). Şablon doldurucu (practice.generate:
 # py/template_fill.py, `python3 -I`), anahtar doğrulayıcı (py/key_verify.py) ve belge figürleri (document.generate:
 # py/figure_render.py; sahte LLM ya da açıkça OGRENMEN_FIGURES=local) için SymPy + matplotlib + NumPy (pip, CI ile aynı
 # sabit sürümler; yoksa şablon yolu LLM'e, figür yeniden üretime/figürsüz belgeye düşer). Yerel figür kodu OS yalıtımında çalışır

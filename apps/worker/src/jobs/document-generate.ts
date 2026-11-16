@@ -543,7 +543,7 @@ async function markFailed(ctx: JobContext, p: DocumentGeneratePayload, err: unkn
 export const documentGenerateJob: JobDefinition<DocumentGeneratePayload, DocumentGenerateResult> = {
   name: 'document.generate',
   description: 'Not / deneme / soru seti üretimi: Opus (notes_generation | exam_generation) → doğrulama merdiveni → PDF → Storage → yayın ya da inceleme.',
-  process: 'worker',
+  process: 'pdf',
   payload,
   concurrency: 2,
   retry: RETRY,

@@ -24,7 +24,7 @@ export interface ExamReportResult {
 export const examReportJob: JobDefinition<z.infer<typeof payload>, ExamReportResult> = {
   name: 'exam.report',
   description: 'Deneme raporu (uygulama içi oturum): exam_report → doc-render PDF → Storage → register_generated_document.',
-  process: 'worker',
+  process: 'pdf',
   payload,
   concurrency: 2,
   retry: { retryLimit: 3, retryDelay: 30, retryBackoff: true, retryDelayMax: 900, expireInSeconds: 900, deleteAfterSeconds: 604_800, retentionSeconds: 7 * 86_400 },
