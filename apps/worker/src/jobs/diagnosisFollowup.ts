@@ -82,7 +82,7 @@ export const diagnosisFollowupJob: JobDefinition<z.infer<typeof payload>, Diagno
         signal: ctx.signal,
       });
       const ops = ((res.data as { ops?: MemoryDeltaOp[] } | null)?.ops ?? []) as MemoryDeltaOp[];
-      const out = await applyMemoryDelta({ store, studentId, actor: MEMORY_DELTA_ACTOR }, ops);
+      const out = await applyMemoryDelta({ store, studentId, actor: MEMORY_DELTA_ACTOR, policy: 'delta' }, ops);
       memory.called = true;
       memory.applied = out.applied;
       memory.failed = out.failed;

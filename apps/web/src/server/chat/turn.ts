@@ -306,7 +306,7 @@ async function runTurn(deps: TurnDeps, prepared: PreparedTurn, emit: (ev: ChatEv
       promptVersion: product.version,
       studentRef: student.publicRef,
       ref: { table: 'conversations', id: conversation.id },
-      tools: { runners, memory: { store: store.memoryStore(conversation.id), studentId: student.studentId, actor: 'coach' } },
+      tools: { runners, memory: { store: store.memoryStore(conversation.id), studentId: student.studentId, actor: 'coach', policy: 'coach' } },
       onEvent,
       ...(req.signal ? { signal: req.signal } : {}),
     });

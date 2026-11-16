@@ -118,7 +118,29 @@ function numbered(content: string, range?: readonly number[]): string {
     .join('\n');
 }
 
+/**
+ * Çağıranın yazım politikası (öğrenci yüklemelerinden gelen OCR metni prompt enjeksiyonu taşıyabilir):
+ *   - `trusted` (varsayılan): bugünkü davranış; gece sıkıştırması, ders `memory.apply`, eğitmen/admin yolları.
+ *   - `coach`: koç sohbeti. Dizin silemez, `profile.md` / `goals.md` silemez, hiçbir dosyayı yeniden adlandıramaz;
+ *     tek `create`/`str_replace` var olan dosyayı yarıdan fazla küçültemez (OGR-MEM-030).
+ *   - `delta`: teşhis sonrası `memory_delta`. Yalnız `patterns.md` ve `courses/*.md` içinde `str_replace` / `insert`
+ *     (dosya yoksa `create`); silme, yeniden adlandırma ve başka yol reddedilir (OGR-MEM-029).
+ * Ret `MemoryError` olarak döner (geçit `is_error: true` araç sonucuna çevirir); tur düşmez.
+ */
+export type MemoryWritePolicy = 'trusted' | 'coach' | 'delta';
+
+export const MEMORY_POLICY_CODE = 'OGR-MEM-029';
+export const MEMORY_SHRINK_CODE = 'OGR-MEM-030';
+/** `coach`: bir işlemde dosya en çok bu oranda küçülebilir (yeni/eski bayt alt sınırı). */
+export const COACH_MIN_KEEP_RATIO = 0.5;
+/** `coach`: bu kadar bayttan az küçülme her zaman serbest (kısa dosyalarda olağan düzeltme). */
+export const COACH_SHRINK_SLACK_BYTES = 64;
+const COACH_UNDELETABLE = new Set(['/memories/profile.md', '/memories/goals.md']);
+const DELTA_PATH_RE = /^\/memories\/(patterns\.md|courses\/[A-Za-z0-9_-][A-Za-z0-9_.-]*\.md)$/;
+
 export interface MemoryHandlerOptions {
+  /** Yazım politikası; verilmezse `trusted` (bugünkü davranış). */
+  policy?: MemoryWritePolicy;
   store: MemoryStore;
   studentId: string;
   /** Sürüm satırındaki yazan: 'coach' | 'memory-delta' | 'memory-compact' | 'student:<uuid>' | 'instructor:<uuid>'. */
@@ -160,6 +182,29 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
       throw new MemoryError('OGR-MEM-007', `${PARENT_SUMMARY_PATH} ${n} bayt; sınır ${PARENT_SUMMARY_MAX_BYTES} bayt`);
     }
   };
+  const policy: MemoryWritePolicy = opts.policy ?? 'trusted';
+  const refuse = (msg: string): never => {
+    throw new MemoryError(MEMORY_POLICY_CODE, msg);
+  };
+  /** Politika: komut + yol(lar) bu çağırana açık mı (içerik denetimi `guardShrink`'te). */
+  const allowed = (command: 'create' | 'str_replace' | 'insert' | 'delete' | 'rename', path: string) => {
+    if (policy === 'delta') {
+      if (command === 'delete' || command === 'rename') refuse(`bu bağlamda ${command} yapılamaz; yalnız düzenleme`);
+      if (!DELTA_PATH_RE.test(path)) refuse(`bu bağlamda yalnız patterns.md ve courses/*.md düzenlenir: ${path}`);
+    } else if (policy === 'coach') {
+      if (command === 'rename') refuse('koç sohbetinde dosya yeniden adlandırılamaz');
+      if (command === 'delete' && COACH_UNDELETABLE.has(path)) refuse(`koç sohbetinde ${path} silinemez`);
+    }
+  };
+  /** `coach`: tek işlemde var olan dosyanın yarıdan fazlası silinemez (ör. "profili baştan yaz"). */
+  const guardShrink = (path: string, before: string, after: string) => {
+    if (policy !== 'coach') return;
+    const a = utf8Bytes(before);
+    const b = utf8Bytes(after);
+    if (b < a * COACH_MIN_KEEP_RATIO && a - b > COACH_SHRINK_SLACK_BYTES) {
+      throw new MemoryError(MEMORY_SHRINK_CODE, `tek işlemde ${path} dosyasının yarısından fazlası silinemez (${a} → ${b} bayt); küçük düzenlemeler yap`);
+    }
+  };
   const mustRead = async (path: string): Promise<string> => {
     const c = await store.read(studentId, path);
     if (c === null) throw new MemoryError('OGR-MEM-017', `dosya yok: ${path}`);
@@ -177,6 +222,7 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
     for (let attempt = 0; ; attempt++) {
       const content = await mustRead(path);
       const next = apply(content);
+      guardShrink(path, content, next);
       sizedFor(path, next);
       try {
         await store.write(studentId, path, next, op, actor, { expectedHash: memoryContentHash(content) });
@@ -204,12 +250,15 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
     async create(cmd) {
       const path = assertMemoryPath(cmd.path);
       writable(path);
+      allowed('create', path);
       if (typeof cmd.file_text !== 'string') throw new MemoryError('OGR-MEM-018', 'file_text metin olmalı');
       sizedFor(path, cmd.file_text);
       const files = await store.list(studentId);
       const exists = files.some((f) => f.path === path);
       if (!exists && files.some((f) => f.path.startsWith(`${path}/`))) throw new MemoryError('OGR-MEM-019', `bu yol bir dizin: ${path}`);
       if (!exists && files.length >= maxFiles) throw new MemoryError('OGR-MEM-001', `dosya sınırı (${maxFiles}) dolu; önce birleştir ya da sil`);
+      if (exists && policy === 'delta') refuse(`bu bağlamda var olan dosyanın üzerine yazılamaz: ${path}`);
+      if (exists && policy === 'coach') guardShrink(path, (await store.read(studentId, path)) ?? '', cmd.file_text);
       await store.write(studentId, path, cmd.file_text, 'create', actor);
       return exists ? `File ${path} overwritten.` : `File created successfully at: ${path}`;
     },
@@ -217,6 +266,7 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
     async str_replace(cmd) {
       const path = assertMemoryPath(cmd.path);
       writable(path);
+      allowed('str_replace', path);
       const oldStr = cmd.old_str;
       if (typeof oldStr !== 'string' || oldStr === '') throw new MemoryError('OGR-MEM-020', 'old_str boş olamaz');
       await edit(path, 'str_replace', (content) => {
@@ -231,6 +281,7 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
     async insert(cmd) {
       const path = assertMemoryPath(cmd.path);
       writable(path);
+      allowed('insert', path);
       const at = cmd.insert_line;
       const text = cmd.insert_text;
       await edit(path, 'insert', (content) => {
@@ -248,11 +299,13 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
     async delete(cmd) {
       const path = assertMemoryPath(cmd.path, { allowDir: true });
       writable(path);
+      allowed('delete', path);
       if (await store.read(studentId, path) !== null) {
         await store.remove(studentId, path, actor);
         return `File deleted: ${path}`;
       }
       if (await isDir(path)) {
+        if (policy === 'coach') refuse(`koç sohbetinde dizin silinemez: ${path}`);
         const files = (await store.list(studentId)).filter((f) => f.path.startsWith(`${path}/`));
         for (const f of files) await store.remove(studentId, f.path, actor);
         return `Directory deleted: ${path} (${files.length} files)`;
@@ -264,6 +317,8 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
       const from = assertMemoryPath(cmd.old_path);
       const to = assertMemoryPath(cmd.new_path);
       writable(from, to);
+      allowed('rename', from);
+      allowed('rename', to);
       if (from === to) throw new MemoryError('OGR-MEM-024', 'eski ve yeni yol aynı');
       const moved = await store.read(studentId, from);
       if (moved === null) throw new MemoryError('OGR-MEM-017', `dosya yok: ${from}`);
