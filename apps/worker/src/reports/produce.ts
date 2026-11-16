@@ -10,6 +10,7 @@
  * Belge `document_set_status('ready')` yerine `rendered` olur: o yol öğrenci belgelerinin yayın kapısıdır (doğrulama
  * merdiveni, Bugün kartı); veli raporu öğrencinin Bugün ekranına düşmemelidir. `parent_reports` rendered'ı hazır sayar.
  */
+import { createHash } from 'node:crypto';
 import type { ReportAst } from '@ogrenmen/contracts';
 import { renderHtml, renderPdf } from '@ogrenmen/doc-render';
 import { buildPromptSystem, classifyError, MaxTokensError, ParseError, RefusalError, type ToolRunners } from '@ogrenmen/llm';
@@ -128,7 +129,52 @@ function fallbackWorthy(err: unknown): boolean {
   return !c.retryable && c.code !== 'unknown';
 }
 
+/**
+ * Ham model çıktısı PDF/Storage'dan ÖNCE audit.events'e yazılır (diagnosis.raw deseni; audit.events politikasızdır,
+ * veli okuyamaz): çizim ya da yükleme düşüp iş yeniden denenirse aynı belge + prompt sürümü + girdi özeti için
+ * saklanan çıktı kullanılır, model yeniden çağrılmaz. Belge son durumuna varınca `report.draft_cleared` geçersiz kılar.
+ */
+export const REPORT_DRAFT_ACTION = 'report.draft';
+export const REPORT_DRAFT_CLEARED = 'report.draft_cleared';
+interface ReportDraft {
+  document_id: string;
+  prompt_version: string;
+  input_hash: string;
+  ast: ReportAst;
+  model: string;
+  cost_usd: number;
+}
+
+async function loadReportDraft(db: Db, docId: string, promptVersion: string, inputHash: string): Promise<ReportDraft | null> {
+  const r = await db.query(
+    `select action, diff from audit.events
+      where table_name = 'generated_documents' and row_id = $1 and action = any($2::text[])
+      order by created_at desc, id desc limit 1`,
+    [docId, [REPORT_DRAFT_ACTION, REPORT_DRAFT_CLEARED]],
+  );
+  const row = r.rows[0] as { action?: string; diff?: ReportDraft } | undefined;
+  const d = row?.action === REPORT_DRAFT_ACTION ? row.diff : undefined;
+  if (!d || !d.ast || typeof d.ast !== 'object') return null;
+  return d.document_id === docId && d.prompt_version === promptVersion && d.input_hash === inputHash ? d : null;
+}
+
+async function clearReportDraft(ctx: JobContext, docId: string): Promise<void> {
+  try {
+    await ctx.db.query(`select app.audit_event($1, 'generated_documents', $2, $3::jsonb)`, [REPORT_DRAFT_CLEARED, docId, JSON.stringify({ document_id: docId })]);
+  } catch (e) {
+    ctx.log.warn('rapor taslağı geçersiz kılınamadı', { document: docId, error: (e as Error).message });
+  }
+}
+
 async function modelReport(ctx: JobContext, doc: ReportDoc, d: ReportData): Promise<{ ast: ReportAst; costUsd: number; model: string }> {
+  const prompt = await systemPrompt(ctx.db, 'report');
+  const user = reportUserText({ kind: d.kind, title: d.title, period: d.period, course_title: d.courseTitle, generated_on: d.generatedOn, charts: d.charts, data: d.data, question: d.question });
+  const inputHash = createHash('sha256').update(user).digest('hex');
+  const prior = await loadReportDraft(ctx.db, doc.id, prompt.version, inputHash);
+  if (prior) {
+    ctx.log.info('saklanan rapor taslağı kullanılıyor; model yeniden çağrılmadı', { document: doc.id });
+    return { ast: prior.ast, costUsd: Number(prior.cost_usd ?? 0), model: prior.model };
+  }
   const gateway = await ctx.gateway();
   const ref = await ctx.db.query('select public_ref from public.students where id = $1::uuid', [doc.studentId]);
   const studentRef = ref.rows[0]?.public_ref ? String(ref.rows[0].public_ref) : null;
@@ -136,12 +182,11 @@ async function modelReport(ctx: JobContext, doc: ReportDoc, d: ReportData): Prom
   const spend = await spendGate(ctx, gateway, 'report.generate', studentRef);
   const block = generationBlock(spend);
   if (block) throw new SpendGateError(block, spend.state);
-  const prompt = await systemPrompt(ctx.db, 'report');
   // Ders bloğu (müfredat) önbellekli; dossier (koç hafızası) veli raporuna girmez.
   const system = doc.courseId ? { product: prompt.text, course: (await buildPromptSystem(ctx.db, { product: prompt.text, studentId: doc.studentId, courseId: doc.courseId })).system.course ?? null } : { product: prompt.text };
   const res = await gateway.call('report', {
     system,
-    user: reportUserText({ kind: d.kind, title: d.title, period: d.period, course_title: d.courseTitle, generated_on: d.generatedOn, charts: d.charts, data: d.data, question: d.question }),
+    user,
     turn: { now: ctx.now() },
     promptVersion: prompt.version,
     studentRef,
@@ -150,7 +195,10 @@ async function modelReport(ctx: JobContext, doc: ReportDoc, d: ReportData): Prom
     tools: { runners: parentReportRunners(ctx.db, doc.studentId, doc.courseId) },
     signal: ctx.signal,
   });
-  return { ast: res.data as ReportAst, costUsd: res.costUsd, model: res.model };
+  const ast = res.data as ReportAst;
+  const draft: ReportDraft = { document_id: doc.id, prompt_version: prompt.version, input_hash: inputHash, ast, model: res.model, cost_usd: res.costUsd };
+  await ctx.db.query(`select app.audit_event($1, 'generated_documents', $2, $3::jsonb)`, [REPORT_DRAFT_ACTION, doc.id, JSON.stringify(draft)]);
+  return { ast, costUsd: res.costUsd, model: res.model };
 }
 
 async function register(db: Db, doc: ReportDoc, patch: Record<string, unknown>): Promise<void> {
@@ -194,6 +242,7 @@ export async function produceParentReport(ctx: JobContext, documentId: string, o
     storage = ctx.storage();
   } catch (err) {
     await register(ctx.db, doc, { status: 'failed', verification: { render_error: (err as Error).message.slice(0, 300) } });
+    await clearReportDraft(ctx, doc.id);
     return { documentId, status: 'failed', reason: 'storage' };
   }
   let pdfPath: string;
@@ -205,6 +254,7 @@ export async function produceParentReport(ctx: JobContext, documentId: string, o
   } catch (err) {
     if (!opts.lastAttempt && !(err instanceof PermanentJobError)) throw err;
     await register(ctx.db, doc, { status: 'failed', verification: { render_error: (err as Error).message.slice(0, 300) } });
+    await clearReportDraft(ctx, doc.id);
     return { documentId, status: 'failed', reason: 'render' };
   }
 
@@ -218,6 +268,7 @@ export async function produceParentReport(ctx: JobContext, documentId: string, o
     model: fallback ? 'deterministic' : model,
     cost_usd: costUsd,
   });
+  await clearReportDraft(ctx, doc.id);
   let notificationId: string | null = null;
   if (doc.requestedBy) {
     try {

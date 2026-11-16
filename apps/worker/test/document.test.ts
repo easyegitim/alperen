@@ -16,7 +16,8 @@ import { buildDraft, CALLOUT_SLOT, dropBlocks, examToAst, figureTasks, latexToPl
 import { FigureCache, localFigureRun, rasterize, renderAndCheckFigures, type FigureEnv } from '../src/documents/figures.js';
 import { runLadder, type Issue, type LadderEnv } from '../src/documents/ladder.js';
 import { figureIsolation, isolatedCommand, resetFigureIsolation } from '../src/documents/sandbox.js';
-import { documentHooks, figuresMode, regenUserText } from '../src/jobs/document-generate.js';
+import { DRAFT_ACTION, DRAFT_CLEARED, documentHooks, figuresMode, loadDocumentDraft, regenUserText } from '../src/jobs/document-generate.js';
+import { PermanentJobError } from '../src/jobs/errors.js';
 import { getJob } from '../src/jobs/registry.js';
 import { silentLogger } from '../src/log.js';
 import type { KeyVerifier } from '../src/practice/bank.js';
@@ -605,6 +606,78 @@ describe('document.generate işi', () => {
     expect(container(calls[1]!)).toMatch(/^container_fake_/);
     expect(container(calls[2]!)).toBe(container(calls[1]!));
   }, 60_000);
+
+  it('taslak saklanır: Storage düşerse yeniden denemede ana üretim çağrısı tekrarlanmaz, iş saklanan taslaktan biter', async () => {
+    const events: { action: string; row: string; diff: Record<string, unknown> }[] = [];
+    const statuses: string[] = [];
+    const routes: Route[] = [
+      [/app\.audit_event/, (v) => {
+        events.push({ action: String(v![0]), row: String(v![1]), diff: JSON.parse(String(v![2])) as Record<string, unknown> });
+        return [];
+      }],
+      [/from audit\.events/, (v) => {
+        const e = [...events].reverse().find((x) => x.row === v![0] && (v![1] as string[]).includes(x.action));
+        return e ? [{ action: e.action, diff: e.diff }] : [];
+      }],
+      [/with target as/, () => [{ id: DOC, kind: 'notes', title: 'Rasyonel sayılar', spec: { topic: 'Rasyonel sayılar', skill_ids: ['tyt.mat.temel.rasyonel-sayilar'], length: 'short' }, status: 'generating', student_id: null, course_id: null, review_required: true, cost_usd: 0, content: null, request_id: DOC, request_status: 'generating', enrollment_id: null, message_id: null }]],
+      [/from \(select 1\) one/, () => [{ curriculum_id: CUR, course_title: 'TYT Matematik', target_exam: null, student_ref: null }]],
+      [/from public\.skills s/, () => SKILLS as unknown as Record<string, unknown>[]],
+      [/document_set_status/, (v) => {
+        statuses.push(String(v![1]));
+        return [{ r: { status: v![1] === 'ready' ? 'review' : v![1] } }];
+      }],
+      [/document_block_regen_note/, (v) => [{ r: { attempts: v![4], max: 2 } }]],
+      [/register_generated_document/, () => [{ id: DOC }]],
+      [/from public\.llm_calls/, () => [{ s: 0 }]],
+      [/select cost_usd/, () => [{ c: 0 }]],
+    ];
+    documentHooks.keyVerifier = verifierFailing(new Set());
+    documentHooks.visionCheck = false;
+    if (!PY) documentHooks.figureRun = async () => ({ ok: true, svg: '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="200"><rect width="640" height="200" fill="#f6f8fc"/><circle cx="100" cy="100" r="60" fill="#0030a2"/></svg>' });
+    const transport = new FakeTransport();
+    // ana üretim çağrısında asistan mesajı yoktur; yeniden üretim turları önceki çıktıyı asistan geçmişi olarak taşır
+    const mainCalls = () => transport.requests.filter((r) => r.route === 'notes_generation' && !(r.body.messages ?? []).some((m) => m.role === 'assistant')).length;
+    const flaky = new MemoryStorage();
+    let fail = true;
+    const upload = flaky.upload.bind(flaky);
+    flaky.upload = async (...a: Parameters<MemoryStorage['upload']>) => {
+      if (fail) throw new Error('storage geçici hata');
+      return upload(...a);
+    };
+    const db = routedDb(routes);
+
+    // 1. deneme: model çağrılır, taslak doğrulamadan önce saklanır, Storage düşer → geçici hata (pg-boss yeniden dener)
+    const first = await getJob('document.generate')!.handler!({ document_id: DOC }, jobCtx({ db, transport, storage: () => flaky, job: { id: 'job-1', name: 'document.generate', retryCount: 0 } })).catch((e: unknown) => e);
+    expect(first).toBeInstanceOf(Error);
+    expect(first).not.toBeInstanceOf(PermanentJobError);
+    expect(mainCalls()).toBe(1);
+    expect(events.map((e) => e.action)).toEqual([DRAFT_ACTION]);
+    expect(events[0]!.diff).toMatchObject({ document_id: DOC, request_id: DOC, route: 'notes_generation', mode: 'local', input_hash: expect.stringMatching(/^[0-9a-f]{64}$/) });
+    expect(db.calls.findIndex((c) => /app\.audit_event/.test(c.text))).toBeLessThan(db.calls.findIndex((c) => /document_set_status/.test(c.text) && c.values![1] === 'verifying'));
+
+    // 2. deneme: saklanan taslak kullanılır, ana çağrı sayısı artmaz, belge biter ve taslak geçersiz kılınır
+    fail = false;
+    const res = await getJob('document.generate')!.handler!({ document_id: DOC }, jobCtx({ db, transport, storage: () => flaky, job: { id: 'job-1', name: 'document.generate', retryCount: 1 } }));
+    expect(res).toMatchObject({ document_id: DOC, status: 'review' });
+    expect(mainCalls()).toBe(1);
+    expect(events.map((e) => e.action)).toEqual([DRAFT_ACTION, DRAFT_CLEARED]);
+    expect(statuses.at(-1)).toBe('ready');
+    expect(flaky.objects.get(`documents/notes/course-none/${DOC}.pdf`)!.body.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  }, 120_000);
+
+  it('taslak eşleşmesi: başka girdi/prompt sürümü ya da geçersiz kılınmış taslak kullanılmaz', async () => {
+    const key = { document_id: DOC, request_id: DOC, route: 'notes_generation' as const, prompt_version: 'v1', mode: 'local' as const, input_hash: 'a'.repeat(64) };
+    let row: { action: string; diff: Record<string, unknown> } | null = { action: DRAFT_ACTION, diff: { ...key, data: NOTES, model: 'm', repaired: false, cost_usd: 1.2, figures: {} } };
+    const db = routedDb([[/from audit\.events/, () => (row ? [row] : [])]]);
+    expect(await loadDocumentDraft(db, key)).toMatchObject({ model: 'm', cost_usd: 1.2 });
+    expect(await loadDocumentDraft(db, { ...key, input_hash: 'b'.repeat(64) })).toBeNull();
+    expect(await loadDocumentDraft(db, { ...key, prompt_version: 'v2' })).toBeNull();
+    expect(await loadDocumentDraft(db, { ...key, request_id: null })).toBeNull();
+    row = { action: DRAFT_CLEARED, diff: { document_id: DOC } };
+    expect(await loadDocumentDraft(db, key)).toBeNull();
+    row = null;
+    expect(await loadDocumentDraft(db, key)).toBeNull();
+  });
 
   it('code_execution: dosya inmezse figür yerelde çalıştırılmaz, blok yeniden istenir; inmezse figürsüz', async () => {
     const localRuns: string[] = [];

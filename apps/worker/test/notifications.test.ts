@@ -3,7 +3,8 @@
  * sessizlik, ilerleme), parent_summary.md ve bildirim metni (Haiku → kurala uymazsa şablon), tekilleştirme (SQL null +
  * geçmiş anahtar), e-posta kanalı, push/e-posta kuru çalışma, rapor temizliği ve deterministik rapor.
  */
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
+import { closeBrowser } from '@ogrenmen/doc-render';
 import { contractRegistry, type Contract } from '@ogrenmen/contracts';
 import { FakeTransport } from '@ogrenmen/llm';
 import { getJob } from '../src/jobs/registry.js';
@@ -20,7 +21,7 @@ import {
   weeklyTemplate,
   writeNotificationCopy,
 } from '../src/notifications/summary.js';
-import { fallbackParentReport, sanitizeReport } from '../src/reports/produce.js';
+import { fallbackParentReport, REPORT_DRAFT_ACTION, REPORT_DRAFT_CLEARED, sanitizeReport } from '../src/reports/produce.js';
 import type { ReportData } from '../src/reports/data.js';
 import { silentLogger } from '../src/log.js';
 import { jobCtx, routedDb, type Route } from './support.js';
@@ -406,4 +407,62 @@ describe('veli raporu: temizlik ve deterministik rapor', () => {
     expect(getJob('notifications.evaluate')!.payload.safeParse({ kinds: ['improvement'], student_id: id }).success).toBe(true);
     expect(getJob('notifications.evaluate')!.payload.safeParse({ kinds: ['spam'] }).success).toBe(false);
   });
+});
+
+describe('report.generate: taslak yeniden kullanımı', () => {
+  afterAll(async () => {
+    await closeBrowser().catch(() => undefined);
+  });
+
+  it('model çıktısı PDF/Storage\'dan önce saklanır; Storage düşerse yeniden denemede model yeniden çağrılmaz', async () => {
+    const DOCID = '44444444-4444-4444-8444-444444444445';
+    const events: { action: string; row: string; diff: Record<string, unknown> }[] = [];
+    const registers: Record<string, unknown>[] = [];
+    const routes: Route[] = [
+      [/app\.audit_event/, (v) => {
+        events.push({ action: String(v![0]), row: String(v![1]), diff: JSON.parse(String(v![2])) as Record<string, unknown> });
+        return [];
+      }],
+      [/from audit\.events/, (v) => {
+        const e = [...events].reverse().find((x) => x.row === v![0] && (v![1] as string[]).includes(x.action));
+        return e ? [{ action: e.action, diff: e.diff }] : [];
+      }],
+      [/from public\.generated_documents gd where gd\.id/, () => [{ id: DOCID, student_id: STUDENT, course_id: null, kind: 'report', title: 'Haftalık rapor', status: 'generating', spec: { report_kind: 'weekly', params: { week_start: '2026-11-02' } }, created_by: null }]],
+      [/register_generated_document/, (v) => {
+        registers.push(JSON.parse(String(v![0])) as Record<string, unknown>);
+        return [{ id: DOCID }];
+      }],
+    ];
+    const db = routedDb(routes);
+    const transport = new FakeTransport();
+    const calls = () => transport.requests.filter((r) => r.route === 'report').length;
+    let fail = true;
+    const objects = new Map<string, Buffer>();
+    const storage = {
+      upload: async (bucket: string, path: string, body: Uint8Array | Buffer) => {
+        if (fail) throw new Error('storage geçici hata');
+        objects.set(`${bucket}/${path}`, Buffer.from(body));
+      },
+      download: async () => Buffer.alloc(0),
+      createSignedUrl: async () => '',
+    };
+    const run = (retryCount: number) =>
+      getJob('report.generate')!.handler!({ document_id: DOCID }, jobCtx({ db, transport, storage: () => storage, now: () => SUNDAY_1905, job: { id: 'job-1', name: 'report.generate', retryCount } }));
+
+    // 1. deneme: yeni istek → model bir kez çağrılır, çıktı saklanır, Storage düşer → hata yukarı (yeniden denenir)
+    await expect(run(0)).rejects.toThrow(/storage geçici hata/);
+    expect(calls()).toBe(1);
+    expect(events.map((e) => e.action)).toEqual([REPORT_DRAFT_ACTION]);
+    expect(events[0]!.diff).toMatchObject({ document_id: DOCID, input_hash: expect.stringMatching(/^[0-9a-f]{64}$/), ast: { kind: 'report' } });
+    expect(registers.some((r) => r.status === 'rendered' || r.status === 'failed')).toBe(false);
+
+    // 2. deneme: saklanan çıktı kullanılır, çağrı sayısı artmaz; rapor rendered, taslak geçersiz kılınır
+    fail = false;
+    const res = await run(1);
+    expect(res).toMatchObject({ documentId: DOCID, status: 'rendered' });
+    expect(calls()).toBe(1);
+    expect(events.map((e) => e.action)).toEqual([REPORT_DRAFT_ACTION, REPORT_DRAFT_CLEARED]);
+    expect(registers.at(-1)).toMatchObject({ status: 'rendered', pdf_path: `reports/${STUDENT}/${DOCID}.pdf` });
+    expect(objects.get(`documents/reports/${STUDENT}/${DOCID}.pdf`)!.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  }, 120_000);
 });

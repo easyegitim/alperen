@@ -22,6 +22,7 @@
  *   Hata: son denemede (ya da kalıcı hatada) belge ve istek `failed` + Türkçe neden; kısmi içerik (AST ve Storage'daki
  *   HTML/PDF) silinir. Blok yeniden üretim hakkı iş çalıştırması başına sayılır (yeniden denemede baştan).
  */
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import {
   splitDocumentKeys,
@@ -231,6 +232,63 @@ async function documentCost(db: Db, docId: string, inProcess: number): Promise<n
   }
 }
 
+/**
+ * Ham üretim çıktısı (taslak) doğrulama/PDF/Storage'dan ÖNCE audit.events'e yazılır (diagnosis.raw ile aynı desen;
+ * audit.events politikasızdır, öğrenci/veli okuyamaz). Sonraki iş denemesi aynı belge + istek + rota + prompt sürümü +
+ * figür kipi + girdi özeti için saklanan taslağı kullanır; belge son durumuna (ready/review/failed) varınca
+ * `document.draft_cleared` olayı taslağı geçersiz kılar.
+ */
+interface DraftKey {
+  document_id: string;
+  request_id: string | null;
+  route: RouteName;
+  prompt_version: string;
+  mode: FiguresMode;
+  input_hash: string;
+}
+interface StoredDraft extends DraftKey {
+  data: unknown;
+  model: string;
+  repaired: boolean;
+  cost_usd: number;
+  /** code_execution kipinde Files API'den inen figürler (dosya adı → SVG); yeniden denemede transcript yoktur. */
+  figures: Record<string, string>;
+}
+export const DRAFT_ACTION = 'document.draft';
+export const DRAFT_CLEARED = 'document.draft_cleared';
+
+/** İstek girdisinin özeti (kapsam, örüntüler, istek cümlesi); sistem bloğu katılmaz (dossier zamanla değişir, ürün promptu sürümle izlenir). */
+function draftInputHash(g: Pick<Generation, 'route' | 'userText'>): string {
+  return createHash('sha256').update(JSON.stringify([g.route, g.userText])).digest('hex');
+}
+
+export async function loadDocumentDraft(db: Db, key: DraftKey): Promise<StoredDraft | null> {
+  const r = await db.query(
+    `select action, diff from audit.events
+      where table_name = 'generated_documents' and row_id = $1 and action = any($2::text[])
+      order by created_at desc, id desc limit 1`,
+    [key.document_id, [DRAFT_ACTION, DRAFT_CLEARED]],
+  );
+  const row = r.rows[0] as { action?: string; diff?: StoredDraft } | undefined;
+  const d = row?.action === DRAFT_ACTION ? row.diff : undefined;
+  if (!d || !d.data || typeof d.data !== 'object') return null;
+  const same = (Object.keys(key) as (keyof DraftKey)[]).every((k) => (d[k] ?? null) === key[k]);
+  return same ? { ...d, figures: d.figures ?? {}, cost_usd: Number(d.cost_usd ?? 0), repaired: d.repaired === true } : null;
+}
+
+async function saveDocumentDraft(db: Db, d: StoredDraft): Promise<void> {
+  await db.query(`select app.audit_event($1, 'generated_documents', $2, $3::jsonb)`, [DRAFT_ACTION, d.document_id, JSON.stringify(d)]);
+}
+
+/** Taslak geçersiz kılınır (yalnız eklemeli tablo: silme yerine üstüne olay). Hata işi düşürmez. */
+async function clearDocumentDraft(ctx: JobContext, docId: string): Promise<void> {
+  try {
+    await ctx.db.query(`select app.audit_event($1, 'generated_documents', $2, $3::jsonb)`, [DRAFT_CLEARED, docId, JSON.stringify({ document_id: docId })]);
+  } catch (e) {
+    ctx.log.warn('document.generate: taslak geçersiz kılınamadı', { document: docId, error: (e as Error).message });
+  }
+}
+
 export async function runDocumentGenerate(p: DocumentGeneratePayload, ctx: JobContext): Promise<DocumentGenerateResult> {
   const t0 = Date.now();
   const doc = await loadDocument(ctx.db, { document_id: p.document_id, request_id: p.request_id });
@@ -288,12 +346,25 @@ export async function runDocumentGenerate(p: DocumentGeneratePayload, ctx: JobCo
     container: null, costUsd: 0,
   };
 
-  // üretim
-  const res = await callRoute(ctx, g);
+  // üretim — önceki iş denemesinin saklanan çıktısı aynı istek için varsa Opus yeniden çağrılmaz (ücret tek sefer)
+  const key: DraftKey = { document_id: doc.id, request_id: doc.request_id, route: g.route, prompt_version: g.promptVersion, mode: g.mode, input_hash: draftInputHash(g) };
+  const remote = new Map<string, string>();
+  let res: { data: unknown; model: string; repaired: boolean };
+  const prior = await loadDocumentDraft(ctx.db, key);
+  if (prior) {
+    res = { data: prior.data, model: prior.model, repaired: prior.repaired };
+    g.costUsd += prior.cost_usd;
+    for (const [k, v] of Object.entries(prior.figures)) remote.set(k, v);
+    ctx.log.info('document.generate: saklanan taslak kullanılıyor; model yeniden çağrılmadı', { document: doc.id });
+  } else {
+    const r = await callRoute(ctx, g);
+    res = { data: r.data, model: r.model, repaired: r.repaired };
+    const probe = buildDraft(kind, r.data as DocumentAst | ExamGeneration, g.meta);
+    await remoteFiguresOf(g, r, probe, remote);
+    await saveDocumentDraft(ctx.db, { ...key, data: r.data, model: r.model, repaired: r.repaired, cost_usd: r.costUsd, figures: Object.fromEntries(remote) });
+  }
   let draft = buildDraft(kind, res.data as DocumentAst | ExamGeneration, g.meta);
   if (kind === 'notes') draft = { ...draft, ast: { ...draft.ast, title: (draft.ast.title || doc.title).slice(0, 200) } };
-  const remote = new Map<string, string>();
-  await remoteFiguresOf(g, res, draft, remote);
   await setStatus(ctx.db, doc.id, 'verifying', { verification: { schema: { status: 'pass', route: g.route, repaired: res.repaired } } });
 
   // doğrulama merdiveni
@@ -422,6 +493,7 @@ export async function runDocumentGenerate(p: DocumentGeneratePayload, ctx: JobCo
     ...(review ? { review_required: true } : {}),
   });
   const status = out.status === 'review' ? 'review' : 'ready';
+  await clearDocumentDraft(ctx, doc.id);
   if (status === 'ready' && doc.student_id) {
     const n = await ctx.db.query(
       `select n.id from public.notifications n where n.kind = 'document_ready' and n.payload ->> 'document_id' = $1 and n.sent_at is null order by n.created_at desc limit 3`,
@@ -455,6 +527,7 @@ async function markFailed(ctx: JobContext, p: DocumentGeneratePayload, err: unkn
   } catch (e2) {
     ctx.log.error('document.generate: belge failed yapılamadı', { document: doc.id, error: (e2 as Error).message });
   }
+  await clearDocumentDraft(ctx, doc.id);
   if (!['notes', 'mock_exam', 'question_set'].includes(doc.kind)) return;
   try {
     const storage = ctx.storage();
