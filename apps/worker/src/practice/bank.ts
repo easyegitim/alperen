@@ -26,6 +26,7 @@ import { fileURLToPath } from 'node:url';
 import type { ExamGeneration } from '@ogrenmen/contracts';
 import { checkSpend, pgSpendQuery, type Gateway } from '@ogrenmen/llm';
 import type { Db } from '../db.js';
+import { minimalPythonEnv } from '../documents/sandbox.js';
 import { routePrompt } from '../curriculum/prompt.js';
 import type { Logger } from '../log.js';
 import type { StorageLike } from '../storage.js';
@@ -150,7 +151,7 @@ export type TemplateRunner = (req: TemplateRunRequest, signal?: AbortSignal) => 
 function runPython<T>(script: string, label: string, input: unknown, signal?: AbortSignal): Promise<T> {
   return new Promise((resolve, reject) => {
     const python = process.env.OGRENMEN_PYTHON || 'python3';
-    const child = spawn(python, ['-I', script], { stdio: ['pipe', 'pipe', 'pipe'], signal, timeout: 30_000, cwd: tmpdir() });
+    const child = spawn(python, ['-I', script], { stdio: ['pipe', 'pipe', 'pipe'], signal, timeout: 30_000, cwd: tmpdir(), env: minimalPythonEnv() });
     let out = '';
     let err = '';
     child.stdout.setEncoding('utf8').on('data', (d: string) => (out += d));

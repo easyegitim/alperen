@@ -18,6 +18,7 @@
  */
 import { execFile } from 'node:child_process';
 import { existsSync, realpathSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 
 const MASK_CANDIDATES = ['/home', '/root', '/app', '/tmp', '/var/tmp', '/run', '/srv', '/mnt', '/media', '/opt', '/workspace', '/workspaces'];
 
@@ -34,6 +35,23 @@ export interface IsolatedCommand {
 }
 
 export type Isolation = { ok: true; python: string; masks: string[] } | { ok: false; reason: string };
+
+/**
+ * Yerel Python alt süreçleri için asgari ortam: worker'ın sırları (API anahtarları, DATABASE_URL…) geçmez.
+ * Yalnız PATH (venv yorumlayıcısı çalışsın diye ebeveynin değeri), dil, matplotlib arka ucu ve geçici dizin.
+ */
+export function minimalPythonEnv(): Record<string, string> {
+  const tmp = tmpdir();
+  return {
+    PATH: process.env.PATH ?? '/usr/bin:/bin',
+    LANG: process.env.LANG || 'C.UTF-8',
+    LC_ALL: process.env.LC_ALL || 'C.UTF-8',
+    MPLBACKEND: 'Agg',
+    HOME: tmp,
+    TMPDIR: tmp,
+    PYTHONDONTWRITEBYTECODE: '1',
+  };
+}
 
 const python = () => process.env.OGRENMEN_PYTHON || 'python3';
 
