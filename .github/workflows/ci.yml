@@ -22,7 +22,7 @@ jobs:
       FEATURE_EXPERT_NETWORK: "false"
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Sürüm kök package.json 'packageManager' alanından okunur (ikisi birden verilirse action hata verir).
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -59,7 +59,7 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/aura
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Supabase auth/cron stub + migrations
         run: |
           psql postgres://postgres:postgres@127.0.0.1:5432/postgres -v ON_ERROR_STOP=1 -c "create database aura"
@@ -81,7 +81,7 @@ jobs:
       run:
         working-directory: mobile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Sürüm kök package.json 'packageManager' alanından okunur (ikisi birden verilirse action hata verir).
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
