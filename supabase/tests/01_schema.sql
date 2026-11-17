@@ -83,7 +83,8 @@ insert into expected_columns values
     ('secure.coach_turns', 'conversation_id token expires_at created_at'),
     ('secure.job_outbox', 'id name data reason attempts last_error created_at retried_at'),
     -- P3 içerik stüdyosu (0034)
-    ('public.document_requests', 'id student_id enrollment_id course_id kind spec source conversation_message_id status generated_document_id error requested_by job_id created_at updated_at');
+    ('public.document_requests', 'id student_id enrollment_id course_id kind spec source conversation_message_id status generated_document_id error requested_by job_id created_at updated_at'),
+    ('public.spend_cap_holds', 'id kind request_id held_at approved_by approved_at job_id consumed_at created_at');
 
 do $$
 declare
@@ -102,7 +103,7 @@ begin
      and not exists (select 1 from expected_columns e where e.tbl = n.nspname || '.' || c.relname);
   perform t.ok(v_extra is null, 'listede olmayan tablo yok (fazla: ' || coalesce(v_extra, '-') || ')');
   select count(*) into v_n from expected_columns;
-  perform t.ok(v_n = 70, 'v2 tabanı 61 tablo + P1 ekleri 4 tablo + koç üretim yolu 2 tablo + iş outbox''ı 1 tablo + belge istekleri 1 tablo + ders transkriptleri 1 tablo (' || v_n || ')');
+  perform t.ok(v_n = 71, 'v2 tabanı 61 tablo + P1 ekleri 4 tablo + koç üretim yolu 2 tablo + iş outbox''ı 1 tablo + belge istekleri 1 tablo + ders transkriptleri 1 tablo + harcama tavanı onayları 1 tablo (' || v_n || ')');
   perform t.ok(to_regclass('public.staff') is null and to_regclass('public.messages') is null and to_regclass('public.consents') is null
                and to_regclass('public.tg_chats') is null and to_regclass('public.quota_usage') is null
                and to_regclass('public.diagnostic_tests') is null and to_regclass('public.legal_texts') is null

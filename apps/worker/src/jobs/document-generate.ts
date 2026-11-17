@@ -68,7 +68,7 @@ import { pythonKeyVerifier, type KeyVerifier } from '../practice/bank.js';
 import { systemPrompt } from '../prompts.js';
 import type { StorageLike } from '../storage.js';
 import { PermanentJobError } from './errors.js';
-import { generationBlock, SPEND_CAP_REASON, spendGate } from './spend.js';
+import { approvedGenerationBlock, SPEND_CAP_REASON, spendGate } from './spend.js';
 import { acceptCamelAliases, uuid } from './schemas.js';
 import type { JobContext, JobDefinition } from './types.js';
 
@@ -301,8 +301,9 @@ export async function runDocumentGenerate(p: DocumentGeneratePayload, ctx: JobCo
 
   await setStatus(ctx.db, doc.id, 'generating');
   const gateway = await ctx.gateway();
-  // Harcama kapısı (kapalı başarısız). Tavanda (downgrade) belge üretimi çalışmaz: aynı sonuç, gerekçe spend_cap.
-  const spend = generationBlock(await spendGate(ctx, gateway, 'document.generate', doc.student_ref));
+  // Harcama kapısı (kapalı başarısız). Tavanda (downgrade) belge üretimi çalışmaz: aynı sonuç, gerekçe spend_cap; eğitmen
+  // Kuyruk'ta onayladıysa (spend_cap_holds) bu istek bir kez çalışır. Kapalıyken (paid_allowed = false) onay okunmaz.
+  const spend = await approvedGenerationBlock(ctx, await spendGate(ctx, gateway, 'document.generate', doc.student_ref), { kind: 'document', requestId: doc.request_id });
   if (spend) {
     throw new DocumentFailure('Bugünkü üretim sınırına ulaşıldı; yarın yeniden isteyebilirsin.', spend === SPEND_CAP_REASON ? 'spend_cap: check_spend downgrade' : 'check_spend: paid_allowed = false');
   }

@@ -179,6 +179,19 @@ const server = http.createServer(async (req, res) => {
       tables.guardian_links.push({ id: `gl-${invites.size}-${Date.now()}`, parent_id: caller.id, student_id: invite.studentId, relation: invite.relation, status: 'active', created_at: new Date().toISOString() });
       return send(res, 200, { link_id: 'l1', student_id: invite.studentId });
     }
+    if (rpc[1] === 'instructor_queue') {
+      // Eğitmen Kuyruk (0050): sahte ortamda bekleyen iş yok → boş dizi (sayfa boş durumu gösterir)
+      if (!caller) return send(res, 401, { code: '42501', message: 'OGR-AUTH-002 oturum gerekli', details: null, hint: null });
+      return send(res, 200, []);
+    }
+    if (rpc[1] === 'resolve_instructor_note') {
+      if (!caller) return send(res, 401, { code: '42501', message: 'OGR-AUTH-002 oturum gerekli', details: null, hint: null });
+      return send(res, 200, false);
+    }
+    if (rpc[1] === 'approve_spend_capped_request') {
+      if (!caller) return send(res, 401, { code: '42501', message: 'OGR-AUTH-002 oturum gerekli', details: null, hint: null });
+      return send(res, 200, { approved: false, already: true, job_id: null });
+    }
     if (rpc[1] === 'instructor_cost_overview') {
       // Eğitmen Maliyet (0047): sahte ortamda harcama yok → sıfırlar (sayfa boş durumu gösterir)
       if (!caller) return send(res, 401, { code: '42501', message: 'OGR-AUTH-002 oturum gerekli', details: null, hint: null });
