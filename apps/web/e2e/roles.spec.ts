@@ -124,7 +124,7 @@ test.describe('sayfa içerikleri', () => {
     await expect(page).toHaveURL(`${WEB_URL}/veli/bildirimler`);
     await expect(page.getByRole('switch', { name: 'Haftalık özet' })).toBeVisible();
     await page.goto('/veli/raporlar');
-    await expect(page).toHaveURL(`${WEB_URL}/veli`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Raporlar' })).toBeVisible();
     await page.getByRole('link', { name: /^Hesabın/ }).click();
     await expect(page).toHaveURL(`${WEB_URL}/veli/ayarlar`);
     await expect(page.getByRole('heading', { name: 'Çocuk ekle' })).toBeVisible();

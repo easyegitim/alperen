@@ -102,6 +102,11 @@ export default async function VeliOzet({ searchParams }: { searchParams: Promise
           <ChevronRight aria-hidden="true" size={20} className="shrink-0 text-ink-muted" />
         </Link>
       ) : null}
+      {s?.latestReport ? (
+        <Link href={`/veli/raporlar${children.length > 1 ? `?cocuk=${child.id}` : ''}`} className="text-small -mt-6 self-start text-ink-muted">
+          Tüm raporlar
+        </Link>
+      ) : null}
 
       {notes.ok ? <NotificationCards items={notes.data.items} /> : null}
 

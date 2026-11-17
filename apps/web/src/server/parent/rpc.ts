@@ -6,8 +6,8 @@ import { callRpc, type RpcClient, type RpcResult } from '@/server/practice/rpc';
 export const loadSummary = (db: RpcClient, studentId: string): Promise<RpcResult<ParentSummary>> =>
   callRpc(db, 'parent_child_summary', { p_student: studentId }, parseSummary);
 
-export const loadNotifications = (db: RpcClient, limit = 5): Promise<RpcResult<{ unread: number; items: NotificationCard[] }>> =>
-  callRpc(db, 'list_notifications', { p_limit: limit, p_before: null, p_unread_only: true }, parseNotifications);
+export const loadNotifications = (db: RpcClient, limit = 5, unreadOnly = true): Promise<RpcResult<{ unread: number; items: NotificationCard[] }>> =>
+  callRpc(db, 'list_notifications', { p_limit: limit, p_before: null, p_unread_only: unreadOnly }, parseNotifications);
 
 export const loadRules = (db: RpcClient): Promise<RpcResult<RuleRow[]>> => callRpc(db, 'list_notification_rules', {}, parseRules);
 

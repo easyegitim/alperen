@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Brain } from 'lucide-react';
+import { GuardianLinkRemove } from '@/components/GuardianLinkRemove';
 import { GuardianInvite } from '@/components/GuardianInvite';
 import { LinkButton } from '@/components/LinkButton';
 import { PageHeader } from '@/components/PageHeader';
@@ -59,7 +60,10 @@ export default async function ProfilSayfasi() {
         {links.length > 0 ? (
           <ul aria-label="Bağlı veliler" className="text-small m-0 flex list-none flex-col gap-1 p-0 text-ink-muted">
             {links.map((l) => (
-              <li key={l.id}>{l.label}</li>
+              <li key={l.id} className="flex flex-wrap items-center gap-x-3">
+                <span>{l.label}</span>
+                <GuardianLinkRemove linkId={l.id} />
+              </li>
             ))}
           </ul>
         ) : null}

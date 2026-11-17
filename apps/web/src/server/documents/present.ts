@@ -50,3 +50,12 @@ export function downloadName(title: string): string {
     .slice(0, 60);
   return `${base || 'belge'}.pdf`;
 }
+
+/** Veli rapor listesi: rapor belgesinin tür kelimesi (başlıktan/deneme bağından; bilinmezse "Rapor"). */
+export function reportKindWord(d: Pick<MyDocument, 'title' | 'exam_session_id'>): string {
+  if (d.exam_session_id) return 'Deneme';
+  if (/haftal/i.test(d.title)) return 'Haftalık';
+  if (/trend/i.test(d.title)) return 'Trend';
+  if (/konu/i.test(d.title)) return 'Konu';
+  return 'Rapor';
+}
