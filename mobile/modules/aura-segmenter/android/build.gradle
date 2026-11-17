@@ -1,0 +1,21 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.aurasegmenter'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.aurasegmenter"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // SPEC-MOBILE M8. react-native-mediapipe 0.6.0 tasks-vision 0.10.2 ister; Gradle en yüksek sürümü seçer.
+  // ImageSegmenter'ın setOutputCategoryMask/categoryMask() API'si 0.10.3+'ta; FaceLandmarker API'si değişmez.
+  implementation 'com.google.mediapipe:tasks-vision:0.10.14'
+}

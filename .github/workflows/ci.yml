@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: typecheck · lint · test · build · e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # Dummy Supabase: sayfalar ve API kapıları oturumsuz senaryolarla test edilir; gerçek anahtar yok.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54399
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy
+      SUPABASE_SERVICE_ROLE_KEY: dummy
+      FEATURE_EXPERT_NETWORK: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      # Sürüm kök package.json 'packageManager' alanından okunur (ikisi birden verilirse action hata verir).
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: e2e (oturumsuz akışlar, güvenlik başlıkları, CSP)
+        run: pnpm exec playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: test-results
+          retention-days: 7
+
+  db:
+    name: migrations · RLS kontrolü · purge
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/aura
+    steps:
+      - uses: actions/checkout@v4
+      - name: Supabase auth/cron stub + migrations
+        run: |
+          psql postgres://postgres:postgres@127.0.0.1:5432/postgres -v ON_ERROR_STOP=1 -c "create database aura"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/ci/supabase-stub.sql
+          for f in supabase/migrations/*.sql; do
+            sed 's/create extension if not exists pg_cron with schema pg_catalog;//' "$f" > /tmp/mig.sql
+            psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f /tmp/mig.sql
+          done
+      - name: SPEC 16.4 — RLS kapalı public tablo yok
+        run: bash scripts/check-rls.sh
+      - name: Silme talebi → 7 gün → hiçbir tabloda satır kalmaz (SPEC Faz 13 çıkış kriteri)
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/ci/purge-check.sql
+
+  mobile:
+    name: mobile · typecheck · lint · test · export
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      # Sürüm kök package.json 'packageManager' alanından okunur (ikisi birden verilirse action hata verir).
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Kök bağımlılıklar: mobil, kökteki lib/ ve content/ dosyalarını içe aktarır; bunların paketleri (zod, supabase-js…)
+      # Node çözümlemesiyle kök node_modules'tan bulunur.
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      # mobile ayrı bir pnpm projesidir; kök pnpm-workspace.yaml'a bağlanmaması için --ignore-workspace zorunlu.
+      - run: pnpm install --frozen-lockfile --ignore-workspace
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm check:modules
+      - run: pnpm export

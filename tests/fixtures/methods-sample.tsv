@@ -1,0 +1,17 @@
+id	area	title_tr	summary_tr	tier	evidence_grade	cost_band	frequency_per	frequency_times	minutes_per_day	difficulty	impact	effort	source_url	cost_min_try	cost_max_try	tags	regions	contraindications	flaw_ids	tryon_preset_id	user_label_tr	notes_internal
+m_sample_spf_tinted	skin	Renkli güneş koruyucu	Ton eşitliği için hafif renkli SPF; her sabah	diy	A	low	day	1	1	1	3	1	https://doi.org/10.1016/j.jaad.2012.12.973	150	600	spf;ton;guneş	skin		f_sample_tone		Renkli güneş koruyucu	ORNEK satir
+m_sample_niacin_serum	skin	Niasinamid serumu	Gözenek görünümü ve parlama için akşam	diy	B	medium	day	1	1	1	2	1	https://pubmed.ncbi.nlm.nih.gov/16029679/	300	900	gozenek;parlama;serum	skin;cheeks				Gözenek serumu	ORNEK
+m_sample_scalp_massage	hair	Saç derisi masajı	Günde birkaç dakika parmak ucuyla	diy	C	none	day	1	4	1	1	1	https://pubmed.ncbi.nlm.nih.gov/26883167/			sac derisi;dokulme	hair	head_covering;head_covering_unknown	f_sample_density		Saç derisi masajı	ORNEK
+m_sample_barber_lineup	beard	Berberde sakal hattı	Ayda bir profesyonel hat düzeltme	expert	C	low	month	1	0	1	2	1		200	500	sakal;hat;berber	beard;jawline	female_presentation;no_beard_preference		stubble_heavy	Berberde sakal hattı	ORNEK
+m_sample_brow_shape_expert	brows	Kaş şekillendirme (uzman)	Estetisyende doğal çizgiye göre düzen	expert	C	low	month	1	0	1	2	1		150	400	kas;duzen	brows;eyeArea				Kaş şekillendirme	ORNEK
+m_sample_doctor_topical	skin	Reçeteli cilt ürünü (hekim kararı)	Yalnız hekim muayenesinden sonra; taslak kuyruğuna gider	doctor	A	medium	day	1	1	2	3	2	https://www.titck.gov.tr/			hekim;recete	skin				Hekim onaylı cilt tedavisi	ORNEK — doktor katmani
+m_sample_bad_area	nowhere	Geçersiz alan	Bu satır düşmeli	diy	A	low	day	1	1	1	1	1				bad	skin				Geçersiz	ORNEK — hatali
+m_sample_bad_grade	skin	Geçersiz kanıt	Bu satır düşmeli	diy	Z	low	day	1	1	1	1	1				bad	skin				Geçersiz	ORNEK — hatali
+m_sample_posture_walk	habit	Öğle yürüyüşü	Masa başı günlerde yarım saat yürüyüş	diy	B	none	day	1	30	2	2	2	https://www.who.int/publications/i/item/9789240015128			yuruyus;durus	skin	bmi_below_25;under_18;restriction_signal			Öğle yürüyüşü	ORNEK
+m_sample_hair_texture_spray	hair	Doku spreyi	Kuru saça hacim ve mat doku	diy	C	low	day	1	1	1	2	1		120	350	doku;hacim;sprey	hair	head_covering;head_covering_unknown		textured_crop	Doku spreyi	ORNEK
+m_sample_spf_tinted	skin	Tekrar eden kimlik	Bu satır tekrar sayılmalı	diy	A	low	day	1	1	1	1	1				spf	skin				Tekrar	ORNEK — tekrar
+m_sample_bad_source	skin	Düz atıf kaynak	Kaynak https değil; bu satır düşmeli	diy	B	low	day	1	1	1	1	1	Dermatoloji ders kitabı, 2019			kaynak	skin				Düz atıf	ORNEK — hatali kaynak
+m_sample_bad_preset	hair	Bilinmeyen deneme stili	tryon_preset_id katalogda yok; bu satır düşmeli	expert	C	low	once	1	0	1	2	1				kesim	hair	head_covering;head_covering_unknown		foo_style	Bilinmeyen stil	ORNEK — hatali preset
+m_sample_drug_title	skin	Retinoid krem	Kullanıcı kanalında ilaç adı; bu satır düşmeli	diy	A	medium	day	1	1	1	3	1				cilt	skin				Retinoid krem	ORNEK — safety
+m_sample_calorie_habit	habit	Günlük açık	Her gün 300 kalori açık oluştur; etiket yok, bu satır düşmeli	diy	B	none	day	1	0	2	2	2				kilo	skin				Günlük açık	ORNEK — K8 etiketi yok
+m_sample_hair_no_contra	hair	Saç şekillendirme (kuaför)	Ayda bir kuaförde şekil; kontrendikasyon sütunu boş, kod ekler	expert	C	low	month	1	0	1	2	1		200	600	sekil;kuafor	hair				Saç şekillendirme	ORNEK — alan varsayilani
