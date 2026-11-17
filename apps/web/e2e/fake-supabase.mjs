@@ -179,6 +179,15 @@ const server = http.createServer(async (req, res) => {
       tables.guardian_links.push({ id: `gl-${invites.size}-${Date.now()}`, parent_id: caller.id, student_id: invite.studentId, relation: invite.relation, status: 'active', created_at: new Date().toISOString() });
       return send(res, 200, { link_id: 'l1', student_id: invite.studentId });
     }
+    if (rpc[1] === 'instructor_cost_overview') {
+      // Eğitmen Maliyet (0047): sahte ortamda harcama yok → sıfırlar (sayfa boş durumu gösterir)
+      if (!caller) return send(res, 401, { code: '42501', message: 'OGR-AUTH-002 oturum gerekli', details: null, hint: null });
+      const today = new Date().toISOString().slice(0, 10);
+      return send(res, 200, {
+        today_usd: 0, month_usd: 0, daily_cap_usd: 0, monthly_cap_usd: 0, student_monthly_cap_usd: 0, state: 'normal',
+        by_route: [], by_student: [], last_7_days: [{ day: today, cost_usd: 0 }],
+      });
+    }
     return send(res, 404, { message: 'rpc yok' });
   }
   const rest = /^\/rest\/v1\/(\w+)$/.exec(path);
