@@ -20,6 +20,7 @@ export const SCHEDULES: readonly ScheduleDef[] = [
   { job: 'memory.compact', cron: '0 3 * * *', description: 'Her gece 03:00 hafıza sıkıştırma' },
   { job: 'weekly.summary', cron: '0 19 * * 0', description: 'Pazar 19:00 haftalık özet' },
   { job: 'notifications.evaluate', cron: '5 * * * *', description: 'Saatlik bildirim kuralları (sessizlik, ilerleme, alıcı saatine göre haftalık özet) + e-posta süpürmesi' },
+  { job: 'curriculum.proposals.review', cron: '30 2 * * *', description: 'Gece 02:30 açık müfredat önerilerinin Batch incelemesi (otopilot kabulü buradan)' },
   { job: 'lesson.retention', cron: '15 4 * * *', description: 'Gece 04:15 ders medyası saklama (90 gün video, kalan ses/kareler) + takılan dersler' },
 ];
 

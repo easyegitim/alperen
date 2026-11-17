@@ -279,8 +279,8 @@ PLAN-v2 §3.5. SQL tarafı `supabase/migrations/0025_curriculum_builder.sql`.
   kayıtlar kendi öğrencisiyse).
 - **Eksik**: eğitmen editöründe kaynak (izlence, kitap, çıkmış sınav) yükleme adımı yok; `curriculum_draft_retry`
   `p_upload_ids` alır ama arayüz şimdilik kaynaksız yeniden kurar. Onboarding de kaynak göndermez.
-- Gece zamanlaması henüz kurulmadı: `SCHEDULES` ↔ pg_cron eşliği `supabase/tests/01_schema.sql`'de iki zamanlamaya
-  sabittir; `curriculum.proposals.review` eklenince ikisi birlikte güncellenmeli.
+- Gece zamanlaması: `curriculum.proposals.review` her gece 02:30 (Istanbul) koşar (`src/schedules.ts`; pg_cron eşi
+  `supabase/migrations/0046_proposals_review_schedule.sql`, eşlik denetimi `supabase/tests/01_schema.sql`).
 
 ## Alıştırma soru bankası (`src/jobs/practice-generate.ts`, `src/practice/bank.ts`, `py/template_fill.py`, `py/key_verify.py`)
 

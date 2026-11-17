@@ -422,8 +422,9 @@ declare
 begin
   if to_regclass('cron.job') is not null then
     select array_agg(j.jobname order by j.jobname) into v_jobs from cron.job j where j.jobname like 'ogrenmen-%';
-    perform t.ok(v_jobs = array['ogrenmen-lesson-retention', 'ogrenmen-memory-compact', 'ogrenmen-notifications-evaluate', 'ogrenmen-weekly-summary'],
-                 format('pg_cron tam dört zamanlama kurar: lesson.retention (0040), memory.compact, notifications.evaluate (0042), weekly.summary (%s)', v_jobs));
+    perform t.ok(v_jobs = array['ogrenmen-curriculum-proposals-review', 'ogrenmen-lesson-retention', 'ogrenmen-memory-compact',
+                                'ogrenmen-notifications-evaluate', 'ogrenmen-weekly-summary'],
+                 format('pg_cron tam beş zamanlama kurar: curriculum.proposals.review (0046), lesson.retention (0040), memory.compact, notifications.evaluate (0042), weekly.summary (%s)', v_jobs));
     perform t.ok(not exists (select 1 from cron.job j
                               where j.jobname like 'ogrenmen-%'
                                 and (j.command !~ '^select public\.enqueue_job\(''[a-z0-9.]+'', ''\{\}''::jsonb\)$'

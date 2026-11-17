@@ -70,11 +70,12 @@ describe('iş kayıt defteri', () => {
     expect(getJob('noop')!.payload.safeParse({}).success).toBe(true);
   });
 
-  it('zamanlamalar kayıtlı işleri gösterir (03:00 gece, pazar 19:00, saatlik kural motoru, 04:15 ders saklama)', () => {
+  it('zamanlamalar kayıtlı işleri gösterir (03:00 gece, pazar 19:00, saatlik kural motoru, 02:30 öneri incelemesi, 04:15 ders saklama)', () => {
     expect(SCHEDULES.map((s) => [s.job, s.cron])).toEqual([
       ['memory.compact', '0 3 * * *'],
       ['weekly.summary', '0 19 * * 0'],
       ['notifications.evaluate', '5 * * * *'],
+      ['curriculum.proposals.review', '30 2 * * *'],
       ['lesson.retention', '15 4 * * *'],
     ]);
     for (const s of SCHEDULES) expect(getJob(s.job)).toBeDefined();
