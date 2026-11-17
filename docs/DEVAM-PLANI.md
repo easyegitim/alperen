@@ -18,13 +18,15 @@ yeniden keşif yapmadan kaldığı yerden devam etmesi için yazıldı. Ürün p
   derlemesini `OGRENMEN_E2E=1` ile açar.
 - Teyit edilmemiş: kurucunun Windows makinesinde Docker komutunun açılıp açılmadığı.
 
-## Güncel durum (2026-11-16): Aşama 1 TAMAMLANDI — sıradaki Aşama 2 (kart 2a)
-Bu oturumda gönderilenler: 1c çifte ödeme (taslak `audit.events`'te), 1d betik yalıtımı (`minimalPythonEnv`), 1e hafıza
-yazım politikası (`MemoryWritePolicy`: trusted | coach | delta), 1g PDF işleri `pdf` sürecinde + Chromium korumalı alan.
-Açık notlar: (a) 1c yalnız ana üretim çağrısını atlar, doğrulama adımları yeniden koşar; (b) 1e kuralı veritabanında değil
-hafıza işleyicisinde; (c) 1g: üretim imajı root olmayan kullanıcıyla çalışır, Chromium korumalı alanla açılamazsa
-`--no-sandbox` ile yeniden dener (OGR-DOC-031) — Fly üzerinde 3g duman testinde bakılacak; 2 GB'lık `pdf` sürecinin
-eşzamanlı üretime yettiği de orada ölçülecek.
+## Güncel durum (2026-11-16 akşam): Aşama 1 TAMAMLANDI, CI yeşil (son commit `cd0b8e1`) — bu onayla Aşama 2 başlar
+Gönderilenler: 1c çifte ödeme (taslak `audit.events`'te), 1d betik yalıtımı (`minimalPythonEnv`), 1e hafıza yazım
+politikası (`MemoryWritePolicy`: trusted | coach | delta), 1g PDF işleri `pdf` sürecinde + Chromium korumalı alan geri dönüşü.
+Açık notlar: 1c yalnız ana üretim çağrısını atlar; 1e kuralı işleyicide (veritabanında değil); 1g Fly üzerinde 3g'de denenecek.
+**Bu onayın kapsamı — Aşama 2, sırayla, her kart tek ajan + tek commit, ajan modeli Opus (2f, 2g, 2h Sonnet):**
+2f `/ogrenci/sor` yönlendirme → 2g gece öneri incelemesi zamanlaması → 2h yükleme/hata ekranları → 2a Maliyet →
+2c Sınavlar → 2d öğrenci ayrıntı sayfası → 2e hafıza düzeltme → 2b Kuyruk (onay RPC'si + arayüz; `spend_cap` ile duran
+üretim isteklerini onaylama dahil) → 2i veli küçükleri. Küçük ve bağımsız kartlar önce; Kuyruk en sona, çünkü 2a/2c/2d'nin
+kurduğu desenleri kullanır. Bitince durulur, 10 satırlık özet verilir.
 
 ## Çalışma kuralları (her iş kartı için geçerli)
 1. **Az token:** ana oturum yönetir; her kart tek bir alt ajana dar görev tanımıyla verilir (kartın metni + "yalnız adı

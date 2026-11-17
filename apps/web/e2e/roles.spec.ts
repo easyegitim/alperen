@@ -31,7 +31,7 @@ test.describe('rol yönlendirmesi (sahte oturum)', () => {
     await expect(page).toHaveURL(`${WEB_URL}/egitmen`);
     await page.goto('/veli');
     await expect(page).toHaveURL(`${WEB_URL}/egitmen`);
-    await page.goto('/ogrenci/sor');
+    await page.goto('/ogrenci/yukle');
     await expect(page).toHaveURL(`${WEB_URL}/egitmen`);
   });
 
@@ -108,11 +108,10 @@ test.describe('sayfa içerikleri', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Koç' })).toBeVisible();
   });
 
-  test('öğrenci: Sor sayfasında kamera yakalama bileşeni var', async ({ page, context }) => {
+  test('öğrenci: eski Sor adresi Yükle ekranına yönlendirir', async ({ page, context }) => {
     await signInAs(context, 'student');
     await page.goto('/ogrenci/sor');
-    await expect(page.getByRole('heading', { level: 1, name: 'Sor' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Fotoğraf çek/ })).toBeVisible();
+    await expect(page).toHaveURL(`${WEB_URL}/ogrenci/yukle`);
   });
 
   test('veli: özet çocuğu ve bildirim kartını, bildirim ayarları kural anahtarlarını gösterir', async ({ page, context }) => {

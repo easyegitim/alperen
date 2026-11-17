@@ -22,7 +22,7 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
     shortcuts: [
-      { name: 'Sor', short_name: 'Sor', url: '/ogrenci/sor', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
+      { name: 'Yükle', short_name: 'Yükle', url: '/ogrenci/yukle', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
     ],
   };
 }
