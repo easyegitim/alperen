@@ -52,8 +52,8 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname in ('public', 'app') and p.prosrc ilike '%exam_answer_keys%'
      and has_function_privilege('authenticated', p.oid, 'execute');
-  perform t.ok(v_set = 'public.grade_exam_session,public.peek_answer_key,public.set_exam_key,public.set_exam_keys',
-               'anahtara dokunan, authenticated çağırabilen fonksiyonlar yalnız notlama/yazım/peek (' || coalesce(v_set, '-') || ')');
+  perform t.ok(v_set = 'public.grade_exam_session,public.instructor_exam_keys,public.instructor_exam_list,public.peek_answer_key,public.set_exam_key,public.set_exam_keys',
+               'anahtara dokunan, authenticated çağırabilen fonksiyonlar yalnız notlama/yazım/peek/personel okuması (' || coalesce(v_set, '-') || ')');
   perform t.ok(not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                             where n.nspname in ('public', 'app') and p.prosrc ilike '%exam_answer_keys%'
                               and has_function_privilege('anon', p.oid, 'execute')), 'anon anahtara dokunan fonksiyon çağıramaz');

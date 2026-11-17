@@ -188,6 +188,15 @@ const server = http.createServer(async (req, res) => {
         by_route: [], by_student: [], last_7_days: [{ day: today, cost_usd: 0 }],
       });
     }
+    if (rpc[1] === 'instructor_exam_list') {
+      // Eğitmen Sınavlar (0048): sahte ortamda sınav yok → boş liste (sayfa boş durumu gösterir)
+      if (!caller) return send(res, 401, { code: '42501', message: 'OGR-AUTH-002 oturum gerekli', details: null, hint: null });
+      return send(res, 200, []);
+    }
+    if (rpc[1] === 'instructor_exam_keys') {
+      if (!caller) return send(res, 401, { code: '42501', message: 'OGR-AUTH-002 oturum gerekli', details: null, hint: null });
+      return send(res, 400, { code: 'P0001', message: 'OGR-EXAM-001 sınav bulunamadı', details: null, hint: null });
+    }
     return send(res, 404, { message: 'rpc yok' });
   }
   const rest = /^\/rest\/v1\/(\w+)$/.exec(path);
