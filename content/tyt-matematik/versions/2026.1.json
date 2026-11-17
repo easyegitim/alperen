@@ -1,0 +1,27 @@
+{
+  "code": "TYT-MAT",
+  "version": "2026.1",
+  "skill_ids": [
+    "tyt.mat.cebir",
+    "tyt.mat.cebir.denklem",
+    "tyt.mat.cebir.esitsizlik",
+    "tyt.mat.cebir.mutlak-deger",
+    "tyt.mat.cebir.oran-oranti",
+    "tyt.mat.problem",
+    "tyt.mat.problem.hareket",
+    "tyt.mat.problem.isci",
+    "tyt.mat.problem.kesir",
+    "tyt.mat.problem.sayi",
+    "tyt.mat.problem.yas",
+    "tyt.mat.problem.yuzde",
+    "tyt.mat.temel",
+    "tyt.mat.temel.bolunebilme",
+    "tyt.mat.temel.carpanlara-ayirma",
+    "tyt.mat.temel.ebob-ekok",
+    "tyt.mat.temel.koklu",
+    "tyt.mat.temel.ondalik",
+    "tyt.mat.temel.rasyonel-sayilar",
+    "tyt.mat.temel.sayilar",
+    "tyt.mat.temel.uslu"
+  ]
+}

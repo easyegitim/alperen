@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/diagnostic-keys.json",
+  "title": "DiagnosticKeys",
+  "description": "Teşhis cevap anahtarları (diagnostic/answer-keys.json): {madde kodu: anahtar}. Yalnız seed-keys.py okur; Worker ve LLM yolu içe almaz.",
+  "x-version": "1.0",
+  "type": "object",
+  "minProperties": 1,
+  "propertyNames": {
+    "pattern": "^DIAG-[0-9]{4}\\.[0-9]+-[0-9]{2}$"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/key"
+  },
+  "$defs": {
+    "key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correct_option",
+        "solution"
+      ],
+      "properties": {
+        "correct_option": {
+          "$ref": "common.json#/$defs/optionKey"
+        },
+        "canonical_expr": {
+          "type": "string",
+          "minLength": 1,
+          "description": "SymPy ifadesi; validate.py correct_option metnini verdiğini doğrular"
+        },
+        "numeric_value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "numeric_tolerance": {
+          "type": "number",
+          "minimum": 0
+        },
+        "solution": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 2000
+        }
+      }
+    }
+  }
+}

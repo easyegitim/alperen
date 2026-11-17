@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/research-output.json",
+  "title": "ResearchOutput",
+  "description": "Kitap araştırma çıktısı: her atıf Crossref'te doğrulanmış (verified) ya da DOI'siz kurumsal bağlantılı (no_doi); unresolved burada olamaz.",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "query",
+    "expanded_queries",
+    "synthesis",
+    "citations",
+    "matrix",
+    "removed",
+    "bibtex",
+    "apa",
+    "model",
+    "cost_usd"
+  ],
+  "$defs": {
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ordinal",
+        "title",
+        "authors",
+        "year",
+        "crossref_status"
+      ],
+      "properties": {
+        "ordinal": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "doi": {
+          "type": "string",
+          "pattern": "^10\\.[0-9]{4,9}/\\S+$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "authors": {
+          "type": "string"
+        },
+        "venue": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "year": {
+          "type": "integer",
+          "minimum": 1800,
+          "maximum": 2100
+        },
+        "crossref_status": {
+          "enum": [
+            "verified",
+            "no_doi"
+          ]
+        },
+        "title_similarity": {
+          "$ref": "common.json#/$defs/probability"
+        },
+        "verified_at": {
+          "$ref": "common.json#/$defs/dateTime"
+        },
+        "oa_pdf_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "tldr": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 240,
+          "description": "Tek cümle; kaynağın iddiasını aşmaz"
+        },
+        "source": {
+          "enum": [
+            "openalex",
+            "semantic_scholar",
+            "arxiv",
+            "crossref",
+            "manual"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "crossref_status": {
+                "const": "verified"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "doi",
+              "verified_at",
+              "title_similarity"
+            ],
+            "properties": {
+              "title_similarity": {
+                "minimum": 0.6
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "crossref_status": {
+                "const": "no_doi"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "doi"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "request_id": {
+      "$ref": "common.json#/$defs/uuid"
+    },
+    "query": {
+      "type": "string"
+    },
+    "expanded_queries": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 5,
+      "items": {
+        "type": "string"
+      }
+    },
+    "synthesis": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "cites"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "cites": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "citations[].ordinal — her paragraf en az bir doğrulanmış kaynağa bağlı; pipeline eşleşmeyen paragrafı atar"
+          }
+        }
+      }
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/citation"
+      },
+      "description": "Yalnız verified veya no_doi; unresolved burada OLAMAZ (enum)"
+    },
+    "matrix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ordinal",
+          "method",
+          "sample",
+          "finding",
+          "limitation"
+        ],
+        "properties": {
+          "ordinal": {
+            "type": "integer"
+          },
+          "method": {
+            "type": "string"
+          },
+          "sample": {
+            "type": "string"
+          },
+          "finding": {
+            "type": "string"
+          },
+          "limitation": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "removed": {
+      "type": "array",
+      "description": "Yalnız inceleme ekranı; öğrenciye gitmez",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "doi_or_title",
+          "reason"
+        ],
+        "properties": {
+          "doi_or_title": {
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "crossref_unresolved",
+              "title_mismatch",
+              "no_doi_no_link",
+              "duplicate",
+              "off_topic"
+            ]
+          }
+        }
+      }
+    },
+    "bibtex": {
+      "type": "string"
+    },
+    "apa": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "model": {
+      "type": "string"
+    },
+    "cost_usd": {
+      "$ref": "common.json#/$defs/usd"
+    }
+  }
+}

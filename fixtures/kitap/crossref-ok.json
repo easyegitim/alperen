@@ -1,0 +1,154 @@
+{
+  "10.1037/0033-2909.132.3.354": {
+    "status": "ok",
+    "message-type": "work",
+    "message": {
+      "DOI": "10.1037/0033-2909.132.3.354",
+      "title": [
+        "Distributed practice in verbal recall tasks: A review and quantitative synthesis"
+      ],
+      "type": "journal-article",
+      "author": [
+        {
+          "given": "Nicholas J.",
+          "family": "Cepeda"
+        },
+        {
+          "given": "Harold",
+          "family": "Pashler"
+        },
+        {
+          "given": "Edward",
+          "family": "Vul"
+        },
+        {
+          "given": "John T.",
+          "family": "Wixted"
+        },
+        {
+          "given": "Doug",
+          "family": "Rohrer"
+        }
+      ],
+      "container-title": [
+        "Psychological Bulletin"
+      ],
+      "issued": {
+        "date-parts": [
+          [
+            2006
+          ]
+        ]
+      },
+      "URL": "https://doi.org/10.1037/0033-2909.132.3.354",
+      "is-referenced-by-count": 3150
+    }
+  },
+  "10.1007/s11251-007-9015-8": {
+    "status": "ok",
+    "message-type": "work",
+    "message": {
+      "DOI": "10.1007/s11251-007-9015-8",
+      "title": [
+        "The shuffling of mathematics problems improves learning"
+      ],
+      "type": "journal-article",
+      "author": [
+        {
+          "given": "Doug",
+          "family": "Rohrer"
+        },
+        {
+          "given": "Kelli",
+          "family": "Taylor"
+        }
+      ],
+      "container-title": [
+        "Instructional Science"
+      ],
+      "issued": {
+        "date-parts": [
+          [
+            2007
+          ]
+        ]
+      },
+      "URL": "https://doi.org/10.1007/s11251-007-9015-8",
+      "is-referenced-by-count": 640
+    }
+  },
+  "10.1177/1529100612453266": {
+    "status": "ok",
+    "message-type": "work",
+    "message": {
+      "DOI": "10.1177/1529100612453266",
+      "title": [
+        "Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology"
+      ],
+      "type": "journal-article",
+      "author": [
+        {
+          "given": "John",
+          "family": "Dunlosky"
+        },
+        {
+          "given": "Katherine A.",
+          "family": "Rawson"
+        },
+        {
+          "given": "Elizabeth J.",
+          "family": "Marsh"
+        },
+        {
+          "given": "Mitchell J.",
+          "family": "Nathan"
+        },
+        {
+          "given": "Daniel T.",
+          "family": "Willingham"
+        }
+      ],
+      "container-title": [
+        "Psychological Science in the Public Interest"
+      ],
+      "issued": {
+        "date-parts": [
+          [
+            2013
+          ]
+        ]
+      },
+      "URL": "https://doi.org/10.1177/1529100612453266",
+      "is-referenced-by-count": 4200
+    }
+  },
+  "10.5555/ogrenmen.mismatch": {
+    "status": "ok",
+    "message-type": "work",
+    "message": {
+      "DOI": "10.5555/ogrenmen.mismatch",
+      "title": [
+        "Soil moisture dynamics in semi-arid grasslands"
+      ],
+      "type": "journal-article",
+      "author": [
+        {
+          "given": "B.",
+          "family": "Örnek"
+        }
+      ],
+      "container-title": [
+        "Örnek Dergi"
+      ],
+      "issued": {
+        "date-parts": [
+          [
+            2019
+          ]
+        ]
+      },
+      "URL": "https://doi.org/10.5555/ogrenmen.mismatch",
+      "is-referenced-by-count": 12
+    }
+  }
+}

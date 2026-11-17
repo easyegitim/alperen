@@ -1,0 +1,160 @@
+{
+  "fake_match": [
+    "sayfa 1/3."
+  ],
+  "output": {
+    "items": [
+      {
+        "no": 1,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "$\\frac{2}{3}+\\frac{1}{6}$ işleminin sonucu kaçtır?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$\\frac{1}{2}$"
+          },
+          {
+            "key": "B",
+            "text": "$\\frac{2}{3}$"
+          },
+          {
+            "key": "C",
+            "text": "$\\frac{5}{6}$"
+          },
+          {
+            "key": "D",
+            "text": "$1$"
+          },
+          {
+            "key": "E",
+            "text": "$\\frac{7}{6}$"
+          }
+        ],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 2,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "$3x-7=11$ olduğuna göre $x$ kaçtır?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$6$"
+          },
+          {
+            "key": "B",
+            "text": "$5$"
+          },
+          {
+            "key": "C",
+            "text": "$4$"
+          },
+          {
+            "key": "D",
+            "text": "$7$"
+          },
+          {
+            "key": "E",
+            "text": "$8$"
+          }
+        ],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 3,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "Şekildeki sayı doğrusunda taranmış aralık aşağıdaki eşitsizliklerden hangisinin çözüm kümesidir?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$-2<x<3$"
+          },
+          {
+            "key": "B",
+            "text": "$-2\\le x<3$"
+          },
+          {
+            "key": "C",
+            "text": "$-2\\le x\\le 3$"
+          },
+          {
+            "key": "D",
+            "text": "$x<3$"
+          },
+          {
+            "key": "E",
+            "text": "$x\\ge -2$"
+          }
+        ],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [
+          {
+            "bbox": {
+              "x": 0.124,
+              "y": 0.363,
+              "w": 0.726,
+              "h": 0.074
+            },
+            "description": "Sayı doğrusu: -2'de dolu nokta, 3'te boş nokta, aradaki bölge taranmış"
+          }
+        ],
+        "legibility": "clear"
+      },
+      {
+        "no": 4,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "$2^5-3^3$ işleminin sonucu kaçtır?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$1$"
+          },
+          {
+            "key": "B",
+            "text": "$23$"
+          },
+          {
+            "key": "C",
+            "text": "$4$"
+          },
+          {
+            "key": "D",
+            "text": "$5$"
+          },
+          {
+            "key": "E",
+            "text": "$9$"
+          }
+        ],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 5,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "Bir sınıftaki 30 öğrencinin %40'ı kızdır. Sınıfa 6 kız öğrenci daha katılırsa",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": true,
+        "figures": [],
+        "legibility": "clear"
+      }
+    ],
+    "page_notes": null,
+    "unreadable": false
+  }
+}

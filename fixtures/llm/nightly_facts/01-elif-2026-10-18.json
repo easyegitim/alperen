@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "day": "2026-10-18",
+  "student_ref": "s_qk7m2rx4tn5a",
+  "facts": [
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_qk7m2rx4tn5a",
+      "kind": "deadline",
+      "text": "Öğrencinin Cuma günü deneme sınavı var.",
+      "source_message_ids": [
+        17
+      ],
+      "confidence": 0.85,
+      "valid_until": "2026-10-23",
+      "morale_signal": null,
+      "requires_approval": false,
+      "skill_id": null
+    },
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_qk7m2rx4tn5a",
+      "kind": "promise",
+      "text": "Öğrenci ertesi akşam 10 soru çözeceğine söz verdi.",
+      "source_message_ids": [
+        24
+      ],
+      "confidence": 0.8,
+      "valid_until": "2026-10-19",
+      "morale_signal": null,
+      "requires_approval": false,
+      "skill_id": null
+    },
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_qk7m2rx4tn5a",
+      "kind": "morale",
+      "text": "Öğrenci yorgun olduğunu söyledi ama çalışmaya devam etmek istiyor.",
+      "source_message_ids": [
+        24
+      ],
+      "confidence": 0.7,
+      "valid_until": null,
+      "morale_signal": -1,
+      "requires_approval": false,
+      "skill_id": null
+    },
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_qk7m2rx4tn5a",
+      "kind": "topic_asked",
+      "text": "Öğrenci rasyonel sayılarda toplamayı sordu; payları ve paydaları ayrı topladı.",
+      "source_message_ids": [
+        19,
+        21
+      ],
+      "confidence": 0.9,
+      "valid_until": null,
+      "morale_signal": null,
+      "requires_approval": false,
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+    }
+  ],
+  "is_question_message_ids": [
+    19,
+    21,
+    16
+  ],
+  "answered_question_message_ids": [
+    19,
+    21,
+    16
+  ],
+  "preferences": {
+    "modality": "verbal",
+    "explanation_notes": "Kısa adımlarla ilerlemek işe yarıyor.",
+    "active_hours": [
+      19,
+      20,
+      21
+    ]
+  }
+}

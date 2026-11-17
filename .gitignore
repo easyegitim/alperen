@@ -1,0 +1,41 @@
+# Bağımlılıklar ve derleme çıktıları
+node_modules/
+.next/
+dist/
+out/
+coverage/
+*.tsbuildinfo
+.turbo/
+
+# Ortam dosyaları (sır içerir; yalnız .env.example izlenir)
+.env
+.env.*
+!.env.example
+!.env.local.example
+.dev.vars
+*.local
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Yerel deneme (scripts/dev-local/up.ts): günlükler, yüklenen dosyalar
+.dev-local/
+
+# Diğer
+*.log
+.DS_Store
+/tmp-*/
+
+# Playwright tarayıcıları (CI: PLAYWRIGHT_BROWSERS_PATH) ve test çıktıları
+.pw-browsers/
+test-results/
+playwright-report/
+blob-report/
+!Dockerfile.local

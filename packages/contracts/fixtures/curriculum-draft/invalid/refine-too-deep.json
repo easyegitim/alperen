@@ -1,0 +1,53 @@
+{
+  "nodes": [
+    {
+      "code": "a",
+      "parent_code": null,
+      "name": "Kök",
+      "description": "",
+      "kind": "unit",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "a.b",
+      "parent_code": "a",
+      "name": "Düğüm a.b",
+      "description": "",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "a.b.c",
+      "parent_code": "a.b",
+      "name": "Düğüm a.b.c",
+      "description": "",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "a.b.c.d",
+      "parent_code": "a.b.c",
+      "name": "Düğüm a.b.c.d",
+      "description": "",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    },
+    {
+      "code": "a.b.c.d.e",
+      "parent_code": "a.b.c.d",
+      "name": "Düğüm a.b.c.d.e",
+      "description": "",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    }
+  ],
+  "prerequisites": [],
+  "misconception_tags": [],
+  "confidence": 0.74,
+  "notes_for_instructor": "Konu ağırlıkları 2019-2024 LGS sorularından tahmin edildi, gözden geçirmeniz önerilir."
+}

@@ -1,0 +1,122 @@
+{
+  "DIAG-2026.1-01": {
+    "correct_option": "C",
+    "canonical_expr": "12 - 3*(2 - 5)",
+    "numeric_value": "21",
+    "solution": "Önce parantez: `2 - 5 = -3`. Sonra çarpma: `3 · (-3) = -9`. Son olarak `12 - (-9) = 21`."
+  },
+  "DIAG-2026.1-02": {
+    "correct_option": "D",
+    "canonical_expr": "2**5 * 2**(-3)",
+    "numeric_value": "4",
+    "solution": "Tabanlar aynı olduğundan üsler toplanır: `5 + (-3) = 2`, sonuç `2^2 = 4`."
+  },
+  "DIAG-2026.1-03": {
+    "correct_option": "C",
+    "canonical_expr": "6*(2 + 1)/(3 - 2)",
+    "numeric_value": "18",
+    "solution": "Paydalardan kurtulmak için her terimi 6 ile çarp: `2x + 12 = 3x - 6`. x'leri bir tarafa topla: `12 + 6 = 3x - 2x`, yani `x = 18`."
+  },
+  "DIAG-2026.1-04": {
+    "correct_option": "A",
+    "canonical_expr": "-(4 - 9) + 2",
+    "numeric_value": "7",
+    "solution": "Parantez: `4 - 9 = -5`. Eksi her terime dağılır: `-(-5) = 5`. Sonra `5 + 2 = 7`."
+  },
+  "DIAG-2026.1-05": {
+    "correct_option": "B",
+    "canonical_expr": "18 - (3 + 1 + 7 + 4)",
+    "numeric_value": "3",
+    "solution": "9 ile bölünebilme için rakamlar toplamı 9'un katı olmalı: `3 + a + 1 + 7 + 4 = 15 + a`. Rakam olarak tek uygun değer `15 + 3 = 18` verir, yani `a = 3`."
+  },
+  "DIAG-2026.1-06": {
+    "correct_option": "C",
+    "canonical_expr": "3**2 * 3**3",
+    "numeric_value": "243",
+    "solution": "Tabanlar aynı, üsler toplanır: `a^2 · a^3 = a^5`. `a = 3` için `3^5 = 243`."
+  },
+  "DIAG-2026.1-07": {
+    "correct_option": "B",
+    "canonical_expr": "Rational(3,4)+Rational(1,8)",
+    "numeric_value": "7/8",
+    "solution": "Paydaları 8'de eşitle: `6/8 + 1/8 = 7/8`."
+  },
+  "DIAG-2026.1-08": {
+    "correct_option": "B",
+    "canonical_expr": "ilcm(12, 18)",
+    "numeric_value": "36",
+    "solution": "Karenin kenarı hem 12'nin hem 18'in katı olmalı; en küçüğü EKOK'tur. `12 = 2^2 · 3`, `18 = 2 · 3^2`, `EKOK = 2^2 · 3^2 = 36`."
+  },
+  "DIAG-2026.1-09": {
+    "correct_option": "A",
+    "canonical_expr": "(-9 - 3)/(5 - 2)",
+    "numeric_value": "-4",
+    "solution": "Terim karşı tarafa geçerken işareti değişir: `5x - 2x = -9 - 3`, yani `3x = -12` ve `x = -4`."
+  },
+  "DIAG-2026.1-10": {
+    "correct_option": "C",
+    "canonical_expr": "Rational(2,3) + Rational(1,6)",
+    "numeric_value": "5/6",
+    "solution": "Modeller `2/3` ve `1/6` kesirlerini gösterir. Paydaları 6'da eşitle: `4/6 + 1/6 = 5/6`."
+  },
+  "DIAG-2026.1-11": {
+    "correct_option": "C",
+    "canonical_expr": "Rational(42,10)*10 + Rational(58,100)*100",
+    "numeric_value": "100",
+    "solution": "10 ile çarparken virgül bir, 100 ile çarparken iki basamak sağa gider: `4,2 · 10 = 42`, `0,58 · 100 = 58`; toplam `42 + 58 = 100`."
+  },
+  "DIAG-2026.1-12": {
+    "correct_option": "A",
+    "canonical_expr": "2*sqrt(5) + sqrt(5)",
+    "numeric_value": "3*sqrt(5)",
+    "solution": "`2√5` ile `√5` benzer köklüdür: `2√5 + √5 = 3√5`. Katsayı kök içine karesi alınarak girer: `3√5 = √(9 · 5) = √45`."
+  },
+  "DIAG-2026.1-13": {
+    "correct_option": "D",
+    "canonical_expr": "7**2 - 2*10",
+    "numeric_value": "29",
+    "solution": "`(x + y)^2 = x^2 + 2xy + y^2` olduğundan `49 = x^2 + y^2 + 20`; buradan `x^2 + y^2 = 29`."
+  },
+  "DIAG-2026.1-14": {
+    "correct_option": "B",
+    "canonical_expr": "ceiling(Rational(-3 - 5, -2)) - 1",
+    "numeric_value": "3",
+    "solution": "`5`'i karşıya geçir: `-2x > -8`. Negatif sayıya bölünce yön değişir: `x < 4`. 4 dahil olmadığından en büyük tam sayı 3."
+  },
+  "DIAG-2026.1-15": {
+    "correct_option": "D",
+    "canonical_expr": "(3 + 4) - (3 - 4) - 1",
+    "numeric_value": "7",
+    "solution": "İki durum var: `-4 < x - 3 < 4`, yani `-1 < x < 7`. Bu aralıktaki tam sayılar 0, 1, 2, 3, 4, 5, 6; toplam 7 tane."
+  },
+  "DIAG-2026.1-16": {
+    "correct_option": "D",
+    "canonical_expr": "20*12/30",
+    "numeric_value": "8",
+    "solution": "Günlük sayfa artınca gün sayısı azalır (ters orantı): kitap `20 · 12 = 240` sayfa; `240 / 30 = 8` gün."
+  },
+  "DIAG-2026.1-17": {
+    "correct_option": "A",
+    "canonical_expr": "(29 - 5)/3",
+    "numeric_value": "8",
+    "solution": "Denklem: `3x + 5 = 29`. `5`'i karşıya işaret değiştirerek geçir: `3x = 24`, yani `x = 8`."
+  },
+  "DIAG-2026.1-18": {
+    "correct_option": "B",
+    "canonical_expr": "40/((1 - Rational(1,3))*(1 - Rational(1,2)))",
+    "numeric_value": "120",
+    "solution": "Kitaptan sonra paranın `2/3`'ü kalır; bunun yarısı harcanınca `2/3 · 1/2 = 1/3`'ü kalır. `x/3 = 40` olduğundan `x = 120` TL."
+  },
+  "DIAG-2026.1-19": {
+    "correct_option": "D",
+    "canonical_expr": "400*Rational(125,100)*Rational(90,100)",
+    "numeric_value": "450",
+    "solution": "Yüzdeler sırayla uygulanır, toplanmaz: `400 · 1,25 = 500`; `500 · 0,9 = 450` TL."
+  },
+  "DIAG-2026.1-20": {
+    "correct_option": "A",
+    "canonical_expr": "90*Rational(20,60)",
+    "numeric_value": "30",
+    "solution": "Hız km/sa olduğundan süreyi saate çevir: 20 dakika `1/3` saattir. Yol `90 · 1/3 = 30` km."
+  }
+}

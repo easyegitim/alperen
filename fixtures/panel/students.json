@@ -1,0 +1,360 @@
+[
+  {
+    "student_id": "c661b28c-81a8-5c11-9a5e-b919b5231034",
+    "public_ref": "s_qk7m2rx4tn5a",
+    "label": "Elif K.",
+    "status": "active",
+    "is_minor": false,
+    "tier": "standard",
+    "enrollment_id": "8bef16e2-1fb1-56d1-9530-3cd5b1ea7cf3",
+    "period": "YKS 2027",
+    "mastery": [],
+    "open_misconceptions": [],
+    "weekly_summary": null,
+    "quota": [
+      {
+        "id": 1,
+        "student_id": "c661b28c-81a8-5c11-9a5e-b919b5231034",
+        "staff_id": null,
+        "day": "2026-10-19",
+        "kind": "message",
+        "used": 12,
+        "warned": false
+      },
+      {
+        "id": 2,
+        "student_id": "c661b28c-81a8-5c11-9a5e-b919b5231034",
+        "staff_id": null,
+        "day": "2026-10-19",
+        "kind": "test",
+        "used": 1,
+        "warned": false
+      }
+    ],
+    "recent_attempts": [],
+    "assigned_staff": [
+      "de70e65e-1410-5026-a773-c5e55a3e6368",
+      "e52b76f6-2fb9-5e83-8949-d20c15d5abb3"
+    ]
+  },
+  {
+    "student_id": "1da926ea-a047-5403-9644-bb047719707b",
+    "public_ref": "s_vd3hp6wz2kc7",
+    "label": "Mert D.",
+    "status": "active",
+    "is_minor": true,
+    "tier": "standard",
+    "enrollment_id": "1899cde6-c497-5b14-8051-882f44649013",
+    "period": "YKS 2027",
+    "mastery": [
+      {
+        "skill_id": "tyt.mat.cebir.denklem",
+        "skill_name": "Birinci dereceden denklemler ve sistemler",
+        "p": 0.88113,
+        "evidence_count": 2,
+        "is_reliable": false,
+        "band": "yüksek",
+        "last_evidence_at": "2026-10-15T15:11:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.cebir.esitsizlik",
+        "skill_name": "Basit eşitsizlikler",
+        "p": 0.64607,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "orta",
+        "last_evidence_at": "2026-10-15T15:14:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.cebir.mutlak-deger",
+        "skill_name": "Mutlak değer: tanım, denklem, eşitsizlik",
+        "p": 0.64607,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "orta",
+        "last_evidence_at": "2026-10-15T15:15:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.cebir.oran-oranti",
+        "skill_name": "Oran–orantı, doğru/ters orantı",
+        "p": 0.39466,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "düşük",
+        "last_evidence_at": "2026-10-15T15:16:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.problem.hareket",
+        "skill_name": "Hareket problemleri",
+        "p": 0.64607,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "orta",
+        "last_evidence_at": "2026-10-15T15:20:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.problem.kesir",
+        "skill_name": "Kesir problemleri",
+        "p": 0.64607,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "orta",
+        "last_evidence_at": "2026-10-15T15:18:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.problem.sayi",
+        "skill_name": "Sayı problemleri",
+        "p": 0.64607,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "orta",
+        "last_evidence_at": "2026-10-15T15:17:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.problem.yuzde",
+        "skill_name": "Yüzde, kâr–zarar",
+        "p": 0.14865,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "düşük",
+        "last_evidence_at": "2026-10-15T15:19:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.temel.bolunebilme",
+        "skill_name": "Bölünebilme kuralları, kalan",
+        "p": 0.39466,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "düşük",
+        "last_evidence_at": "2026-10-15T15:02:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.temel.carpanlara-ayirma",
+        "skill_name": "Çarpanlara ayırma ve özdeşlikler",
+        "p": 0.64607,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "orta",
+        "last_evidence_at": "2026-10-15T15:13:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.temel.ebob-ekok",
+        "skill_name": "EBOB–EKOK ve problemleri",
+        "p": 0.14865,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "düşük",
+        "last_evidence_at": "2026-10-15T15:08:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.temel.koklu",
+        "skill_name": "Köklü ifadeler, kök içine alma, eşlenik",
+        "p": 0.14865,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "düşük",
+        "last_evidence_at": "2026-10-15T15:12:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.temel.ondalik",
+        "skill_name": "Ondalık gösterim, devirli ondalık, dönüşüm",
+        "p": 0.64607,
+        "evidence_count": 1,
+        "is_reliable": false,
+        "band": "orta",
+        "last_evidence_at": "2026-10-15T15:10:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+        "skill_name": "Rasyonel sayılarda dört işlem ve sıralama",
+        "p": 0.40732,
+        "evidence_count": 5,
+        "is_reliable": true,
+        "band": "orta",
+        "last_evidence_at": "2026-10-17T12:00:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.temel.sayilar",
+        "skill_name": "Sayı kümeleri, işlem önceliği, işaret kuralları",
+        "p": 0.99,
+        "evidence_count": 4,
+        "is_reliable": false,
+        "band": "yüksek",
+        "last_evidence_at": "2026-10-16T16:02:00Z"
+      },
+      {
+        "skill_id": "tyt.mat.temel.uslu",
+        "skill_name": "Üslü ifadeler ve özellikleri",
+        "p": 0.69765,
+        "evidence_count": 2,
+        "is_reliable": false,
+        "band": "orta",
+        "last_evidence_at": "2026-10-15T15:09:00Z"
+      }
+    ],
+    "open_misconceptions": [
+      {
+        "id": "6dc17606-33d3-59ff-a693-a23ab515fc00",
+        "enrollment_id": "1899cde6-c497-5b14-8051-882f44649013",
+        "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+        "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+        "tag": "rasyonel.pay-payda-ayri-toplama",
+        "text_instructor": "Payları ve paydaları ayrı ayrı topluyor.",
+        "text_student": "Paylar ve paydalar ayrı ayrı toplanmaz; önce paydaları eşitleyelim.",
+        "status": "open",
+        "evidence_count": 3,
+        "first_seen": "2026-10-15T15:03:00Z",
+        "last_seen": "2026-10-16T16:04:00Z",
+        "resolved_at": null,
+        "resolved_by": null,
+        "resolution_observation_id": null,
+        "rejected_by": null,
+        "reject_note": null
+      }
+    ],
+    "weekly_summary": {
+      "id": "8069919a-e1c4-585a-a8b7-53a07a50b572",
+      "student_id": "1da926ea-a047-5403-9644-bb047719707b",
+      "week_start": "2026-10-13",
+      "body": "Öğrenci bu hafta teşhis testini bitirdi ve kesir toplamada paydaları ayrı toplama hatasını üç kez tekrarladı. Üslü ifadelerde aynı tabanlı çarpımı sordu. Ödevini pazartesiye kadar teslim edeceğini söyledi. Kesirlerde zorlandığını belirtti; moral göstergesi düştü.",
+      "metrics": {
+        "messages": 9,
+        "questions_solved": 24,
+        "accuracy": 0.75,
+        "active_days": 4,
+        "open_misconceptions": 1,
+        "unanswered_questions": 1,
+        "morale_trend": "down",
+        "mastery_deltas": [
+          {
+            "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+            "delta": -0.05,
+            "reliable": true
+          }
+        ]
+      },
+      "facts_used": [
+        7,
+        9,
+        11
+      ],
+      "model": "gemini-2.5-flash-lite",
+      "cost_usd": 0.00016,
+      "created_at": "2026-10-20T01:30:00Z"
+    },
+    "quota": [
+      {
+        "id": 3,
+        "student_id": "1da926ea-a047-5403-9644-bb047719707b",
+        "staff_id": null,
+        "day": "2026-10-19",
+        "kind": "message",
+        "used": 4,
+        "warned": false
+      }
+    ],
+    "recent_attempts": [
+      {
+        "id": 20,
+        "enrollment_id": "1899cde6-c497-5b14-8051-882f44649013",
+        "question_id": "95d28ba8-53e5-5901-9092-b1c106827d22",
+        "context": "diagnostic",
+        "session_id": "1fbefe29-e44d-5979-b2f1-4b874e772e17",
+        "chosen": {
+          "key": "B"
+        },
+        "attempt_no": 1,
+        "is_correct": true,
+        "misconception_tag": null,
+        "graded_at": "2026-10-15T15:20:00Z",
+        "response_ms": 50000,
+        "created_at": "2026-10-15T15:20:00Z"
+      },
+      {
+        "id": 21,
+        "enrollment_id": "1899cde6-c497-5b14-8051-882f44649013",
+        "question_id": "00408829-e916-5ef1-b422-36f8e46bf0ad",
+        "context": "practice",
+        "session_id": null,
+        "chosen": {
+          "key": "C"
+        },
+        "attempt_no": 1,
+        "is_correct": true,
+        "misconception_tag": null,
+        "graded_at": "2026-10-16T16:00:00Z",
+        "response_ms": 41000,
+        "created_at": "2026-10-16T16:00:00Z"
+      },
+      {
+        "id": 22,
+        "enrollment_id": "1899cde6-c497-5b14-8051-882f44649013",
+        "question_id": "0be3214d-25be-581f-a955-daa36bee997f",
+        "context": "practice",
+        "session_id": null,
+        "chosen": {
+          "key": "A"
+        },
+        "attempt_no": 1,
+        "is_correct": true,
+        "misconception_tag": null,
+        "graded_at": "2026-10-16T16:02:00Z",
+        "response_ms": 41500,
+        "created_at": "2026-10-16T16:02:00Z"
+      },
+      {
+        "id": 23,
+        "enrollment_id": "1899cde6-c497-5b14-8051-882f44649013",
+        "question_id": "1c2285a0-d51e-5b5b-92d4-c855bed52aa9",
+        "context": "practice",
+        "session_id": null,
+        "chosen": {
+          "key": "A"
+        },
+        "attempt_no": 1,
+        "is_correct": false,
+        "misconception_tag": "rasyonel.pay-payda-ayri-toplama",
+        "graded_at": "2026-10-16T16:04:00Z",
+        "response_ms": 42000,
+        "created_at": "2026-10-16T16:04:00Z"
+      },
+      {
+        "id": 24,
+        "enrollment_id": "1899cde6-c497-5b14-8051-882f44649013",
+        "question_id": "04f606a1-3b8a-546a-a21c-bd792bc542db",
+        "context": "practice",
+        "session_id": null,
+        "chosen": {
+          "key": "B"
+        },
+        "attempt_no": 1,
+        "is_correct": true,
+        "misconception_tag": null,
+        "graded_at": "2026-10-16T16:06:00Z",
+        "response_ms": 42500,
+        "created_at": "2026-10-16T16:06:00Z"
+      }
+    ],
+    "assigned_staff": [
+      "de70e65e-1410-5026-a773-c5e55a3e6368"
+    ]
+  },
+  {
+    "student_id": "9d4d557b-6191-5018-b679-baf9dbacc67e",
+    "public_ref": "s_mb5tj7ye4ql2",
+    "label": "Zeynep Ç.",
+    "status": "pending_consent",
+    "is_minor": true,
+    "tier": "standard",
+    "enrollment_id": "d441ee83-5b1a-5f11-b124-9100b6ba8d32",
+    "period": "YKS 2027",
+    "mastery": [],
+    "open_misconceptions": [],
+    "weekly_summary": null,
+    "quota": [],
+    "recent_attempts": [],
+    "assigned_staff": [
+      "de70e65e-1410-5026-a773-c5e55a3e6368"
+    ]
+  }
+]

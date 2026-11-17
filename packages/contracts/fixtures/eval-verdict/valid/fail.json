@@ -1,0 +1,12 @@
+{
+  "failing_step_match": "miss",
+  "cause_match": false,
+  "skills_match": "none",
+  "tone_score": 2,
+  "overall": 0.2,
+  "pass": false,
+  "rationale": "Bozulan adım doğru bulundu, kazanım listesi bir alt kazanımı kaçırdı.",
+  "issues": [
+    "Alt kazanım eksik"
+  ]
+}

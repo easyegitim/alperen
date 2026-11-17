@@ -1,0 +1,14 @@
+{
+  "item-no-zero.json": [
+    "minimum"
+  ],
+  "missing-ocr-text.json": [
+    "required"
+  ],
+  "real-instructor-name.json": [
+    "pattern"
+  ],
+  "unknown-kind.json": [
+    "enum"
+  ]
+}

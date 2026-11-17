@@ -1,0 +1,47 @@
+@import "tailwindcss";
+@import "@ogrenmen/design-system/styles/tokens.css";
+@import "@ogrenmen/design-system/styles/theme.css";
+@import "@ogrenmen/design-system/styles/base.css";
+@import "@ogrenmen/design-system/styles/katex.css";
+/* Bileşen sınıflarının taranması (monorepo kökünden göreli yol). */
+@source "../../../../packages/design-system/src";
+
+:root {
+  color-scheme: light dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* İçeriğe atla bağlantısı: yalnız klavye odağında görünür. */
+.og-skip-link {
+  position: absolute;
+  left: 16px;
+  top: -64px;
+  z-index: 50;
+}
+.og-skip-link:focus-visible {
+  top: 16px;
+}
+
+/* Marka işareti: açık temada mor, koyu temada beyaz sürüm. */
+.og-brand-dark {
+  display: none;
+}
+[data-theme="dark"] .og-brand-light {
+  display: none;
+}
+[data-theme="dark"] .og-brand-dark {
+  display: inline-flex;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .og-brand-light {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .og-brand-dark {
+    display: inline-flex;
+  }
+}

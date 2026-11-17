@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "id": "3f2b8c1e-5a4d-4e7f-9b1a-2c3d4e5f6a71",
+  "curriculum_code": "TYT-MAT@2026.1",
+  "kind": "mcq",
+  "skill_ids": [
+    "tyt.mat.temel.rasyonel-sayilar"
+  ],
+  "stem": "`3/4 + 1/8` işleminin sonucu kaçtır?",
+  "stem_values": {},
+  "figure": null,
+  "options": [
+    {
+      "key": "A",
+      "text": "`4/12`",
+      "misconception_tag": "rasyonel.pay-payda-ayri-toplama"
+    },
+    {
+      "key": "B",
+      "text": "`7/8`",
+      "misconception_tag": null
+    },
+    {
+      "key": "C",
+      "text": "`4/8`",
+      "misconception_tag": "rasyonel.payda-esitlemeden-toplama"
+    },
+    {
+      "key": "D",
+      "text": "`3/32`",
+      "misconception_tag": null
+    }
+  ],
+  "difficulty": 0.5,
+  "source": "diagnostic",
+  "verification": {
+    "schema": true,
+    "sympy": "verified",
+    "render": "not_applicable",
+    "vision": "not_applicable",
+    "attempts": 0,
+    "status": "approved",
+    "review_note": null
+  }
+}

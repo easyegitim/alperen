@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "id": "kesir-modeli-toplama",
+  "seed": 17,
+  "params": {
+    "kesir1": {
+      "pay": 1,
+      "payda": 2
+    },
+    "kesir2": {
+      "pay": 3,
+      "payda": 8
+    },
+    "ortak_payda": null,
+    "paydalar": [
+      2,
+      8
+    ],
+    "model": "dikdortgen"
+  }
+}

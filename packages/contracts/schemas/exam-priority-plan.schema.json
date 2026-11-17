@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/exam-priority-plan.json",
+  "title": "ExamPriorityPlan",
+  "description": "Geçmiş sınavların sıklık analizine göre öncelikler. Tahmin değildir; soru metni taşımaz.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "course_code": {
+      "type": "string"
+    },
+    "period": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string",
+      "const": "Sıklık analizine göre öncelikler"
+    },
+    "years_total": {
+      "type": "integer",
+      "minimum": 2
+    },
+    "rows": {
+      "minItems": 1,
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "topic": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ispat",
+              "hesap",
+              "çoktan seçmeli",
+              "diğer"
+            ]
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hits": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "years": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "points_text": {
+            "type": "string",
+            "pattern": "^≈[0-9]+ puan$"
+          },
+          "evidence_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "evidence_item_ids": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Eğitmen arşivine bağlantı; soru metni yok"
+            }
+          },
+          "syllabus_alignment": {
+            "type": "string",
+            "enum": [
+              "covered_and_asked",
+              "covered_never_asked",
+              "asked_not_in_syllabus"
+            ]
+          },
+          "variant_question_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ÖZGÜN varyantlar (questions.source=llm, approved)"
+            }
+          },
+          "style_ids": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "description": "question_styles.id"
+            }
+          }
+        },
+        "required": [
+          "rank",
+          "topic",
+          "kind",
+          "hits",
+          "years",
+          "points_text",
+          "evidence_count",
+          "evidence_item_ids",
+          "syllabus_alignment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "others": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 80
+      }
+    },
+    "uncovered_topics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "schema_version",
+    "course_code",
+    "period",
+    "title",
+    "years_total",
+    "rows",
+    "others",
+    "evidence_count",
+    "generated_at"
+  ],
+  "additionalProperties": false
+}

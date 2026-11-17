@@ -1,0 +1,369 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/models.json",
+  "title": "ModelsConfig",
+  "description": "Sağlayıcı, model, fiyat, limit ve zincir tablosu (models.json; tek kaynak, verified_at zorunlu). Kod model adı içermez, zincir adı kullanır. Ücretsiz Gemini katmanı trains_on_data=true beyan etmek zorundadır (aydınlatma metni bunu yazar).",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verified_at",
+    "currency",
+    "providers",
+    "models",
+    "chains",
+    "cost_rules"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "verified_at": {
+      "$ref": "common.json#/$defs/date"
+    },
+    "currency": {
+      "const": "USD"
+    },
+    "note": {
+      "type": "string"
+    },
+    "providers": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/provider"
+      }
+    },
+    "models": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/model"
+      }
+    },
+    "chains": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chat",
+        "chat_free_only",
+        "nightly_facts",
+        "weekly_summary",
+        "question_gen",
+        "vision_check",
+        "ocr",
+        "lesson_analysis",
+        "transcribe",
+        "diarize",
+        "query_expand",
+        "research",
+        "embedding"
+      ],
+      "properties": {
+        "chat": {
+          "$ref": "#/$defs/chain"
+        },
+        "chat_free_only": {
+          "$ref": "#/$defs/chain"
+        },
+        "nightly_facts": {
+          "$ref": "#/$defs/chain"
+        },
+        "weekly_summary": {
+          "$ref": "#/$defs/chain"
+        },
+        "question_gen": {
+          "$ref": "#/$defs/chain"
+        },
+        "vision_check": {
+          "$ref": "#/$defs/chain"
+        },
+        "ocr": {
+          "$ref": "#/$defs/chain"
+        },
+        "lesson_analysis": {
+          "$ref": "#/$defs/chain"
+        },
+        "transcribe": {
+          "$ref": "#/$defs/chain"
+        },
+        "diarize": {
+          "$ref": "#/$defs/chain"
+        },
+        "query_expand": {
+          "$ref": "#/$defs/chain"
+        },
+        "research": {
+          "$ref": "#/$defs/chain"
+        },
+        "embedding": {
+          "$ref": "#/$defs/chain"
+        }
+      }
+    },
+    "cost_rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chat_budget_tokens_in",
+        "chat_turn_max_usd",
+        "chat_target_usd"
+      ],
+      "properties": {
+        "chat_budget_tokens_in": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chat_turn_max_usd": {
+          "$ref": "common.json#/$defs/usd"
+        },
+        "chat_target_usd": {
+          "$ref": "common.json#/$defs/usd"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "tier"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "gemini",
+            "openai-compatible",
+            "workers-ai",
+            "anthropic",
+            "fake"
+          ]
+        },
+        "base": {
+          "type": "string",
+          "format": "uri"
+        },
+        "rest_base": {
+          "type": "string",
+          "pattern": "^https://"
+        },
+        "binding": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "key_env": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "tier": {
+          "enum": [
+            "free",
+            "paid"
+          ]
+        },
+        "rpd": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "neurons_per_day": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "trains_on_data": {
+          "type": "boolean",
+          "description": "Gönderilen veri sağlayıcının ürün eğitiminde kullanılabilir mi"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "gemini"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "trains_on_data",
+              "base",
+              "key_env"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "gemini"
+              },
+              "tier": {
+                "const": "free"
+              }
+            },
+            "required": [
+              "kind",
+              "tier"
+            ]
+          },
+          "then": {
+            "properties": {
+              "trains_on_data": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "openai-compatible",
+                  "anthropic"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "base",
+              "key_env"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "workers-ai"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "binding",
+              "rest_base"
+            ]
+          }
+        }
+      ]
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "in_per_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "1M giriş token başına USD"
+        },
+        "out_per_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "1M çıkış token başına USD"
+        },
+        "batch_discount": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "ctx": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "structured": {
+          "type": "boolean"
+        },
+        "vision": {
+          "type": "boolean"
+        },
+        "audio": {
+          "type": "boolean"
+        },
+        "dims": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "use": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "chat",
+              "nightly_facts",
+              "weekly_summary",
+              "question_gen",
+              "vision_check",
+              "ocr",
+              "lesson_analysis",
+              "transcribe",
+              "diarize",
+              "research",
+              "embedding",
+              "query_expand",
+              "tts"
+            ]
+          }
+        },
+        "per_audio_hour": {
+          "type": "number",
+          "minimum": 0
+        },
+        "neurons_per_1k_tokens": {
+          "type": "number",
+          "minimum": 0
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "in_per_m",
+            "out_per_m"
+          ]
+        },
+        {
+          "required": [
+            "per_audio_hour"
+          ]
+        }
+      ]
+    },
+    "chain": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Denenme sırasıyla model adları (models anahtarları)"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ogrenmen-tablet"
+version = "0.1.0"
+description = "Öğrenmen Tablet (M06): şablon stoku, LLM soru üretimi, şekil sandbox'ı, SymPy ve vision doğrulaması, deneme PDF'i, ders notu kütüphanesi"
+readme = "README.md"
+requires-python = ">=3.11"
+# Yerel yol bağımlılıkları (ogrenmen-common, ogrenmen-contracts, ogrenmen-pii) BLUEPRINT §2 gereği aynı ortamda
+# `pip install -e <yol>` ile önceden kurulmuş olmalıdır; şablonlar content/tyt-matematik/templates'ten dosya yoluyla
+# yüklenir (içerik paketi kurulmaz). sympy/matplotlib/numpy sürümleri content/tyt-matematik ile aynıdır.
+dependencies = [
+  "brotli==1.2.0",
+  "defusedxml==0.7.1",
+  "fonttools==4.67.0",
+  "httpx==0.28.1",
+  "jinja2==3.1.6",
+  "matplotlib==3.11.2",
+  "numpy==2.5.3",
+  "ogrenmen-common==0.1.0",
+  "ogrenmen-contracts==0.1.0",
+  "ogrenmen-pii==0.1.0",
+  "pypdf==6.17.0",
+  "sympy==1.14.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.2.0", "ruff==0.17.3"]
+# SVG → PNG dönüştürücü (libcairo ister); yoksa .svg saklanır ve PNG SKIP (§6.1, §12 #41)
+svg = ["cairosvg==2.8.2"]
+
+[project.scripts]
+ogrenmen-tablet = "ogrenmen_tablet.cli:entrypoint"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+markers = ["live: OGRENMEN_DATABASE_URL tanımlıysa canlı Postgres'e karşı koşar; yoksa atlanır"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ogrenmen_tablet"]

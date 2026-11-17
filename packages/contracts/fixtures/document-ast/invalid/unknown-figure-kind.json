@@ -1,0 +1,221 @@
+{
+  "kind": "notes",
+  "title": "Rasyonel sayılar notu",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": "Toplama ve çıkarma · sana göre hazırlandı",
+    "generated_on": "2026-11-04",
+    "language": "tr",
+    "personalized": true,
+    "duration_min": null
+  },
+  "sections": [
+    {
+      "no": 1,
+      "title": "Hedefler"
+    },
+    {
+      "no": 2,
+      "title": "Konu anlatımı"
+    },
+    {
+      "no": 3,
+      "title": "Senin sık yaptığın hata"
+    },
+    {
+      "no": 4,
+      "title": "Kendini sına"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "id": "b1",
+      "section_no": 1,
+      "level": 1,
+      "text": "Rasyonel sayılarda toplama ve çıkarma"
+    },
+    {
+      "type": "summary_box",
+      "id": "b2",
+      "section_no": 1,
+      "title": "Bu notun hedefleri",
+      "bullets": [
+        "Paydaları farklı kesirleri ortak paydaya genişletip toplar ve çıkarırsın.",
+        "Ortak payda olarak paydaların EKOK'unu seçip sonucu sadeleştirirsin.",
+        "Bulduğun toplamın makul olup olmadığını tek bir kontrolle sınarsın."
+      ]
+    },
+    {
+      "type": "definition_box",
+      "id": "b3",
+      "section_no": 2,
+      "term": "Kesirlerde toplama ve çıkarma",
+      "body": "Paydaları eşit kesirlerde yalnız paylar toplanır ya da çıkarılır, payda aynı kalır. Paydalar farklıysa önce ortak paydaya genişletirsin: $\\frac{a}{b}+\\frac{c}{d}=\\frac{a\\cdot d+c\\cdot b}{b\\cdot d}$ ($b\\neq 0$, $d\\neq 0$). Ortak payda olarak paydaların EKOK'unu seçersen sayılar küçük kalır."
+    },
+    {
+      "type": "figure",
+      "id": "b4",
+      "section_no": 2,
+      "source": "svg",
+      "figure_code": "fig, ax = plt.subplots(figsize=(6.4, 2.2))\nfor i in range(12):\n    color = ACCENT if i < 8 else (MUTED if i < 11 else PAPER)\n    ax.add_patch(plt.Rectangle((i, 0), 1, 1, facecolor=color, edgecolor=NAVY, linewidth=1.2))\nax.annotate(\"\", xy=(0, 1.15), xytext=(8, 1.15), arrowprops=dict(arrowstyle=\"<->\", color=ACCENT))\nax.text(4, 1.35, \"2/3 = 8/12\", ha=\"center\", color=ACCENT)\nax.annotate(\"\", xy=(8, 1.15), xytext=(11, 1.15), arrowprops=dict(arrowstyle=\"<->\", color=NAVY))\nax.text(9.5, 1.35, \"1/4 = 3/12\", ha=\"center\")\nax.text(6, -0.5, \"Toplam: 8 + 3 = 11 parça, yani 11/12\", ha=\"center\")\nax.set_xlim(-0.3, 12.3)\nax.set_ylim(-0.9, 1.8)\nax.axis(\"off\")\nsave_figure(fig, 1)",
+      "kind": "plotly",
+      "alt": "On iki eş parçaya bölünmüş bir şerit: ilk sekiz parça 2/3'ü, sonraki üç parça 1/4'ü gösteriyor; toplam on bir parça, yani 11/12."
+    },
+    {
+      "type": "worked_example",
+      "id": "b5",
+      "section_no": 2,
+      "title": "Üç kesirle işlem",
+      "problem": "$\\frac{5}{6}-\\frac{1}{4}+\\frac{2}{3}$ işleminin sonucu kaçtır?",
+      "steps": [
+        "Paydaların EKOK'unu bul: $\\text{EKOK}(6,4,3)=12$.",
+        "Her kesri 12 paydasına genişlet: $\\frac{10}{12}-\\frac{3}{12}+\\frac{8}{12}$.",
+        "Yalnız payları işle, payda aynı kalır: $\\frac{10-3+8}{12}=\\frac{15}{12}$.",
+        "Sadeleştir: $\\frac{15}{12}=\\frac{5}{4}$."
+      ],
+      "answer": "$\\frac{5}{4}$"
+    },
+    {
+      "type": "common_mistake_callout",
+      "id": "b6",
+      "section_no": 3,
+      "pattern_id": "patterns.md:2",
+      "pattern_ref": {
+        "source": "patterns.md",
+        "id": "patterns.md:2",
+        "date": "2026-10-19"
+      },
+      "text": "12 ve 19 Ekim'de iki kez paydaları da topladın: $\\frac{2}{3}+\\frac{1}{4}$ için $\\frac{3}{7}$ yazdın. Doğrusu $\\frac{8}{12}+\\frac{3}{12}=\\frac{11}{12}$. Kontrol yolu: iki pozitif kesrin toplamı, toplananların en büyüğünden küçük çıkamaz; $\\frac{3}{7}$ ise $\\frac{2}{3}$'ten küçük."
+    },
+    {
+      "type": "heading",
+      "id": "b7",
+      "section_no": 4,
+      "level": 2,
+      "text": "Kendini sına"
+    },
+    {
+      "type": "question",
+      "id": "q1",
+      "section_no": 4,
+      "no": 1,
+      "stem": "$\\frac{3}{4}+\\frac{1}{8}$ işleminin sonucu kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$\\frac{4}{12}$"
+        },
+        {
+          "key": "B",
+          "text": "$\\frac{7}{8}$"
+        },
+        {
+          "key": "C",
+          "text": "$\\frac{4}{8}$"
+        },
+        {
+          "key": "D",
+          "text": "$\\frac{5}{8}$"
+        },
+        {
+          "key": "E",
+          "text": "$1$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q2",
+      "section_no": 4,
+      "no": 2,
+      "stem": "$2-\\frac{5}{6}$ işleminin sonucu kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$\\frac{7}{6}$"
+        },
+        {
+          "key": "B",
+          "text": "$\\frac{3}{6}$"
+        },
+        {
+          "key": "C",
+          "text": "$-\\frac{3}{6}$"
+        },
+        {
+          "key": "D",
+          "text": "$\\frac{1}{6}$"
+        },
+        {
+          "key": "E",
+          "text": "$\\frac{5}{6}$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q3",
+      "section_no": 4,
+      "no": 3,
+      "stem": "$\\frac{2}{5}+\\frac{1}{3}-\\frac{1}{2}$ işleminin sonucu kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$\\frac{2}{6}$"
+        },
+        {
+          "key": "B",
+          "text": "$\\frac{1}{5}$"
+        },
+        {
+          "key": "C",
+          "text": "$\\frac{7}{30}$"
+        },
+        {
+          "key": "D",
+          "text": "$\\frac{13}{30}$"
+        },
+        {
+          "key": "E",
+          "text": "$\\frac{1}{30}$"
+        }
+      ],
+      "skill_ids": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ]
+    },
+    {
+      "type": "answer_key_page",
+      "id": "b8",
+      "section_no": 4,
+      "title": "Cevaplar"
+    }
+  ],
+  "keys": [
+    {
+      "question_no": 1,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": "7/8"
+    },
+    {
+      "question_no": 2,
+      "correct_option": "A",
+      "numeric_value": null,
+      "canonical_expr": "7/6"
+    },
+    {
+      "question_no": 3,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "7/30"
+    }
+  ]
+}

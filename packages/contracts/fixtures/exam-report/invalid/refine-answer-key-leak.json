@@ -1,0 +1,73 @@
+{
+  "kind": "report",
+  "title": "Deneme 3 analizi",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": null,
+    "generated_on": "2026-11-02",
+    "language": "tr",
+    "personalized": true,
+    "duration_min": null
+  },
+  "sections": [
+    {
+      "no": 1,
+      "title": "Genel görünüm"
+    },
+    {
+      "no": 2,
+      "title": "Kazanımlar"
+    },
+    {
+      "no": 3,
+      "title": "Sonraki adım"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "id": "r1",
+      "section_no": 1,
+      "level": 1,
+      "text": "Genel görünüm"
+    },
+    {
+      "type": "paragraph",
+      "id": "r2",
+      "section_no": 1,
+      "text": "Matematik bölümünde 24 doğru, 9 yanlış yaptın; netin 21,75 oldu."
+    },
+    {
+      "type": "chart",
+      "id": "r3",
+      "section_no": 1,
+      "chart_kind": "score_by_section",
+      "title": "Bölümlere göre net",
+      "data_ref": "section_nets"
+    },
+    {
+      "type": "chart",
+      "id": "r5",
+      "section_no": 2,
+      "chart_kind": "skill_heatmap",
+      "title": "Kazanım ısı haritası",
+      "data_ref": "skill_map"
+    },
+    {
+      "type": "paragraph",
+      "id": "rleak",
+      "section_no": 2,
+      "text": "Dokuzuncu soruda doğru cevap B idi, sen D işaretledin."
+    },
+    {
+      "type": "summary_box",
+      "id": "r4",
+      "section_no": 3,
+      "title": "Önümüzdeki hafta",
+      "bullets": [
+        "Rasyonel sayılarda paydaları eşitleme alıştırması yap."
+      ]
+    }
+  ],
+  "keys": []
+}

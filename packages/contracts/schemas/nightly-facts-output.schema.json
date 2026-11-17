@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/nightly-facts-output.json",
+  "title": "NightlyFactsOutput",
+  "description": "Gece olgu çıkarımının öğrenci × gün çıktısı (Batch; zincir nightly_facts).",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "day",
+    "student_ref",
+    "facts",
+    "is_question_message_ids",
+    "answered_question_message_ids"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "day": {
+      "$ref": "common.json#/$defs/date"
+    },
+    "student_ref": {
+      "$ref": "common.json#/$defs/studentRef"
+    },
+    "facts": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "$ref": "memory-fact.json"
+      }
+    },
+    "is_question_message_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "answered_question_message_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "modality": {
+          "enum": [
+            "visual",
+            "verbal",
+            "mixed"
+          ]
+        },
+        "explanation_notes": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "active_hours": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 23
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "name": "@ogrenmen/prompts",
+  "version": "0.1.0",
+  "description": "Öğrenmen prompt paketi: katmanlar (ürün + rol + rota), sürümlü rota promptları (<rota>/<sürüm>.md), sürüm seçimi, eval seti",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./db": {
+      "types": "./src/db.ts",
+      "default": "./src/db.ts"
+    },
+    "./eval": {
+      "types": "./src/eval/index.ts",
+      "default": "./src/eval/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./src/index.ts",
+  "files": [
+    "src",
+    "eval",
+    "prompts.lock.json"
+  ],
+  "scripts": {
+    "bundle": "bun scripts/build-bundle.ts",
+    "bundle:check": "bun scripts/build-bundle.ts --check",
+    "eval": "bun scripts/eval.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "test": "vitest run",
+    "test:live": "vitest run --config vitest.live.config.ts"
+  },
+  "dependencies": {
+    "@ogrenmen/contracts": "workspace:*",
+    "@ogrenmen/llm": "workspace:*",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
+    "@eslint/js": "9.39.5",
+    "@types/node": "22.10.2",
+    "@types/pg": "^8.23.1",
+    "eslint": "9.39.5",
+    "pg": "^8.23.1",
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "2.1.9"
+  }
+}

@@ -1,0 +1,269 @@
+{
+  "title": "Alıştırma soruları",
+  "items": [
+    {
+      "no": 1,
+      "section": "Alıştırma",
+      "kind": "mcq",
+      "stem": "`3 + 4 · 2` işleminin sonucu kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "`14`"
+        },
+        {
+          "key": "B",
+          "text": "`11`"
+        },
+        {
+          "key": "C",
+          "text": "`10`"
+        },
+        {
+          "key": "D",
+          "text": "`24`"
+        }
+      ],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.temel.sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "easy"
+    },
+    {
+      "no": 2,
+      "section": "Alıştırma",
+      "kind": "mcq",
+      "stem": "`2/3 + 1/6` toplamı kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "`3/9`"
+        },
+        {
+          "key": "B",
+          "text": "`1/2`"
+        },
+        {
+          "key": "C",
+          "text": "`5/6`"
+        },
+        {
+          "key": "D",
+          "text": "`3/6`"
+        }
+      ],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.temel.sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "easy"
+    },
+    {
+      "no": 3,
+      "section": "Alıştırma",
+      "kind": "mcq",
+      "stem": "`(-2) · (-3) - 4` işleminin sonucu kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "`2`"
+        },
+        {
+          "key": "B",
+          "text": "`-10`"
+        },
+        {
+          "key": "C",
+          "text": "`10`"
+        },
+        {
+          "key": "D",
+          "text": "`-2`"
+        }
+      ],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.temel.sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "easy"
+    },
+    {
+      "no": 4,
+      "section": "Alıştırma",
+      "kind": "mcq",
+      "stem": "`2^3 · 2^2` ifadesi aşağıdakilerden hangisine eşittir?",
+      "options": [
+        {
+          "key": "A",
+          "text": "`2^6`"
+        },
+        {
+          "key": "B",
+          "text": "`4^5`"
+        },
+        {
+          "key": "C",
+          "text": "`2^5`"
+        },
+        {
+          "key": "D",
+          "text": "`2^1`"
+        }
+      ],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.temel.sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "medium"
+    },
+    {
+      "no": 5,
+      "section": "Alıştırma",
+      "kind": "mcq",
+      "stem": "`1,2 + 0,35` toplamı kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "`1,37`"
+        },
+        {
+          "key": "B",
+          "text": "`1,55`"
+        },
+        {
+          "key": "C",
+          "text": "`4,7`"
+        },
+        {
+          "key": "D",
+          "text": "`0,47`"
+        }
+      ],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.temel.sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "easy"
+    },
+    {
+      "no": 6,
+      "section": "Alıştırma",
+      "kind": "mcq",
+      "stem": "Bir sayının 3 katının 5 fazlası 20 ise bu sayı kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "`5`"
+        },
+        {
+          "key": "B",
+          "text": "`15`"
+        },
+        {
+          "key": "C",
+          "text": "`25/3`"
+        },
+        {
+          "key": "D",
+          "text": "`3`"
+        }
+      ],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.temel.sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "medium"
+    },
+    {
+      "no": 7,
+      "section": "Alıştırma",
+      "kind": "numeric",
+      "stem": "`x/2 + x/3 = 10` ise `x` kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.temel.sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "medium"
+    },
+    {
+      "no": 8,
+      "section": "Alıştırma",
+      "kind": "numeric",
+      "stem": "`-(5 - 9) + 2 · 3` işleminin sonucu kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.temel.sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "easy"
+    }
+  ],
+  "keys": [
+    {
+      "question_no": 1,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": "3 + 4*2",
+      "solution": "Çarpma önce yapılır: `4 · 2 = 8`, sonra `3 + 8 = 11`."
+    },
+    {
+      "question_no": 2,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "Rational(2,3) + Rational(1,6)",
+      "solution": "Paydalar 6'da eşitlenir: `4/6 + 1/6 = 5/6`."
+    },
+    {
+      "question_no": 3,
+      "correct_option": "A",
+      "numeric_value": null,
+      "canonical_expr": "(-2)*(-3) - 4",
+      "solution": "İki negatifin çarpımı pozitiftir: `6 - 4 = 2`."
+    },
+    {
+      "question_no": 4,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "2**3*2**2",
+      "solution": "Aynı tabanlı çarpmada üsler toplanır: `2^(3+2) = 2^5`."
+    },
+    {
+      "question_no": 5,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": "Rational(12,10) + Rational(35,100)",
+      "solution": "Virgüller alt alta yazılır: `1,20 + 0,35 = 1,55`."
+    },
+    {
+      "question_no": 6,
+      "correct_option": "A",
+      "numeric_value": null,
+      "canonical_expr": "Rational(15,3)",
+      "solution": "`3x + 5 = 20` ise `3x = 15` ve `x = 5`."
+    },
+    {
+      "question_no": 7,
+      "correct_option": null,
+      "numeric_value": 12,
+      "canonical_expr": "12",
+      "solution": "Paydalar 6'da eşitlenir: `3x/6 + 2x/6 = 10`, `5x = 60`, `x = 12`."
+    },
+    {
+      "question_no": 8,
+      "correct_option": null,
+      "numeric_value": 10,
+      "canonical_expr": "-(5 - 9) + 2*3",
+      "solution": "Eksi parantezin içine dağılır: `-(5 - 9) = 4`. Çarpma: `2 · 3 = 6`. Toplam `10`."
+    }
+  ]
+}

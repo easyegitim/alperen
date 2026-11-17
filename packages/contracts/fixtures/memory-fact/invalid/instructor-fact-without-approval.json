@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "student_ref": "s_k3m7q2x4z6ab",
+  "kind": "instructor_fact",
+  "text": "Eğitmen öğrencinin deneme sınavı puanının düştüğünü not etti.",
+  "source_message_ids": [
+    1101
+  ],
+  "confidence": 0.7,
+  "valid_until": null,
+  "morale_signal": -1,
+  "requires_approval": false,
+  "skill_id": null
+}

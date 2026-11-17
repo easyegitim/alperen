@@ -1,0 +1,17 @@
+{
+  "detail-too-long.json": [
+    "maxLength"
+  ],
+  "ops-ocr-basarisiz-wording.json": [
+    "x-forbidden-words"
+  ],
+  "unknown-severity.json": [
+    "enum"
+  ],
+  "word-depresif-turkish-case.json": [
+    "x-forbidden-words"
+  ],
+  "word-tembel.json": [
+    "x-forbidden-words"
+  ]
+}

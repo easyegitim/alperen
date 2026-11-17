@@ -1,0 +1,10 @@
+{
+  "ops": [
+    {
+      "op": "insert",
+      "path": "/memories/a/b/c/d.md",
+      "insert_line": 0,
+      "text": "x"
+    }
+  ]
+}

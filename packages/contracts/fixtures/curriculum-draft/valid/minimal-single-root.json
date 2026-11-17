@@ -1,0 +1,17 @@
+{
+  "nodes": [
+    {
+      "code": "edebiyat",
+      "parent_code": null,
+      "name": "Edebiyat",
+      "description": "",
+      "kind": "unit",
+      "exam_weight_hint": null,
+      "sources": []
+    }
+  ],
+  "prerequisites": [],
+  "misconception_tags": [],
+  "confidence": 0.4,
+  "notes_for_instructor": ""
+}

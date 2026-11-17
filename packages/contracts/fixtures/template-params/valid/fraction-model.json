@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "id": "kesir-modeli-toplama",
+  "seed": 7,
+  "params": {
+    "payda_1": 4,
+    "payda_2": 8,
+    "pay_1": 3,
+    "pay_2": 1
+  }
+}

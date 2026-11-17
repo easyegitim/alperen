@@ -1,0 +1,17 @@
+{
+  "duplicate-option-keys.json": [
+    "const"
+  ],
+  "fourteen-items.json": [
+    "minItems"
+  ],
+  "item-with-correct.json": [
+    "additionalProperties"
+  ],
+  "numeric-kind.json": [
+    "const"
+  ],
+  "three-options.json": [
+    "minItems"
+  ]
+}

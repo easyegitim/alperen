@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "item": {
+    "schema_version": "1.0",
+    "curriculum_code": "TYT-MAT@2026.1",
+    "kind": "mcq",
+    "skill_ids": [
+      "tyt.mat.cebir.oran-oranti"
+    ],
+    "stem": "Bir tarifte 3 yumurtaya 2 su bardağı un gidiyor. Aynı tariften 9 yumurtayla yapmak için kaç bardak un gerekir?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`6`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`3`",
+        "misconception_tag": "oran.ters-oran-dogru-gibi"
+      },
+      {
+        "key": "C",
+        "text": "`8`",
+        "misconception_tag": null
+      },
+      {
+        "key": "D",
+        "text": "`18`",
+        "misconception_tag": "genel.soruyu-yarim-okuma"
+      }
+    ],
+    "difficulty": 0.4,
+    "source": "llm",
+    "verification": {
+      "schema": true,
+      "sympy": "pending",
+      "render": "pending",
+      "vision": "pending",
+      "attempts": 0,
+      "status": "draft",
+      "review_note": null
+    },
+    "provenance": {
+      "model": "gemini-2.5-flash-lite",
+      "cost_usd": 0.000302,
+      "prompt_version": "question_gen.v1"
+    }
+  },
+  "key": {
+    "correct_option": "A",
+    "canonical_expr": "Rational(2,3) * 9",
+    "solution": "Doğru orantı: `3/2 = 9/x`, buradan `x = 6` bardak.",
+    "sympy_status": "verified",
+    "sympy_report": {
+      "expr": "Rational(2,3) * 9",
+      "value": "6",
+      "matched_option": "A"
+    }
+  }
+}

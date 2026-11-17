@@ -1,0 +1,14 @@
+{
+  "body-too-long.json": [
+    "maxLength"
+  ],
+  "eight-active-days.json": [
+    "maximum"
+  ],
+  "four-focus-skills.json": [
+    "maxItems"
+  ],
+  "missing-metrics.json": [
+    "required"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "fake_match": [
+    "<exam_context>",
+    "soru no: 9."
+  ],
+  "output": {
+    "question_text": "$0{,}25\\cdot 0{,}4$ işleminin sonucu kaçtır? A) $0{,}01$ B) $0{,}001$ C) $0{,}1$ D) $1$ E) $10$",
+    "student_work_text": "Kitapçık kenarında: 25 · 4 = 100, 0,0100",
+    "reference_solution_steps": [
+      "$25\\cdot 4=100$",
+      "Çarpanlarda toplam üç ondalık basamak var",
+      "$0{,}100=0{,}1$, cevap C"
+    ],
+    "student_steps": [
+      {
+        "no": 1,
+        "text": "$25\\cdot 4=100$",
+        "status": "ok"
+      },
+      {
+        "no": 2,
+        "text": "$0{,}0100$",
+        "status": "error"
+      }
+    ],
+    "failing_step_no": 2,
+    "verdict": "wrong",
+    "error_cause": "procedure",
+    "why_tr": "2. adımda virgülü dört basamak kaydırdın; $0{,}25$ ve $0{,}4$ toplam üç ondalık basamak taşır, doğrusu $0{,}1$.",
+    "skill_ids": [
+      "tyt.mat.temel.ondalik"
+    ],
+    "misconception_tags": [],
+    "proposed_subskill": null,
+    "style_hint": null,
+    "confidence": 0.82,
+    "key_dispute": null
+  }
+}

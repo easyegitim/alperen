@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "request_id": "b33430e9-7422-5d88-b762-eb5d8984c506",
+  "query": "kesirlerde aralıklı tekrar ve kendini sınama",
+  "expanded_queries": [
+    "retrieval practice fractions",
+    "spacing effect fraction learning",
+    "kendini sınama kesirler"
+  ],
+  "synthesis": [
+    {
+      "text": "Kendini sınama ve aralıklı tekrar, öğrenme tekniklerinin karşılaştırıldığı derlemede yüksek fayda sağlayan iki teknik olarak öne çıkar.",
+      "cites": [
+        1
+      ]
+    },
+    {
+      "text": "Aralıklar arttıkça hatırlama süresi uzar; bu bulgu kesir gibi işlem ağırlıklı konulara doğrudan aktarılmadan önce sınıf içinde denenmelidir.",
+      "cites": [
+        2
+      ]
+    }
+  ],
+  "citations": [
+    {
+      "ordinal": 1,
+      "doi": "10.1177/1529100612453266",
+      "title": "Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology",
+      "authors": "Dunlosky, John; Rawson, Katherine A.; Marsh, Elizabeth J.; Nathan, Mitchell J.; Willingham, Daniel T.",
+      "venue": "Psychological Science in the Public Interest",
+      "year": 2013,
+      "crossref_status": "verified",
+      "title_similarity": 0.96,
+      "verified_at": "2026-10-18T00:20:00Z",
+      "oa_pdf_url": "https://example.org/oa/dunlosky-2013.pdf",
+      "tldr": "Aralıklı tekrar ve kendini sınama yüksek fayda sağlayan tekniklerdir.",
+      "source": "openalex"
+    },
+    {
+      "ordinal": 2,
+      "doi": "10.1037/0033-2909.132.3.354",
+      "title": "Distributed practice in verbal recall tasks: A review and quantitative synthesis",
+      "authors": "Cepeda, Nicholas J.; Pashler, Harold; Vul, Edward; Wixted, John T.; Rohrer, Doug",
+      "venue": "Psychological Bulletin",
+      "year": 2006,
+      "crossref_status": "verified",
+      "title_similarity": 0.98,
+      "verified_at": "2026-10-18T00:20:00Z",
+      "oa_pdf_url": null,
+      "tldr": "Aralıklı çalışma, toplu çalışmaya göre uzun süreli hatırlamayı artırır.",
+      "source": "crossref"
+    }
+  ],
+  "matrix": [
+    {
+      "ordinal": 1,
+      "method": "Derleme",
+      "sample": "10 öğrenme tekniği",
+      "finding": "Kendini sınama yüksek fayda",
+      "limitation": "Kesir özelinde veri yok"
+    },
+    {
+      "ordinal": 2,
+      "method": "Meta-analiz",
+      "sample": "317 deney",
+      "finding": "Aralık arttıkça hatırlama uzar",
+      "limitation": "Çoğunlukla sözel materyal"
+    }
+  ],
+  "removed": [],
+  "bibtex": "@article{dunlosky2013,\n  title = {Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology},\n  author = {Dunlosky, John and Rawson, Katherine A. and Marsh, Elizabeth J. and Nathan, Mitchell J. and Willingham, Daniel T.},\n  journal = {Psychological Science in the Public Interest},\n  year = {2013},\n  doi = {10.1177/1529100612453266}\n}\n@article{cepeda2006,\n  title = {Distributed practice in verbal recall tasks: A review and quantitative synthesis},\n  author = {Cepeda, Nicholas J. and Pashler, Harold and Vul, Edward and Wixted, John T. and Rohrer, Doug},\n  journal = {Psychological Bulletin},\n  year = {2006},\n  doi = {10.1037/0033-2909.132.3.354}\n}\n",
+  "apa": [
+    "Dunlosky, J., Rawson, K., Marsh, E., Nathan, M., Willingham, D. (2013). Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology. Psychological Science in the Public Interest. https://doi.org/10.1177/1529100612453266",
+    "Cepeda, N., Pashler, H., Vul, E., Wixted, J., Rohrer, D. (2006). Distributed practice in verbal recall tasks: A review and quantitative synthesis. Psychological Bulletin. https://doi.org/10.1037/0033-2909.132.3.354"
+  ],
+  "model": "gemini-2.5-flash",
+  "cost_usd": 0.021
+}

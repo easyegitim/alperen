@@ -1,0 +1,19 @@
+{
+  "ok": false,
+  "offending_block_ids": [
+    "b6",
+    "b9"
+  ],
+  "findings": [
+    {
+      "block_id": "b6",
+      "problem": "wrong",
+      "note": "Kutu 12 Ekim diyor; patterns.md:2 satırındaki tarihler 12 Eki ve 19 Eki, son tarih yazılmamış."
+    },
+    {
+      "block_id": "b9",
+      "problem": "unknown_pattern",
+      "note": "misconception rasyonel.bolmede-ters-cevirmeme öğrencinin örüntüleri arasında yok."
+    }
+  ]
+}

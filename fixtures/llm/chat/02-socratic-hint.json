@@ -1,0 +1,20 @@
+{
+  "reply": "İlk adım: `3/4 = 6/8`.\nŞimdi `6/8 + 1/8` toplamında paylara ne yaparsın?",
+  "ends_with_question": true,
+  "hint_level": 1,
+  "confidence": 0.9,
+  "escalate": false,
+  "escalate_reason": null,
+  "detected_skill_ids": [
+    "tyt.mat.temel.rasyonel-sayilar"
+  ],
+  "detected_misconception_tag": null,
+  "used_fact_ids": [
+    4
+  ],
+  "suggest_pool_save": false,
+  "suggested_buttons": [
+    "hint",
+    "show_solution"
+  ]
+}

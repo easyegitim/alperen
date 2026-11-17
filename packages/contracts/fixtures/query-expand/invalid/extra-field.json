@@ -1,0 +1,8 @@
+{
+  "queries": [
+    "abc def",
+    "ghi jkl",
+    "mno pqr"
+  ],
+  "reason": "genişletme"
+}

@@ -1,0 +1,107 @@
+{
+  "kind": "notes",
+  "title": "Rasyonel sayılar notu",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": null,
+    "generated_on": "2026-11-02",
+    "language": "tr",
+    "personalized": true,
+    "duration_min": null
+  },
+  "sections": [
+    {
+      "no": 1,
+      "title": "Kazanım hedefleri"
+    },
+    {
+      "no": 2,
+      "title": "Senin sık yaptığın hatalar"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "id": "n1",
+      "section_no": 1,
+      "level": 1,
+      "text": "Rasyonel sayılar"
+    },
+    {
+      "type": "definition_box",
+      "id": "n2",
+      "section_no": 1,
+      "term": "Rasyonel sayı",
+      "body": "a ve b tam sayı, b sıfırdan farklı iken a/b biçiminde yazılabilen sayıdır."
+    },
+    {
+      "type": "worked_example",
+      "id": "n3",
+      "section_no": 1,
+      "title": "Toplama örneği",
+      "problem": "$\\frac{1}{2}+\\frac{1}{3}$ işlemini yap.",
+      "steps": [
+        "Paydaları 6'da eşitle.",
+        "$\\frac{3}{6}+\\frac{2}{6}$ yaz.",
+        "Payları topla."
+      ],
+      "answer": "$\\frac{5}{6}$"
+    },
+    {
+      "type": "math_display",
+      "id": "n4",
+      "section_no": 1,
+      "latex": "\\frac{a}{b}+\\frac{c}{d}=\\frac{ad+bc}{bd}"
+    },
+    {
+      "type": "table",
+      "id": "n5",
+      "section_no": 1,
+      "caption": "Kesir türleri",
+      "header": [
+        "Tür",
+        "Örnek"
+      ],
+      "rows": [
+        [
+          "Basit",
+          "1/2"
+        ],
+        [
+          "Bileşik",
+          "5/3"
+        ]
+      ]
+    },
+    {
+      "type": "summary_box",
+      "id": "n6",
+      "section_no": 1,
+      "title": "Özet",
+      "bullets": [
+        "Paydaları eşitlemeden toplama yapma.",
+        "Sonucu sadeleştir."
+      ]
+    },
+    {
+      "type": "common_mistake_callout",
+      "id": "n7",
+      "section_no": 2,
+      "pattern_id": "rasyonel.payda-esitlemeden-toplama",
+      "pattern_ref": {
+        "source": "misconception",
+        "id": "rasyonel.payda-esitlemeden-toplama",
+        "date": "2026-11-03"
+      },
+      "text": "3 Kasım'daki çözümünde paydaları eşitlemeden toplamıştın; önce paydayı eşitle."
+    },
+    {
+      "type": "check_yourself",
+      "id": "n8",
+      "section_no": 2,
+      "question": "$\\frac{2}{3}+\\frac{1}{6}$ kaçtır?",
+      "answer_hidden": "$\\frac{5}{6}$"
+    }
+  ],
+  "keys": []
+}

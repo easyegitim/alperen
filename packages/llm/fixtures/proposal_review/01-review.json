@@ -1,0 +1,16 @@
+{
+  "decisions": [
+    {
+      "proposal_id": "33333333-3333-4333-8333-333333333333",
+      "action": "accept",
+      "confidence": 0.88,
+      "rationale": "Önerilen alt kazanım resmî programla uyuşuyor ve ağaçta karşılığı yok."
+    },
+    {
+      "proposal_id": "44444444-4444-4444-8444-444444444444",
+      "action": "reject",
+      "confidence": 0.81,
+      "rationale": "Aynı içerik tyt.mat.temel.rasyonel-sayilar altında zaten var; yinelenen öneri."
+    }
+  ]
+}

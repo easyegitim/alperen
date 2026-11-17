@@ -1,0 +1,25 @@
+{
+  "name": "@ogrenmen/pii",
+  "version": "0.1.0",
+  "description": "Öğrenmen PII temizleyici (TypeScript) — Python eşleniğiyle aynı cases.json vakalarını geçer",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dump": "bun src/dump.ts"
+  },
+  "devDependencies": {
+    "@types/node": "22.9.0",
+    "typescript": "5.6.3",
+    "vitest": "3.2.4"
+  }
+}

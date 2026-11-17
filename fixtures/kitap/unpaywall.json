@@ -1,0 +1,30 @@
+{
+  "10.1037/0033-2909.132.3.354": {
+    "doi": "10.1037/0033-2909.132.3.354",
+    "is_oa": false,
+    "best_oa_location": null
+  },
+  "10.1007/s11251-007-9015-8": {
+    "doi": "10.1007/s11251-007-9015-8",
+    "is_oa": true,
+    "best_oa_location": {
+      "url_for_pdf": "https://example.org/oa/rohrer-2007.pdf",
+      "host_type": "repository",
+      "license": null
+    }
+  },
+  "10.1177/1529100612453266": {
+    "doi": "10.1177/1529100612453266",
+    "is_oa": true,
+    "best_oa_location": {
+      "url_for_pdf": "https://example.org/oa/dunlosky-2013.pdf",
+      "host_type": "repository",
+      "license": null
+    }
+  },
+  "10.5555/ogrenmen.mismatch": {
+    "doi": "10.5555/ogrenmen.mismatch",
+    "is_oa": false,
+    "best_oa_location": null
+  }
+}

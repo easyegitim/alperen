@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/transcript.json",
+  "title": "Transcript",
+  "description": "Ders transkripti: konuşmacı etiketli, isimsiz bölümler. Tek bölüm transcript#/$defs/segment ile doğrulanır.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "segments": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/segment"
+      }
+    }
+  },
+  "required": [
+    "segments"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "segment": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+          "description": "HH:MM:SS"
+        },
+        "t_end": {
+          "type": "string",
+          "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+          "description": "HH:MM:SS"
+        },
+        "speaker": {
+          "type": "string",
+          "enum": [
+            "ÖĞRENCİ",
+            "EĞİTMEN"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "t",
+        "speaker",
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

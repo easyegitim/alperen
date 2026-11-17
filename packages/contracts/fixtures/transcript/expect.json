@@ -1,0 +1,14 @@
+{
+  "empty-segments.json": [
+    "minItems"
+  ],
+  "empty-text.json": [
+    "minLength"
+  ],
+  "named-speaker.json": [
+    "enum"
+  ],
+  "short-timestamp.json": [
+    "pattern"
+  ]
+}

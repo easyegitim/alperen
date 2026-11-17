@@ -1,0 +1,11 @@
+{
+  "id": "kesir-modeli-toplama",
+  "params": {
+    "kesirler": [
+      {
+        "pay": 1,
+        "payda": 2
+      }
+    ]
+  }
+}

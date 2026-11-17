@@ -1,0 +1,292 @@
+{
+  "note": "Sentetik okul denemesi (gerçek yayıncı yok). Tek doğruluk kaynağı: render.mjs bu dosyadan PNG üretir; packages/llm/fixtures/{page_class,exam_page_items,answer_sheet,inferred_keys,exam_report} sahte çıktıları ve packages/prompts/eval/exam_page_items vakaları bununla tutarlıdır.",
+  "id": "synthetic-tyt-mat-01",
+  "title": "Örnek Deneme 1 · TYT Matematik",
+  "course": "tyt-matematik",
+  "section": "Matematik",
+  "duration_min": 20,
+  "booklet_type": "A",
+  "uploads": [
+    {
+      "order": 1,
+      "file": "booklet-p1.png",
+      "page_class": "booklet",
+      "printed_page_number": 1,
+      "question_numbers_seen": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "order": 2,
+      "file": "booklet-p2.png",
+      "page_class": "booklet",
+      "printed_page_number": 2,
+      "question_numbers_seen": [
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "order": 3,
+      "file": "answer-sheet.png",
+      "page_class": "answer_sheet",
+      "printed_page_number": null,
+      "question_numbers_seen": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "no": 1,
+      "page": 1,
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "answer": "C",
+      "stem": "$\\frac{2}{3}+\\frac{1}{6}$ işleminin sonucu kaçtır?",
+      "options": [
+        "$\\frac{1}{2}$",
+        "$\\frac{2}{3}$",
+        "$\\frac{5}{6}$",
+        "$1$",
+        "$\\frac{7}{6}$"
+      ]
+    },
+    {
+      "no": 2,
+      "page": 1,
+      "skill_id": "tyt.mat.cebir.denklem",
+      "answer": "A",
+      "stem": "$3x-7=11$ olduğuna göre $x$ kaçtır?",
+      "options": [
+        "$6$",
+        "$5$",
+        "$4$",
+        "$7$",
+        "$8$"
+      ]
+    },
+    {
+      "no": 3,
+      "page": 1,
+      "skill_id": "tyt.mat.cebir.esitsizlik",
+      "answer": "B",
+      "stem": "Şekildeki sayı doğrusunda taranmış aralık aşağıdaki eşitsizliklerden hangisinin çözüm kümesidir?",
+      "figure": {
+        "description": "Sayı doğrusu: -2'de dolu nokta, 3'te boş nokta, aradaki bölge taranmış",
+        "bbox": {
+          "x": 0.124,
+          "y": 0.363,
+          "w": 0.726,
+          "h": 0.074
+        }
+      },
+      "options": [
+        "$-2<x<3$",
+        "$-2\\le x<3$",
+        "$-2\\le x\\le 3$",
+        "$x<3$",
+        "$x\\ge -2$"
+      ]
+    },
+    {
+      "no": 4,
+      "page": 1,
+      "skill_id": "tyt.mat.temel.uslu",
+      "answer": "D",
+      "stem": "$2^5-3^3$ işleminin sonucu kaçtır?",
+      "options": [
+        "$1$",
+        "$23$",
+        "$4$",
+        "$5$",
+        "$9$"
+      ]
+    },
+    {
+      "no": 5,
+      "page": 1,
+      "continues_on_page": 2,
+      "skill_id": "tyt.mat.problem.yuzde",
+      "answer": "E",
+      "stem_page1": "Bir sınıftaki 30 öğrencinin %40'ı kızdır. Sınıfa 6 kız öğrenci daha katılırsa",
+      "stem_page2": "kız öğrencilerin sayısının sınıf mevcuduna oranı kaç olur?",
+      "options": [
+        "$\\frac{1}{3}$",
+        "$\\frac{2}{5}$",
+        "$\\frac{3}{7}$",
+        "$\\frac{4}{9}$",
+        "$\\frac{1}{2}$"
+      ]
+    },
+    {
+      "no": 6,
+      "page": 2,
+      "skill_id": "tyt.mat.cebir.mutlak-deger",
+      "answer": "B",
+      "stem": "$|x-3|=5$ denkleminin köklerinin toplamı kaçtır?",
+      "options": [
+        "$2$",
+        "$6$",
+        "$8$",
+        "$10$",
+        "$-6$"
+      ]
+    },
+    {
+      "no": 7,
+      "page": 2,
+      "skill_id": "tyt.mat.cebir.oran-oranti",
+      "answer": "A",
+      "stem": "$\\frac{a}{b}=\\frac{3}{4}$ ve $a+b=28$ olduğuna göre $a$ kaçtır?",
+      "options": [
+        "$12$",
+        "$14$",
+        "$16$",
+        "$9$",
+        "$21$"
+      ]
+    },
+    {
+      "no": 8,
+      "page": 2,
+      "skill_id": "tyt.mat.problem.sayi",
+      "answer": "D",
+      "stem": "Ardışık üç tek sayının toplamı 51'dir. Bu sayılardan en büyüğü kaçtır?",
+      "options": [
+        "$15$",
+        "$17$",
+        "$18$",
+        "$19$",
+        "$21$"
+      ]
+    },
+    {
+      "no": 9,
+      "page": 2,
+      "skill_id": "tyt.mat.temel.ondalik",
+      "answer": "C",
+      "stem": "$0{,}25\\cdot 0{,}4$ işleminin sonucu kaçtır?",
+      "options": [
+        "$0{,}01$",
+        "$0{,}001$",
+        "$0{,}1$",
+        "$1$",
+        "$10$"
+      ]
+    },
+    {
+      "no": 10,
+      "page": 2,
+      "skill_id": "tyt.mat.problem.isci",
+      "answer": "E",
+      "stem": "Bir işi Deniz tek başına 6 günde, Ece tek başına 3 günde bitirebiliyor. İkisi birlikte bu işi kaç günde bitirir?",
+      "options": [
+        "$1$",
+        "$1{,}5$",
+        "$2{,}5$",
+        "$3$",
+        "$2$"
+      ]
+    }
+  ],
+  "student_marks": [
+    {
+      "no": 1,
+      "marks": [
+        "C"
+      ]
+    },
+    {
+      "no": 2,
+      "marks": [
+        "A"
+      ]
+    },
+    {
+      "no": 3,
+      "marks": [
+        "B"
+      ]
+    },
+    {
+      "no": 4,
+      "marks": [
+        "B"
+      ]
+    },
+    {
+      "no": 5,
+      "marks": []
+    },
+    {
+      "no": 6,
+      "marks": [
+        "B"
+      ]
+    },
+    {
+      "no": 7,
+      "marks": [
+        "A",
+        "C"
+      ]
+    },
+    {
+      "no": 8,
+      "marks": [
+        "D"
+      ]
+    },
+    {
+      "no": 9,
+      "marks": [
+        "A"
+      ]
+    },
+    {
+      "no": 10,
+      "marks": [
+        "E"
+      ]
+    }
+  ],
+  "expected_result": {
+    "correct": [
+      1,
+      2,
+      3,
+      6,
+      8,
+      10
+    ],
+    "wrong": [
+      4,
+      9
+    ],
+    "blank": [
+      5,
+      7
+    ],
+    "double_mark": [
+      7
+    ],
+    "net": 5.5,
+    "net_rule": "TYT: doğru - yanlış/4; çift işaret boş sayılır"
+  }
+}

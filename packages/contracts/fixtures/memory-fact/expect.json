@@ -1,0 +1,14 @@
+{
+  "instructor-fact-without-approval.json": [
+    "const"
+  ],
+  "morale-out-of-range.json": [
+    "maximum"
+  ],
+  "no-source-message.json": [
+    "minItems"
+  ],
+  "short-text.json": [
+    "minLength"
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/tutor-reply.json",
+  "title": "TutorReply",
+  "description": "Sohbetin yapılandırılmış çıktısı (zincir chat). Sunucu used_fact_ids ve detected_skill_ids'i doğrular.",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reply",
+    "ends_with_question",
+    "confidence",
+    "escalate",
+    "escalate_reason",
+    "detected_skill_ids",
+    "detected_misconception_tag",
+    "used_fact_ids",
+    "suggest_pool_save"
+  ],
+  "properties": {
+    "reply": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 700,
+      "description": "En çok 4 satır; emoji ve ünlem yok; yalnız **kalın** ve `kod`"
+    },
+    "ends_with_question": {
+      "type": "boolean"
+    },
+    "hint_level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "confidence": {
+      "$ref": "common.json#/$defs/probability"
+    },
+    "escalate": {
+      "type": "boolean"
+    },
+    "escalate_reason": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "enum": [
+            "bot_unsure",
+            "grade_attendance_payment",
+            "human_requested"
+          ]
+        }
+      ]
+    },
+    "detected_skill_ids": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "$ref": "common.json#/$defs/skillId"
+      }
+    },
+    "detected_misconception_tag": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.json#/$defs/tag"
+        }
+      ]
+    },
+    "used_fact_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "description": "Gerçekten kullanılan olgu numaraları; sunucu bilinmeyen id'yi atar"
+    },
+    "suggested_buttons": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "enum": [
+          "hint",
+          "show_solution",
+          "ask_instructor",
+          "skip",
+          "continue"
+        ]
+      }
+    },
+    "suggest_pool_save": {
+      "type": "boolean",
+      "description": "Cevap genel bir açıklamaysa content_pool adayı"
+    }
+  }
+}

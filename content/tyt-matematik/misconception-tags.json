@@ -1,0 +1,191 @@
+[
+  {
+    "tag": "sayilar.islem-onceligi-soldan",
+    "skill_id": "tyt.mat.temel.sayilar",
+    "prereq_skill_id": null,
+    "text_instructor": "İşlem önceliğini atlayıp soldan sağa gidiyor.",
+    "text_student": "Çarpma ve bölmeyi toplama ve çıkarmadan önce yapıyoruz."
+  },
+  {
+    "tag": "sayilar.negatif-carpim-isaret",
+    "skill_id": "tyt.mat.temel.sayilar",
+    "prereq_skill_id": null,
+    "text_instructor": "Negatif × negatif sonucunu negatif alıyor.",
+    "text_student": "İki negatifin çarpımı pozitif olur."
+  },
+  {
+    "tag": "sayilar.parantez-eksi-dagitma",
+    "skill_id": "tyt.mat.temel.sayilar",
+    "prereq_skill_id": null,
+    "text_instructor": "Parantez önündeki eksiyi dağıtmıyor.",
+    "text_student": "Eksi işareti parantezdeki her terime dağılır."
+  },
+  {
+    "tag": "bolunebilme.3-ile-9-karistirma",
+    "skill_id": "tyt.mat.temel.bolunebilme",
+    "prereq_skill_id": null,
+    "text_instructor": "9 ile bölünebilmeyi 3 kuralıyla kontrol ediyor.",
+    "text_student": "9'a bölünebilme için rakamlar toplamı 9'un katı olmalı."
+  },
+  {
+    "tag": "ebob-ekok.karistirma",
+    "skill_id": "tyt.mat.temel.ebob-ekok",
+    "prereq_skill_id": "tyt.mat.temel.bolunebilme",
+    "text_instructor": "EBOB ile EKOK'u yer değiştiriyor.",
+    "text_student": "En büyük ortak bölen küçüğü, EKOK büyüğü verir."
+  },
+  {
+    "tag": "rasyonel.pay-payda-ayri-toplama",
+    "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "prereq_skill_id": null,
+    "text_instructor": "Payları ve paydaları ayrı ayrı topluyor.",
+    "text_student": "Paylar ve paydalar ayrı ayrı toplanmaz; önce paydaları eşitleyelim."
+  },
+  {
+    "tag": "rasyonel.payda-esitlemeden-toplama",
+    "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "prereq_skill_id": "tyt.mat.temel.ebob-ekok",
+    "text_instructor": "Paydaları eşitlemeden payları topluyor.",
+    "text_student": "Toplamadan önce paydaları eşitlemen gerekiyor."
+  },
+  {
+    "tag": "rasyonel.bolmede-ters-cevirmeme",
+    "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "prereq_skill_id": null,
+    "text_instructor": "Kesirle bölmede ikinci kesri ters çevirmiyor.",
+    "text_student": "Kesirle bölerken ikinci kesri ters çevirip çarpıyoruz."
+  },
+  {
+    "tag": "rasyonel.negatif-siralama-mutlak",
+    "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "prereq_skill_id": "tyt.mat.temel.sayilar",
+    "text_instructor": "Negatif kesirleri mutlak değerlerine göre sıralıyor.",
+    "text_student": "Negatif sayılarda mutlak değeri büyük olan daha küçüktür."
+  },
+  {
+    "tag": "ondalik.virgul-kaydirma-yon",
+    "skill_id": "tyt.mat.temel.ondalik",
+    "prereq_skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "text_instructor": "Virgül kaydırma yönünü karıştırıyor.",
+    "text_student": "10 ile çarparken virgül bir basamak sağa gider."
+  },
+  {
+    "tag": "uslu.usleri-carpma",
+    "skill_id": "tyt.mat.temel.uslu",
+    "prereq_skill_id": null,
+    "text_instructor": "Aynı tabanlı çarpımda üsleri çarpıyor.",
+    "text_student": "Tabanlar aynıysa üsler toplanır."
+  },
+  {
+    "tag": "uslu.negatif-us-isaret",
+    "skill_id": "tyt.mat.temel.uslu",
+    "prereq_skill_id": "tyt.mat.temel.sayilar",
+    "text_instructor": "Negatif üssü sonucun işareti sanıyor.",
+    "text_student": "Negatif üs tersini alır, işareti değiştirmez."
+  },
+  {
+    "tag": "koklu.toplam-kok-icine",
+    "skill_id": "tyt.mat.temel.koklu",
+    "prereq_skill_id": "tyt.mat.temel.uslu",
+    "text_instructor": "√a + √b'yi √(a+b) olarak topluyor.",
+    "text_student": "√a + √b, √(a+b) değildir."
+  },
+  {
+    "tag": "koklu.kok-icine-alma-kare",
+    "skill_id": "tyt.mat.temel.koklu",
+    "prereq_skill_id": "tyt.mat.temel.uslu",
+    "text_instructor": "Katsayıyı kök içine alırken karesini almıyor.",
+    "text_student": "Katsayı kök içine karesi alınarak girer."
+  },
+  {
+    "tag": "carpan.tam-kare-orta-terim",
+    "skill_id": "tyt.mat.temel.carpanlara-ayirma",
+    "prereq_skill_id": "tyt.mat.temel.uslu",
+    "text_instructor": "(a+b)² açılımında 2ab terimini unutuyor.",
+    "text_student": "Kare açarken ortadaki 2ab terimini ekleyelim."
+  },
+  {
+    "tag": "carpan.iki-kare-farki",
+    "skill_id": "tyt.mat.temel.carpanlara-ayirma",
+    "prereq_skill_id": null,
+    "text_instructor": "a²−b²'yi (a−b)² ile karıştırıyor.",
+    "text_student": "a²−b² = (a−b)(a+b) olur."
+  },
+  {
+    "tag": "denklem.taraf-degistirme-isaret",
+    "skill_id": "tyt.mat.cebir.denklem",
+    "prereq_skill_id": "tyt.mat.temel.sayilar",
+    "text_instructor": "Terimi karşı tarafa işaret değiştirmeden geçiriyor.",
+    "text_student": "Terim karşı tarafa geçerken işareti değişir."
+  },
+  {
+    "tag": "denklem.paydayla-carpma-eksik",
+    "skill_id": "tyt.mat.cebir.denklem",
+    "prereq_skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "text_instructor": "Paydadan kurtarırken tüm terimleri çarpmıyor.",
+    "text_student": "Paydayla çarparken her terimi çarpıyoruz."
+  },
+  {
+    "tag": "esitsizlik.negatifle-carpma-yon",
+    "skill_id": "tyt.mat.cebir.esitsizlik",
+    "prereq_skill_id": "tyt.mat.cebir.denklem",
+    "text_instructor": "Negatifle çarpınca eşitsizliğin yönünü çevirmiyor.",
+    "text_student": "Eşitsizliği negatifle çarparsan yön değişir."
+  },
+  {
+    "tag": "mutlak.tek-durum",
+    "skill_id": "tyt.mat.cebir.mutlak-deger",
+    "prereq_skill_id": "tyt.mat.cebir.esitsizlik",
+    "text_instructor": "Mutlak değer denkleminde tek durum alıyor.",
+    "text_student": "İçerideki ifade hem pozitif hem negatif olabilir; iki durum var."
+  },
+  {
+    "tag": "oran.ters-oran-dogru-gibi",
+    "skill_id": "tyt.mat.cebir.oran-oranti",
+    "prereq_skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "text_instructor": "Ters orantıyı doğru orantı gibi kuruyor.",
+    "text_student": "Biri artarken diğeri azalıyorsa ters orantı var."
+  },
+  {
+    "tag": "yuzde.ardisik-toplama",
+    "skill_id": "tyt.mat.problem.yuzde",
+    "prereq_skill_id": "tyt.mat.cebir.oran-oranti",
+    "text_instructor": "Ardışık yüzdeleri topluyor.",
+    "text_student": "%20 sonra %10 artış, %30 değildir; sırayla uygula."
+  },
+  {
+    "tag": "yuzde.kar-satis-uzerinden",
+    "skill_id": "tyt.mat.problem.yuzde",
+    "prereq_skill_id": null,
+    "text_instructor": "Kârı satış fiyatı üzerinden hesaplıyor.",
+    "text_student": "Kâr yüzdesi maliyet üzerinden hesaplanır."
+  },
+  {
+    "tag": "hareket.birim-donusumu",
+    "skill_id": "tyt.mat.problem.hareket",
+    "prereq_skill_id": null,
+    "text_instructor": "Saat–dakika dönüşümünü atlıyor.",
+    "text_student": "Hız km/sa ise süreyi saate çevir."
+  },
+  {
+    "tag": "isci.sureleri-toplama",
+    "skill_id": "tyt.mat.problem.isci",
+    "prereq_skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "text_instructor": "İş sürelerini topluyor.",
+    "text_student": "Birlikte çalışırken birim zamandaki işler toplanır, süreler değil."
+  },
+  {
+    "tag": "kesir.kalan-butun-karistirma",
+    "skill_id": "tyt.mat.problem.kesir",
+    "prereq_skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "text_instructor": "Kalanın kesrini bütünün kesri sanıyor.",
+    "text_student": "\"Kalanın yarısı\" bütünün değil kalanın yarısıdır."
+  },
+  {
+    "tag": "genel.soruyu-yarim-okuma",
+    "skill_id": null,
+    "prereq_skill_id": null,
+    "text_instructor": "Sorulanı değil ara sonucu işaretliyor.",
+    "text_student": "Soru neyi istiyor, son adımda tekrar bak."
+  }
+]

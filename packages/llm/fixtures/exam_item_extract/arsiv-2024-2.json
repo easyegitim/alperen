@@ -1,0 +1,26 @@
+{
+  "fake_match": [
+    "arşivi: 2024",
+    "madde no: 2."
+  ],
+  "output": {
+    "schema_version": "1.0",
+    "source_id": "00000000-0000-4000-8000-00000000a5c1",
+    "item_no": 2,
+    "topic": "Denklem kurma problemi",
+    "kind": "calc",
+    "points": 20,
+    "year": 2024,
+    "term": "final",
+    "instructor_alias": null,
+    "skill_id": "tyt.mat.problem.sayi",
+    "ocr_text": "Bir sayının 3 katının 5 fazlası, aynı sayının 2 katından 11 fazladır. Bu sayıyı denklem kurarak bulunuz.",
+    "ocr_confidence": 0.95,
+    "format": "word_problem",
+    "trick": "Fazlası ve eksiği ifadeleri ters yöne çevrilince denklem yanlış kurulur",
+    "difficulty": 0.5,
+    "skill_ids": [
+      "tyt.mat.problem.sayi"
+    ]
+  }
+}

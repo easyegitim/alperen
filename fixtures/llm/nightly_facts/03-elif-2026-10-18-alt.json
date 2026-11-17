@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "day": "2026-10-18",
+  "student_ref": "s_qk7m2rx4tn5a",
+  "facts": [
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_qk7m2rx4tn5a",
+      "kind": "preference",
+      "text": "Öğrenci soruları kendi denemesiyle birlikte paylaşmayı tercih ediyor.",
+      "source_message_ids": [
+        19
+      ],
+      "confidence": 0.6,
+      "valid_until": null,
+      "morale_signal": null,
+      "requires_approval": false,
+      "skill_id": null
+    },
+    {
+      "schema_version": "1.0",
+      "student_ref": "s_qk7m2rx4tn5a",
+      "kind": "topic_asked",
+      "text": "Öğrenci mutlak değerde iki durumu anlamadığını grupta eğitmene sordu.",
+      "source_message_ids": [
+        16
+      ],
+      "confidence": 0.85,
+      "valid_until": null,
+      "morale_signal": null,
+      "requires_approval": false,
+      "skill_id": "tyt.mat.cebir.mutlak-deger"
+    }
+  ],
+  "is_question_message_ids": [
+    16
+  ],
+  "answered_question_message_ids": [
+    16
+  ]
+}

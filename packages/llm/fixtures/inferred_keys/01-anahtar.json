@@ -1,0 +1,95 @@
+{
+  "keys": [
+    {
+      "question_no": 1,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "5/6",
+      "solution_summary": "Paydaları 6'da eşitle: $\\frac{4}{6}+\\frac{1}{6}=\\frac{5}{6}$.",
+      "confidence": 0.98,
+      "checked_with_code": true
+    },
+    {
+      "question_no": 2,
+      "correct_option": "A",
+      "numeric_value": null,
+      "canonical_expr": "6",
+      "solution_summary": "$3x=18$, $x=6$.",
+      "confidence": 0.98,
+      "checked_with_code": true
+    },
+    {
+      "question_no": 3,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": null,
+      "solution_summary": "-2 dolu nokta (dahil), 3 boş nokta (hariç): $-2\\le x<3$.",
+      "confidence": 0.9,
+      "checked_with_code": false
+    },
+    {
+      "question_no": 4,
+      "correct_option": "D",
+      "numeric_value": null,
+      "canonical_expr": "5",
+      "solution_summary": "$2^5=32$, $3^3=27$, fark $5$.",
+      "confidence": 0.98,
+      "checked_with_code": true
+    },
+    {
+      "question_no": 5,
+      "correct_option": "E",
+      "numeric_value": null,
+      "canonical_expr": "1/2",
+      "solution_summary": "Kız sayısı $30\\cdot 0{,}4=12$, katılımla $18$; mevcut $36$; oran $\\frac{18}{36}=\\frac{1}{2}$.",
+      "confidence": 0.98,
+      "checked_with_code": true
+    },
+    {
+      "question_no": 6,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": "6",
+      "solution_summary": "$x-3=5$ ya da $x-3=-5$; kökler $8$ ve $-2$, toplam $6$.",
+      "confidence": 0.98,
+      "checked_with_code": true
+    },
+    {
+      "question_no": 7,
+      "correct_option": "A",
+      "numeric_value": null,
+      "canonical_expr": "12",
+      "solution_summary": "$a=3k$, $b=4k$, $7k=28$, $k=4$, $a=12$.",
+      "confidence": 0.98,
+      "checked_with_code": true
+    },
+    {
+      "question_no": 8,
+      "correct_option": "D",
+      "numeric_value": null,
+      "canonical_expr": "19",
+      "solution_summary": "Sayılar $n-2, n, n+2$; $3n=51$, $n=17$; en büyüğü $19$.",
+      "confidence": 0.98,
+      "checked_with_code": true
+    },
+    {
+      "question_no": 9,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "1/10",
+      "solution_summary": "$25\\cdot 4=100$, üç basamak: $0{,}100=0{,}1$.",
+      "confidence": 0.98,
+      "checked_with_code": true
+    },
+    {
+      "question_no": 10,
+      "correct_option": "E",
+      "numeric_value": null,
+      "canonical_expr": "2",
+      "solution_summary": "Birlikte günde $\\frac{1}{6}+\\frac{1}{3}=\\frac{1}{2}$ iş; $2$ gün.",
+      "confidence": 0.98,
+      "checked_with_code": true
+    }
+  ],
+  "notes": null
+}

@@ -1,0 +1,13 @@
+{
+  "ref": "#/$defs/providerAttempt",
+  "data": {
+    "provider": "gemini-paid",
+    "model": "gemini-2.5-flash-lite",
+    "status": "rate_limited",
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "cost_usd": 0,
+    "latency_ms": 412,
+    "error_code": "429"
+  }
+}

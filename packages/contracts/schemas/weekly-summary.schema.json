@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/weekly-summary.json",
+  "title": "WeeklySummary",
+  "description": "Haftalık özet: metin (3-6 cümle) ve SQL kaynaklı metrikler.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "student_ref": {
+      "type": "string",
+      "pattern": "^s_[a-z2-7]{12}$",
+      "description": "students.public_ref; ad ve uuid asla"
+    },
+    "week_start": {
+      "type": "string",
+      "format": "date"
+    },
+    "body": {
+      "type": "string",
+      "maxLength": 600,
+      "description": "3-6 cümle, üçüncü tekil, isimsiz"
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "integer"
+        },
+        "questions_solved": {
+          "type": "integer"
+        },
+        "accuracy": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "active_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "open_misconceptions": {
+          "type": "integer"
+        },
+        "unanswered_questions": {
+          "type": "integer"
+        },
+        "morale_trend": {
+          "type": "string",
+          "enum": [
+            "up",
+            "flat",
+            "down",
+            "unknown"
+          ]
+        },
+        "mastery_deltas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "skill_id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+              },
+              "delta": {
+                "type": "number",
+                "minimum": -1,
+                "maximum": 1
+              },
+              "reliable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "skill_id",
+              "delta"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "messages",
+        "questions_solved",
+        "accuracy",
+        "active_days",
+        "open_misconceptions",
+        "unanswered_questions",
+        "morale_trend"
+      ],
+      "additionalProperties": false
+    },
+    "facts_used": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "next_week_focus": {
+      "maxItems": 3,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "student_ref",
+    "week_start",
+    "body",
+    "metrics",
+    "facts_used"
+  ],
+  "additionalProperties": false
+}

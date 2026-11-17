@@ -1,0 +1,69 @@
+{
+  "fake_match": [
+    "<lesson_transcript_window>"
+  ],
+  "output": {
+    "segments": [
+      {
+        "t": "00:00:00",
+        "t_end": "00:00:02",
+        "speaker": "EĞİTMEN",
+        "text": "[ÖĞRENCİ], bugün kesirlerde"
+      },
+      {
+        "t": "00:00:02",
+        "t_end": "00:00:04",
+        "speaker": "ÖĞRENCİ",
+        "text": "Tamam hocam, ama"
+      },
+      {
+        "t": "00:00:04",
+        "t_end": "00:00:06",
+        "speaker": "EĞİTMEN",
+        "text": "3/4 + 1/8"
+      },
+      {
+        "t": "00:00:06",
+        "t_end": "00:00:08",
+        "speaker": "ÖĞRENCİ",
+        "text": "Payları toplarım 4,"
+      },
+      {
+        "t": "00:00:08",
+        "t_end": "00:00:10",
+        "speaker": "EĞİTMEN",
+        "text": "Paylar ve paydalar"
+      },
+      {
+        "t": "00:00:10",
+        "t_end": "00:00:12",
+        "speaker": "ÖĞRENCİ",
+        "text": "Anlamadım, neden sekiz?"
+      },
+      {
+        "t": "00:00:12",
+        "t_end": "00:00:14",
+        "speaker": "EĞİTMEN",
+        "text": "Sekiz, dört ile"
+      },
+      {
+        "t": "00:00:14",
+        "t_end": "00:00:16",
+        "speaker": "ÖĞRENCİ",
+        "text": "O zaman 6/8"
+      },
+      {
+        "t": "00:00:16",
+        "t_end": "00:00:18",
+        "speaker": "EĞİTMEN",
+        "text": "Evet. Denklemde de"
+      },
+      {
+        "t": "00:00:18",
+        "t_end": "00:00:20",
+        "speaker": "ÖĞRENCİ",
+        "text": "Bu hafta sonuna"
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "tag": "rasyonel.pay-payda-ayri-toplama",
+    "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "prereq_skill_id": null,
+    "text_instructor": "Payları ve paydaları ayrı ayrı topluyor.",
+    "text_student": "Paylar ve paydalar ayrı ayrı toplanmaz; önce paydaları eşitleyelim."
+  },
+  {
+    "tag": "rasyonel.payda-esitlemeden-toplama",
+    "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "prereq_skill_id": "tyt.mat.temel.ebob-ekok",
+    "text_instructor": "Paydaları eşitlemeden payları topluyor.",
+    "text_student": "Önce paydaları eşitle!"
+  },
+  {
+    "tag": "genel.soruyu-yarim-okuma",
+    "skill_id": null,
+    "prereq_skill_id": null,
+    "text_instructor": "Sorulanı değil ara sonucu işaretliyor.",
+    "text_student": "Soru neyi istiyor, son adımda tekrar bak."
+  }
+]

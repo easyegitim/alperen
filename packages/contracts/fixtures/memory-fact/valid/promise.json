@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "student_ref": "s_k3m7q2x4z6ab",
+  "kind": "promise",
+  "text": "Öğrenci cumartesiye kadar kesir çalışma kâğıdını bitireceğini söyledi.",
+  "source_message_ids": [
+    1042,
+    1043
+  ],
+  "confidence": 0.86,
+  "valid_until": "2026-10-24",
+  "morale_signal": null,
+  "requires_approval": false,
+  "skill_id": "tyt.mat.temel.rasyonel-sayilar"
+}

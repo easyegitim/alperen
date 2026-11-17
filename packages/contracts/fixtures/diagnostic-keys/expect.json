@@ -1,0 +1,19 @@
+{
+  "bad-question-code.json": [
+    "propertyNames",
+    "pattern"
+  ],
+  "empty-file.json": [
+    "minProperties"
+  ],
+  "fifth-option.json": [
+    "enum"
+  ],
+  "key-trailing-newline.json": [
+    "propertyNames",
+    "pattern"
+  ],
+  "missing-solution.json": [
+    "required"
+  ]
+}

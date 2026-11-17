@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0",
+  "lesson_ref": "fdf713bd-4a69-5887-99ed-1547cc0aac53",
+  "student_ref": "s_vd3hp6wz2kc7",
+  "duration_min": 60,
+  "skills": [
+    {
+      "skill_id": "tyt.mat.temel.uslu",
+      "mastery_estimate": 0.6,
+      "confidence": 0.7,
+      "evidence": [
+        {
+          "speaker": "ÖĞRENCİ",
+          "quote": "Tabanlar aynı olduğu için üsleri topladım, 2^7 oldu.",
+          "t": "00:12:40"
+        }
+      ]
+    },
+    {
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "mastery_estimate": 0.5,
+      "confidence": 0.75,
+      "evidence": [
+        {
+          "speaker": "ÖĞRENCİ",
+          "quote": "Önce paydaları altıda eşitledim, sonra topladım.",
+          "t": "00:31:05"
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "t": "00:20:11",
+      "quote": "Negatif üs olunca sayı negatif mi olur?",
+      "skill_id": "tyt.mat.temel.uslu",
+      "answered": true
+    }
+  ],
+  "hesitations": [
+    {
+      "t": "00:20:11",
+      "kind": "asked_repeat",
+      "quote": "Bir daha anlatır mısınız?",
+      "skill_id": "tyt.mat.temel.uslu"
+    }
+  ],
+  "misconceptions": [
+    {
+      "tag": "uslu.negatif-us-isaret",
+      "skill_id": "tyt.mat.temel.uslu",
+      "text_instructor": "Negatif üssü sonucun işareti sanıyor.",
+      "text_student": "Negatif üs tersini alır, işareti değiştirmez.",
+      "resolved_in_lesson": false,
+      "evidence": [
+        {
+          "speaker": "ÖĞRENCİ",
+          "quote": "Negatif üs olunca sayı negatif mi olur?",
+          "t": "00:20:11"
+        }
+      ]
+    }
+  ],
+  "commitments": [
+    {
+      "who": "EĞİTMEN",
+      "kind": "deadline",
+      "text": "Üslü ifadeler çalışma kâğıdı pazartesi teslim edilecek.",
+      "due": "2026-10-26",
+      "t": "00:55:30"
+    },
+    {
+      "who": "ÖĞRENCİ",
+      "kind": "promise",
+      "text": "Her akşam beş üslü ifade sorusu çözecek.",
+      "due": null,
+      "t": "00:56:02"
+    }
+  ],
+  "talk": {
+    "student_ratio": 0.31,
+    "student_questions": 4,
+    "attention": "high",
+    "morale": "low",
+    "notes": "Öğrenci yanlış yapmaktan çekindiğini söyledi."
+  },
+  "previous_profile_check": [
+    {
+      "misconception_id": "6dc17606-33d3-59ff-a693-a23ab515fc00",
+      "status": "improved",
+      "evidence": [
+        {
+          "speaker": "ÖĞRENCİ",
+          "quote": "Önce paydaları altıda eşitledim, sonra topladım.",
+          "t": "00:31:05"
+        }
+      ]
+    }
+  ],
+  "next_step": {
+    "for_student": "Negatif üslü beş ifadeyi kesir olarak yaz ve sonucu kontrol et.",
+    "for_instructor": "Negatif üs ile negatif sayı ayrımını sayı doğrusu üzerinde gösterin."
+  },
+  "model_notes": {
+    "model": "gemini-2.5-pro",
+    "prompt_version": "lesson_analysis.v1",
+    "cost_usd": 0.33,
+    "tokens_in": 141000,
+    "tokens_out": 2100,
+    "frames": 26
+  }
+}

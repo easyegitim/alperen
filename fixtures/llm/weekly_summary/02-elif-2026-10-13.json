@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "student_ref": "s_qk7m2rx4tn5a",
+  "week_start": "2026-10-13",
+  "body": "Öğrenci rasyonel sayılarda toplamayı çalıştı ve paydaları eşitleyerek doğru sonuca ulaştı. Cuma günkü deneme sınavı için kesirleri bitirmeyi hedefliyor. On soru çözme sözünü tuttu. Yorgun olduğunu söylese de çalışmaya devam etti.",
+  "metrics": {
+    "messages": 16,
+    "questions_solved": 10,
+    "accuracy": 0.8,
+    "active_days": 3,
+    "open_misconceptions": 0,
+    "unanswered_questions": 0,
+    "morale_trend": "flat"
+  },
+  "facts_used": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "next_week_focus": [
+    "tyt.mat.temel.rasyonel-sayilar",
+    "tyt.mat.temel.sayilar"
+  ]
+}

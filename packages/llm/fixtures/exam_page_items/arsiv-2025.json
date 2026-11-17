@@ -1,0 +1,67 @@
+{
+  "fake_match": [
+    "arşivi: 2025",
+    "sayfa 1/1."
+  ],
+  "output": {
+    "items": [
+      {
+        "no": 1,
+        "section": null,
+        "kind": "open",
+        "stem_text": "$\\left(\\frac{1}{2} + \\frac{1}{3}\\right) : \\frac{5}{6} - \\frac{1}{4}$ işleminin sonucu kaçtır? İşlem önceliğine dikkat ederek kesirleri sadeleştiriniz.",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 2,
+        "section": null,
+        "kind": "open",
+        "stem_text": "$\\frac{3^{4} \\cdot 9^{2}}{27^{2}}$ ifadesini üslü ifadelerin özelliklerini kullanarak sadeleştiriniz.",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 3,
+        "section": null,
+        "kind": "open",
+        "stem_text": "Bir sayının 4 katının 7 eksiği, aynı sayının 2 katının 9 fazlasına eşittir. Bu sayıyı denklem kurarak bulunuz.",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 4,
+        "section": null,
+        "kind": "open",
+        "stem_text": "Ardışık üç tek sayının toplamı 57'dir. Denklem kurarak en büyük sayıyı bulunuz.",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 5,
+        "section": null,
+        "kind": "open",
+        "stem_text": "$\\frac{5^{6} \\cdot 25}{125^{2}}$ ifadesinin değerini üslü ifadeleri ortak tabana çevirerek bulunuz.",
+        "options": [],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      }
+    ],
+    "page_notes": null,
+    "unreadable": false
+  }
+}

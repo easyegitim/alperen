@@ -1,0 +1,202 @@
+{
+  "$schema": "./schemas/models.schema.json",
+  "verified_at": "2026-10-19",
+  "currency": "USD",
+  "note": "Fiyatlar 1M token başına USD; 0 = ücretsiz katman. Ücretsiz katmanda gönderilen veri ürün eğitiminde kullanılabilir: öğrenci metni içeren 'chat' zincirinde gemini-free yalnız yedek ve her zaman temizlenmiş metinle; aydınlatma metni bunu yazar. Limitler sık değişir; gerçek limit sağlayıcı panelinde.",
+  "providers": {
+    "gemini-paid": {
+      "kind": "gemini",
+      "base": "https://generativelanguage.googleapis.com/v1beta",
+      "key_env": "GEMINI_PAID_KEY",
+      "tier": "paid",
+      "trains_on_data": false
+    },
+    "gemini-free": {
+      "kind": "gemini",
+      "base": "https://generativelanguage.googleapis.com/v1beta",
+      "key_env": "GEMINI_FREE_KEY",
+      "tier": "free",
+      "rpd": 1000,
+      "trains_on_data": true
+    },
+    "groq": {
+      "kind": "openai-compatible",
+      "base": "https://api.groq.com/openai/v1",
+      "key_env": "GROQ_KEY",
+      "tier": "free",
+      "rpd": 1000
+    },
+    "cf-ai": {
+      "kind": "workers-ai",
+      "binding": "AI",
+      "rest_base": "https://api.cloudflare.com/client/v4/accounts/{account}/ai/run",
+      "key_env": "CF_AI_TOKEN",
+      "tier": "free",
+      "neurons_per_day": 10000
+    },
+    "openrouter": {
+      "kind": "openai-compatible",
+      "base": "https://openrouter.ai/api/v1",
+      "key_env": "OPENROUTER_KEY",
+      "tier": "free",
+      "rpd": 50
+    },
+    "anthropic": {
+      "kind": "anthropic",
+      "base": "https://api.anthropic.com/v1",
+      "key_env": "ANTHROPIC_KEY",
+      "tier": "paid",
+      "enabled": false
+    },
+    "fake": {
+      "kind": "fake",
+      "tier": "free"
+    }
+  },
+  "models": {
+    "gemini-2.5-flash-lite": {
+      "provider": "gemini-paid",
+      "in_per_m": 0.1,
+      "out_per_m": 0.4,
+      "batch_discount": 0.5,
+      "ctx": 1000000,
+      "structured": true
+    },
+    "gemini-2.5-flash": {
+      "provider": "gemini-paid",
+      "in_per_m": 0.3,
+      "out_per_m": 2.5,
+      "batch_discount": 0.5,
+      "ctx": 1000000,
+      "structured": true,
+      "vision": true,
+      "audio": true
+    },
+    "gemini-2.5-pro": {
+      "provider": "gemini-paid",
+      "in_per_m": 1.25,
+      "out_per_m": 10.0,
+      "batch_discount": 0.5,
+      "ctx": 1000000,
+      "structured": true,
+      "vision": true
+    },
+    "gemini-2.5-flash-lite@free": {
+      "provider": "gemini-free",
+      "in_per_m": 0,
+      "out_per_m": 0,
+      "ctx": 1000000,
+      "structured": true
+    },
+    "gemini-2.5-flash@free": {
+      "provider": "gemini-free",
+      "in_per_m": 0,
+      "out_per_m": 0,
+      "ctx": 1000000,
+      "structured": true,
+      "vision": true,
+      "audio": true
+    },
+    "llama-3.3-70b-versatile": {
+      "provider": "groq",
+      "in_per_m": 0,
+      "out_per_m": 0,
+      "ctx": 8192,
+      "structured": true
+    },
+    "@cf/meta/llama-3.3-70b-instruct-fp8-fast": {
+      "provider": "cf-ai",
+      "in_per_m": 0,
+      "out_per_m": 0,
+      "ctx": 8192,
+      "structured": true,
+      "neurons_per_1k_tokens": 2.9
+    },
+    "meta-llama/llama-3.3-70b-instruct:free": {
+      "provider": "openrouter",
+      "in_per_m": 0,
+      "out_per_m": 0,
+      "ctx": 65536,
+      "structured": true
+    },
+    "gemini-embedding-001": {
+      "provider": "gemini-paid",
+      "in_per_m": 0,
+      "out_per_m": 0,
+      "dims": 768,
+      "use": [
+        "embedding"
+      ]
+    },
+    "whisper-large-v3-turbo": {
+      "provider": "groq",
+      "per_audio_hour": 0.04,
+      "use": [
+        "transcribe"
+      ]
+    },
+    "claude-sonnet-4-5": {
+      "provider": "anthropic",
+      "in_per_m": 3.0,
+      "out_per_m": 15.0,
+      "ctx": 200000,
+      "structured": true,
+      "vision": true,
+      "use": [
+        "lesson_analysis"
+      ],
+      "enabled": false
+    }
+  },
+  "chains": {
+    "chat_free_only": [
+      "gemini-2.5-flash-lite@free",
+      "llama-3.3-70b-versatile",
+      "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "meta-llama/llama-3.3-70b-instruct:free"
+    ],
+    "nightly_facts": [
+      "gemini-2.5-flash-lite"
+    ],
+    "weekly_summary": [
+      "gemini-2.5-flash-lite"
+    ],
+    "question_gen": [
+      "gemini-2.5-flash-lite",
+      "gemini-2.5-flash"
+    ],
+    "vision_check": [
+      "gemini-2.5-flash@free",
+      "gemini-2.5-flash"
+    ],
+    "ocr": [
+      "gemini-2.5-flash@free",
+      "gemini-2.5-flash"
+    ],
+    "lesson_analysis": [
+      "gemini-2.5-pro",
+      "claude-sonnet-4-5"
+    ],
+    "transcribe": [
+      "gemini-2.5-flash@free",
+      "whisper-large-v3-turbo"
+    ],
+    "diarize": [
+      "gemini-2.5-flash-lite"
+    ],
+    "query_expand": [
+      "gemini-2.5-flash-lite"
+    ],
+    "research": [
+      "gemini-2.5-flash"
+    ],
+    "embedding": [
+      "gemini-embedding-001"
+    ]
+  },
+  "cost_rules": {
+    "chat_budget_tokens_in": 2200,
+    "chat_turn_max_usd": 0.0003,
+    "chat_target_usd": 0.00025
+  }
+}

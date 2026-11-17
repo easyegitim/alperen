@@ -1,0 +1,14 @@
+{
+  "reply": "Çözüm: `3/4 = 6/8`, sonra `6/8 + 1/8 = **7/8**`.\nBenzer bir soruyu sen dener misin?",
+  "ends_with_question": true,
+  "hint_level": 3,
+  "confidence": 0.88,
+  "escalate": false,
+  "escalate_reason": null,
+  "detected_skill_ids": [
+    "tyt.mat.temel.rasyonel-sayilar"
+  ],
+  "detected_misconception_tag": null,
+  "used_fact_ids": [],
+  "suggest_pool_save": false
+}

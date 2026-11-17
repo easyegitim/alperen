@@ -1,0 +1,139 @@
+{
+  "kind": "report",
+  "title": "Deneme analizi: Temel Matematik Denemesi 1",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": "Okul denemesi",
+    "generated_on": "2026-11-03",
+    "language": "tr",
+    "personalized": true,
+    "duration_min": null
+  },
+  "sections": [
+    {
+      "no": 1,
+      "title": "Özet"
+    },
+    {
+      "no": 2,
+      "title": "Ayrıntı"
+    },
+    {
+      "no": 3,
+      "title": "Sonraki adım"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "paragraph",
+      "id": "p1",
+      "section_no": 1,
+      "text": "Bu denemede toplam netin 32,5 oldu; matematikte iyi, fizikte orta düzeyde bir sonuç aldın ve en çok kazanç yüzde konusunda var."
+    },
+    {
+      "type": "chart",
+      "id": "ch1",
+      "section_no": 1,
+      "chart_kind": "score_by_section",
+      "title": "Bölüm netleri",
+      "data_ref": "section_nets",
+      "caption": "Çubuk uzunluğu bölümün en yüksek netine göre."
+    },
+    {
+      "type": "heading",
+      "id": "h1",
+      "section_no": 2,
+      "level": 1,
+      "text": "Kazanım haritası"
+    },
+    {
+      "type": "chart",
+      "id": "ch2",
+      "section_no": 2,
+      "chart_kind": "skill_heatmap",
+      "title": "Kazanım ısı haritası",
+      "data_ref": "skill_map",
+      "caption": "Koyu hücre güçlü, açık hücre çalışılacak konu. Sayı: doğru / sorulan."
+    },
+    {
+      "type": "chart",
+      "id": "ch3",
+      "section_no": 2,
+      "chart_kind": "error_cause_histogram",
+      "title": "Hataların nedeni",
+      "data_ref": "error_causes"
+    },
+    {
+      "type": "heading",
+      "id": "h2",
+      "section_no": 2,
+      "level": 1,
+      "text": "Yanlış ve boş sorular"
+    },
+    {
+      "type": "table",
+      "id": "t1",
+      "section_no": 2,
+      "caption": "Yeniden bakılacak sorular",
+      "header": [
+        "Soru",
+        "Durum",
+        "Kazanım",
+        "Neden"
+      ],
+      "rows": [
+        [
+          "4",
+          "Yanlış",
+          "Ortalama",
+          "İşlem hatası"
+        ],
+        [
+          "6",
+          "Yanlış",
+          "Yüzde ve oran",
+          "Kavram eksiği"
+        ],
+        [
+          "8",
+          "Boş",
+          "Çember ve daire",
+          "Süre yetmedi"
+        ],
+        [
+          "9",
+          "Boş",
+          "Dörtgenler",
+          "Süre yetmedi"
+        ]
+      ]
+    },
+    {
+      "type": "common_mistake_callout",
+      "id": "c1",
+      "section_no": 2,
+      "pattern_id": "yuzde.zam-sonrasi-geri-hesap",
+      "text": "Yüzde sorularında zamlı fiyattan geri dönerken yüzdeyi çıkarıyorsun. Zamlı fiyat, ilk fiyatın 1,2 katıdır; böl, çıkarma."
+    },
+    {
+      "type": "chart",
+      "id": "ch4",
+      "section_no": 2,
+      "chart_kind": "mastery_trend",
+      "title": "Son üç ayda genel ustalık",
+      "data_ref": "trend"
+    },
+    {
+      "type": "summary_box",
+      "id": "s1",
+      "section_no": 3,
+      "title": "Sonraki adım",
+      "bullets": [
+        "Bu hafta yüzde ve oran için 10 soruluk bir çalışma yap.",
+        "Çember ve daire konusunun kısa notunu oku.",
+        "Bir sonraki denemede son 10 dakikayı boş soruları görmeye ayır."
+      ]
+    }
+  ],
+  "keys": []
+}

@@ -1,0 +1,38 @@
+{
+  "studentId": "00000000-0000-4000-8000-0000000000aa",
+  "today": "2026-11-03",
+  "enrollments": [
+    {
+      "enrollmentId": "00000000-0000-4000-8000-0000000000e9",
+      "courseId": "00000000-0000-4000-8000-0000000000c9",
+      "courseTitle": "TYT Matematik",
+      "examDate": "2027-06-20",
+      "targetExam": "TYT",
+      "leaves": [
+        { "skillId": "tyt.mat.temel.rasyonel-sayilar", "name": "Rasyonel sayılarda dört işlem ve sıralama", "p": 0.21, "n": 5, "lastAt": "2026-11-02T15:00:00Z" },
+        { "skillId": "tyt.mat.temel.sayilar", "name": "Sayı kümeleri, işlem önceliği, işaret kuralları", "p": 0.35, "n": 3, "lastAt": "2026-11-01T15:00:00Z" },
+        { "skillId": "tyt.mat.temel.ebob-ekok", "name": "EBOB–EKOK ve problemleri", "p": 0.55, "n": 2, "lastAt": "2026-10-30T15:00:00Z" },
+        { "skillId": "tyt.mat.temel.uslu", "name": "Üslü ifadeler ve özellikleri", "p": 0.7, "n": 4, "lastAt": "2026-10-28T10:00:00Z" },
+        { "skillId": "tyt.mat.problem.yas", "name": "Yaş problemleri", "p": 0.92, "n": 6, "lastAt": "2026-10-10T10:00:00Z" },
+        { "skillId": "tyt.mat.cebir.denklem", "name": "Birinci dereceden denklemler ve sistemler", "p": 0.95, "n": 7, "lastAt": "2026-11-01T10:00:00Z" }
+      ],
+      "firstLeaves": [
+        { "skillId": "tyt.mat.temel.sayilar", "name": "Sayı kümeleri, işlem önceliği, işaret kuralları" },
+        { "skillId": "tyt.mat.temel.bolunebilme", "name": "Bölünebilme kuralları, kalan" }
+      ],
+      "topMisconception": null,
+      "homework": [],
+      "lessonReview": {
+        "analysisId": "00000000-0000-4000-8000-0000000000a5",
+        "lessonId": "00000000-0000-4000-8000-0000000000a4",
+        "heldAt": "2026-10-28T14:00:00Z",
+        "skillIds": ["tyt.mat.temel.uslu"],
+        "skillNames": ["Üslü ifadeler ve özellikleri"]
+      }
+    }
+  ],
+  "documents": [],
+  "uploads": [],
+  "consumedRefs": [],
+  "practicedToday": []
+}

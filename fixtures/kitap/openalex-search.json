@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "count": 4,
+    "page": 1,
+    "per_page": 25,
+    "query": "spaced repetition matematik"
+  },
+  "results": [
+    {
+      "id": "https://openalex.org/W2105935416",
+      "doi": "https://doi.org/10.1037/0033-2909.132.3.354",
+      "title": "Distributed practice in verbal recall tasks: A review and quantitative synthesis",
+      "display_name": "Distributed practice in verbal recall tasks: A review and quantitative synthesis",
+      "publication_year": 2006,
+      "cited_by_count": 3150,
+      "authorships": [
+        {
+          "author": {
+            "display_name": "Nicholas J. Cepeda"
+          }
+        },
+        {
+          "author": {
+            "display_name": "Harold Pashler"
+          }
+        },
+        {
+          "author": {
+            "display_name": "Edward Vul"
+          }
+        },
+        {
+          "author": {
+            "display_name": "John T. Wixted"
+          }
+        },
+        {
+          "author": {
+            "display_name": "Doug Rohrer"
+          }
+        }
+      ],
+      "primary_location": {
+        "source": {
+          "display_name": "Psychological Bulletin"
+        }
+      },
+      "open_access": {
+        "is_oa": false,
+        "oa_url": null
+      },
+      "language": "en",
+      "type": "article"
+    },
+    {
+      "id": "https://openalex.org/W2040781230",
+      "doi": "https://doi.org/10.1007/s11251-007-9015-8",
+      "title": "The shuffling of mathematics problems improves learning",
+      "display_name": "The shuffling of mathematics problems improves learning",
+      "publication_year": 2007,
+      "cited_by_count": 640,
+      "authorships": [
+        {
+          "author": {
+            "display_name": "Doug Rohrer"
+          }
+        },
+        {
+          "author": {
+            "display_name": "Kelli Taylor"
+          }
+        }
+      ],
+      "primary_location": {
+        "source": {
+          "display_name": "Instructional Science"
+        }
+      },
+      "open_access": {
+        "is_oa": true,
+        "oa_url": "https://example.org/oa/rohrer-2007.pdf"
+      },
+      "language": "en",
+      "type": "article"
+    },
+    {
+      "id": "https://openalex.org/W2147186036",
+      "doi": "https://doi.org/10.1177/1529100612453266",
+      "title": "Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology",
+      "display_name": "Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology",
+      "publication_year": 2013,
+      "cited_by_count": 4200,
+      "authorships": [
+        {
+          "author": {
+            "display_name": "John Dunlosky"
+          }
+        },
+        {
+          "author": {
+            "display_name": "Katherine A. Rawson"
+          }
+        },
+        {
+          "author": {
+            "display_name": "Elizabeth J. Marsh"
+          }
+        },
+        {
+          "author": {
+            "display_name": "Mitchell J. Nathan"
+          }
+        },
+        {
+          "author": {
+            "display_name": "Daniel T. Willingham"
+          }
+        }
+      ],
+      "primary_location": {
+        "source": {
+          "display_name": "Psychological Science in the Public Interest"
+        }
+      },
+      "open_access": {
+        "is_oa": true,
+        "oa_url": "https://example.org/oa/dunlosky-2013.pdf"
+      },
+      "language": "en",
+      "type": "article"
+    },
+    {
+      "id": "https://openalex.org/W4999999901",
+      "doi": "https://doi.org/10.5555/ogrenmen.mismatch",
+      "title": "Spaced practice in algebra homework",
+      "display_name": "Spaced practice in algebra homework",
+      "publication_year": 2019,
+      "cited_by_count": 12,
+      "authorships": [
+        {
+          "author": {
+            "display_name": "B. Örnek"
+          }
+        }
+      ],
+      "primary_location": {
+        "source": {
+          "display_name": "Örnek Dergi"
+        }
+      },
+      "open_access": {
+        "is_oa": false,
+        "oa_url": null
+      },
+      "language": "en",
+      "type": "article"
+    }
+  ]
+}

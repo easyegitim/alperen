@@ -1,0 +1,76 @@
+{
+  "curriculum": {
+    "code": "TYT-MAT",
+    "authority": "ÖSYM",
+    "year": 2026,
+    "version": "2026.1",
+    "label": "TYT Matematik 2026",
+    "status": "active",
+    "period_label": "YKS 2027",
+    "sources": [
+      "ÖSYM 2026 TYT kılavuzu konu başlıkları",
+      "MEB 2024 Matematik Öğretim Programı"
+    ],
+    "diagnostic_exempt": [
+      "tyt.mat.problem.yas",
+      "tyt.mat.problem.isci"
+    ]
+  },
+  "skills": [
+    {
+      "id": "tyt.mat.temel",
+      "parent_id": null,
+      "name": "Temel matematik",
+      "is_leaf": false,
+      "order_no": 1
+    },
+    {
+      "id": "tyt.mat.temel.sayilar",
+      "parent_id": "tyt.mat.temel",
+      "name": "Sayı kümeleri, işlem önceliği, işaret kuralları",
+      "is_leaf": true,
+      "order_no": 2,
+      "p_init": 0.3,
+      "p_learn": 0.1,
+      "p_guess": 0.25,
+      "p_slip": 0.1
+    },
+    {
+      "id": "tyt.mat.temel.ebob-ekok",
+      "parent_id": "tyt.mat.temel",
+      "name": "EBOB–EKOK ve problemleri",
+      "is_leaf": true,
+      "order_no": 4,
+      "p_init": 0.3,
+      "p_learn": 0.1,
+      "p_guess": 0.25,
+      "p_slip": 0.1
+    },
+    {
+      "id": "tyt.mat.temel.rasyonel-sayilar",
+      "parent_id": "tyt.mat.temel",
+      "name": "Rasyonel sayılarda dört işlem ve sıralama",
+      "description": null,
+      "is_leaf": true,
+      "order_no": 5,
+      "p_init": 0.3,
+      "p_learn": 0.1,
+      "p_guess": 0.25,
+      "p_slip": 0.1
+    }
+  ],
+  "prerequisites": [
+    {
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "prereq_id": "tyt.mat.temel.sayilar",
+      "strength": 1.0,
+      "source": "curriculum"
+    },
+    {
+      "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+      "prereq_id": "tyt.mat.temel.ebob-ekok",
+      "strength": 0.6,
+      "source": "curriculum"
+    }
+  ]
+}

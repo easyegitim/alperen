@@ -1,0 +1,84 @@
+/* Bu dosya scripts/tokens-to-css.mjs tarafından tokens.json dosyasından üretilir; elle düzenlenmez. */
+/* Tailwind 4 eşlemesi: renk, yazı tipi, köşe, gölge ve yazı ölçeği tokens.css değişkenlerine bağlanır.
+   Boşluk ölçeği ayrıca tanımlanmaz: Tailwind varsayılanı 4px tabanlıdır ve space-N = N birimdir
+   (space-2 = p-2, space-4 = p-4, space-6 = p-6, space-8 = p-8, space-12 = p-12).
+   Kullanım (uygulamanın ana CSS dosyasında):
+     @import "tailwindcss";
+     @import "@ogrenmen/design-system/styles/tokens.css";
+     @import "@ogrenmen/design-system/styles/theme.css";
+     @import "@ogrenmen/design-system/styles/base.css";
+     @source "<design-system>/src";   (bileşen sınıflarının taranması için) */
+@theme inline {
+  --color-surface: var(--og-surface);
+  --color-surface-raised: var(--og-surface-raised);
+  --color-surface-sunken: var(--og-surface-sunken);
+  --color-paper: var(--og-paper);
+  --color-line: var(--og-line);
+  --color-line-strong: var(--og-line-strong);
+  --color-ink: var(--og-ink);
+  --color-ink-muted: var(--og-ink-muted);
+  --color-primary: var(--og-primary);
+  --color-primary-strong: var(--og-primary-strong);
+  --color-primary-soft: var(--og-primary-soft);
+  --color-on-primary: var(--og-on-primary);
+  --color-navy: var(--og-navy);
+  --color-on-navy: var(--og-on-navy);
+  --color-gold: var(--og-gold);
+  --color-gold-deep: var(--og-gold-deep);
+  --color-gold-ink: var(--og-gold-ink);
+  --color-on-gold: var(--og-on-gold);
+  --color-ai-glow: var(--og-ai-glow);
+  --color-ai-soft: var(--og-ai-soft);
+  --color-easy-purple: var(--og-easy-purple);
+  --color-success: var(--og-success);
+  --color-success-soft: var(--og-success-soft);
+  --color-warning: var(--og-warning);
+  --color-warning-soft: var(--og-warning-soft);
+  --color-danger: var(--og-danger);
+  --color-danger-soft: var(--og-danger-soft);
+  --color-focus: var(--og-focus);
+  --color-link: var(--og-link);
+  --font-sans: var(--og-font-sans);
+  --font-mono: var(--og-font-mono);
+  --radius-sm: var(--og-radius-sm);
+  --radius-md: var(--og-radius-md);
+  --radius-lg: var(--og-radius-lg);
+  --radius-full: var(--og-radius-full);
+  --shadow-sm: var(--og-shadow-sm);
+  --shadow-lg: var(--og-shadow-lg);
+  --shadow-ai: var(--og-shadow-ai);
+  --shadow-focus-ring: var(--og-focus-ring);
+  --text-display: 48px;
+  --text-display--line-height: 52px;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+  --text-title-1: 32px;
+  --text-title-1--line-height: 40px;
+  --text-title-1--font-weight: 600;
+  --text-title-1--letter-spacing: -0.01em;
+  --text-title-2: 24px;
+  --text-title-2--line-height: 32px;
+  --text-title-2--font-weight: 600;
+  --text-title-3: 18px;
+  --text-title-3--line-height: 26px;
+  --text-title-3--font-weight: 600;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-lg--font-weight: 400;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-body--font-weight: 400;
+  --text-label: 15px;
+  --text-label--line-height: 20px;
+  --text-label--font-weight: 500;
+  --text-small: 14px;
+  --text-small--line-height: 20px;
+  --text-small--font-weight: 400;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+  --text-caption--letter-spacing: 0.02em;
+  --text-code: 14px;
+  --text-code--line-height: 20px;
+  --text-code--font-weight: 400;
+}

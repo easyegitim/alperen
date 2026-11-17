@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "item": {
+    "schema_version": "1.0",
+    "curriculum_code": "TYT-MAT@2026.1",
+    "kind": "mcq",
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar"
+    ],
+    "stem": "Şekilde 6 eş parçadan 5'i ve 4 eş parçadan 1'i boyalı iki kesir modeli var. `5/6 - 1/4` işleminin sonucu kaçtır?",
+    "stem_values": {
+      "pay1": 5,
+      "payda1": 6,
+      "pay2": 1,
+      "payda2": 4
+    },
+    "figure": {
+      "tool": "matplotlib",
+      "code": "\"\"\"Kesir modeli: 5/6 ve 1/4 (Tablet render sandbox örneği; çalışma dizinine figure.png yazar).\"\"\"\nimport matplotlib\n\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\n\nPAPER, NAVY, PRIMARY = \"#f6f8fc\", \"#051c60\", \"#0030a2\"\nfig, axes = plt.subplots(2, 1, figsize=(8, 4), dpi=100, facecolor=PAPER)\nfor ax, (pay, payda, etiket) in zip(axes, [(5, 6, \"5/6\"), (1, 4, \"1/4\")]):\n    ax.set_facecolor(PAPER)\n    for i in range(payda):\n        renk = PRIMARY if i < pay else PAPER\n        ax.add_patch(plt.Rectangle((i / payda, 0), 1 / payda, 1, facecolor=renk, edgecolor=NAVY, linewidth=2))\n    ax.set_xlim(0, 1.25)\n    ax.set_ylim(-0.1, 1.1)\n    ax.text(1.05, 0.5, etiket, fontsize=18, color=NAVY, va=\"center\")\n    ax.axis(\"off\")\nfig.tight_layout()\nfig.savefig(\"figure.png\", dpi=100, facecolor=PAPER)\n",
+      "alt_text": "Üstte 6 eş parçaya bölünmüş, 5 parçası boyalı; altta 4 eş parçaya bölünmüş, 1 parçası boyalı iki dikdörtgen.",
+      "expected_px": {
+        "min_w": 600,
+        "max_w": 1000,
+        "min_h": 300,
+        "max_h": 600
+      }
+    },
+    "options": [
+      {
+        "key": "A",
+        "text": "`4/2`",
+        "misconception_tag": "rasyonel.pay-payda-ayri-toplama"
+      },
+      {
+        "key": "B",
+        "text": "`7/12`",
+        "misconception_tag": null
+      },
+      {
+        "key": "C",
+        "text": "`4/6`",
+        "misconception_tag": "rasyonel.payda-esitlemeden-toplama"
+      },
+      {
+        "key": "D",
+        "text": "`1/12`",
+        "misconception_tag": null
+      }
+    ],
+    "difficulty": 0.5,
+    "source": "llm",
+    "verification": {
+      "schema": true,
+      "sympy": "pending",
+      "render": "pending",
+      "vision": "pending",
+      "attempts": 0,
+      "status": "draft",
+      "review_note": null
+    },
+    "provenance": {
+      "model": "gemini-2.5-flash-lite",
+      "cost_usd": 0.000318,
+      "prompt_version": "question_gen.v1"
+    }
+  },
+  "key": {
+    "correct_option": "B",
+    "canonical_expr": "Rational(5,6) - Rational(1,4)",
+    "solution": "Paydaları 12'de eşitle: `10/12 - 3/12 = 7/12`.",
+    "sympy_status": "verified",
+    "sympy_report": {
+      "expr": "Rational(5,6) - Rational(1,4)",
+      "value": "7/12",
+      "matched_option": "B"
+    }
+  }
+}

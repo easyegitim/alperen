@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/exam-block-regen.json",
+  "title": "ExamBlockRegen",
+  "description": "Deneme/soru seti yeniden üretimi: yalnız doğrulamadan geçemeyen sorular ve bunların anahtarları (öteki sorular korunur).",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "items": {
+      "minItems": 1,
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "section": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "mcq",
+              "numeric"
+            ]
+          },
+          "stem": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2500
+          },
+          "options": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "enum": [
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+                  ]
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 600
+                }
+              },
+              "required": [
+                "key",
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "figure_svg": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Soru şekli satır içi SVG (worker figure kodundan üretir); model figure verdiyse null"
+          },
+          "figure": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "matplotlib",
+                      "svg"
+                    ]
+                  },
+                  "figure_code": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 20000,
+                    "description": "kind=matplotlib: figure_<n>.svg yazan Python (matplotlib/numpy); kind=svg: SVG metni"
+                  },
+                  "alt": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 400,
+                    "description": "Şekli kelimelerle anlatır"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "figure_code",
+                  "alt"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kodla üretilen soru şekli; şekilsiz soruda null"
+          },
+          "skill_ids": {
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+            }
+          },
+          "style_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "description": "question_styles.id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "easy",
+              "medium",
+              "hard"
+            ]
+          }
+        },
+        "required": [
+          "no",
+          "section",
+          "kind",
+          "stem",
+          "options",
+          "figure_svg",
+          "skill_ids",
+          "style_id",
+          "difficulty"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "keys": {
+      "minItems": 1,
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "correct_option": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "MCQ ise doğru şık, değilse null"
+          },
+          "numeric_value": {
+            "description": "Sayısal soru ise ondalık değer (secure.exam_answer_keys.numeric_value numeric); grade_exam_session 1e-6 toleransla karşılaştırır. Değilse null",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "canonical_expr": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kesin SymPy biçimi: sympy.sympify edilebilir ifade ('7/8', '2*sqrt(3)') ya da null"
+          },
+          "solution": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000,
+            "description": "Adım adım çözüm"
+          }
+        },
+        "required": [
+          "question_no",
+          "correct_option",
+          "numeric_value",
+          "canonical_expr",
+          "solution"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "items",
+    "keys"
+  ],
+  "additionalProperties": false
+}

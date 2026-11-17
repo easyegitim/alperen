@@ -1,0 +1,79 @@
+{
+  "id": "sd-03-ara-sonucu-isaretleme",
+  "route": "solution_diagnosis",
+  "title": "Yaş problemi: Ali'nin yaşı bulunup Ayşe'nin yerine işaretlenmiş (okuma)",
+  "input": {
+    "course": "tyt-matematik",
+    "dossier": "Öğrenci: 11. sınıf, hedef TYT. tyt.mat.problem.yas: orta (6 kanıt). Hafıza patterns.md: - Sorulanı değil ara sonucu işaretliyor · tyt.mat.problem.kesir · 1× · 21 Eki",
+    "turn": {
+      "date": "2026-11-03"
+    },
+    "user": "Soru: Ayşe'nin yaşı Ali'nin yaşının 2 katıdır. 5 yıl sonra yaşları toplamı 40 olacaktır. Buna göre Ayşe bugün kaç yaşındadır?\nA) 10  B) 15  C) 20  D) 25  E) 30\n\nÇözümüm (el yazısı, transkripsiyon):\n1) Ali = x, Ayşe = 2x\n2) (x+5) + (2x+5) = 40\n3) 3x + 10 = 40\n4) 3x = 30, x = 10\n5) Cevap: 10 (A)"
+  },
+  "expected": {
+    "verdict": "wrong",
+    "failing_step_no": 5,
+    "error_cause": "reading",
+    "skill_ids_any": [
+      "tyt.mat.problem.yas"
+    ],
+    "misconception_tags_any": [
+      "genel.soruyu-yarim-okuma"
+    ],
+    "proposed_subskill": false
+  },
+  "fake_reply": [
+    {
+      "json": {
+        "question_text": "Ayşe'nin yaşı Ali'nin yaşının 2 katıdır. 5 yıl sonra yaşları toplamı 40 olacaktır. Buna göre Ayşe bugün kaç yaşındadır? A) 10 B) 15 C) 20 D) 25 E) 30",
+        "student_work_text": "Ali = x, Ayşe = 2x; (x+5)+(2x+5)=40; 3x+10=40; 3x=30, x=10; cevap 10 (A)",
+        "reference_solution_steps": [
+          "Ali $x$, Ayşe $2x$",
+          "$(x+5)+(2x+5)=40$",
+          "$3x=30$, $x=10$",
+          "Ayşe $2x=20$, cevap C"
+        ],
+        "student_steps": [
+          {
+            "no": 1,
+            "text": "Ali = x, Ayşe = 2x",
+            "status": "ok"
+          },
+          {
+            "no": 2,
+            "text": "(x+5) + (2x+5) = 40",
+            "status": "ok"
+          },
+          {
+            "no": 3,
+            "text": "3x + 10 = 40",
+            "status": "ok"
+          },
+          {
+            "no": 4,
+            "text": "3x = 30, x = 10",
+            "status": "ok"
+          },
+          {
+            "no": 5,
+            "text": "Cevap: 10 (A)",
+            "status": "error"
+          }
+        ],
+        "failing_step_no": 5,
+        "verdict": "wrong",
+        "error_cause": "reading",
+        "why_tr": "Soru Ayşe'nin yaşını istiyordu, sen Ali'nin yaşı olan $x=10$'u işaretledin; Ayşe $2x=20$ yaşında.",
+        "skill_ids": [
+          "tyt.mat.problem.yas"
+        ],
+        "misconception_tags": [
+          "genel.soruyu-yarim-okuma"
+        ],
+        "proposed_subskill": null,
+        "style_hint": "Ara sonucun şıklarda yer aldığı yaş problemi",
+        "confidence": 0.9
+      }
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/generation-request.json",
+  "title": "GenerationRequest",
+  "description": "generation_requests satırı (boru hatları arası sözleşme tablosu): yalnız META taşır (kazanım, bant, konu, tür, puan). ocr_text/stem alanı TANIMSIZDIR ve additionalProperties:false olduğundan ham soru metni taşınamaz.",
+  "x-version": "1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "skill_id",
+    "difficulty_band"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.json#/$defs/uuid"
+    },
+    "kind": {
+      "enum": [
+        "pool_miss",
+        "regenerate",
+        "exam_variant"
+      ]
+    },
+    "curriculum_id": {
+      "$ref": "common.json#/$defs/uuid"
+    },
+    "skill_id": {
+      "$ref": "common.json#/$defs/skillId"
+    },
+    "difficulty_band": {
+      "enum": [
+        "easy",
+        "mid",
+        "hard"
+      ]
+    },
+    "topic": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 80,
+      "description": "exam_variant: küme konusu (ham soru metni ASLA)"
+    },
+    "question_kind": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "enum": [
+            "mcq",
+            "numeric"
+          ]
+        }
+      ]
+    },
+    "points": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 999.99
+    },
+    "plan_id": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.json#/$defs/uuid"
+        }
+      ]
+    },
+    "requested_by": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.json#/$defs/uuid"
+        }
+      ]
+    },
+    "requested_by_staff": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.json#/$defs/uuid"
+        }
+      ]
+    },
+    "served_question_id": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.json#/$defs/uuid"
+        }
+      ]
+    },
+    "served_at": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "common.json#/$defs/dateTime"
+        }
+      ]
+    },
+    "needs_generation": {
+      "type": "boolean"
+    },
+    "created_at": {
+      "$ref": "common.json#/$defs/dateTime"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "exam_variant"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "topic",
+          "plan_id"
+        ],
+        "properties": {
+          "topic": {
+            "type": "string",
+            "minLength": 1
+          },
+          "plan_id": {
+            "$ref": "common.json#/$defs/uuid"
+          }
+        }
+      }
+    }
+  ]
+}

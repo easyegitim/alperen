@@ -1,0 +1,59 @@
+{
+  "nodes": [
+    {
+      "code": "lgs-fen",
+      "parent_code": null,
+      "name": "LGS Fen Bilimleri",
+      "description": "8. sınıf fen bilimleri kazanımları.",
+      "kind": "unit",
+      "exam_weight_hint": null,
+      "sources": [
+        "https://meb.gov.tr/fen-8"
+      ]
+    },
+    {
+      "code": "lgs-fen.madde",
+      "parent_code": "yok.boyle",
+      "name": "Madde ve Endüstri",
+      "description": "Periyodik sistem ve kimyasal tepkimeler.",
+      "kind": "unit",
+      "exam_weight_hint": 0.25,
+      "sources": []
+    },
+    {
+      "code": "lgs-fen.madde.periyodik",
+      "parent_code": "lgs-fen.madde",
+      "name": "Periyodik sistem",
+      "description": "Elementlerin periyodik sistemdeki yerini yorumlar.",
+      "kind": "outcome",
+      "exam_weight_hint": 0.1,
+      "sources": []
+    },
+    {
+      "code": "lgs-fen.madde.periyodik.metal",
+      "parent_code": "lgs-fen.madde.periyodik",
+      "name": "Metal ve ametal",
+      "description": "Metal, ametal ve yarı metal ayrımı.",
+      "kind": "sub_outcome",
+      "exam_weight_hint": null,
+      "sources": []
+    }
+  ],
+  "prerequisites": [
+    {
+      "skill_code": "lgs-fen.madde.periyodik.metal",
+      "prereq_code": "lgs-fen.madde.periyodik",
+      "strength": 0.7
+    }
+  ],
+  "misconception_tags": [
+    {
+      "tag": "periyodik.grup-periyot-karisimi",
+      "skill_code": "lgs-fen.madde.periyodik",
+      "text_instructor": "Grup ile periyodu birbirine karıştırır.",
+      "text_student": "Satır ile sütunu ters okuyorsun, grup dikey sütundur."
+    }
+  ],
+  "confidence": 0.74,
+  "notes_for_instructor": "Konu ağırlıkları 2019-2024 LGS sorularından tahmin edildi, gözden geçirmeniz önerilir."
+}

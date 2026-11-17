@@ -1,0 +1,9 @@
+{
+  "ref": "#/$defs/evidenceRef",
+  "data": {
+    "kind": "chat",
+    "source": "message:118",
+    "quote": "neden ters çeviriyoruz",
+    "student_name": "Elif"
+  }
+}

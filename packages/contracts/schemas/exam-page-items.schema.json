@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/exam-page-items.json",
+  "title": "ExamPageItems",
+  "description": "Bir kitapçık sayfasındaki sorular: numara, bölüm, tür, kök metni, şıklar, sayfalar arası devam bayrakları ve şekil kutuları (0..1 oranlı).",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "items": {
+      "maxItems": 60,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "mcq",
+              "numeric",
+              "open"
+            ]
+          },
+          "stem_text": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "options": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "enum": [
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+                  ]
+                },
+                "text": {
+                  "type": "string",
+                  "maxLength": 600
+                }
+              },
+              "required": [
+                "key",
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "continues_from_previous": {
+            "type": "boolean",
+            "description": "Soru önceki sayfadan devam ediyor"
+          },
+          "continues_on_next": {
+            "type": "boolean",
+            "description": "Soru sonraki sayfada sürüyor"
+          },
+          "figures": {
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "bbox": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "y": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "w": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "h": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "w",
+                    "h"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 200
+                }
+              },
+              "required": [
+                "bbox",
+                "description"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "legibility": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "partial",
+              "poor"
+            ]
+          }
+        },
+        "required": [
+          "no",
+          "section",
+          "kind",
+          "stem_text",
+          "options",
+          "continues_from_previous",
+          "continues_on_next",
+          "figures",
+          "legibility"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "page_notes": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 400
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "unreadable": {
+      "default": false,
+      "description": "Sayfa okunamayacak kadar bulanık, karanlık ya da kesik: true; o zaman items boş kalır",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "items",
+    "page_notes"
+  ],
+  "additionalProperties": false
+}

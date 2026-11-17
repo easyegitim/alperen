@@ -1,0 +1,72 @@
+[
+  {
+    "schema_version": "1.0",
+    "source_id": "c97a5607-ead2-5620-b865-cf6bb93495e4",
+    "item_no": 1,
+    "topic": "Rasyonel sayılar",
+    "kind": "calc",
+    "points": 10,
+    "year": 2022,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "skill_id": "tyt.mat.temel.rasyonel-sayilar",
+    "ocr_text": "1) (2/3 + 5/6) - 3/4 işleminin sonucunu en sade kesir olarak bulunuz.",
+    "ocr_confidence": 0.96
+  },
+  {
+    "schema_version": "1.0",
+    "source_id": "c97a5607-ead2-5620-b865-cf6bb93495e4",
+    "item_no": 2,
+    "topic": "Yüzde problemleri",
+    "kind": "mc",
+    "points": 5,
+    "year": 2022,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "skill_id": "tyt.mat.problem.yuzde",
+    "ocr_text": "2) Etiket fiyatı 250 TL olan bir montun fiyatına önce %20 indirim, sonra %10 zam yapılıyor. Son fiyat kaç TL'dir? A) 220 B) 225 C) 230 D) 240",
+    "ocr_confidence": 0.95
+  },
+  {
+    "schema_version": "1.0",
+    "source_id": "c97a5607-ead2-5620-b865-cf6bb93495e4",
+    "item_no": 3,
+    "topic": "Mutlak değer",
+    "kind": "calc",
+    "points": 10,
+    "year": 2022,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "skill_id": "tyt.mat.cebir.mutlak-deger",
+    "ocr_text": "3) |2x - 3| = 7 denklemini sağlayan x değerlerinin toplamını bulunuz.",
+    "ocr_confidence": 0.94
+  },
+  {
+    "schema_version": "1.0",
+    "source_id": "c97a5607-ead2-5620-b865-cf6bb93495e4",
+    "item_no": 4,
+    "topic": "İrrasyonel sayılar ispatı",
+    "kind": "proof",
+    "points": 15,
+    "year": 2022,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "skill_id": null,
+    "ocr_text": "4) Karekök 2 sayısının iki tam sayının oranı olarak yazılamayacağını gösteriniz.",
+    "ocr_confidence": 0.93
+  },
+  {
+    "schema_version": "1.0",
+    "source_id": "c97a5607-ead2-5620-b865-cf6bb93495e4",
+    "item_no": 5,
+    "topic": "Üslü ifadeler",
+    "kind": "mc",
+    "points": 5,
+    "year": 2022,
+    "term": "final",
+    "instructor_alias": "hoca-A",
+    "skill_id": "tyt.mat.temel.uslu",
+    "ocr_text": "5) (3^5 · 3^-2) / 3^2 ifadesinin değeri kaçtır? A) 1 B) 3 C) 9 D) 27",
+    "ocr_confidence": 0.92
+  }
+]

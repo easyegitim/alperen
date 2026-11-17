@@ -1,0 +1,105 @@
+{
+  "section_nets": {
+    "kind": "score_by_section",
+    "rows": [
+      {
+        "label": "Temel Matematik",
+        "net": 22.5,
+        "max": 40
+      },
+      {
+        "label": "Geometri",
+        "net": 6,
+        "max": 10
+      },
+      {
+        "label": "Fizik",
+        "net": 4,
+        "max": 14
+      }
+    ]
+  },
+  "skill_map": {
+    "kind": "skill_heatmap",
+    "rows": [
+      {
+        "label": "Rasyonel sayılar",
+        "value": 0.85,
+        "correct": 6,
+        "total": 7
+      },
+      {
+        "label": "Mutlak değer",
+        "value": 0.55,
+        "correct": 3,
+        "total": 5
+      },
+      {
+        "label": "Üslü sayılar",
+        "value": 0.7,
+        "correct": 4,
+        "total": 6
+      },
+      {
+        "label": "Yüzde ve oran",
+        "value": 0.3,
+        "correct": 1,
+        "total": 4
+      },
+      {
+        "label": "Üçgenler",
+        "value": 0.62,
+        "correct": 5,
+        "total": 8
+      },
+      {
+        "label": "Çember ve daire",
+        "value": 0.15,
+        "correct": 0,
+        "total": 3
+      }
+    ]
+  },
+  "error_causes": {
+    "kind": "error_cause_histogram",
+    "rows": [
+      {
+        "label": "Kavram eksiği",
+        "count": 6
+      },
+      {
+        "label": "İşlem hatası",
+        "count": 4
+      },
+      {
+        "label": "Dikkatsizlik",
+        "count": 3
+      },
+      {
+        "label": "Soruyu yanlış okuma",
+        "count": 1
+      },
+      {
+        "label": "Süre yetmedi",
+        "count": 5
+      }
+    ]
+  },
+  "trend": {
+    "kind": "mastery_trend",
+    "points": [
+      {
+        "label": "Eylül",
+        "value": 0.35
+      },
+      {
+        "label": "Ekim",
+        "value": 0.48
+      },
+      {
+        "label": "Kasım",
+        "value": 0.58
+      }
+    ]
+  }
+}

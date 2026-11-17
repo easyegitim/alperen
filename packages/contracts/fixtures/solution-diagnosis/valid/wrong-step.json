@@ -1,0 +1,45 @@
+{
+  "question_text": "x/2 + x/3 = 5 denklemini çözünüz.",
+  "student_work_text": "x/2 + x/3 = 5\n2x + 3x = 5\n5x = 5\nx = 1",
+  "reference_solution_steps": [
+    "Paydaları 6'da eşitle: 3x/6 + 2x/6 = 5",
+    "Toplamı yaz: 5x/6 = 5",
+    "İki tarafı 6/5 ile çarp: x = 6"
+  ],
+  "student_steps": [
+    {
+      "no": 1,
+      "text": "x/2 + x/3 = 5",
+      "status": "ok"
+    },
+    {
+      "no": 2,
+      "text": "2x + 3x = 5",
+      "status": "error"
+    },
+    {
+      "no": 3,
+      "text": "5x = 5",
+      "status": "ok"
+    },
+    {
+      "no": 4,
+      "text": "x = 1",
+      "status": "ok"
+    }
+  ],
+  "failing_step_no": 2,
+  "verdict": "wrong",
+  "error_cause": "procedure",
+  "why_tr": "İkinci adımda paydaları eşitlemeden payları toplamışsın, o yüzden sonuç kaydı.",
+  "skill_ids": [
+    "tyt.mat.denklemler.birinci-derece"
+  ],
+  "misconception_tags": [
+    "rasyonel.payda-esitlemeden-toplama"
+  ],
+  "proposed_subskill": null,
+  "style_hint": null,
+  "confidence": 0.86,
+  "key_dispute": null
+}

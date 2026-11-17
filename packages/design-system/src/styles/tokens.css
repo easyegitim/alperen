@@ -1,0 +1,173 @@
+/* Bu dosya scripts/tokens-to-css.mjs tarafından tokens.json dosyasından üretilir; elle düzenlenmez. */
+@font-face { font-family: "Lexend"; src: url("../../fonts/Lexend-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("../../fonts/Lexend-500.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("../../fonts/Lexend-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("../../fonts/Lexend-700.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("../../fonts/JetBrainsMono-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+:root,
+[data-theme="light"] {
+  --og-font-sans: Lexend, "Segoe UI", system-ui, sans-serif;
+  --og-font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --og-space-1: 4px;
+  --og-space-2: 8px;
+  --og-space-3: 12px;
+  --og-space-4: 16px;
+  --og-space-6: 24px;
+  --og-space-8: 32px;
+  --og-space-12: 48px;
+  --og-radius-sm: 4px;
+  --og-radius-md: 8px;
+  --og-radius-lg: 16px;
+  --og-radius-full: 9999px;
+  --og-type-display-size: 48px;
+  --og-type-display-line: 52px;
+  --og-type-display-weight: 700;
+  --og-type-display-tracking: -0.02em;
+  --og-type-title-1-size: 32px;
+  --og-type-title-1-line: 40px;
+  --og-type-title-1-weight: 600;
+  --og-type-title-1-tracking: -0.01em;
+  --og-type-title-2-size: 24px;
+  --og-type-title-2-line: 32px;
+  --og-type-title-2-weight: 600;
+  --og-type-title-3-size: 18px;
+  --og-type-title-3-line: 26px;
+  --og-type-title-3-weight: 600;
+  --og-type-body-lg-size: 18px;
+  --og-type-body-lg-line: 28px;
+  --og-type-body-lg-weight: 400;
+  --og-type-body-size: 16px;
+  --og-type-body-line: 24px;
+  --og-type-body-weight: 400;
+  --og-type-label-size: 15px;
+  --og-type-label-line: 20px;
+  --og-type-label-weight: 500;
+  --og-type-small-size: 14px;
+  --og-type-small-line: 20px;
+  --og-type-small-weight: 400;
+  --og-type-caption-size: 12px;
+  --og-type-caption-line: 16px;
+  --og-type-caption-weight: 500;
+  --og-type-caption-tracking: 0.02em;
+  --og-type-code-size: 14px;
+  --og-type-code-line: 20px;
+  --og-type-code-weight: 400;
+  --og-surface: #f6f8fc;
+  --og-surface-raised: #ffffff;
+  --og-surface-sunken: #e9eef8;
+  --og-paper: #f6f8fc;
+  --og-line: #d3dbea;
+  --og-line-strong: #7a86a8;
+  --og-ink: #051c60;
+  --og-ink-muted: #4a5578;
+  --og-primary: #0030a2;
+  --og-primary-strong: #00247c;
+  --og-primary-soft: #e3eafc;
+  --og-on-primary: #ffffff;
+  --og-navy: #051c60;
+  --og-on-navy: #ffffff;
+  --og-gold: #feca6e;
+  --og-gold-deep: #d69637;
+  --og-gold-ink: #7a4d00;
+  --og-on-gold: #051c60;
+  --og-ai-glow: #579bfa;
+  --og-ai-soft: #eaf3ff;
+  --og-easy-purple: #41286c;
+  --og-success: #0b6e4f;
+  --og-success-soft: #ddf4ea;
+  --og-warning: #9a3f00;
+  --og-warning-soft: #fff0dc;
+  --og-danger: #b3261e;
+  --og-danger-soft: #fbe4e1;
+  --og-focus: #0030a2;
+  --og-link: var(--og-primary);
+  --og-shadow-sm: 0 1px 2px #051c600f, 0 1px 3px #051c601a;
+  --og-shadow-lg: 0 4px 8px #051c6014, 0 12px 28px -2px #051c6029;
+  --og-shadow-ai: 0 0 0 1px #579bfa66, 0 6px 20px -4px #579bfa59;
+  --og-focus-ring: 0 0 0 2px #f6f8fc, 0 0 0 4px #0030a2;
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --og-surface: #070f2e;
+  --og-surface-raised: #0f1a44;
+  --og-surface-sunken: #040a22;
+  --og-paper: #f6f8fc;
+  --og-line: #26326a;
+  --og-line-strong: #6c7aae;
+  --og-ink: #eef2fb;
+  --og-ink-muted: #a9b4d6;
+  --og-primary: #7fb0ff;
+  --og-primary-strong: #a9c9ff;
+  --og-primary-soft: #13245e;
+  --og-on-primary: #051c60;
+  --og-navy: #051c60;
+  --og-on-navy: #ffffff;
+  --og-gold: #feca6e;
+  --og-gold-deep: #d69637;
+  --og-gold-ink: #feca6e;
+  --og-on-gold: #051c60;
+  --og-ai-glow: #6ecff7;
+  --og-ai-soft: #0b2752;
+  --og-easy-purple: #41286c;
+  --og-success: #5fd4a4;
+  --og-success-soft: #0b3326;
+  --og-warning: #ffb27a;
+  --og-warning-soft: #3a2008;
+  --og-danger: #ff9a8f;
+  --og-danger-soft: #3d1210;
+  --og-focus: #6ecff7;
+  --og-link: var(--og-primary);
+  --og-shadow-sm: 0 1px 3px #000000b3;
+  --og-shadow-lg: 0 12px 28px -2px #000000cc;
+  --og-shadow-ai: 0 0 0 1px #6ecff766, 0 6px 22px -4px #6ecff74d;
+  --og-focus-ring: 0 0 0 2px #070f2e, 0 0 0 4px #6ecff7;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --og-surface: #070f2e;
+    --og-surface-raised: #0f1a44;
+    --og-surface-sunken: #040a22;
+    --og-paper: #f6f8fc;
+    --og-line: #26326a;
+    --og-line-strong: #6c7aae;
+    --og-ink: #eef2fb;
+    --og-ink-muted: #a9b4d6;
+    --og-primary: #7fb0ff;
+    --og-primary-strong: #a9c9ff;
+    --og-primary-soft: #13245e;
+    --og-on-primary: #051c60;
+    --og-navy: #051c60;
+    --og-on-navy: #ffffff;
+    --og-gold: #feca6e;
+    --og-gold-deep: #d69637;
+    --og-gold-ink: #feca6e;
+    --og-on-gold: #051c60;
+    --og-ai-glow: #6ecff7;
+    --og-ai-soft: #0b2752;
+    --og-easy-purple: #41286c;
+    --og-success: #5fd4a4;
+    --og-success-soft: #0b3326;
+    --og-warning: #ffb27a;
+    --og-warning-soft: #3a2008;
+    --og-danger: #ff9a8f;
+    --og-danger-soft: #3d1210;
+    --og-focus: #6ecff7;
+    --og-link: var(--og-primary);
+    --og-shadow-sm: 0 1px 3px #000000b3;
+    --og-shadow-lg: 0 12px 28px -2px #000000cc;
+    --og-shadow-ai: 0 0 0 1px #6ecff766, 0 6px 22px -4px #6ecff74d;
+    --og-focus-ring: 0 0 0 2px #070f2e, 0 0 0 4px #6ecff7;
+    color-scheme: dark;
+  }
+}
+.og-text-display { font-family: var(--og-font-sans); font-size: 48px; line-height: 52px; font-weight: 700; letter-spacing: -0.02em; }
+.og-text-title-1 { font-family: var(--og-font-sans); font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: -0.01em; }
+.og-text-title-2 { font-family: var(--og-font-sans); font-size: 24px; line-height: 32px; font-weight: 600; }
+.og-text-title-3 { font-family: var(--og-font-sans); font-size: 18px; line-height: 26px; font-weight: 600; }
+.og-text-body-lg { font-family: var(--og-font-sans); font-size: 18px; line-height: 28px; font-weight: 400; }
+.og-text-body { font-family: var(--og-font-sans); font-size: 16px; line-height: 24px; font-weight: 400; }
+.og-text-label { font-family: var(--og-font-sans); font-size: 15px; line-height: 20px; font-weight: 500; }
+.og-text-small { font-family: var(--og-font-sans); font-size: 14px; line-height: 20px; font-weight: 400; }
+.og-text-caption { font-family: var(--og-font-sans); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.02em; }
+.og-text-code { font-family: var(--og-font-mono); font-size: 14px; line-height: 20px; font-weight: 400; }

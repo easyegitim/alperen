@@ -1,0 +1,26 @@
+{
+  "fake_match": [
+    "arşivi: 2024",
+    "madde no: 5."
+  ],
+  "output": {
+    "schema_version": "1.0",
+    "source_id": "00000000-0000-4000-8000-00000000a5c1",
+    "item_no": 5,
+    "topic": "Yüzde ve indirim problemi",
+    "kind": "calc",
+    "points": 25,
+    "year": 2024,
+    "term": "final",
+    "instructor_alias": null,
+    "skill_id": "tyt.mat.problem.yuzde",
+    "ocr_text": "Bir mağazada ürünlerin etiket fiyatları tabloda verilmiştir: gömlek 150 TL, pantolon 240 TL. Gömlekte %20, pantolonda %25 indirim vardır. İndirimli fiyatların toplamı kaç TL'dir?",
+    "ocr_confidence": 0.95,
+    "format": "table",
+    "trick": "İndirim her ürünün kendi fiyatına uygulanır, toplam fiyata uygulanmaz",
+    "difficulty": 0.55,
+    "skill_ids": [
+      "tyt.mat.problem.yuzde"
+    ]
+  }
+}

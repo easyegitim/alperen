@@ -1,0 +1,456 @@
+{
+  "title": "TYT Matematik deneme (10 soru)",
+  "blueprint": {
+    "sections": [
+      {
+        "name": "Sayılar",
+        "count": 5
+      },
+      {
+        "name": "Problemler",
+        "count": 3
+      },
+      {
+        "name": "Cebir",
+        "count": 2
+      }
+    ],
+    "difficulty": {
+      "easy": 3,
+      "medium": 5,
+      "hard": 2
+    }
+  },
+  "items": [
+    {
+      "no": 1,
+      "section": "Sayılar",
+      "kind": "mcq",
+      "stem": "$\\frac{2}{3}+\\frac{1}{4}$ işleminin sonucu kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$\\frac{3}{7}$"
+        },
+        {
+          "key": "B",
+          "text": "$\\frac{11}{12}$"
+        },
+        {
+          "key": "C",
+          "text": "$\\frac{5}{12}$"
+        },
+        {
+          "key": "D",
+          "text": "$\\frac{1}{4}$"
+        },
+        {
+          "key": "E",
+          "text": "$1$"
+        }
+      ],
+      "figure_svg": null,
+      "figure": null,
+      "skill_ids": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "easy"
+    },
+    {
+      "no": 2,
+      "section": "Sayılar",
+      "kind": "mcq",
+      "stem": "$2^3\\cdot 2^2$ işleminin sonucu kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$10$"
+        },
+        {
+          "key": "B",
+          "text": "$64$"
+        },
+        {
+          "key": "C",
+          "text": "$16$"
+        },
+        {
+          "key": "D",
+          "text": "$32$"
+        },
+        {
+          "key": "E",
+          "text": "$12$"
+        }
+      ],
+      "figure_svg": null,
+      "figure": null,
+      "skill_ids": [
+        "tyt.mat.temel.uslu"
+      ],
+      "style_id": null,
+      "difficulty": "easy"
+    },
+    {
+      "no": 3,
+      "section": "Sayılar",
+      "kind": "mcq",
+      "stem": "$\\sqrt{12}+\\sqrt{27}$ ifadesinin eşiti aşağıdakilerden hangisidir?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$5\\sqrt{3}$"
+        },
+        {
+          "key": "B",
+          "text": "$\\sqrt{39}$"
+        },
+        {
+          "key": "C",
+          "text": "$6\\sqrt{3}$"
+        },
+        {
+          "key": "D",
+          "text": "$13$"
+        },
+        {
+          "key": "E",
+          "text": "$4\\sqrt{3}$"
+        }
+      ],
+      "figure_svg": null,
+      "figure": null,
+      "skill_ids": [
+        "tyt.mat.temel.koklu"
+      ],
+      "style_id": null,
+      "difficulty": "medium"
+    },
+    {
+      "no": 4,
+      "section": "Sayılar",
+      "kind": "mcq",
+      "stem": "$\\text{EKOK}(12,18)-\\text{EBOB}(12,18)$ farkı kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$24$"
+        },
+        {
+          "key": "B",
+          "text": "$18$"
+        },
+        {
+          "key": "C",
+          "text": "$42$"
+        },
+        {
+          "key": "D",
+          "text": "$36$"
+        },
+        {
+          "key": "E",
+          "text": "$30$"
+        }
+      ],
+      "figure_svg": null,
+      "figure": null,
+      "skill_ids": [
+        "tyt.mat.temel.ebob-ekok"
+      ],
+      "style_id": null,
+      "difficulty": "medium"
+    },
+    {
+      "no": 5,
+      "section": "Sayılar",
+      "kind": "mcq",
+      "stem": "Dört basamaklı $4a2b$ sayısı 9 ile kalansız bölünebildiğine göre $a+b$ toplamının alabileceği en büyük değer kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$3$"
+        },
+        {
+          "key": "B",
+          "text": "$9$"
+        },
+        {
+          "key": "C",
+          "text": "$12$"
+        },
+        {
+          "key": "D",
+          "text": "$15$"
+        },
+        {
+          "key": "E",
+          "text": "$18$"
+        }
+      ],
+      "figure_svg": null,
+      "figure": null,
+      "skill_ids": [
+        "tyt.mat.temel.bolunebilme"
+      ],
+      "style_id": null,
+      "difficulty": "hard"
+    },
+    {
+      "no": 6,
+      "section": "Problemler",
+      "kind": "mcq",
+      "stem": "Fiyatı 400 TL olan bir ürüne önce %20 zam, ardından yeni fiyat üzerinden %10 indirim yapılıyor. Ürünün son fiyatı kaç TL'dir?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$440$"
+        },
+        {
+          "key": "B",
+          "text": "$432$"
+        },
+        {
+          "key": "C",
+          "text": "$420$"
+        },
+        {
+          "key": "D",
+          "text": "$448$"
+        },
+        {
+          "key": "E",
+          "text": "$416$"
+        }
+      ],
+      "figure_svg": null,
+      "figure": null,
+      "skill_ids": [
+        "tyt.mat.problem.yuzde"
+      ],
+      "style_id": null,
+      "difficulty": "medium"
+    },
+    {
+      "no": 7,
+      "section": "Problemler",
+      "kind": "mcq",
+      "stem": "Bir annenin bugünkü yaşı kızının yaşının 4 katıdır. 5 yıl sonra annenin yaşı kızının yaşının 3 katı olacaktır. Kızın bugünkü yaşı kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$8$"
+        },
+        {
+          "key": "B",
+          "text": "$12$"
+        },
+        {
+          "key": "C",
+          "text": "$15$"
+        },
+        {
+          "key": "D",
+          "text": "$10$"
+        },
+        {
+          "key": "E",
+          "text": "$5$"
+        }
+      ],
+      "figure_svg": null,
+      "figure": null,
+      "skill_ids": [
+        "tyt.mat.problem.yas"
+      ],
+      "style_id": null,
+      "difficulty": "easy"
+    },
+    {
+      "no": 8,
+      "section": "Problemler",
+      "kind": "mcq",
+      "stem": "Grafikte bir kitapçının dört günde sattığı kitap sayıları verilmiştir. Buna göre bu dört günde günlük ortalama kaç kitap satılmıştır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$15$"
+        },
+        {
+          "key": "B",
+          "text": "$14$"
+        },
+        {
+          "key": "C",
+          "text": "$16$"
+        },
+        {
+          "key": "D",
+          "text": "$18$"
+        },
+        {
+          "key": "E",
+          "text": "$12$"
+        }
+      ],
+      "figure_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>",
+      "figure": {
+        "kind": "matplotlib",
+        "figure_code": "fig, ax = plt.subplots(figsize=(6.4, 3.6))\ndays = [\"Pazartesi\", \"Salı\", \"Çarşamba\", \"Perşembe\"]\nvalues = [12, 18, 9, 21]\nbars = ax.bar(days, values, color=ACCENT, width=0.6)\nax.bar_label(bars, padding=3, color=NAVY)\nax.set_ylabel(\"Satılan kitap sayısı\")\nax.set_ylim(0, 25)\nax.yaxis.grid(True)\nax.set_axisbelow(True)\nfor side in (\"top\", \"right\"):\n    ax.spines[side].set_visible(False)\nsave_figure(fig, 1)",
+        "alt": "Sütun grafiği: Pazartesi 12, Salı 18, Çarşamba 9, Perşembe 21 kitap."
+      },
+      "skill_ids": [
+        "tyt.mat.problem.sayi"
+      ],
+      "style_id": null,
+      "difficulty": "medium"
+    },
+    {
+      "no": 9,
+      "section": "Cebir",
+      "kind": "mcq",
+      "stem": "Şekildeki sayı doğrusunda $A$ noktası $-3$'e, $B$ noktası $5$'e karşılık gelmektedir. Buna göre $|AB|$ uzunluğu kaç birimdir?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$2$"
+        },
+        {
+          "key": "B",
+          "text": "$6$"
+        },
+        {
+          "key": "C",
+          "text": "$8$"
+        },
+        {
+          "key": "D",
+          "text": "$5$"
+        },
+        {
+          "key": "E",
+          "text": "$3$"
+        }
+      ],
+      "figure_svg": null,
+      "figure": {
+        "kind": "svg",
+        "figure_code": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"640\" height=\"120\" viewBox=\"0 0 640 120\" font-family=\"Lexend, DejaVu Sans\" font-size=\"16\" fill=\"#051c60\">\n<rect width=\"640\" height=\"120\" fill=\"#f6f8fc\"/>\n<line x1=\"40\" y1=\"70\" x2=\"600\" y2=\"70\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<polygon points=\"600,64 612,70 600,76\" fill=\"#051c60\"/>\n<polygon points=\"40,64 28,70 40,76\" fill=\"#051c60\"/>\n<line x1=\"80\" y1=\"63\" x2=\"80\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"80\" y=\"100\" text-anchor=\"middle\">−4</text>\n<line x1=\"128\" y1=\"63\" x2=\"128\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"128\" y=\"100\" text-anchor=\"middle\">−3</text>\n<line x1=\"176\" y1=\"63\" x2=\"176\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"176\" y=\"100\" text-anchor=\"middle\">−2</text>\n<line x1=\"224\" y1=\"63\" x2=\"224\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"224\" y=\"100\" text-anchor=\"middle\">−1</text>\n<line x1=\"272\" y1=\"63\" x2=\"272\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"272\" y=\"100\" text-anchor=\"middle\">0</text>\n<line x1=\"320\" y1=\"63\" x2=\"320\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"320\" y=\"100\" text-anchor=\"middle\">1</text>\n<line x1=\"368\" y1=\"63\" x2=\"368\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"368\" y=\"100\" text-anchor=\"middle\">2</text>\n<line x1=\"416\" y1=\"63\" x2=\"416\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"416\" y=\"100\" text-anchor=\"middle\">3</text>\n<line x1=\"464\" y1=\"63\" x2=\"464\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"464\" y=\"100\" text-anchor=\"middle\">4</text>\n<line x1=\"512\" y1=\"63\" x2=\"512\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"512\" y=\"100\" text-anchor=\"middle\">5</text>\n<line x1=\"560\" y1=\"63\" x2=\"560\" y2=\"77\" stroke=\"#051c60\" stroke-width=\"2\"/>\n<text x=\"560\" y=\"100\" text-anchor=\"middle\">6</text>\n<circle cx=\"128\" cy=\"70\" r=\"6\" fill=\"#0030a2\"/>\n<text x=\"128\" y=\"48\" text-anchor=\"middle\" fill=\"#0030a2\" font-weight=\"600\">A</text>\n<circle cx=\"512\" cy=\"70\" r=\"6\" fill=\"#0030a2\"/>\n<text x=\"512\" y=\"48\" text-anchor=\"middle\" fill=\"#0030a2\" font-weight=\"600\">B</text>\n</svg>",
+        "alt": "−4'ten 6'ya kadar işaretli sayı doğrusu; A noktası −3'te, B noktası 5'te."
+      },
+      "skill_ids": [
+        "tyt.mat.cebir.mutlak-deger"
+      ],
+      "style_id": null,
+      "difficulty": "medium"
+    },
+    {
+      "no": 10,
+      "section": "Cebir",
+      "kind": "mcq",
+      "stem": "$\\frac{x+1}{2}-\\frac{x-1}{3}=2$ denkleminin çözümü kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "$5$"
+        },
+        {
+          "key": "B",
+          "text": "$9$"
+        },
+        {
+          "key": "C",
+          "text": "$11$"
+        },
+        {
+          "key": "D",
+          "text": "$6$"
+        },
+        {
+          "key": "E",
+          "text": "$7$"
+        }
+      ],
+      "figure_svg": null,
+      "figure": null,
+      "skill_ids": [
+        "tyt.mat.cebir.denklem"
+      ],
+      "style_id": null,
+      "difficulty": "hard"
+    }
+  ],
+  "keys": [
+    {
+      "question_no": 1,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": "11/12",
+      "solution": "Payda 12'de eşitlenir: $\\frac{8}{12}+\\frac{3}{12}=\\frac{11}{12}$."
+    },
+    {
+      "question_no": 2,
+      "correct_option": "D",
+      "numeric_value": null,
+      "canonical_expr": "32",
+      "solution": "Tabanlar aynı, üsler toplanır: $2^{3+2}=2^5=32$."
+    },
+    {
+      "question_no": 3,
+      "correct_option": "A",
+      "numeric_value": null,
+      "canonical_expr": "5*sqrt(3)",
+      "solution": "$\\sqrt{12}=2\\sqrt{3}$, $\\sqrt{27}=3\\sqrt{3}$; toplam $5\\sqrt{3}$."
+    },
+    {
+      "question_no": 4,
+      "correct_option": "E",
+      "numeric_value": null,
+      "canonical_expr": "30",
+      "solution": "$\\text{EKOK}(12,18)=36$, $\\text{EBOB}(12,18)=6$; fark $30$."
+    },
+    {
+      "question_no": 5,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "12",
+      "solution": "Rakamlar toplamı $6+a+b$ 9'un katı olmalı; $a+b\\in\\{3,12\\}$ ($a+b\\le 18$). En büyük değer $12$."
+    },
+    {
+      "question_no": 6,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": "432",
+      "solution": "Zamlı fiyat $400\\cdot 1{,}2=480$; indirimli fiyat $480\\cdot 0{,}9=432$."
+    },
+    {
+      "question_no": 7,
+      "correct_option": "D",
+      "numeric_value": null,
+      "canonical_expr": "10",
+      "solution": "Kızın yaşı $k$: $4k+5=3(k+5)$, buradan $k=10$."
+    },
+    {
+      "question_no": 8,
+      "correct_option": "A",
+      "numeric_value": null,
+      "canonical_expr": "15",
+      "solution": "Toplam $12+18+9+21=60$; ortalama $60/4=15$."
+    },
+    {
+      "question_no": 9,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": "8",
+      "solution": "Uzaklık $|5-(-3)|=8$ birim."
+    },
+    {
+      "question_no": 10,
+      "correct_option": "E",
+      "numeric_value": null,
+      "canonical_expr": "7",
+      "solution": "Payda 6 ile çarp: $3(x+1)-2(x-1)=12$, $x+5=12$, $x=7$."
+    }
+  ]
+}

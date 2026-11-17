@@ -1,0 +1,22 @@
+{
+  "reply": "Paydaları farklı iki kesri toplarken önce ne yapmamız gerekiyor?",
+  "ends_with_question": true,
+  "hint_level": 1,
+  "confidence": 0.82,
+  "escalate": false,
+  "escalate_reason": null,
+  "detected_skill_ids": [
+    "tyt.mat.temel.rasyonel-sayilar"
+  ],
+  "detected_misconception_tag": "rasyonel.pay-payda-ayri-toplama",
+  "used_fact_ids": [
+    311
+  ],
+  "suggested_buttons": [
+    "hint",
+    "show_solution",
+    "skip",
+    "continue"
+  ],
+  "suggest_pool_save": true
+}

@@ -1,0 +1,189 @@
+{
+  "pilot_gate": {
+    "question_accuracy": {
+      "min": 0.9,
+      "n_min": 30
+    },
+    "diagnostic_agreement": {
+      "min": 0.6,
+      "n_min": 10
+    },
+    "citation_relevance": {
+      "min": 0.8,
+      "n_min": 10,
+      "required": false
+    },
+    "priority_uplift": {
+      "min": 0.0,
+      "required": false
+    },
+    "cost_per_student": {
+      "max_usd": 0.1
+    },
+    "flagged_response_share": {
+      "max": 0.05
+    },
+    "degraded_share": {
+      "max": 0.05
+    },
+    "isolation_tests": "pass",
+    "key_leak_tests": "pass"
+  },
+  "pilot_metrics": [
+    {
+      "metric": "question_accuracy",
+      "period": "2026-10-12",
+      "value": 0.7273,
+      "detail": {
+        "n": 11,
+        "approved": 8,
+        "rejected": 3,
+        "by_reason": {
+          "SymPy": 1,
+          "Çeldirici": 1,
+          "Şekil": 1
+        }
+      },
+      "computed_at": "2026-10-19T01:20:00Z"
+    },
+    {
+      "metric": "diagnostic_agreement",
+      "period": "2026-10-12",
+      "value": null,
+      "detail": {
+        "n": 1,
+        "numerator": 0,
+        "denominator": 1
+      },
+      "computed_at": "2026-10-19T01:20:00Z"
+    },
+    {
+      "metric": "citation_relevance",
+      "period": "2026-10-12",
+      "value": null,
+      "detail": {
+        "n_rated": 0,
+        "n_total": 3
+      },
+      "computed_at": "2026-10-19T01:20:00Z"
+    },
+    {
+      "metric": "priority_uplift",
+      "period": "2026-10-12",
+      "value": null,
+      "detail": {
+        "plan_ids": [
+          "d323913e-7e24-5ad9-8bc5-4a32cfa8485b"
+        ],
+        "n_students": 1,
+        "delta_in": null,
+        "delta_out": null
+      },
+      "computed_at": "2026-10-19T01:20:00Z"
+    },
+    {
+      "metric": "cost_per_student",
+      "period": "2026-10-12",
+      "value": 0.0213,
+      "detail": {
+        "month_usd": 0.064,
+        "active_students": 3,
+        "lesson_usd": 0.2535
+      },
+      "computed_at": "2026-10-19T01:20:00Z"
+    },
+    {
+      "metric": "flagged_response_share",
+      "period": "2026-10-12",
+      "value": 0.1333,
+      "detail": {
+        "n": 30,
+        "flagged": 4,
+        "by_reason": {
+          "kalite": 4
+        }
+      },
+      "computed_at": "2026-10-19T01:20:00Z"
+    },
+    {
+      "metric": "degraded_share",
+      "period": "2026-10-12",
+      "value": 0.1667,
+      "detail": {
+        "n": 30,
+        "degraded": 3,
+        "schema_invalid": 2,
+        "repaired": 0
+      },
+      "computed_at": "2026-10-19T01:20:00Z"
+    },
+    {
+      "metric": "distractor_unused_share",
+      "period": "2026-10-12",
+      "value": 0.35,
+      "detail": {
+        "n": 20,
+        "unused": 7
+      },
+      "computed_at": "2026-10-19T01:20:00Z"
+    }
+  ],
+  "expected": [
+    {
+      "metric": "question_accuracy",
+      "verdict": "NO_DATA",
+      "required": true,
+      "value": 0.7273
+    },
+    {
+      "metric": "diagnostic_agreement",
+      "verdict": "NO_DATA",
+      "required": true,
+      "value": null
+    },
+    {
+      "metric": "citation_relevance",
+      "verdict": "NO_DATA",
+      "required": false,
+      "value": null
+    },
+    {
+      "metric": "priority_uplift",
+      "verdict": "NO_DATA",
+      "required": false,
+      "value": null
+    },
+    {
+      "metric": "cost_per_student",
+      "verdict": "PASS",
+      "required": true,
+      "value": 0.0213
+    },
+    {
+      "metric": "flagged_response_share",
+      "verdict": "FAIL",
+      "required": true,
+      "value": 0.1333
+    },
+    {
+      "metric": "degraded_share",
+      "verdict": "FAIL",
+      "required": true,
+      "value": 0.1667
+    },
+    {
+      "metric": "isolation_tests",
+      "verdict": "NO_DATA",
+      "required": true,
+      "value": null
+    },
+    {
+      "metric": "key_leak_tests",
+      "verdict": "NO_DATA",
+      "required": true,
+      "value": null
+    }
+  ],
+  "gate": "KAPALI",
+  "computed_at": "2026-10-20T09:00:00Z"
+}

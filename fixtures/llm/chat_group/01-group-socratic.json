@@ -1,0 +1,14 @@
+{
+  "reply": "Mutlak değerin içi pozitif de olabilir negatif de.\n`x - 2 = 5` dışında hangi denklemi kurarsın?",
+  "ends_with_question": true,
+  "hint_level": 0,
+  "confidence": 0.85,
+  "escalate": false,
+  "escalate_reason": null,
+  "detected_skill_ids": [
+    "tyt.mat.cebir.mutlak-deger"
+  ],
+  "detected_misconception_tag": "mutlak.tek-durum",
+  "used_fact_ids": [],
+  "suggest_pool_save": false
+}

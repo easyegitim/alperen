@@ -1,0 +1,16 @@
+{
+  "booklet_type": "A",
+  "answers": [
+    {
+      "question_no": 1,
+      "status": "marked",
+      "marked_option": "C",
+      "marks_seen": [
+        "C"
+      ],
+      "note": null,
+      "confidence": 1.5
+    }
+  ],
+  "unreadable": false
+}

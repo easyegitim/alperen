@@ -1,0 +1,838 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/document-block-regen.json",
+  "title": "DocumentBlockRegen",
+  "description": "Not yeniden üretimi: yalnız doğrulamadan geçemeyen bloklar ve bunların anahtarları (öteki bloklar korunur).",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "blocks": {
+      "minItems": 1,
+      "maxItems": 600,
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "heading"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "level": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "level",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "paragraph"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 3000,
+                "description": "Satır içi matematik $...$ ile"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "math_display"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "latex": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "latex"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "definition_box"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "term": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "body": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1500
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "term",
+              "body"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "summary_box"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "bullets": {
+                "minItems": 1,
+                "maxItems": 12,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 400
+                }
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "title",
+              "bullets"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "worked_example"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "problem": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1500
+              },
+              "steps": {
+                "minItems": 1,
+                "maxItems": 15,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 600
+                }
+              },
+              "answer": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "title",
+              "problem",
+              "steps",
+              "answer"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "common_mistake_callout"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "pattern_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "description": "Gerçek bir örüntüye başvuru: yanılgı etiketi ya da patterns.md girdisi"
+              },
+              "pattern_ref": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "patterns.md",
+                          "misconception",
+                          "analysis"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120,
+                        "description": "pattern_id ile aynı: patterns.md örüntü kimliği, yanılgı etiketi ya da analiz kimliği"
+                      },
+                      "date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Örüntünün gözlendiği (son) gün"
+                      }
+                    },
+                    "required": [
+                      "source",
+                      "id",
+                      "date"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Kişisel kutunun kaynağı; kişiselleştirilmiş notta zorunlu, genel uyarıda null"
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 800
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "pattern_id",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "check_yourself"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "question": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 800
+              },
+              "answer_hidden": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 800
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "question",
+              "answer_hidden"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "figure"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "svg",
+                  "upload"
+                ]
+              },
+              "svg": {
+                "type": "string",
+                "maxLength": 60000,
+                "description": "source=svg ise satır içi SVG; figure_code verilen figürde boş kalır (worker üretir)"
+              },
+              "upload_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "source=upload ise uploads.id"
+              },
+              "figure_code": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 20000,
+                "description": "Kodla figür: kind=matplotlib ise figure_<n>.svg yazan Python (yalnız matplotlib/numpy; math serbest), kind=svg ise SVG metni. source=svg, svg boş"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "matplotlib",
+                  "svg"
+                ],
+                "description": "figure_code dili; figure_code yoksa verilmez"
+              },
+              "alt": {
+                "type": "string",
+                "minLength": 5,
+                "maxLength": 400,
+                "description": "Şekli kelimelerle anlatır"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "source",
+              "alt"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "table"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "caption": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "header": {
+                "maxItems": 12,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              },
+              "rows": {
+                "minItems": 1,
+                "maxItems": 60,
+                "type": "array",
+                "items": {
+                  "maxItems": 12,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                }
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "header",
+              "rows"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "question"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "no": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500
+              },
+              "stem": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2500
+              },
+              "options": {
+                "maxItems": 5,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "enum": [
+                        "A",
+                        "B",
+                        "C",
+                        "D",
+                        "E"
+                      ]
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 600
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "text"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "figure": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "svg",
+                      "upload"
+                    ]
+                  },
+                  "svg": {
+                    "type": "string",
+                    "maxLength": 60000,
+                    "description": "source=svg ise satır içi SVG; figure_code verilen figürde boş kalır (worker üretir)"
+                  },
+                  "upload_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "source=upload ise uploads.id"
+                  },
+                  "figure_code": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 20000,
+                    "description": "Kodla figür: kind=matplotlib ise figure_<n>.svg yazan Python (yalnız matplotlib/numpy; math serbest), kind=svg ise SVG metni. source=svg, svg boş"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "matplotlib",
+                      "svg"
+                    ],
+                    "description": "figure_code dili; figure_code yoksa verilmez"
+                  },
+                  "alt": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 400,
+                    "description": "Şekli kelimelerle anlatır"
+                  }
+                },
+                "required": [
+                  "source",
+                  "alt"
+                ],
+                "additionalProperties": false
+              },
+              "skill_ids": {
+                "maxItems": 3,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*$"
+                }
+              },
+              "style_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "question_styles.id"
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "no",
+              "stem",
+              "options",
+              "skill_ids"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "answer_sheet"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "question_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500
+              },
+              "options_per_question": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 5
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "title",
+              "question_count",
+              "options_per_question"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "answer_key_page"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 120
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "title"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "page_break"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "chart"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "Belge içinde tekil blok kimliği"
+              },
+              "section_no": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "chart_kind": {
+                "type": "string",
+                "enum": [
+                  "score_by_section",
+                  "skill_heatmap",
+                  "mastery_trend",
+                  "time_per_question",
+                  "error_cause_histogram",
+                  "style_coverage"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "data_ref": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "description": "Render anında deterministik doldurulan veri kaynağı adı"
+              },
+              "caption": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "section_no",
+              "chart_kind",
+              "title",
+              "data_ref"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "keys": {
+      "maxItems": 500,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "correct_option": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "MCQ ise doğru şık, değilse null"
+          },
+          "numeric_value": {
+            "description": "Sayısal soru ise ondalık değer (secure.exam_answer_keys.numeric_value numeric); grade_exam_session 1e-6 toleransla karşılaştırır. Değilse null",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "canonical_expr": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kesin SymPy biçimi: sympy.sympify edilebilir ifade ('7/8', '2*sqrt(3)') ya da null"
+          }
+        },
+        "required": [
+          "question_no",
+          "correct_option",
+          "numeric_value",
+          "canonical_expr"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "blocks",
+    "keys"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,91 @@
+# Gerçek Claude denemesi — YALNIZ elle tetiklenir (Actions › live-claude › Run workflow).
+# Gizli anahtar: depo Settings › Secrets and variables › Actions › ANTHROPIC_API_KEY.
+# Anahtar yalnız bu iş akışının adım ortamında bulunur; fork PR'lardan ve push'tan tetiklenmez.
+# Çıktı: iş özetinde tablo (model, token, önbellek okuma, maliyet). Bütçe aşılırsa kalan adımlar atlanır.
+name: live-claude
+
+"on":
+  workflow_dispatch:
+    inputs:
+      budget_usd:
+        description: "En çok harcanacak tutar ($)"
+        required: false
+        default: "1.50"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-claude
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: "1"
+  CI: "true"
+
+jobs:
+  live:
+    name: gerçek Claude (packages/llm)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      OGRENMEN_DATABASE_URL: >-
+        postgresql://postgres:postgres@localhost:5432/postgres
+      OGRENMEN_LIVE: "1"
+      OGRENMEN_LIVE_BUDGET_USD: ${{ inputs.budget_usd }}
+    steps:
+      # actions/checkout v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      # actions/setup-node v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+
+      # oven-sh/setup-bun v2.2.0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.4.2
+
+      - name: Sistem araçları (psql)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Bun bağımlılıkları (kilit dosyasına göre)
+        run: bun install --frozen-lockfile
+
+      - name: Anahtar tanımlı mı? (değer yazdırılmaz)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "${ANTHROPIC_API_KEY}" ]; then
+            echo "::error::ANTHROPIC_API_KEY gizli anahtarı tanımlı değil (Settings › Secrets and variables › Actions)."
+            exit 1
+          fi
+          echo "::add-mask::${ANTHROPIC_API_KEY}"
+          echo "Anahtar var (${#ANTHROPIC_API_KEY} karakter)."
+
+      - name: packages/llm check.sh (canlı Haiku önbellek testi dahil)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bash packages/llm/check.sh
+
+      - name: Gerçek Claude duman testi (Haiku + Sonnet + Opus)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bun run --cwd packages/llm smoke:live

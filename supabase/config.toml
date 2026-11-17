@@ -1,0 +1,36 @@
+# supabase/config.toml — Supabase CLI yapılandırması (v2). PostgREST'e YALNIZ public şeması açılır;
+# secure ve audit açılmaz (barındırılan projede Dashboard → API → Exposed schemas yalnız "public").
+project_id = "ogrenmen"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[db.seed]
+enabled = true
+# Yalnız temel seed; müfredat seed'i çalışma anında export-sql.py --schema v2 ile üretilir. 00_people.sql yalnız yerel
+# deneme kullanıcılarıdır (Supabase auth.users'ta kendini atlar).
+sql_paths = ["./seed/00_people.sql", "./seed/01_settings.sql", "./seed/02_runtime_flags.sql"]
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+
+[storage]
+enabled = true
+file_size_limit = "5GiB"
+
+[studio]
+enabled = false

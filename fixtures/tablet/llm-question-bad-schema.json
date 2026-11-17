@@ -1,0 +1,38 @@
+{
+  "item": {
+    "schema_version": "1.0",
+    "curriculum_code": "TYT-MAT",
+    "kind": "mcq",
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar"
+    ],
+    "stem": "`1/2 + 1/4` kaçtır?",
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`3/4`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`2/6`",
+        "misconception_tag": "rasyonel.pay-payda-ayri-toplama"
+      },
+      {
+        "key": "C",
+        "text": "`2/4`",
+        "misconception_tag": "rasyonel.payda-esitlemeden-toplama"
+      }
+    ],
+    "correct_option": "A",
+    "source": "llm",
+    "verification": {
+      "schema": false
+    }
+  },
+  "key": {
+    "correct_option": "A",
+    "sympy_status": "maybe"
+  }
+}

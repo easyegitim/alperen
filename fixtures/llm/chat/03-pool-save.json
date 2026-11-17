@@ -1,0 +1,14 @@
+{
+  "reply": "Kesirleri toplarken önce paydaları eşitleriz, sonra yalnız payları toplarız.\n`1/2 + 1/3` için ortak payda kaç olur?",
+  "ends_with_question": true,
+  "hint_level": 0,
+  "confidence": 0.92,
+  "escalate": false,
+  "escalate_reason": null,
+  "detected_skill_ids": [
+    "tyt.mat.temel.rasyonel-sayilar"
+  ],
+  "detected_misconception_tag": null,
+  "used_fact_ids": [],
+  "suggest_pool_save": true
+}

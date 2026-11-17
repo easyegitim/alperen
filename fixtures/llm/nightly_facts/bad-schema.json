@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "day": "18 Ekim",
+  "student_ref": "Elif Kaya",
+  "facts": [
+    {
+      "kind": "promise",
+      "text": "Elif söz verdi",
+      "source_message_ids": []
+    }
+  ]
+}

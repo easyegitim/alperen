@@ -1,0 +1,20 @@
+{
+  "segments": [
+    {
+      "t": "00:00:04",
+      "t_end": "00:00:09",
+      "speaker": "EĞİTMEN",
+      "text": "Bugün kesirlerde toplama ile başlıyoruz."
+    },
+    {
+      "t": "00:00:10",
+      "speaker": "ÖĞRENCİ",
+      "text": "Geçen hafta paydaları eşitlemekte zorlandım."
+    },
+    {
+      "t": "00:00:15",
+      "speaker": "EĞİTMEN",
+      "text": "O zaman EKOK ile başlayalım."
+    }
+  ]
+}

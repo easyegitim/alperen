@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/common.json",
+  "title": "Common",
+  "description": "Ortak tanımlar: kimlikler, zaman, olasılık, konuşmacı, kanıt ve sağlayıcı denemesi. Diğer şemalar $ref ile kullanır.",
+  "x-version": "1.0",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "studentRef": {
+      "type": "string",
+      "pattern": "^s_[a-z2-7]{12}$",
+      "description": "students.public_ref; ad ve uuid asla"
+    },
+    "skillId": {
+      "type": "string",
+      "pattern": "^[a-z]+(\\.[a-z0-9-]+)+$",
+      "examples": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ]
+    },
+    "tag": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$",
+      "examples": [
+        "rasyonel.pay-payda-ayri-toplama"
+      ]
+    },
+    "probability": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "usd": {
+      "type": "number",
+      "minimum": 0
+    },
+    "speaker": {
+      "enum": [
+        "ÖĞRENCİ",
+        "EĞİTMEN"
+      ]
+    },
+    "ts": {
+      "type": "string",
+      "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+      "description": "HH:MM:SS"
+    },
+    "optionKey": {
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    "timedQuote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "speaker",
+        "quote",
+        "t"
+      ],
+      "properties": {
+        "speaker": {
+          "$ref": "#/$defs/speaker"
+        },
+        "quote": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 300,
+          "description": "Alıntı; ad içermez"
+        },
+        "t": {
+          "$ref": "#/$defs/ts"
+        },
+        "t_end": {
+          "$ref": "#/$defs/ts"
+        }
+      }
+    },
+    "evidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "source",
+        "quote"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "lesson",
+            "quiz",
+            "chat",
+            "instructor"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 3
+        },
+        "quote": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "href": {
+          "type": "string"
+        },
+        "observation_id": {
+          "type": "integer"
+        }
+      }
+    },
+    "providerAttempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "model",
+        "status"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "error",
+            "rate_limited",
+            "timeout",
+            "cap_blocked",
+            "cooldown_skip",
+            "bad_output"
+          ]
+        },
+        "tokens_in": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tokens_out": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cost_usd": {
+          "$ref": "#/$defs/usd"
+        },
+        "latency_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

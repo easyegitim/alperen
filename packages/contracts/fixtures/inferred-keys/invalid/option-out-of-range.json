@@ -1,0 +1,14 @@
+{
+  "keys": [
+    {
+      "question_no": 1,
+      "correct_option": "G",
+      "numeric_value": null,
+      "canonical_expr": null,
+      "solution_summary": "Denklem çözülünce x = 6 bulunur, B şıkkı.",
+      "confidence": 0.95,
+      "checked_with_code": true
+    }
+  ],
+  "notes": null
+}

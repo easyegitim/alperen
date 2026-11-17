@@ -1,0 +1,28 @@
+{
+  "kind": "report",
+  "title": "Haftalık rapor",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": "Bu hafta",
+    "generated_on": "2026-11-08",
+    "language": "tr",
+    "personalized": true,
+    "duration_min": null
+  },
+  "sections": [
+    { "no": 1, "title": "Genel görünüm" },
+    { "no": 2, "title": "Ayrıntı" },
+    { "no": 3, "title": "Bu hafta yapılabilecekler" }
+  ],
+  "blocks": [
+    { "type": "heading", "id": "h1", "section_no": 1, "level": 1, "text": "Genel görünüm" },
+    { "type": "paragraph", "id": "p1", "section_no": 1, "text": "Bu hafta düzenli çalıştı ve en çok rasyonel sayılara odaklandı." },
+    { "type": "chart", "id": "c1", "section_no": 1, "chart_kind": "time_per_question", "title": "Günlere göre çalışma süresi", "data_ref": "daily_time", "caption": "Süreler tahminidir." },
+    { "type": "heading", "id": "h2", "section_no": 2, "level": 1, "text": "Ayrıntı" },
+    { "type": "paragraph", "id": "p2", "section_no": 2, "text": "Kazanımlardaki bantlar aşağıda; az veri olan kazanımlar henüz değerlendirilmedi." },
+    { "type": "chart", "id": "c2", "section_no": 2, "chart_kind": "style_coverage", "title": "Kazanımlara göre bant", "data_ref": "skill_bands" },
+    { "type": "heading", "id": "h3", "section_no": 3, "level": 1, "text": "Bu hafta yapılabilecekler" },
+    { "type": "summary_box", "id": "s1", "section_no": 3, "title": "Küçük adımlar", "bullets": ["Ona bu hafta en çok hangi konuyu kolay bulduğunu sorabilirsiniz.", "Rasyonel sayılardan bir soruyu size anlatmasını isteyebilirsiniz."] }
+  ],
+  "keys": []
+}

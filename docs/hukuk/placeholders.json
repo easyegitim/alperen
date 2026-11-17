@@ -1,0 +1,98 @@
+{
+  "RETENTION_MESSAGES_DAYS": {
+    "policy_id": "messages.hard_delete",
+    "days_source": "tg_chats.retention_days",
+    "expected_days": 90,
+    "description": "Grup ve özel sohbet mesajlarının (text_raw, text_llm) saklama süresi. retention_policies satırının days değeri 0'dır çünkü eşik messages.expires_at sütunundadır; gün sayısı public.tg_chats.retention_days varsayılanından (0007 migration) gelir. Grup bildirimi, aydınlatma metni ve çocuk dili özeti bu değeri yazar. Çözümleyici bu girdide days_source alanına uymalıdır: policy_id satırındaki days (0) kullanılırsa metin '0 gün sonra silinir' der; bu yüzden bu yer tutucu için çözülen değer 0 ise çözüm hatadır ve yükleme çıkış 1 ile durmalıdır (M03 export-sql.py; M13 docs-consistency bu değerin 90 olduğunu denetler)."
+  },
+  "RETENTION_PROMPT_DAYS": {
+    "policy_id": "bot_responses.prompt_null",
+    "days_source": "retention_policies.days",
+    "expected_days": 30,
+    "description": "bot_responses.prompt_text (temizlenmiş tam prompt) bu süre sonunda boşaltılır; hash ve bağlam kimlikleri kalır."
+  },
+  "RETENTION_FACTS_DAYS": {
+    "policy_id": "memory_facts.stale",
+    "days_source": "retention_policies.days",
+    "expected_days": 180,
+    "description": "Süresiz (valid_until boş) aktif hafıza olgusu created_at tarihinden bu kadar gün sonra expired sayılır."
+  },
+  "RETENTION_VIDEO_DAYS": {
+    "policy_id": "lessons.video",
+    "days_source": "retention_policies.days",
+    "expected_days": 30,
+    "description": "Ham ders ses/videosu held_at tarihinden bu kadar gün sonra kurucu makinesinden silinir; öğrenciye ve veliye bildirilir."
+  },
+  "RETENTION_TRANSCRIPT_DAYS": {
+    "policy_id": "lessons.transcript",
+    "days_source": "retention_policies.days",
+    "expected_days": 730,
+    "description": "İsimsiz, etiketli ders transkripti dönem kaydı kapandıktan (enrollments.ended_at) bu kadar gün sonra Storage'dan silinir."
+  },
+  "RETENTION_LEARNING_DAYS": {
+    "policy_id": "enrollments.learning_data",
+    "days_source": "retention_policies.days",
+    "expected_days": 730,
+    "description": "Kapalı dönem kaydında kanıt alıntıları (observations.quote) ve seçimler (attempts.chosen) bu kadar gün sonra anonimleştirilir; ustalık sayıları rastgele kimlikle kalır."
+  },
+  "RETENTION_BOT_RESPONSES_DAYS": {
+    "policy_id": "bot_responses.hard_delete",
+    "days_source": "retention_policies.days",
+    "expected_days": 180,
+    "description": "İşaretlenmemiş bot cevabı satırları bu kadar gün sonra silinir."
+  },
+  "RETENTION_AUDIT_DAYS": {
+    "policy_id": "audit.events.purge",
+    "days_source": "retention_policies.days",
+    "expected_days": 730,
+    "description": "Denetim izi (audit.events) satırları bu kadar gün sonra silinir."
+  },
+  "RETENTION_FLAGGED_DAYS": {
+    "policy_id": "bot_responses.flagged_delete",
+    "days_source": "retention_policies.days",
+    "expected_days": 365,
+    "description": "Eğitmenin işaretlediği bot cevapları, kalite incelemesi için, işaretsiz cevaplardan daha uzun saklanır ve bu kadar gün sonra silinir."
+  },
+  "RETENTION_LLM_CALLS_DAYS": {
+    "policy_id": "llm_calls.hard_delete",
+    "days_source": "retention_policies.days",
+    "expected_days": 180,
+    "description": "Sağlayıcı çağrı kayıtları (llm_calls; yalnız rastgele öğrenci kimliği taşır) bu kadar gün sonra silinir; spend_ledger toplamları kalır."
+  },
+  "RETENTION_ANONYMIZE_DAYS": {
+    "policy_id": "students.anonymize",
+    "days_source": "retention_policies.days",
+    "expected_days": 30,
+    "description": "Silme talebinden (students.deleted_at) bu kadar gün sonra kimlik verileri silinir ve kayıtlar anonimleştirilir."
+  },
+  "RETENTION_CLOSED_CLEANUP_DAYS": {
+    "policy_id": "enrollments.closed_cleanup",
+    "days_source": "retention_policies.days",
+    "expected_days": 365,
+    "description": "Kapalı dönem kaydından bu kadar gün sonra öğrencinin hafıza olguları silinir; ustalık ve gözlemler kalır."
+  },
+  "RETENTION_FACTS_EXPIRED_DAYS": {
+    "policy_id": "memory_facts.hard_delete",
+    "days_source": "retention_policies.days",
+    "expected_days": 180,
+    "description": "Süresi dolmuş (expired) hafıza olguları created_at tarihinden bu kadar gün sonra kalıcı olarak silinir."
+  },
+  "RETENTION_TG_UPDATES_DAYS": {
+    "policy_id": "tg_updates.purge",
+    "days_source": "retention_policies.days",
+    "expected_days": 2,
+    "description": "Telegram güncelleme kimliklerinin tekrar kontrolü tablosu (yalnız update_id ve alınma zamanı) bu kadar gün sonra temizlenir."
+  },
+  "RETENTION_CITATIONS_UNRESOLVED_DAYS": {
+    "policy_id": "citations.unresolved",
+    "days_source": "retention_policies.days",
+    "expected_days": 7,
+    "description": "Crossref'te çözülemeyen atıf satırları bu kadar gün sonra silinir."
+  },
+  "RETENTION_QUOTA_USAGE_DAYS": {
+    "policy_id": "quota_usage.purge",
+    "days_source": "retention_policies.days",
+    "expected_days": 60,
+    "description": "Günlük kota sayaçları bu kadar gün sonra silinir."
+  }
+}

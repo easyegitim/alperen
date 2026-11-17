@@ -1,0 +1,20 @@
+{
+  "emoji-in-instructor-text.json": [
+    "pattern"
+  ],
+  "emoji-in-student-text.json": [
+    "pattern"
+  ],
+  "empty-catalog.json": [
+    "minItems"
+  ],
+  "exclamation-in-student-text.json": [
+    "pattern"
+  ],
+  "missing-prereq-key.json": [
+    "required"
+  ],
+  "null-skill-non-general.json": [
+    "pattern"
+  ]
+}

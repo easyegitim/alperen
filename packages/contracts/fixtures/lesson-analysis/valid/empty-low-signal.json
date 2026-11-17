@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "lesson_ref": "5b6c7d8e-9f0a-4b1c-8d2e-3f4a5b6c7d85",
+  "student_ref": "s_p2r4t6v7w3cd",
+  "skills": [],
+  "questions": [],
+  "hesitations": [],
+  "misconceptions": [],
+  "commitments": [],
+  "talk": {
+    "student_ratio": 0.12,
+    "student_questions": 0,
+    "attention": "low",
+    "morale": "unknown"
+  },
+  "previous_profile_check": [],
+  "next_step": {
+    "for_student": "Bir sonraki derste konuyu birlikte baştan alalım.",
+    "for_instructor": "Ses kalitesi düşük; kazanım iddiası çıkarılmadı."
+  },
+  "model_notes": {
+    "model": "gemini-2.5-pro",
+    "prompt_version": "ders-1.0",
+    "cost_usd": 0.18,
+    "tokens_in": 90211,
+    "tokens_out": 640
+  }
+}

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ogrenmen-content-tyt-matematik"
+version = "0.1.0"
+description = "Öğrenmen TYT Matematik içeriği: kazanım ağacı, yanılgı etiketleri, teşhis testi, parametrik şablonlar ve seed betikleri (M03)"
+requires-python = ">=3.11"
+# ogrenmen_contracts yerel yol bağımlılığıdır: pip install -e packages/contracts/python
+dependencies = [
+  "sympy==1.14.0",
+  "matplotlib==3.11.2",
+  "numpy==2.5.3",
+  "pglast==8.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.2.0", "ruff>=0.8,<1"]
+
+[tool.setuptools]
+# Kurulacak paket yok: betikler dosya yolundan çalışır, şablonlar module_path ile yüklenir.
+packages = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: OGRENMEN_DATABASE_URL tanımlıysa canlı Postgres'e karşı koşar"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E402"]

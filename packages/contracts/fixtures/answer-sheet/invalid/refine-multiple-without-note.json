@@ -1,0 +1,15 @@
+{
+  "booklet_type": "A",
+  "answers": [
+    {
+      "question_no": 3,
+      "status": "multiple",
+      "marked_option": null,
+      "marks_seen": [
+        "B",
+        "D"
+      ],
+      "note": null
+    }
+  ]
+}

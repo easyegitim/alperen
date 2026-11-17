@@ -1,0 +1,226 @@
+{
+  "items": [
+    {
+      "no": 1,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    },
+    {
+      "no": 2,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    },
+    {
+      "no": 3,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    },
+    {
+      "no": 4,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    },
+    {
+      "no": 5,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    },
+    {
+      "no": 6,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    },
+    {
+      "no": 7,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    },
+    {
+      "no": 8,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    },
+    {
+      "no": 9,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    },
+    {
+      "no": 10,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    },
+    {
+      "no": 11,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    }
+  ],
+  "keys": [
+    {
+      "question_no": 1,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    },
+    {
+      "question_no": 2,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    },
+    {
+      "question_no": 3,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    },
+    {
+      "question_no": 4,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    },
+    {
+      "question_no": 5,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    },
+    {
+      "question_no": 6,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    },
+    {
+      "question_no": 7,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    },
+    {
+      "question_no": 8,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    },
+    {
+      "question_no": 9,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    },
+    {
+      "question_no": 10,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    },
+    {
+      "question_no": 11,
+      "correct_option": null,
+      "numeric_value": 6,
+      "canonical_expr": "Eq(x/2+x/3,5)",
+      "solution": "3x/6 + 2x/6 = 5 ise 5x/6 = 5 ve x = 6."
+    }
+  ]
+}

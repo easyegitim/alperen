@@ -1,0 +1,121 @@
+{
+  "kind": "mock_exam",
+  "title": "TYT Matematik Deneme 1",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": "Öğrenmen sana göre hazırladı",
+    "generated_on": "2026-11-02",
+    "language": "tr",
+    "personalized": true,
+    "duration_min": 40
+  },
+  "sections": [
+    {
+      "no": 1,
+      "title": "Temel Matematik"
+    },
+    {
+      "no": 2,
+      "title": "Optik form"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "id": "b1",
+      "section_no": 1,
+      "level": 1,
+      "text": "Temel Matematik"
+    },
+    {
+      "type": "paragraph",
+      "id": "b2",
+      "section_no": 1,
+      "text": "Aşağıdaki soruları süre tutarak çöz. Kesirli ifadelerde $\\frac{a}{b}$ gösterimi kullanılır."
+    },
+    {
+      "type": "figure",
+      "id": "b3",
+      "section_no": 1,
+      "source": "svg",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"10\" y=\"10\" width=\"80\" height=\"80\" fill=\"none\" stroke=\"#051c60\"/></svg>",
+      "alt": "Kenarı 4 birim olan bir kare çizimi"
+    },
+    {
+      "type": "question",
+      "id": "q1",
+      "section_no": 1,
+      "no": 1,
+      "stem": "Kenarı 4 cm olan karenin çevresi kaç cm'dir?",
+      "options": [
+        {
+          "key": "A",
+          "text": "8"
+        },
+        {
+          "key": "B",
+          "text": "12"
+        },
+        {
+          "key": "C",
+          "text": "16"
+        },
+        {
+          "key": "D",
+          "text": "20"
+        },
+        {
+          "key": "E",
+          "text": "24"
+        }
+      ],
+      "skill_ids": [
+        "tyt.mat.geometri.kare"
+      ]
+    },
+    {
+      "type": "question",
+      "id": "q2",
+      "section_no": 1,
+      "no": 2,
+      "stem": "$\\frac{1}{2}+\\frac{1}{3}$ işleminin sonucu kaçtır? (Kesir olarak yaz.)",
+      "options": [],
+      "skill_ids": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ]
+    },
+    {
+      "type": "page_break",
+      "id": "b6",
+      "section_no": 1
+    },
+    {
+      "type": "answer_sheet",
+      "id": "b7",
+      "section_no": 2,
+      "title": "Optik form",
+      "question_count": 2,
+      "options_per_question": 5
+    },
+    {
+      "type": "answer_key_page",
+      "id": "b8",
+      "section_no": 2,
+      "title": "Cevap anahtarı"
+    }
+  ],
+  "keys": [
+    {
+      "question_no": 1,
+      "correct_option": "C",
+      "numeric_value": null,
+      "canonical_expr": null
+    },
+    {
+      "question_no": 2,
+      "correct_option": null,
+      "numeric_value": 0.8333333333,
+      "canonical_expr": "Rational(1,2)+Rational(1,3)"
+    }
+  ]
+}

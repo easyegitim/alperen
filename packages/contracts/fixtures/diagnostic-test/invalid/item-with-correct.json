@@ -1,0 +1,670 @@
+[
+  {
+    "code": "DIAG-2026.1-01",
+    "skill_ids": [
+      "tyt.mat.temel.sayilar"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`3 * 6 - 3` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`15`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`9`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`21`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`18`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-02",
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`4 * 7 - 4` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`24`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`12`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`32`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`28`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-03",
+    "skill_ids": [
+      "tyt.mat.temel.uslu"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`5 * 8 - 5` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`35`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`15`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`45`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`40`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-04",
+    "skill_ids": [
+      "tyt.mat.cebir.denklem"
+    ],
+    "difficulty": 0.3,
+    "kind": "mcq",
+    "stem": "`6 * 9 - 6` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`48`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`18`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`60`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`54`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-05",
+    "skill_ids": [
+      "tyt.mat.temel.bolunebilme"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`7 * 10 - 7` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`63`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`21`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`77`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`70`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-06",
+    "skill_ids": [
+      "tyt.mat.temel.sayilar"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`8 * 11 - 8` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`80`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`24`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`96`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`88`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-07",
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`3/4 + 1/8` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`4/12`",
+        "misconception_tag": "rasyonel.pay-payda-ayri-toplama"
+      },
+      {
+        "key": "B",
+        "text": "`7/8`",
+        "misconception_tag": null
+      },
+      {
+        "key": "C",
+        "text": "`4/8`",
+        "misconception_tag": "rasyonel.payda-esitlemeden-toplama"
+      },
+      {
+        "key": "D",
+        "text": "`3/32`",
+        "misconception_tag": null
+      }
+    ],
+    "correct": "B"
+  },
+  {
+    "code": "DIAG-2026.1-08",
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar"
+    ],
+    "difficulty": 0.3,
+    "kind": "mcq",
+    "stem": "`10 * 13 - 10` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`120`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`30`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`140`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`130`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-09",
+    "skill_ids": [
+      "tyt.mat.temel.ondalik"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`11 * 14 - 11` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`143`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`33`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`165`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`154`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-10",
+    "skill_ids": [
+      "tyt.mat.temel.uslu"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`12 * 15 - 12` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`168`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`36`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`192`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`180`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-11",
+    "skill_ids": [
+      "tyt.mat.temel.koklu"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`13 * 16 - 13` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`195`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`39`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`221`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`208`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-12",
+    "skill_ids": [
+      "tyt.mat.cebir.denklem"
+    ],
+    "difficulty": 0.3,
+    "kind": "mcq",
+    "stem": "`14 * 17 - 14` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`224`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`42`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`252`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`238`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-13",
+    "skill_ids": [
+      "tyt.mat.temel.carpanlara-ayirma"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`15 * 18 - 15` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`255`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`45`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`285`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`270`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-14",
+    "skill_ids": [
+      "tyt.mat.cebir.esitsizlik"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "Sayı doğrusunda gösterilen çözüm kümesi aşağıdaki eşitsizliklerden hangisine aittir?",
+    "stem_values": {
+      "a": 3
+    },
+    "figure": {
+      "tool": "matplotlib",
+      "png_path": "figures/sayi-dogrusu-01.png",
+      "source_path": "figures/sayi-dogrusu-01.py",
+      "alt_text": "Sayı doğrusu: 3 noktasında dolu daire, sağa doğru taralı ok."
+    },
+    "options": [
+      {
+        "key": "A",
+        "text": "`288`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`48`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`320`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`304`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-15",
+    "skill_ids": [
+      "tyt.mat.cebir.mutlak-deger"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`17 * 20 - 17` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`323`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`51`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`357`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`340`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-16",
+    "skill_ids": [
+      "tyt.mat.cebir.oran-oranti"
+    ],
+    "difficulty": 0.3,
+    "kind": "mcq",
+    "stem": "`18 * 21 - 18` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`360`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`54`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`396`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`378`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-17",
+    "skill_ids": [
+      "tyt.mat.problem.sayi"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`19 * 22 - 19` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`399`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`57`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`437`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`418`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-18",
+    "skill_ids": [
+      "tyt.mat.problem.kesir"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`20 * 23 - 20` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`440`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`60`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`480`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`460`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-19",
+    "skill_ids": [
+      "tyt.mat.problem.yuzde"
+    ],
+    "difficulty": 0.5,
+    "kind": "mcq",
+    "stem": "`21 * 24 - 21` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`483`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`63`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`525`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`504`",
+        "misconception_tag": null
+      }
+    ]
+  },
+  {
+    "code": "DIAG-2026.1-20",
+    "skill_ids": [
+      "tyt.mat.problem.hareket"
+    ],
+    "difficulty": 0.3,
+    "kind": "mcq",
+    "stem": "`22 * 25 - 22` işleminin sonucu kaçtır?",
+    "stem_values": {},
+    "figure": null,
+    "options": [
+      {
+        "key": "A",
+        "text": "`528`",
+        "misconception_tag": null
+      },
+      {
+        "key": "B",
+        "text": "`66`",
+        "misconception_tag": "sayilar.islem-onceligi-soldan"
+      },
+      {
+        "key": "C",
+        "text": "`572`",
+        "misconception_tag": "sayilar.parantez-eksi-dagitma"
+      },
+      {
+        "key": "D",
+        "text": "`550`",
+        "misconception_tag": null
+      }
+    ]
+  }
+]

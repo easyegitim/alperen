@@ -1,0 +1,314 @@
+[
+  {
+    "id": "4b354188-9bef-56e8-9ac9-81b872362900",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar"
+    ],
+    "kind": "mcq",
+    "stem": "`5/6 - 1/4` işleminin sonucu kaçtır?",
+    "source": "llm",
+    "status": "approved",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-13T20:00:00Z",
+    "review_note": null,
+    "created_at": "2026-10-13T03:00:00Z"
+  },
+  {
+    "id": "f8c987c4-d9e7-5ffa-bc58-cf2af27715bc",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.temel.rasyonel-sayilar"
+    ],
+    "kind": "mcq",
+    "stem": "`2/5 + 1/10` işleminin sonucu kaçtır?",
+    "source": "llm",
+    "status": "approved",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-14T07:00:00Z",
+    "review_note": null,
+    "created_at": "2026-10-13T08:00:00Z"
+  },
+  {
+    "id": "6633afa6-07d3-50b4-af77-ba11711e0e6a",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.temel.ondalik"
+    ],
+    "kind": "mcq",
+    "stem": "`0,25` ondalık sayısının kesir karşılığı hangisidir?",
+    "source": "llm",
+    "status": "approved",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-14T18:00:00Z",
+    "review_note": null,
+    "created_at": "2026-10-13T13:00:00Z"
+  },
+  {
+    "id": "6c62b281-b466-51b7-9f6d-f0f5ef1fd239",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.cebir.oran-oranti"
+    ],
+    "kind": "mcq",
+    "stem": "3 yumurtaya 2 bardak un giderse 9 yumurtaya kaç bardak un gider?",
+    "source": "llm",
+    "status": "approved",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-15T05:00:00Z",
+    "review_note": null,
+    "created_at": "2026-10-13T18:00:00Z"
+  },
+  {
+    "id": "2662fca1-cbd9-5eee-b14d-c4c34efce41b",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.problem.kesir"
+    ],
+    "kind": "mcq",
+    "stem": "Bir kitabın `1/4`'ü okunmuşsa kalanı kitabın kaçta kaçıdır?",
+    "source": "llm",
+    "status": "approved",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-15T16:00:00Z",
+    "review_note": null,
+    "created_at": "2026-10-13T23:00:00Z"
+  },
+  {
+    "id": "a746ff6c-771b-5f7c-af69-e94d9c7a63d4",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.problem.yuzde"
+    ],
+    "kind": "mcq",
+    "stem": "120 TL'lik ürüne %15 indirim yapılırsa fiyat kaç TL olur?",
+    "source": "llm",
+    "status": "approved",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-16T03:00:00Z",
+    "review_note": null,
+    "created_at": "2026-10-14T04:00:00Z"
+  },
+  {
+    "id": "35f81cb0-d216-545f-a69c-9f9a517f3156",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.cebir.mutlak-deger"
+    ],
+    "kind": "mcq",
+    "stem": "`|x + 1| = 4` denkleminin çözüm kümesi hangisidir?",
+    "source": "llm",
+    "status": "approved",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-16T14:00:00Z",
+    "review_note": null,
+    "created_at": "2026-10-14T09:00:00Z"
+  },
+  {
+    "id": "1e2f6645-09f9-5f2d-b1da-0decb586142c",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.temel.uslu"
+    ],
+    "kind": "mcq",
+    "stem": "`5^3 · 5^(-1)` ifadesinin değeri kaçtır?",
+    "source": "llm",
+    "status": "approved",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-17T01:00:00Z",
+    "review_note": null,
+    "created_at": "2026-10-14T14:00:00Z"
+  },
+  {
+    "id": "5576dc3a-adf1-579e-8305-1a56e9aa8d80",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.temel.koklu"
+    ],
+    "kind": "mcq",
+    "stem": "`√18 + √8` ifadesinin değeri kaçtır?",
+    "source": "llm",
+    "status": "rejected",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "failed",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-17T12:00:00Z",
+    "review_note": "SymPy doğrulaması başarısız",
+    "created_at": "2026-10-14T19:00:00Z"
+  },
+  {
+    "id": "302fcb3b-d53e-5f32-a185-31b47448d489",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.problem.hareket"
+    ],
+    "kind": "mcq",
+    "stem": "Saatte 80 km giden araç 90 dakikada kaç km gider?",
+    "source": "llm",
+    "status": "rejected",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-17T23:00:00Z",
+    "review_note": "Çeldirici iki şık aynı değeri veriyor",
+    "created_at": "2026-10-15T00:00:00Z"
+  },
+  {
+    "id": "c6468530-aeb4-52a4-a1aa-a798431e839b",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.cebir.esitsizlik"
+    ],
+    "kind": "mcq",
+    "stem": "Şekildeki sayı doğrusunda gösterilen aralık hangisidir?",
+    "source": "llm",
+    "status": "rejected",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "mismatch",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "reviewed_at": "2026-10-18T10:00:00Z",
+    "review_note": "Şekil kökle uyuşmuyor",
+    "created_at": "2026-10-15T05:00:00Z"
+  },
+  {
+    "id": "99e1d851-fd2e-5e06-aa62-37104db84723",
+    "curriculum_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+    "skill_ids": [
+      "tyt.mat.problem.isci"
+    ],
+    "kind": "mcq",
+    "stem": "İki işçi bir işi birlikte kaç günde bitirir?",
+    "source": "llm",
+    "status": "pending_review",
+    "difficulty": 0.5,
+    "verification": {
+      "schema": true,
+      "sympy": "verified",
+      "render": "not_applicable",
+      "vision": "not_applicable",
+      "attempts": 1
+    },
+    "model": "gemini-2.5-flash-lite",
+    "cost_usd": 0.0003,
+    "prompt_version": "question_gen.v1",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "review_note": null,
+    "created_at": "2026-10-15T10:00:00Z"
+  }
+]

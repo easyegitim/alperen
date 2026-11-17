@@ -1,0 +1,203 @@
+{
+  "fake_match": [
+    "sayfa 2/3."
+  ],
+  "output": {
+    "items": [
+      {
+        "no": 5,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "kız öğrencilerin sayısının sınıf mevcuduna oranı kaç olur?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$\\frac{1}{3}$"
+          },
+          {
+            "key": "B",
+            "text": "$\\frac{2}{5}$"
+          },
+          {
+            "key": "C",
+            "text": "$\\frac{3}{7}$"
+          },
+          {
+            "key": "D",
+            "text": "$\\frac{4}{9}$"
+          },
+          {
+            "key": "E",
+            "text": "$\\frac{1}{2}$"
+          }
+        ],
+        "continues_from_previous": true,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 6,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "$|x-3|=5$ denkleminin köklerinin toplamı kaçtır?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$2$"
+          },
+          {
+            "key": "B",
+            "text": "$6$"
+          },
+          {
+            "key": "C",
+            "text": "$8$"
+          },
+          {
+            "key": "D",
+            "text": "$10$"
+          },
+          {
+            "key": "E",
+            "text": "$-6$"
+          }
+        ],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 7,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "$\\frac{a}{b}=\\frac{3}{4}$ ve $a+b=28$ olduğuna göre $a$ kaçtır?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$12$"
+          },
+          {
+            "key": "B",
+            "text": "$14$"
+          },
+          {
+            "key": "C",
+            "text": "$16$"
+          },
+          {
+            "key": "D",
+            "text": "$9$"
+          },
+          {
+            "key": "E",
+            "text": "$21$"
+          }
+        ],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 8,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "Ardışık üç tek sayının toplamı 51'dir. Bu sayılardan en büyüğü kaçtır?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$15$"
+          },
+          {
+            "key": "B",
+            "text": "$17$"
+          },
+          {
+            "key": "C",
+            "text": "$18$"
+          },
+          {
+            "key": "D",
+            "text": "$19$"
+          },
+          {
+            "key": "E",
+            "text": "$21$"
+          }
+        ],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 9,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "$0{,}25\\cdot 0{,}4$ işleminin sonucu kaçtır?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$0{,}01$"
+          },
+          {
+            "key": "B",
+            "text": "$0{,}001$"
+          },
+          {
+            "key": "C",
+            "text": "$0{,}1$"
+          },
+          {
+            "key": "D",
+            "text": "$1$"
+          },
+          {
+            "key": "E",
+            "text": "$10$"
+          }
+        ],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      },
+      {
+        "no": 10,
+        "section": "Matematik",
+        "kind": "mcq",
+        "stem_text": "Bir işi Deniz tek başına 6 günde, Ece tek başına 3 günde bitirebiliyor. İkisi birlikte bu işi kaç günde bitirir?",
+        "options": [
+          {
+            "key": "A",
+            "text": "$1$"
+          },
+          {
+            "key": "B",
+            "text": "$1{,}5$"
+          },
+          {
+            "key": "C",
+            "text": "$2{,}5$"
+          },
+          {
+            "key": "D",
+            "text": "$3$"
+          },
+          {
+            "key": "E",
+            "text": "$2$"
+          }
+        ],
+        "continues_from_previous": false,
+        "continues_on_next": false,
+        "figures": [],
+        "legibility": "clear"
+      }
+    ],
+    "page_notes": null,
+    "unreadable": false
+  }
+}

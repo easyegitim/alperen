@@ -1,0 +1,75 @@
+[
+  {
+    "schema_version": "1.0",
+    "kind": "unanswered",
+    "severity": "danger",
+    "student_ref": "s_vd3hp6wz2kc7",
+    "staff_ref": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "detail": "Cevapsız soru: \"Yarın deneme sınavı saat kaçta başlıyor?\"",
+    "since": "2026-10-18T16:00:00Z",
+    "ref": {
+      "message_id": 14
+    },
+    "id": "26d32780-ec24-5115-8213-f719f15e8e5a",
+    "status": "open",
+    "student_label": "Mert D."
+  },
+  {
+    "schema_version": "1.0",
+    "kind": "unanswered",
+    "severity": "danger",
+    "student_ref": "s_vd3hp6wz2kc7",
+    "staff_ref": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "detail": "Hocaya iletilen soru cevap bekliyor: \"Bu hafta notum kaç oldu?\"",
+    "since": "2026-10-18T18:02:00Z",
+    "ref": {
+      "escalation_id": "1a63cd96-68d4-5624-9057-5d62fd897052"
+    },
+    "id": "6220f640-212a-505d-9756-47c54c3d55bb",
+    "status": "open",
+    "student_label": "Mert D."
+  },
+  {
+    "schema_version": "1.0",
+    "kind": "silent",
+    "severity": "warning",
+    "student_ref": "s_mb5tj7ye4ql2",
+    "staff_ref": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "detail": "Öğrenci 3 gündür yazmadı; veli onayı da bekleniyor.",
+    "since": "2026-10-16T14:00:00Z",
+    "ref": {},
+    "id": "46e7569e-3096-553f-8ad9-0d9be5ef6761",
+    "status": "open",
+    "student_label": "Zeynep Ç."
+  },
+  {
+    "schema_version": "1.0",
+    "kind": "ops",
+    "severity": "warning",
+    "student_ref": null,
+    "staff_ref": null,
+    "detail": "Ders raporu onay bekliyor",
+    "since": "2026-10-19T17:31:00Z",
+    "ref": {
+      "lesson_id": "00000000-0000-0000-0000-000000000001"
+    },
+    "id": "e128cabc-756c-5253-86b4-488e68afe5a2",
+    "status": "open",
+    "student_label": null
+  },
+  {
+    "schema_version": "1.0",
+    "kind": "deadline",
+    "severity": "neutral",
+    "student_ref": "s_qk7m2rx4tn5a",
+    "staff_ref": "de70e65e-1410-5026-a773-c5e55a3e6368",
+    "detail": "Cuma günü deneme sınavı var; hazırlık için 3 gün kaldı.",
+    "since": "2026-10-19T00:40:00Z",
+    "ref": {
+      "fact_id": 2
+    },
+    "id": "417a2059-4bd9-5a64-8ddb-f461c29abef9",
+    "status": "open",
+    "student_label": "Elif K."
+  }
+]

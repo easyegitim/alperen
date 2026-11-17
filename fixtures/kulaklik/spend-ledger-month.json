@@ -1,0 +1,191 @@
+[
+  {
+    "day": "2026-10-01",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-02",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-03",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-04",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-05",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-06",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-07",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-08",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-09",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-10",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-11",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 2,
+    "tokens_in": 1440000,
+    "tokens_out": 128000,
+    "cost_usd": 0.2
+  },
+  {
+    "day": "2026-10-12",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 1,
+    "tokens_in": 720000,
+    "tokens_out": 64000,
+    "cost_usd": 0.1
+  },
+  {
+    "day": "2026-10-13",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 1,
+    "tokens_in": 720000,
+    "tokens_out": 64000,
+    "cost_usd": 0.1
+  },
+  {
+    "day": "2026-10-14",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 1,
+    "tokens_in": 720000,
+    "tokens_out": 64000,
+    "cost_usd": 0.1
+  },
+  {
+    "day": "2026-10-14",
+    "purpose": "lesson_analysis",
+    "provider": "gemini-paid",
+    "calls": 1,
+    "tokens_in": 150000,
+    "tokens_out": 26250,
+    "cost_usd": 0.45
+  },
+  {
+    "day": "2026-10-15",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 1,
+    "tokens_in": 720000,
+    "tokens_out": 64000,
+    "cost_usd": 0.1
+  },
+  {
+    "day": "2026-10-16",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 1,
+    "tokens_in": 720000,
+    "tokens_out": 64000,
+    "cost_usd": 0.1
+  },
+  {
+    "day": "2026-10-16",
+    "purpose": "lesson_analysis",
+    "provider": "gemini-paid",
+    "calls": 1,
+    "tokens_in": 150000,
+    "tokens_out": 26250,
+    "cost_usd": 0.45
+  },
+  {
+    "day": "2026-10-17",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 1,
+    "tokens_in": 720000,
+    "tokens_out": 64000,
+    "cost_usd": 0.1
+  },
+  {
+    "day": "2026-10-18",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 1,
+    "tokens_in": 720000,
+    "tokens_out": 64000,
+    "cost_usd": 0.1
+  },
+  {
+    "day": "2026-10-19",
+    "purpose": "chat",
+    "provider": "gemini-paid",
+    "calls": 1,
+    "tokens_in": 720000,
+    "tokens_out": 64000,
+    "cost_usd": 0.1
+  }
+]

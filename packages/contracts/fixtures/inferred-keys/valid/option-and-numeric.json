@@ -1,0 +1,23 @@
+{
+  "keys": [
+    {
+      "question_no": 1,
+      "correct_option": "B",
+      "numeric_value": null,
+      "canonical_expr": null,
+      "solution_summary": "Denklem çözülünce x = 6 bulunur, B şıkkı.",
+      "confidence": 0.95,
+      "checked_with_code": true
+    },
+    {
+      "question_no": 2,
+      "correct_option": null,
+      "numeric_value": 0.875,
+      "canonical_expr": "Rational(7,8)",
+      "solution_summary": "Kesirler ortak paydada toplanır.",
+      "confidence": 0.55,
+      "checked_with_code": true
+    }
+  ],
+  "notes": null
+}

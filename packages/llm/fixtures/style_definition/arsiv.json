@@ -1,0 +1,52 @@
+{
+  "styles": [
+    {
+      "cluster_id": "k1",
+      "code": "kesir-islem-onceligi",
+      "name": "Kesirlerle işlem önceliği",
+      "description": "Kesirlerle toplama, çıkarma, çarpma ve bölmenin birlikte geçtiği bir ifadenin değeri istenir; çözüm işlem önceliğini doğru uygulamaya ve payda eşitlemeye dayanır.",
+      "format": "text",
+      "trick": "Bölme ve çarpma toplamadan önce yapılır; soldan sağa toplayan yanlış sonuca ulaşır",
+      "difficulty_band": "easy",
+      "skill_ids": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ]
+    },
+    {
+      "cluster_id": "k2",
+      "code": "sayi-denklem-kurma",
+      "name": "Sözel ifadeden denklem kurma",
+      "description": "Bir sayının katları ve farkları sözel olarak verilir, birinci dereceden bir denklem kurulup bilinmeyen sayı bulunur; ayrışma, sözel ifadenin denkleme doğru çevrilmesindedir.",
+      "format": "word_problem",
+      "trick": "Fazlası ve eksiği ifadeleri ters yöne çevrilince denklem yanlış kurulur",
+      "difficulty_band": "medium",
+      "skill_ids": [
+        "tyt.mat.problem.sayi"
+      ]
+    },
+    {
+      "cluster_id": "k3",
+      "code": "uslu-ifade-sadelestirme",
+      "name": "Ortak tabana çevirerek üslü sadeleştirme",
+      "description": "Pay ve paydasında farklı tabanlı üslü sayılar bulunan bir kesir verilir; tabanlar ortak bir asal tabana çevrilip üs kurallarıyla sadeleştirilir.",
+      "format": "text",
+      "trick": "Farklı görünen tabanlar aynı asal tabana çevrilmeden üsler toplanamaz",
+      "difficulty_band": "medium",
+      "skill_ids": [
+        "tyt.mat.temel.uslu"
+      ]
+    },
+    {
+      "cluster_id": "k4",
+      "code": "tablolu-indirim-problemi",
+      "name": "Tabloda verilen indirim problemi",
+      "description": "Ürün fiyatları bir tabloda verilir ve ürünlere farklı oranlarda indirim uygulanır; indirimli fiyatların toplamı ya da farkı istenir.",
+      "format": "table",
+      "trick": "İndirim her ürünün kendi fiyatına uygulanır, toplam fiyata uygulanmaz",
+      "difficulty_band": "medium",
+      "skill_ids": [
+        "tyt.mat.problem.yuzde"
+      ]
+    }
+  ]
+}

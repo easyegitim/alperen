@@ -1,0 +1,52 @@
+{
+  "title": "Rasyonel sayılar mini deneme",
+  "items": [
+    {
+      "no": 1,
+      "section": "Matematik",
+      "kind": "mcq",
+      "stem": "1/2 + 1/3 işleminin sonucu kaçtır?",
+      "options": [
+        {
+          "key": "A",
+          "text": "1/5"
+        },
+        {
+          "key": "B",
+          "text": "2/5"
+        },
+        {
+          "key": "C",
+          "text": "5/6"
+        },
+        {
+          "key": "D",
+          "text": "1/6"
+        },
+        {
+          "key": "E",
+          "text": "3/4"
+        }
+      ],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.temel.rasyonel-sayilar"
+      ],
+      "style_id": null,
+      "difficulty": "easy"
+    },
+    {
+      "no": 2,
+      "section": "Matematik",
+      "kind": "numeric",
+      "stem": "x/2 + x/3 = 5 ise x kaçtır?",
+      "options": [],
+      "figure_svg": null,
+      "skill_ids": [
+        "tyt.mat.denklemler.birinci-derece"
+      ],
+      "style_id": "7a988b84-8937-5242-8c35-ddbc4ea9216d",
+      "difficulty": "medium"
+    }
+  ]
+}

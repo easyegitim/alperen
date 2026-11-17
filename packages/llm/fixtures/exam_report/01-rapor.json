@@ -1,0 +1,123 @@
+{
+  "kind": "report",
+  "title": "Örnek Deneme 1 analizi",
+  "meta": {
+    "course_title": "TYT Matematik",
+    "subtitle": "Matematik testi · 10 soru",
+    "generated_on": "2026-11-03",
+    "language": "tr",
+    "personalized": true,
+    "duration_min": 20
+  },
+  "sections": [
+    {
+      "no": 1,
+      "title": "Genel görünüm"
+    },
+    {
+      "no": 2,
+      "title": "Kazanımlar"
+    },
+    {
+      "no": 3,
+      "title": "Sonraki adım"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "id": "h1",
+      "section_no": 1,
+      "level": 1,
+      "text": "Genel görünüm"
+    },
+    {
+      "type": "paragraph",
+      "id": "p1",
+      "section_no": 1,
+      "text": "Bu denemede 10 sorunun 6'sını doğru yaptın ve netin 5,5 oldu; en çok kazanç üslü ifadelerde ve ondalık çarpmada var."
+    },
+    {
+      "type": "chart",
+      "id": "c1",
+      "section_no": 1,
+      "chart_kind": "score_by_section",
+      "title": "Bölüm neti",
+      "data_ref": "section_nets"
+    },
+    {
+      "type": "paragraph",
+      "id": "p2",
+      "section_no": 1,
+      "text": "İki soru boş sayıldı: 5. soruyu işaretlemedin, 7. soruda iki şık işaretlendiği için optik okuma onu boş saydı."
+    },
+    {
+      "type": "heading",
+      "id": "h2",
+      "section_no": 2,
+      "level": 1,
+      "text": "Kazanımlar"
+    },
+    {
+      "type": "chart",
+      "id": "c2",
+      "section_no": 2,
+      "chart_kind": "skill_heatmap",
+      "title": "Kazanım ısı haritası",
+      "data_ref": "skill_map",
+      "caption": "Koyu hücre güçlü, açık hücre çalışılacak konu."
+    },
+    {
+      "type": "table",
+      "id": "t1",
+      "section_no": 2,
+      "caption": "Yanlış ve boş sorular",
+      "header": [
+        "Soru",
+        "Kazanım",
+        "Durum"
+      ],
+      "rows": [
+        [
+          "4",
+          "Üslü ifadeler",
+          "Yanlış"
+        ],
+        [
+          "9",
+          "Ondalık gösterim",
+          "Yanlış"
+        ],
+        [
+          "5",
+          "Yüzde, kâr–zarar",
+          "Boş"
+        ],
+        [
+          "7",
+          "Oran–orantı",
+          "Çift işaret"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "id": "h3",
+      "section_no": 3,
+      "level": 1,
+      "text": "Sonraki adım"
+    },
+    {
+      "type": "summary_box",
+      "id": "s1",
+      "section_no": 3,
+      "title": "Bu hafta",
+      "bullets": [
+        "Üslü ifadelerde $3^3$ gibi kuvvetleri hesaplayan 10 soruluk bir alıştırma yap.",
+        "Ondalık sayılarla çarpmada virgülün yerini kısa notla tekrar et.",
+        "Optik formu teslim etmeden her satırda tek şık işaretlediğini kontrol et."
+      ]
+    }
+  ],
+  "keys": []
+}

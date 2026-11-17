@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ogrenmen.easy/schemas/memory-delta.json",
+  "title": "MemoryDelta",
+  "description": "Hafıza dosyalarına en çok 3 işlem: str_replace, insert. Yol yalnız /memories/ altında olur.",
+  "x-version": "2.0",
+  "type": "object",
+  "properties": {
+    "ops": {
+      "maxItems": 3,
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "str_replace"
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^\\/memories\\/([A-Za-z0-9_-]+\\/){0,2}[A-Za-z0-9_-][A-Za-z0-9_.-]*\\.(md|txt)$",
+                "description": "/memories/ altında dosya yolu"
+              },
+              "old_str": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "new_str": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "op",
+              "path",
+              "old_str",
+              "new_str"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "const": "insert"
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^\\/memories\\/([A-Za-z0-9_-]+\\/){0,2}[A-Za-z0-9_-][A-Za-z0-9_.-]*\\.(md|txt)$",
+                "description": "/memories/ altında dosya yolu"
+              },
+              "insert_line": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "op",
+              "path",
+              "insert_line",
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "ops"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,8 @@
+{
+  "fake_match": ["<notification>", "weekly_summary"],
+  "output": {
+    "title": "Haftalık özet hazır",
+    "body": "Bu haftanın kısa özeti hazır. Ona bu hafta en çok hangi konuyu sevdiğini sorabilirsiniz.",
+    "action_label": "Aç"
+  }
+}

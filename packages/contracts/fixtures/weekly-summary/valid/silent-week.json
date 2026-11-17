@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "student_ref": "s_p2r4t6v7w3cd",
+  "week_start": "2026-10-12",
+  "body": "Öğrenci bu hafta bota yazmadı. Açık bir yanılgı kaydı yok.",
+  "metrics": {
+    "messages": 0,
+    "questions_solved": 0,
+    "accuracy": null,
+    "active_days": 0,
+    "open_misconceptions": 0,
+    "unanswered_questions": 0,
+    "morale_trend": "unknown"
+  },
+  "facts_used": []
+}

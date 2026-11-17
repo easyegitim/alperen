@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "item": {
+    "schema_version": "1.0",
+    "curriculum_code": "TYT-MAT@2026.1",
+    "kind": "numeric",
+    "skill_ids": [
+      "tyt.mat.temel.ondalik"
+    ],
+    "stem": "`0,125` ondalık sayısını en sade kesir olarak yazınız (pay/payda biçiminde).",
+    "stem_values": {},
+    "figure": null,
+    "difficulty": 0.5,
+    "source": "llm",
+    "verification": {
+      "schema": true,
+      "sympy": "pending",
+      "render": "pending",
+      "vision": "pending",
+      "attempts": 0,
+      "status": "draft",
+      "review_note": null
+    },
+    "provenance": {
+      "model": "gemini-2.5-flash-lite",
+      "cost_usd": 0.00027,
+      "prompt_version": "question_gen.v1"
+    }
+  },
+  "key": {
+    "numeric_value": "1/8",
+    "numeric_tolerance": 0,
+    "canonical_expr": "Rational(125, 1000)",
+    "solution": "`0,125 = 125/1000`; pay ve paydayı 125'e böl: `1/8`.",
+    "sympy_status": "verified",
+    "sympy_report": {
+      "expr": "Rational(125, 1000)",
+      "value": "1/8",
+      "matched_option": null
+    }
+  }
+}

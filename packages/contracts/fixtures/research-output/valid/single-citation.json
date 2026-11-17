@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "request_id": "0e9d8c7b-6a5f-4e3d-8c2b-1a0f9e8d7c64",
+  "query": "geri bildirim zamanlaması",
+  "expanded_queries": [
+    "feedback timing learning",
+    "immediate versus delayed feedback",
+    "geri bildirim zamanı öğrenme",
+    "feedback delay mathematics"
+  ],
+  "synthesis": [
+    {
+      "text": "Gecikmeli geri bildirim bazı görevlerde kalıcılığı artırabilir.",
+      "cites": [
+        1
+      ]
+    }
+  ],
+  "citations": [
+    {
+      "ordinal": 1,
+      "doi": "10.1037/a0020082",
+      "title": "Spacing effects in learning: A temporal ridgeline of optimal retention",
+      "authors": "Cepeda, N. J.; Vul, E.; Rohrer, D.; Wixted, J. T.; Pashler, H.",
+      "venue": "Psychological Science",
+      "year": 2008,
+      "crossref_status": "verified",
+      "title_similarity": 0.61,
+      "verified_at": "2026-10-18T21:40:00Z",
+      "oa_pdf_url": null,
+      "tldr": "Aralıklı tekrar aralığı hedeflenen saklama süresine göre ayarlandığında kalıcılık artar.",
+      "source": "openalex"
+    }
+  ],
+  "matrix": [],
+  "removed": [],
+  "bibtex": "",
+  "apa": [],
+  "model": "gemini-2.5-flash",
+  "cost_usd": 0.019
+}

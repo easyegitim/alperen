@@ -1,0 +1,18 @@
+{
+  "reply": "Paylar ve paydalar ayrı ayrı toplanmaz.\n`3/4`'ü sekizde kaç olarak yazabilirsin?",
+  "ends_with_question": true,
+  "hint_level": 0,
+  "confidence": 0.86,
+  "escalate": false,
+  "escalate_reason": null,
+  "detected_skill_ids": [
+    "tyt.mat.temel.rasyonel-sayilar"
+  ],
+  "detected_misconception_tag": "rasyonel.pay-payda-ayri-toplama",
+  "used_fact_ids": [],
+  "suggest_pool_save": false,
+  "suggested_buttons": [
+    "hint",
+    "ask_instructor"
+  ]
+}

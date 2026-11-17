@@ -1,0 +1,17 @@
+{
+  "exam-variant-without-plan.json": [
+    "required"
+  ],
+  "ocr-text-field.json": [
+    "additionalProperties"
+  ],
+  "stem-field.json": [
+    "additionalProperties"
+  ],
+  "topic-too-long.json": [
+    "maxLength"
+  ],
+  "unknown-band.json": [
+    "enum"
+  ]
+}

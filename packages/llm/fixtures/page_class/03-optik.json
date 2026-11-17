@@ -1,0 +1,15 @@
+{
+  "fake_match": [
+    "sayfa 3/3."
+  ],
+  "output": {
+    "page_class": "answer_sheet",
+    "confidence": 0.98,
+    "rotation_degrees": 0,
+    "question_numbers_seen": [],
+    "has_figures": false,
+    "section_hint": "Matematik",
+    "printed_page_number": null,
+    "unreadable": false
+  }
+}
