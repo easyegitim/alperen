@@ -32,6 +32,20 @@ export async function listEnrollableCourses(): Promise<EnrollableCourse[]> {
 
 export type MemoryFile = Pick<Row<'memory_files'>, 'path' | 'content' | 'bytes' | 'updated_at'>;
 
+export type MemoryCorrection = Pick<Row<'memory_corrections'>, 'id' | 'text' | 'status' | 'resolution_note' | 'created_at'>;
+
+/** Öğrencinin son hafıza düzeltme istekleri (RLS memory_corrections_select: öğrenci kendininkini görür). */
+export async function listMemoryCorrections(studentId: string, limit = 3): Promise<MemoryCorrection[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from('memory_corrections')
+    .select('id, text, status, resolution_note, created_at')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return data ?? [];
+}
+
 /** Hafıza dosyaları (RLS: öğrenci kendininkini görür). */
 export async function listMemoryFiles(studentId: string): Promise<MemoryFile[]> {
   const supabase = await createSupabaseServerClient();

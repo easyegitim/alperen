@@ -7,14 +7,15 @@ import { MemoryFileCard, Notice } from '@/ds';
 import { formatDateTimeTr } from '@/lib/format';
 import { memorySortKey, memoryTitle } from '@/lib/memory';
 import { requireRole } from '@/server/auth';
-import { getMyStudent, listMemoryFiles } from '@/server/queries';
+import { getMyStudent, listMemoryCorrections, listMemoryFiles } from '@/server/queries';
+import { DuzeltmeIste } from './duzeltme';
 
 export const metadata: Metadata = { title: 'Hafıza' };
 
 export default async function HafizaSayfasi() {
   const { user } = await requireRole('student', 'admin');
   const student = await getMyStudent(user.id);
-  const files = student ? await listMemoryFiles(student.id) : [];
+  const [files, corrections] = student ? await Promise.all([listMemoryFiles(student.id), listMemoryCorrections(student.id, 3)]) : [[], []];
   const sorted = [...files].sort((a, b) => memorySortKey(a.path).localeCompare(memorySortKey(b.path)));
 
   return (
@@ -24,10 +25,12 @@ export default async function HafizaSayfasi() {
           Profil
         </LinkButton>
       </div>
-      <PageHeader title="Hafıza" description="Öğretmenin seni tanımak için tuttuğu notlar. Bunları öğretmen yazar; sen okursun. Yanlış bulduğunu eğitmenine söyle." />
+      <PageHeader title="Hafıza" description="Öğretmenin seni tanımak için tuttuğu notlar. Bunları öğretmen yazar; sen okursun. Yanlış bulduğun bir şey varsa düzeltme isteyebilirsin." />
       <Notice tone="legal" title="Bu notlar yapay zekâ tarafından yazılır">
-        Her not, derslerde ve sorularda gördüklerinden çıkarılır. Emin olmadığı şeyi yazmaz; yanlış bir şey görürsen eğitmenine söyle.
+        Her not, derslerde ve sorularda gördüklerinden çıkarılır. Emin olmadığı şeyi yazmaz; yanlış bir şey görürsen aşağıdan düzeltme iste.
       </Notice>
+
+      {student ? <DuzeltmeIste recent={corrections} /> : null}
 
       {sorted.length === 0 ? (
         <EmptyState title="Öğretmenin henüz sana dair not tutmadı">

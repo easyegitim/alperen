@@ -43,7 +43,7 @@ export default async function ProfilSayfasi() {
         <h2 id="hafiza" className="text-title-2 m-0 text-ink">
           Öğrenmen senin hakkında ne biliyor
         </h2>
-        <p className="text-body m-0 max-w-prose text-ink-muted">Öğretmenin seni tanımak için tuttuğu notları okuyabilirsin. Yanlış ya da eksik bir şey görürsen eğitmenine söyle.</p>
+        <p className="text-body m-0 max-w-prose text-ink-muted">Öğretmenin seni tanımak için tuttuğu notları okuyabilirsin. Yanlış ya da eksik bir şey görürsen düzeltme isteyebilirsin.</p>
         <div>
           <LinkButton href="/ogrenci/profil/hafiza" variant="secondary" icon={<Brain size={18} />}>
             Hafızamı gör

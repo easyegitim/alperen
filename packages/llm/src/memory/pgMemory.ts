@@ -125,9 +125,13 @@ function numbered(content: string, range?: readonly number[]): string {
  *     tek `create`/`str_replace` var olan dosyayı yarıdan fazla küçültemez (OGR-MEM-030).
  *   - `delta`: teşhis sonrası `memory_delta`. Yalnız `patterns.md` ve `courses/*.md` içinde `str_replace` / `insert`
  *     (dosya yoksa `create`); silme, yeniden adlandırma ve başka yol reddedilir (OGR-MEM-029).
+ *   - `correction`: öğrencinin düzeltme isteği (`memory.correction`; metin güvenilmez). Yalnız `profile.md`, `goals.md`,
+ *     `patterns.md`, `coach_notes.md` ve `courses/*.md` içinde `str_replace` / `insert` (dosya yoksa `create`); silme,
+ *     yeniden adlandırma, var olan dosyanın üzerine yazma ve başka yol (ör. `parent_summary.md`) reddedilir
+ *     (OGR-MEM-029); `coach` gibi tek işlemde dosyanın yarısından fazlası silinemez (OGR-MEM-030).
  * Ret `MemoryError` olarak döner (geçit `is_error: true` araç sonucuna çevirir); tur düşmez.
  */
-export type MemoryWritePolicy = 'trusted' | 'coach' | 'delta';
+export type MemoryWritePolicy = 'trusted' | 'coach' | 'delta' | 'correction';
 
 export const MEMORY_POLICY_CODE = 'OGR-MEM-029';
 export const MEMORY_SHRINK_CODE = 'OGR-MEM-030';
@@ -137,6 +141,8 @@ export const COACH_MIN_KEEP_RATIO = 0.5;
 export const COACH_SHRINK_SLACK_BYTES = 64;
 const COACH_UNDELETABLE = new Set(['/memories/profile.md', '/memories/goals.md']);
 const DELTA_PATH_RE = /^\/memories\/(patterns\.md|courses\/[A-Za-z0-9_-][A-Za-z0-9_.-]*\.md)$/;
+/** `correction` politikasının düzenleyebildiği yollar (parent_summary.md hiçbir zaman). */
+export const CORRECTION_PATH_RE = /^\/memories\/(profile\.md|goals\.md|patterns\.md|coach_notes\.md|courses\/[A-Za-z0-9_-][A-Za-z0-9_.-]*\.md)$/;
 
 export interface MemoryHandlerOptions {
   /** Yazım politikası; verilmezse `trusted` (bugünkü davranış). */
@@ -191,14 +197,17 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
     if (policy === 'delta') {
       if (command === 'delete' || command === 'rename') refuse(`bu bağlamda ${command} yapılamaz; yalnız düzenleme`);
       if (!DELTA_PATH_RE.test(path)) refuse(`bu bağlamda yalnız patterns.md ve courses/*.md düzenlenir: ${path}`);
+    } else if (policy === 'correction') {
+      if (command === 'delete' || command === 'rename') refuse(`düzeltme isteğinde ${command} yapılamaz; yalnız düzenleme`);
+      if (!CORRECTION_PATH_RE.test(path)) refuse(`düzeltme isteğinde yalnız profile.md, goals.md, patterns.md, coach_notes.md ve courses/*.md düzenlenir: ${path}`);
     } else if (policy === 'coach') {
       if (command === 'rename') refuse('koç sohbetinde dosya yeniden adlandırılamaz');
       if (command === 'delete' && COACH_UNDELETABLE.has(path)) refuse(`koç sohbetinde ${path} silinemez`);
     }
   };
-  /** `coach`: tek işlemde var olan dosyanın yarıdan fazlası silinemez (ör. "profili baştan yaz"). */
+  /** `coach` / `correction`: tek işlemde var olan dosyanın yarıdan fazlası silinemez (ör. "profili baştan yaz"). */
   const guardShrink = (path: string, before: string, after: string) => {
-    if (policy !== 'coach') return;
+    if (policy !== 'coach' && policy !== 'correction') return;
     const a = utf8Bytes(before);
     const b = utf8Bytes(after);
     if (b < a * COACH_MIN_KEEP_RATIO && a - b > COACH_SHRINK_SLACK_BYTES) {
@@ -257,7 +266,7 @@ export function createMemoryHandlers(opts: MemoryHandlerOptions): MemoryToolHand
       const exists = files.some((f) => f.path === path);
       if (!exists && files.some((f) => f.path.startsWith(`${path}/`))) throw new MemoryError('OGR-MEM-019', `bu yol bir dizin: ${path}`);
       if (!exists && files.length >= maxFiles) throw new MemoryError('OGR-MEM-001', `dosya sınırı (${maxFiles}) dolu; önce birleştir ya da sil`);
-      if (exists && policy === 'delta') refuse(`bu bağlamda var olan dosyanın üzerine yazılamaz: ${path}`);
+      if (exists && (policy === 'delta' || policy === 'correction')) refuse(`bu bağlamda var olan dosyanın üzerine yazılamaz: ${path}`);
       if (exists && policy === 'coach') guardShrink(path, (await store.read(studentId, path)) ?? '', cmd.file_text);
       await store.write(studentId, path, cmd.file_text, 'create', actor);
       return exists ? `File ${path} overwritten.` : `File created successfully at: ${path}`;
@@ -586,6 +595,8 @@ export interface MemoryDeltaResult {
 export const MEMORY_DELTA_MAX_OPS = 3;
 /** `memory_delta` işinin sürüm satırındaki yazanı. */
 export const MEMORY_DELTA_ACTOR = 'memory-delta';
+/** Öğrenci düzeltme isteği işinin (`memory.correction`, `correction` politikası) sürüm satırındaki yazanı. */
+export const MEMORY_CORRECTION_ACTOR = 'memory-correction';
 
 function isHandlers(x: MemoryToolHandlers | MemoryHandlerOptions): x is MemoryToolHandlers {
   return typeof (x as MemoryToolHandlers).view === 'function' && typeof (x as MemoryToolHandlers).str_replace === 'function';

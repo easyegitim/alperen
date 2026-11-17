@@ -35,8 +35,9 @@ describe('iş kayıt defteri', () => {
     expect(jobsForProcess('all')).toHaveLength(JOBS.length);
   });
 
-  it('işleyicisi olmayan SQL iş adları da kuyruk olarak kayıtlıdır', () => {
-    for (const n of ['memory.correction']) expect(getJob(n)?.handler).toBeNull();
+  it('hafıza düzeltme isteği işleyicili (P1): memory.correction', () => {
+    expect(getJob('memory.correction')?.handler).not.toBeNull();
+    expect(getJob('memory.correction')?.skeleton).toBeFalsy();
   });
 
   it('içerik stüdyosu işi işleyicili (P3): document.generate', () => {

@@ -1,0 +1,13 @@
+{
+  "fake_match": ["\"kind\":\"memory_correction\""],
+  "output": {
+    "ops": [
+      {
+        "op": "insert",
+        "path": "/memories/patterns.md",
+        "insert_line": 0,
+        "text": "- Öğrencinin düzeltmesi: zorlandığı alan geometri değil cebir"
+      }
+    ]
+  }
+}

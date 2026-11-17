@@ -3,6 +3,7 @@ import {
   applyMemoryDelta,
   createMemoryHandlers,
   InMemoryStore,
+  MEMORY_CORRECTION_ACTOR,
   MEMORY_DELTA_ACTOR,
   MEMORY_POLICY_CODE,
   MEMORY_SHRINK_CODE,
@@ -133,5 +134,55 @@ describe("politika verilmezse ('trusted') davranış değişmez", () => {
     expect(await runMemoryCommand(h, { command: 'delete', path: '/memories/courses' })).toMatch(/Directory deleted/);
     await runMemoryCommand(h, { command: 'create', path: PROFILE, file_text: 'x' });
     expect(await store.read(SID, PROFILE)).toBe('x');
+  });
+});
+
+describe("yazım politikası 'correction' (öğrenci düzeltme isteği; metin güvenilmez)", () => {
+  const opts = (store: InMemoryStore) => ({ store, studentId: SID, actor: MEMORY_CORRECTION_ACTOR, policy: 'correction' as const });
+
+  it('profile.md, goals.md, patterns.md, coach_notes.md ve courses/*.md düzenlenir; yoksa oluşturulur', async () => {
+    const store = await seeded();
+    const ops: MemoryDeltaOp[] = [
+      { op: 'str_replace', path: PROFILE, old_str: '- Kesirlerde ve parantez önündeki eksi işaretinde zorlanıyor', new_str: '- Cebirde zorlanıyor (öğrencinin düzeltmesi)' },
+      { op: 'insert', path: GOALS, insert_line: 1, text: '- 35 net' },
+      { op: 'insert', path: '/memories/coach_notes.md', insert_line: 0, text: '- Öğrenci geometride iyi olduğunu söyledi' },
+    ];
+    const r = await applyMemoryDelta(opts(store), ops);
+    expect(r).toMatchObject({ applied: 3, failed: 0 });
+    expect(await store.read(SID, PROFILE)).toContain('Cebirde zorlanıyor');
+    expect(await store.read(SID, GOALS)).toBe('- 30 net\n- 35 net');
+    expect(await store.read(SID, '/memories/coach_notes.md')).toBe('- Öğrenci geometride iyi olduğunu söyledi');
+    const h = createMemoryHandlers(opts(store));
+    expect(await code(runMemoryCommand(h, { command: 'str_replace', path: PATTERNS, old_str: '2×', new_str: '3×' }))).toBe('ok');
+    expect(await code(runMemoryCommand(h, { command: 'insert', path: COURSE, insert_line: 0, insert_text: '- not' }))).toBe('ok');
+  });
+
+  it('silme, yeniden adlandırma, üzerine yazma, parent_summary.md ve izin dışı yol reddedilir', async () => {
+    const store = await seeded();
+    await store.write(SID, PARENT_SUMMARY_PATH, 'Veli özeti', 'create', 'memory-compact');
+    const h = createMemoryHandlers(opts(store));
+    expect(await code(runMemoryCommand(h, { command: 'delete', path: PATTERNS }))).toBe(MEMORY_POLICY_CODE);
+    expect(await code(runMemoryCommand(h, { command: 'delete', path: '/memories/courses' }))).toBe(MEMORY_POLICY_CODE);
+    expect(await code(runMemoryCommand(h, { command: 'rename', old_path: COURSE, new_path: '/memories/courses/x.md' }))).toBe(MEMORY_POLICY_CODE);
+    expect(await code(runMemoryCommand(h, { command: 'create', path: PROFILE, file_text: 'yeni profil' }))).toBe(MEMORY_POLICY_CODE);
+    expect(await code(runMemoryCommand(h, { command: 'str_replace', path: PARENT_SUMMARY_PATH, old_str: 'Veli', new_str: 'X' }))).toBe('OGR-MEM-007');
+    expect(await code(runMemoryCommand(h, { command: 'create', path: '/memories/notes.md', file_text: 'x' }))).toBe(MEMORY_POLICY_CODE);
+    expect(await store.read(SID, PARENT_SUMMARY_PATH)).toBe('Veli özeti');
+    expect(await store.read(SID, PATTERNS)).toBe(LINE);
+  });
+
+  it("parent_summary.md'ye açık izin verilse bile yol izin listesinde değil", async () => {
+    const store = await seeded();
+    await store.write(SID, PARENT_SUMMARY_PATH, 'Veli özeti', 'create', 'memory-compact');
+    const h = createMemoryHandlers({ ...opts(store), allowParentSummary: true });
+    expect(await code(runMemoryCommand(h, { command: 'insert', path: PARENT_SUMMARY_PATH, insert_line: 0, insert_text: 'x' }))).toBe(MEMORY_POLICY_CODE);
+  });
+
+  it('tek işlemde dosyanın yarısından fazlası silinemez (coach ile aynı sınır)', async () => {
+    const store = await seeded();
+    const h = createMemoryHandlers(opts(store));
+    const body = PROFILE_TEXT.split('\n').slice(1).join('\n');
+    expect(await code(runMemoryCommand(h, { command: 'str_replace', path: PROFILE, old_str: body, new_str: '- yok' }))).toBe(MEMORY_SHRINK_CODE);
+    expect(await store.read(SID, PROFILE)).toBe(PROFILE_TEXT);
   });
 });

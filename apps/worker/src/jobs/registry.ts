@@ -2,9 +2,9 @@
  * İş kayıt defteri: ad → { yük şeması, eşzamanlılık, yeniden deneme politikası, işleyici }.
  * Tek doğruluk kaynağı; app.ts bunlardan pg-boss kuyruklarını açar ve işçileri bağlar.
  * SQL tarafı (`public.enqueue_job(name, data)`, supabase/migrations/0016) aynı adları kullanır; kuyruk önceden
- * açık olmalıdır, bu yüzden işleyicisi henüz olmayan SQL iş adları da buraya `handler: null` ile yazılır.
+ * açık olmalıdır, bu yüzden işleyicisi henüz olmayan SQL iş adları da buraya `handler: null` ile yazılır
+ * (`skeleton: true`; şu an böyle bir iş yok).
  */
-import { z } from 'zod';
 import { activityCompletedJob } from './activityCompleted.js';
 import { conversationSummarizeJob } from './conversationSummarize.js';
 import { curriculumDraftJob } from './curriculum-draft.js';
@@ -18,6 +18,7 @@ import { examReportJob } from './exam-report.js';
 import { LESSON_JOBS } from './lessons.js';
 import { llmPingJob } from './llmPing.js';
 import { memoryCompactJob } from './memoryCompact.js';
+import { memoryCorrectionJob } from './memory-correction.js';
 import { noopJob } from './noop.js';
 import { outboxDrainJob } from './outboxDrain.js';
 import { practiceGenerateJob, practicePrewarmJob } from './practice-generate.js';
@@ -25,22 +26,13 @@ import { pdfRenderJob } from './pdfRender.js';
 import { pushSendJob } from './pushSend.js';
 import { STYLE_JOBS } from './styles.js';
 import { suggestionsRefreshJob } from './suggestionsRefresh.js';
-import type { AnyJobDefinition, JobDefinition, QueuePolicy } from './types.js';
+import type { AnyJobDefinition } from './types.js';
 import { uploadIntakeJob } from './upload-intake.js';
 import { weeklySummaryJob } from './weeklySummary.js';
 import { emailSendJob } from './email-send.js'; import { notificationsEvaluateJob } from './notifications-evaluate.js'; import { reportGenerateJob } from './report-generate.js'; // P6-B
 
 /** Dead letter kuyruğu: yeniden denemeleri biten ve kalıcı hata veren işler buraya kopyalanır. */
 export const DEAD_LETTER_QUEUE = 'dead_letter';
-
-const uuid = z.string().uuid();
-
-const PENDING_RETRY: QueuePolicy = { retryLimit: 3, retryDelay: 30, retryBackoff: true, retryDelayMax: 900, expireInSeconds: 900, deleteAfterSeconds: 604_800, retentionSeconds: 90 * 86_400 };
-
-/** RPC'lerin (0017_rpc.sql) kuyruğa attığı (yük anahtarları snake_case: SQL sözleşmesi), işleyicisi sonraki aşamalarda gelen işler. */
-function pending(name: string, description: string, payload: z.ZodType<object>): JobDefinition<object, never> {
-  return { name, description, process: 'worker', payload, concurrency: 1, retry: PENDING_RETRY, handler: null, skeleton: true };
-}
 
 export const JOBS: readonly AnyJobDefinition[] = [
   noopJob,
@@ -64,8 +56,8 @@ export const JOBS: readonly AnyJobDefinition[] = [
   // start_practice (0021) bankada soru yoksa practice.generate atar; ön ısıtma curriculum.draft ve suggestions.refresh'ten
   practiceGenerateJob,
   practicePrewarmJob,
-  // 0023 RPC'lerinin kuyruğa attığı işler (kuyruk açık değilse enqueue_job düşer, iş kaybolur); işleyiciler P1'de
-  pending('memory.correction', 'Hafıza düzeltme isteği (P1): request_memory_correction ekler.', z.object({ correction_id: uuid, student_id: uuid }).passthrough()),
+  // 0023 request_memory_correction atar: öğrencinin düzeltme metni → memory_delta (correction politikası) → resolve
+  memoryCorrectionJob,
   curriculumDraftJob,
   curriculumMergeJob,
   proposalsReviewJob,

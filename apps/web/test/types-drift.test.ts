@@ -53,6 +53,7 @@ const TABLE_FOR_ROW: Record<string, string> = {
   Preference: 'preferences',
   Conversation: 'conversations',
   MemoryFile: 'memory_files',
+  MemoryCorrection: 'memory_corrections',
   Notification: 'notifications',
   NotificationRule: 'notification_rules',
   PushSubscription: 'push_subscriptions',
@@ -77,7 +78,7 @@ describe('Supabase tipleri göç dosyalarıyla uyumlu', () => {
 
   it('RPC adları göçlerde tanımlı', () => {
     const sql = migrationSql();
-    for (const fn of ['accept_guardian_invite', 'create_guardian_invite', 'revoke_guardian_link']) {
+    for (const fn of ['accept_guardian_invite', 'create_guardian_invite', 'revoke_guardian_link', 'request_memory_correction']) {
       expect(sql).toMatch(new RegExp(`create or replace function public\\.${fn}\\(`));
     }
   });

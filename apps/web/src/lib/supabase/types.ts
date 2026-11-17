@@ -120,6 +120,19 @@ export type MemoryFileRow = {
   updated_at: string;
 };
 
+export type MemoryCorrectionRow = {
+  id: string;
+  student_id: string;
+  path: string;
+  text: string;
+  status: 'open' | 'applied' | 'rejected';
+  requested_by: string | null;
+  resolved_by: string | null;
+  resolution_note: string | null;
+  resolved_at: string | null;
+  created_at: string;
+};
+
 export type NotificationRow = {
   id: string;
   recipient_id: string;
@@ -163,6 +176,7 @@ export interface Database {
       preferences: Tbl<PreferenceRow, 'student_id'>;
       conversations: Tbl<ConversationRow, 'student_id' | 'kind' | 'participant_id'>;
       memory_files: Tbl<MemoryFileRow, 'student_id' | 'path'>;
+      memory_corrections: Tbl<MemoryCorrectionRow, 'student_id' | 'path' | 'text'>;
       notifications: Tbl<NotificationRow, 'recipient_id' | 'kind' | 'title'>;
       notification_rules: Tbl<NotificationRuleRow, 'recipient_id' | 'kind'>;
       push_subscriptions: Tbl<PushSubscriptionRow, 'user_id' | 'endpoint' | 'p256dh' | 'auth'>;
@@ -172,6 +186,7 @@ export interface Database {
       accept_guardian_invite: { Args: { p_token: string }; Returns: Json };
       create_guardian_invite: { Args: { p_student: string; p_relation?: string }; Returns: Json };
       revoke_guardian_link: { Args: { p_link: string }; Returns: undefined };
+      request_memory_correction: { Args: { p_path: string; p_text: string }; Returns: Json };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
